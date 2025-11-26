@@ -1,0 +1,32 @@
+Summary:
+
+Project Creation & Hospital Details
+
+The process begins with creating a project when a hospital hires NICEHR.
+Each project will include hospital details, the number of hospital staff, required consultants, and the project duration.
+Hospital details are maintained in a separate module.
+Each hospital has multiple departments (Units), and each Unit consists of various Modules.
+Each Module has specific consultant requirements.
+A dedicated Consultant Module will store all necessary consultant information.
+Scheduling & Approval Process
+
+Once a project is created, an automated schedule should run for the entire project duration.
+The schedule will map consultants with hospital staff to their designated positions within specific Modules and Units.
+The NICEHR Admin Team must review and approve the schedule.
+Any change requests, including swaps or retractions from scheduled positions, will be handled by the Admin Team.
+Budget / Savings Calculator
+
+Hospitals may initially estimate a requirement of, for example, 1000 consultants.
+The system will assess the actual number of consultants needed based on Modules, Units, and hospital staffing knowledge.
+The calculator will also evaluate cost savings by factoring in consultant pay rates and expenses (e.g., flights, accommodation, per diem).
+Example: If 1000 consultants are initially estimated, the system will optimize the allocation and identify potential savings, such as reducing consultant travel costs. 
+ROI Dashboard
+
+Hospital staff will answer a set of questions related to their learning experience and feedback regarding consultant support.
+Based on these responses, calculations will be performed to generate key performance metrics.
+The ROI Dashboard will display these insights and will be accessible to hospital leadership for decision-making.
+Action Items:
+
+NiceHR Team: To share a detailed document covering both hospital and consultant requirements.
+JS Team: To review the document thoroughly.
+Next Step: After the review, the JS Team will schedule a follow-up call to discuss the details further.
