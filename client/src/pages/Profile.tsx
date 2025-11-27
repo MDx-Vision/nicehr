@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,69 +17,191 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { User, MapPin, Phone, Mail, Calendar, Clock, CheckCircle, AlertCircle, Save } from "lucide-react";
+import { Camera, Save, Linkedin, Globe, Mail, CheckCircle, AlertCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import type { Consultant } from "@shared/schema";
+import { ObjectUploader } from "@/components/ObjectUploader";
+import type { Consultant, User } from "@shared/schema";
 
 const profileFormSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  bio: z.string().optional(),
+  linkedinUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  websiteUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
   location: z.string().optional(),
   phone: z.string().optional(),
-  shiftPreference: z.enum(["day", "night", "swing"]).optional(),
-  payRate: z.string().optional(),
+  shiftPreference: z.enum(["day", "night", "swing"]).optional().nullable(),
   yearsExperience: z.coerce.number().min(0).optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, isLoading: userLoading } = useAuth();
   const { toast } = useToast();
 
-  const { data: consultant, isLoading } = useQuery<Consultant>({
+  const { data: consultant, isLoading: consultantLoading, error: consultantError } = useQuery<Consultant>({
     queryKey: ["/api/consultants/user", user?.id],
     enabled: !!user?.id,
+    retry: 1,
   });
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      location: consultant?.location || "",
-      phone: consultant?.phone || "",
-      shiftPreference: consultant?.shiftPreference as any,
-      payRate: consultant?.payRate || "",
-      yearsExperience: consultant?.yearsExperience || 0,
+      firstName: "",
+      lastName: "",
+      bio: "",
+      linkedinUrl: "",
+      websiteUrl: "",
+      location: "",
+      phone: "",
+      shiftPreference: undefined,
+      yearsExperience: 0,
     },
   });
 
-  const updateMutation = useMutation({
-    mutationFn: async (data: ProfileFormValues) => {
+  useEffect(() => {
+    if (user && consultant) {
+      form.reset({
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        bio: consultant.bio || "",
+        linkedinUrl: user.linkedinUrl || "",
+        websiteUrl: user.websiteUrl || "",
+        location: consultant.location || "",
+        phone: consultant.phone || "",
+        shiftPreference: consultant.shiftPreference as any,
+        yearsExperience: consultant.yearsExperience || 0,
+      });
+    }
+  }, [user, consultant, form]);
+
+  const updateUserMutation = useMutation({
+    mutationFn: async (data: { firstName: string; lastName: string; linkedinUrl?: string; websiteUrl?: string }) => {
+      return await apiRequest("PUT", `/api/users/${user?.id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    },
+  });
+
+  const updateConsultantMutation = useMutation({
+    mutationFn: async (data: Partial<Consultant>) => {
       return await apiRequest("PATCH", `/api/consultants/${consultant?.id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/consultants/user", user?.id] });
-      toast({ title: "Profile updated successfully" });
-    },
-    onError: () => {
-      toast({ title: "Failed to update profile", variant: "destructive" });
     },
   });
 
-  const handleSubmit = (data: ProfileFormValues) => {
-    updateMutation.mutate(data);
+  const handleSubmit = async (data: ProfileFormValues) => {
+    try {
+      await Promise.all([
+        updateUserMutation.mutateAsync({
+          firstName: data.firstName,
+          lastName: data.lastName,
+          linkedinUrl: data.linkedinUrl || undefined,
+          websiteUrl: data.websiteUrl || undefined,
+        }),
+        consultant && updateConsultantMutation.mutateAsync({
+          bio: data.bio,
+          location: data.location,
+          phone: data.phone,
+          shiftPreference: data.shiftPreference,
+          yearsExperience: data.yearsExperience,
+        }),
+      ]);
+      toast({ title: "Profile updated successfully" });
+    } catch (error) {
+      toast({ title: "Failed to update profile", variant: "destructive" });
+    }
+  };
+
+  const handleProfilePhotoParams = async () => {
+    const res = await fetch('/api/objects/upload', { method: 'POST', credentials: 'include' });
+    const { uploadURL } = await res.json();
+    return { method: 'PUT' as const, url: uploadURL };
+  };
+
+  const handleProfilePhotoComplete = async (result: any) => {
+    if (result.successful?.[0]?.uploadURL) {
+      try {
+        await fetch(`/api/users/${user?.id}/profile-photo`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ photoUrl: result.successful[0].uploadURL })
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        toast({ title: "Profile photo updated successfully" });
+      } catch (error) {
+        toast({ title: "Failed to update profile photo", variant: "destructive" });
+      }
+    }
+  };
+
+  const handleCoverPhotoParams = async () => {
+    const res = await fetch('/api/objects/upload', { method: 'POST', credentials: 'include' });
+    const { uploadURL } = await res.json();
+    return { method: 'PUT' as const, url: uploadURL };
+  };
+
+  const handleCoverPhotoComplete = async (result: any) => {
+    if (result.successful?.[0]?.uploadURL) {
+      try {
+        await fetch(`/api/users/${user?.id}/cover-photo`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ coverPhotoUrl: result.successful[0].uploadURL })
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        toast({ title: "Cover photo updated successfully" });
+      } catch (error) {
+        toast({ title: "Failed to update cover photo", variant: "destructive" });
+      }
+    }
+  };
+
+  // Wait for both user and consultant data before rendering
+  const isLoading = userLoading || consultantLoading || !user;
+  const isSaving = updateUserMutation.isPending || updateConsultantMutation.isPending;
+
+  const getRoleDisplayName = (role: string | undefined) => {
+    switch (role) {
+      case "admin": return "Administrator";
+      case "hospital_staff": return "Hospital Staff";
+      case "consultant": return "Consultant";
+      default: return "User";
+    }
+  };
+
+  const getInitials = () => {
+    const first = user?.firstName?.[0] || "";
+    const last = user?.lastName?.[0] || "";
+    return first + last || "U";
   };
 
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <Skeleton className="h-10 w-48" />
+        <Skeleton className="h-[200px] w-full rounded-md" />
+        <div className="flex items-end gap-6 -mt-16 px-6">
+          <Skeleton className="h-32 w-32 rounded-full" />
+          <div className="space-y-2 pb-4">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+        </div>
         <Card>
-          <CardContent className="p-6">
-            <Skeleton className="h-20 w-20 rounded-full mb-4" />
-            <Skeleton className="h-6 w-32 mb-2" />
-            <Skeleton className="h-4 w-24" />
+          <CardContent className="p-6 space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-24 w-full" />
           </CardContent>
         </Card>
       </div>
@@ -86,177 +209,260 @@ export default function Profile() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold" data-testid="text-profile-title">My Profile</h1>
-        <p className="text-muted-foreground">
-          Manage your consultant profile and availability
-        </p>
-      </div>
+    <div className="space-y-6" data-testid="profile-page">
+      <div className="relative">
+        <div
+          className="relative h-[200px] w-full rounded-md overflow-hidden bg-gradient-to-r from-primary/20 to-primary/40"
+          data-testid="cover-photo-section"
+        >
+          {user?.coverPhotoUrl && (
+            <img
+              src={user.coverPhotoUrl}
+              alt="Cover"
+              className="absolute inset-0 w-full h-full object-cover"
+              data-testid="img-cover-photo"
+            />
+          )}
+          <div className="absolute inset-0 bg-black/30" />
+          
+          <div className="absolute bottom-4 right-4">
+            <ObjectUploader
+              maxNumberOfFiles={1}
+              maxFileSize={10485760}
+              onGetUploadParameters={handleCoverPhotoParams}
+              onComplete={handleCoverPhotoComplete}
+              buttonClassName="bg-white/90 hover:bg-white text-foreground"
+            >
+              <Camera className="w-4 h-4 mr-2" />
+              Change Cover
+            </ObjectUploader>
+          </div>
+        </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle>Profile Overview</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col items-center text-center">
-            <Avatar className="h-24 w-24 mb-4">
-              <AvatarImage src={user?.profileImageUrl || undefined} />
-              <AvatarFallback className="text-2xl">
-                {user?.firstName?.[0]}{user?.lastName?.[0] || "U"}
+        <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 sm:gap-6 -mt-16 px-4 sm:px-6">
+          <div className="relative group" data-testid="profile-photo-section">
+            <Avatar className="h-32 w-32 border-4 border-background shadow-lg">
+              <AvatarImage src={user?.profileImageUrl || undefined} data-testid="img-profile-photo" />
+              <AvatarFallback className="text-4xl bg-primary text-primary-foreground">
+                {getInitials()}
               </AvatarFallback>
             </Avatar>
-            <h3 className="text-xl font-semibold">
-              {user?.firstName} {user?.lastName}
-            </h3>
-            <p className="text-muted-foreground">{consultant?.tngId || "Consultant"}</p>
-            
-            <div className="flex flex-wrap justify-center gap-2 mt-4">
+            <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+              <ObjectUploader
+                maxNumberOfFiles={1}
+                maxFileSize={10485760}
+                onGetUploadParameters={handleProfilePhotoParams}
+                onComplete={handleProfilePhotoComplete}
+                buttonClassName="bg-white/90 hover:bg-white text-foreground h-10 w-10 p-0 rounded-full"
+              >
+                <Camera className="w-5 h-5" />
+              </ObjectUploader>
+            </div>
+          </div>
+
+          <div className="pb-4 flex-1">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl font-bold" data-testid="text-user-name">
+                {user?.firstName} {user?.lastName}
+              </h1>
+              <Badge variant="secondary" data-testid="badge-user-role">
+                {getRoleDisplayName(user?.role)}
+              </Badge>
               {consultant?.isOnboarded ? (
-                <Badge variant="default">
+                <Badge variant="default" data-testid="badge-onboarded">
                   <CheckCircle className="w-3 h-3 mr-1" />
                   Onboarded
                 </Badge>
               ) : (
-                <Badge variant="secondary">
+                <Badge variant="outline" data-testid="badge-pending">
                   <AlertCircle className="w-3 h-3 mr-1" />
                   Pending Onboarding
                 </Badge>
               )}
-              {consultant?.isAvailable ? (
-                <Badge variant="outline" className="text-green-600 border-green-600">
-                  Available
-                </Badge>
-              ) : (
-                <Badge variant="outline">
-                  Unavailable
-                </Badge>
-              )}
             </div>
+            <p className="text-muted-foreground mt-1" data-testid="text-consultant-id">
+              {consultant?.tngId || "Consultant ID Pending"}
+            </p>
+          </div>
+        </div>
+      </div>
 
-            <div className="w-full mt-6 space-y-2 text-left">
-              {consultant?.location && (
-                <div className="flex items-center gap-2 text-sm">
-                  <MapPin className="w-4 h-4 text-muted-foreground" />
-                  <span>{consultant.location}</span>
-                </div>
-              )}
-              {consultant?.phone && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Phone className="w-4 h-4 text-muted-foreground" />
-                  <span>{consultant.phone}</span>
-                </div>
-              )}
-              {user?.email && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Mail className="w-4 h-4 text-muted-foreground" />
-                  <span>{user.email}</span>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Edit Profile</CardTitle>
-            <CardDescription>
-              Update your profile information and preferences
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="location"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Location</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="City, State" data-testid="input-location" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="Phone number" data-testid="input-phone" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="shiftPreference"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Shift Preference</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-shift">
-                              <SelectValue placeholder="Select shift" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="day">Day</SelectItem>
-                            <SelectItem value="night">Night</SelectItem>
-                            <SelectItem value="swing">Swing</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="yearsExperience"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Years of Experience</FormLabel>
-                        <FormControl>
-                          <Input {...field} type="number" min="0" data-testid="input-experience" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
+      <Card>
+        <CardHeader>
+          <CardTitle>Profile Information</CardTitle>
+          <CardDescription>
+            Update your personal information and preferences
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="payRate"
+                  name="firstName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Pay Rate ($/hr)</FormLabel>
+                      <FormLabel>First Name</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Hourly rate" data-testid="input-payrate" />
+                        <Input {...field} placeholder="First name" data-testid="input-first-name" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+                <FormField
+                  control={form.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Last name" data-testid="input-last-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-                <Button type="submit" disabled={updateMutation.isPending} data-testid="button-save">
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Changes
-                </Button>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
-      </div>
+              <div>
+                <FormLabel>Email</FormLabel>
+                <div className="flex items-center gap-2 mt-2">
+                  <Mail className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-muted-foreground" data-testid="text-email">{user?.email || "No email"}</span>
+                </div>
+              </div>
+
+              <FormField
+                control={form.control}
+                name="bio"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bio / About</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        placeholder="Tell us about yourself..."
+                        className="min-h-[100px] resize-none"
+                        data-testid="textarea-bio"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="linkedinUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Linkedin className="w-4 h-4" />
+                        LinkedIn URL
+                      </FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="https://linkedin.com/in/yourprofile" data-testid="input-linkedin" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="websiteUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Globe className="w-4 h-4" />
+                        Website URL
+                      </FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="https://yourwebsite.com" data-testid="input-website" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Location</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="City, State" data-testid="input-location" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Phone number" data-testid="input-phone" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="shiftPreference"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Shift Preference</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || undefined}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-shift">
+                            <SelectValue placeholder="Select shift preference" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="day">Day</SelectItem>
+                          <SelectItem value="night">Night</SelectItem>
+                          <SelectItem value="swing">Swing</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="yearsExperience"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Years of Experience</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="number" min="0" data-testid="input-experience" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <Button type="submit" disabled={isSaving} data-testid="button-save-profile">
+                <Save className="w-4 h-4 mr-2" />
+                {isSaving ? "Saving..." : "Save Changes"}
+              </Button>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
 
       {consultant?.emrSystems && consultant.emrSystems.length > 0 && (
         <Card>
@@ -269,7 +475,7 @@ export default function Profile() {
           <CardContent>
             <div className="flex flex-wrap gap-2">
               {consultant.emrSystems.map((system, idx) => (
-                <Badge key={idx} variant="secondary">
+                <Badge key={idx} variant="secondary" data-testid={`badge-emr-${idx}`}>
                   {system}
                 </Badge>
               ))}
@@ -289,7 +495,7 @@ export default function Profile() {
           <CardContent>
             <div className="flex flex-wrap gap-2">
               {consultant.modules.map((module, idx) => (
-                <Badge key={idx} variant="outline">
+                <Badge key={idx} variant="outline" data-testid={`badge-module-${idx}`}>
                   {module}
                 </Badge>
               ))}

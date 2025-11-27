@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated, requireRole } from "./replitAuth";
+import { setupAuth, isAuthenticated, requireRole, optionalAuth } from "./replitAuth";
 import {
   ObjectStorageService,
   ObjectNotFoundError,
@@ -42,6 +42,32 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Update user profile
+  app.put('/api/users/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (req.params.id !== userId) {
+        return res.status(403).json({ message: "Forbidden: Can only update your own profile" });
+      }
+      
+      const { firstName, lastName, linkedinUrl, websiteUrl } = req.body;
+      const user = await storage.updateUser(req.params.id, {
+        firstName,
+        lastName,
+        linkedinUrl,
+        websiteUrl,
+      });
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ message: "Failed to update user" });
     }
   });
 
@@ -749,9 +775,24 @@ export async function registerRoutes(
 
   // Object Storage routes
   
-  // Serve private objects with ACL check
-  app.get("/objects/:objectPath(*)", isAuthenticated, async (req: any, res) => {
-    const userId = req.user?.claims?.sub;
+  // Serve public objects (no auth required for public visibility)
+  app.get("/public-objects/:filePath(*)", async (req, res) => {
+    const objectStorageService = new ObjectStorageService();
+    try {
+      const file = await objectStorageService.searchPublicObject(req.params.filePath);
+      if (!file) {
+        return res.status(404).json({ error: "File not found" });
+      }
+      objectStorageService.downloadObject(file, res);
+    } catch (error) {
+      console.error("Error serving public object:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+  
+  // Serve objects with ACL check (public objects accessible without auth, private require auth)
+  app.get("/objects/:objectPath(*)", optionalAuth, async (req: any, res) => {
+    const userId = req.user?.claims?.sub; // May be undefined for public objects
     const objectStorageService = new ObjectStorageService();
     try {
       const objectFile = await objectStorageService.getObjectEntityFile(req.path);
@@ -785,63 +826,102 @@ export async function registerRoutes(
     }
   });
 
+  // Helper function to validate uploaded object URL
+  const validateObjectUrl = (url: string): boolean => {
+    // Must be a Google Cloud Storage URL from our bucket
+    if (!url.startsWith("https://storage.googleapis.com/")) {
+      return false;
+    }
+    // URL should contain uploads path for security
+    if (!url.includes("/uploads/")) {
+      return false;
+    }
+    return true;
+  };
+
   // Update profile photo
   app.put("/api/users/:id/profile-photo", isAuthenticated, async (req: any, res) => {
+    const userId = req.user?.claims?.sub;
+    const { photoUrl } = req.body;
+    
+    if (!photoUrl) {
+      return res.status(400).json({ error: "photoUrl is required" });
+    }
+    
+    // Validate ownership - user can only update their own profile
+    if (userId !== req.params.id) {
+      return res.status(403).json({ error: "Forbidden: Can only update your own profile photo" });
+    }
+    
+    // Validate URL is from expected storage domain
+    if (!validateObjectUrl(photoUrl)) {
+      return res.status(400).json({ error: "Invalid photo URL" });
+    }
+    
     try {
-      if (!req.body.photoUrl) {
-        return res.status(400).json({ message: "photoUrl is required" });
-      }
-
-      const userId = req.user?.claims?.sub;
       const objectStorageService = new ObjectStorageService();
-      
+      // Normalize path and set ACL policy to public
       const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
-        req.body.photoUrl,
+        photoUrl,
         {
           owner: userId,
           visibility: "public",
         }
       );
-
-      const user = await storage.updateUserProfilePhoto(req.params.id, objectPath);
+      
+      // Update database with normalized path
+      const user = await storage.updateUserProfilePhoto(userId, objectPath);
       if (!user) {
-        return res.status(404).json({ message: "User not found" });
+        return res.status(404).json({ error: "User not found" });
       }
-
-      res.json({ objectPath, user });
+      
+      res.json({ success: true, objectPath });
     } catch (error) {
       console.error("Error updating profile photo:", error);
-      res.status(500).json({ message: "Failed to update profile photo" });
+      res.status(500).json({ error: "Failed to update profile photo" });
     }
   });
 
   // Update cover photo
   app.put("/api/users/:id/cover-photo", isAuthenticated, async (req: any, res) => {
+    const userId = req.user?.claims?.sub;
+    const { coverPhotoUrl } = req.body;
+    
+    if (!coverPhotoUrl) {
+      return res.status(400).json({ error: "coverPhotoUrl is required" });
+    }
+    
+    // Validate ownership - user can only update their own profile
+    if (userId !== req.params.id) {
+      return res.status(403).json({ error: "Forbidden: Can only update your own cover photo" });
+    }
+    
+    // Validate URL is from expected storage domain
+    if (!validateObjectUrl(coverPhotoUrl)) {
+      return res.status(400).json({ error: "Invalid cover photo URL" });
+    }
+    
     try {
-      if (!req.body.coverPhotoUrl) {
-        return res.status(400).json({ message: "coverPhotoUrl is required" });
-      }
-
-      const userId = req.user?.claims?.sub;
       const objectStorageService = new ObjectStorageService();
-      
+      // Normalize path and set ACL policy to public
       const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
-        req.body.coverPhotoUrl,
+        coverPhotoUrl,
         {
           owner: userId,
           visibility: "public",
         }
       );
-
-      const user = await storage.updateUserCoverPhoto(req.params.id, objectPath);
+      
+      // Update database with normalized path
+      const user = await storage.updateUserCoverPhoto(userId, objectPath);
       if (!user) {
-        return res.status(404).json({ message: "User not found" });
+        return res.status(404).json({ error: "User not found" });
       }
-
-      res.json({ objectPath, user });
+      
+      res.json({ success: true, objectPath });
     } catch (error) {
       console.error("Error updating cover photo:", error);
-      res.status(500).json({ message: "Failed to update cover photo" });
+      res.status(500).json({ error: "Failed to update cover photo" });
     }
   });
 

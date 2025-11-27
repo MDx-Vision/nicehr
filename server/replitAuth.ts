@@ -172,3 +172,31 @@ export const requireRole = (...roles: string[]): RequestHandler => {
     next();
   };
 };
+
+export const optionalAuth: RequestHandler = async (req, res, next) => {
+  const user = req.user as any;
+
+  if (!req.isAuthenticated() || !user?.expires_at) {
+    return next();
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  if (now <= user.expires_at) {
+    return next();
+  }
+
+  const refreshToken = user.refresh_token;
+  if (!refreshToken) {
+    return next();
+  }
+
+  try {
+    const config = await getOidcConfig();
+    const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
+    updateUserSession(user, tokenResponse);
+  } catch (error) {
+    // Ignore refresh errors for optional auth
+  }
+  
+  return next();
+};
