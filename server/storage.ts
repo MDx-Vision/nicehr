@@ -37,6 +37,15 @@ import {
   timesheetEntries,
   availabilityBlocks,
   shiftSwapRequests,
+  courses,
+  courseModules,
+  courseEnrollments,
+  assessments,
+  assessmentQuestions,
+  assessmentAttempts,
+  loginLabs,
+  loginLabParticipants,
+  knowledgeArticles,
   type User,
   type UpsertUser,
   type Consultant,
@@ -126,6 +135,32 @@ import {
   type TimesheetWithDetails,
   type AvailabilityBlockWithDetails,
   type ShiftSwapRequestWithDetails,
+  type Course,
+  type InsertCourse,
+  type CourseModule,
+  type InsertCourseModule,
+  type CourseEnrollment,
+  type InsertCourseEnrollment,
+  type Assessment,
+  type InsertAssessment,
+  type AssessmentQuestion,
+  type InsertAssessmentQuestion,
+  type AssessmentAttempt,
+  type InsertAssessmentAttempt,
+  type LoginLab,
+  type InsertLoginLab,
+  type LoginLabParticipant,
+  type InsertLoginLabParticipant,
+  type KnowledgeArticle,
+  type InsertKnowledgeArticle,
+  type CourseWithDetails,
+  type CourseEnrollmentWithDetails,
+  type AssessmentWithDetails,
+  type AssessmentAttemptWithDetails,
+  type LoginLabWithDetails,
+  type LoginLabParticipantWithUser,
+  type KnowledgeArticleWithDetails,
+  type TrainingAnalytics,
   EHR_IMPLEMENTATION_PHASES,
   NICEHR_TEAM_ROLES,
   HOSPITAL_TEAM_ROLES,
@@ -419,6 +454,74 @@ export interface IStorage {
   approveSwapRequest(id: string, responderId: string, notes?: string): Promise<ShiftSwapRequest | undefined>;
   rejectSwapRequest(id: string, responderId: string, notes?: string): Promise<ShiftSwapRequest | undefined>;
   cancelSwapRequest(id: string): Promise<ShiftSwapRequest | undefined>;
+
+  // ============================================
+  // PHASE 11: TRAINING & COMPETENCY
+  // ============================================
+
+  // Course operations
+  createCourse(data: InsertCourse): Promise<Course>;
+  getCourseById(id: string): Promise<CourseWithDetails | undefined>;
+  getCourses(filters?: { status?: string; level?: string; courseType?: string; moduleId?: string }): Promise<CourseWithDetails[]>;
+  updateCourse(id: string, data: Partial<InsertCourse>): Promise<Course | undefined>;
+  deleteCourse(id: string): Promise<void>;
+
+  // Course Module operations
+  createCourseModule(data: InsertCourseModule): Promise<CourseModule>;
+  getCourseModules(courseId: string): Promise<CourseModule[]>;
+  updateCourseModule(id: string, data: Partial<InsertCourseModule>): Promise<CourseModule | undefined>;
+  deleteCourseModule(id: string): Promise<void>;
+
+  // Enrollment operations
+  enrollInCourse(data: InsertCourseEnrollment): Promise<CourseEnrollment>;
+  getEnrollmentsByUser(userId: string): Promise<CourseEnrollmentWithDetails[]>;
+  getEnrollmentsByCourse(courseId: string): Promise<CourseEnrollmentWithDetails[]>;
+  updateEnrollmentProgress(id: string, data: { progressPercent?: number; status?: string; completedAt?: Date; ceCreditsEarned?: string; certificateUrl?: string }): Promise<CourseEnrollment | undefined>;
+  dropFromCourse(id: string): Promise<CourseEnrollment | undefined>;
+
+  // Assessment operations
+  createAssessment(data: InsertAssessment): Promise<Assessment>;
+  getAssessmentById(id: string): Promise<AssessmentWithDetails | undefined>;
+  getAssessmentsByCourse(courseId: string): Promise<Assessment[]>;
+  updateAssessment(id: string, data: Partial<InsertAssessment>): Promise<Assessment | undefined>;
+  deleteAssessment(id: string): Promise<void>;
+
+  // Assessment Question operations
+  createAssessmentQuestion(data: InsertAssessmentQuestion): Promise<AssessmentQuestion>;
+  getAssessmentQuestions(assessmentId: string): Promise<AssessmentQuestion[]>;
+  updateAssessmentQuestion(id: string, data: Partial<InsertAssessmentQuestion>): Promise<AssessmentQuestion | undefined>;
+  deleteAssessmentQuestion(id: string): Promise<void>;
+
+  // Assessment Attempt operations
+  startAssessmentAttempt(data: InsertAssessmentAttempt): Promise<AssessmentAttempt>;
+  submitAssessmentAttempt(id: string, answers: any, score: number, passed: boolean): Promise<AssessmentAttempt | undefined>;
+  getAttemptsByUser(userId: string): Promise<AssessmentAttemptWithDetails[]>;
+  getAttemptsByAssessment(assessmentId: string): Promise<AssessmentAttemptWithDetails[]>;
+  getAttemptCount(userId: string, assessmentId: string): Promise<number>;
+
+  // Login Lab operations
+  createLoginLab(data: InsertLoginLab): Promise<LoginLab>;
+  getLoginLabById(id: string): Promise<LoginLabWithDetails | undefined>;
+  getLoginLabs(filters?: { projectId?: string; hospitalId?: string; status?: string }): Promise<LoginLabWithDetails[]>;
+  updateLoginLab(id: string, data: Partial<InsertLoginLab>): Promise<LoginLab | undefined>;
+  deleteLoginLab(id: string): Promise<void>;
+
+  // Login Lab Participant operations
+  addParticipantToLab(data: InsertLoginLabParticipant): Promise<LoginLabParticipant>;
+  getLabParticipants(loginLabId: string): Promise<LoginLabParticipantWithUser[]>;
+  validateParticipantAccess(id: string): Promise<LoginLabParticipant | undefined>;
+  completeParticipantLab(id: string, customizationNotes?: string): Promise<LoginLabParticipant | undefined>;
+
+  // Knowledge Base operations
+  createKnowledgeArticle(data: InsertKnowledgeArticle): Promise<KnowledgeArticle>;
+  getArticleById(id: string): Promise<KnowledgeArticleWithDetails | undefined>;
+  searchArticles(query: string, filters?: { category?: string; moduleId?: string; status?: string }): Promise<KnowledgeArticleWithDetails[]>;
+  updateArticle(id: string, data: Partial<InsertKnowledgeArticle>): Promise<KnowledgeArticle | undefined>;
+  deleteArticle(id: string): Promise<void>;
+  incrementArticleViews(id: string): Promise<void>;
+
+  // Training Analytics
+  getTrainingAnalytics(): Promise<TrainingAnalytics>;
 }
 
 export interface ConsultantSearchFilters {
@@ -3430,6 +3533,761 @@ export class DatabaseStorage implements IStorage {
         },
       },
       responder: responderDetails,
+    };
+  }
+
+  // ============================================
+  // PHASE 11: TRAINING & COMPETENCY
+  // ============================================
+
+  // Course operations
+  async createCourse(data: InsertCourse): Promise<Course> {
+    const results = await db.insert(courses).values(data).returning();
+    return results[0];
+  }
+
+  async getCourseById(id: string): Promise<CourseWithDetails | undefined> {
+    const results = await db
+      .select()
+      .from(courses)
+      .where(eq(courses.id, id));
+
+    if (results.length === 0) return undefined;
+
+    return this.buildCourseWithDetails(results[0]);
+  }
+
+  async getCourses(filters?: { status?: string; level?: string; courseType?: string; moduleId?: string }): Promise<CourseWithDetails[]> {
+    const conditions = [];
+
+    if (filters?.status) {
+      conditions.push(eq(courses.status, filters.status as any));
+    }
+    if (filters?.level) {
+      conditions.push(eq(courses.level, filters.level as any));
+    }
+    if (filters?.courseType) {
+      conditions.push(eq(courses.courseType, filters.courseType as any));
+    }
+    if (filters?.moduleId) {
+      conditions.push(eq(courses.moduleId, filters.moduleId));
+    }
+
+    const query = conditions.length > 0
+      ? db.select().from(courses).where(and(...conditions))
+      : db.select().from(courses);
+
+    const results = await query.orderBy(desc(courses.createdAt));
+    return Promise.all(results.map((c) => this.buildCourseWithDetails(c)));
+  }
+
+  async updateCourse(id: string, data: Partial<InsertCourse>): Promise<Course | undefined> {
+    const results = await db
+      .update(courses)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(courses.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteCourse(id: string): Promise<void> {
+    await db.delete(courses).where(eq(courses.id, id));
+  }
+
+  private async buildCourseWithDetails(course: Course): Promise<CourseWithDetails> {
+    let moduleDetails: CourseWithDetails['module'] = null;
+    if (course.moduleId) {
+      const module = await this.getHospitalModule(course.moduleId);
+      if (module) {
+        moduleDetails = { id: module.id, name: module.name };
+      }
+    }
+
+    let hospitalDetails: CourseWithDetails['hospital'] = null;
+    if (course.hospitalId) {
+      const hospital = await this.getHospital(course.hospitalId);
+      if (hospital) {
+        hospitalDetails = { id: hospital.id, name: hospital.name };
+      }
+    }
+
+    let creatorDetails: CourseWithDetails['creator'] = null;
+    if (course.createdBy) {
+      const creator = await this.getUser(course.createdBy);
+      if (creator) {
+        creatorDetails = { id: creator.id, firstName: creator.firstName, lastName: creator.lastName };
+      }
+    }
+
+    const modules = await this.getCourseModules(course.id);
+
+    const enrollmentCountResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(courseEnrollments)
+      .where(eq(courseEnrollments.courseId, course.id));
+
+    return {
+      ...course,
+      module: moduleDetails,
+      hospital: hospitalDetails,
+      creator: creatorDetails,
+      courseModules: modules,
+      enrollmentCount: Number(enrollmentCountResult[0]?.count) || 0,
+    };
+  }
+
+  // Course Module operations
+  async createCourseModule(data: InsertCourseModule): Promise<CourseModule> {
+    const results = await db.insert(courseModules).values(data).returning();
+    return results[0];
+  }
+
+  async getCourseModules(courseId: string): Promise<CourseModule[]> {
+    return await db
+      .select()
+      .from(courseModules)
+      .where(eq(courseModules.courseId, courseId))
+      .orderBy(asc(courseModules.orderIndex));
+  }
+
+  async updateCourseModule(id: string, data: Partial<InsertCourseModule>): Promise<CourseModule | undefined> {
+    const results = await db
+      .update(courseModules)
+      .set(data)
+      .where(eq(courseModules.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteCourseModule(id: string): Promise<void> {
+    await db.delete(courseModules).where(eq(courseModules.id, id));
+  }
+
+  // Enrollment operations
+  async enrollInCourse(data: InsertCourseEnrollment): Promise<CourseEnrollment> {
+    const results = await db.insert(courseEnrollments).values(data).returning();
+    return results[0];
+  }
+
+  async getEnrollmentsByUser(userId: string): Promise<CourseEnrollmentWithDetails[]> {
+    const results = await db
+      .select()
+      .from(courseEnrollments)
+      .where(eq(courseEnrollments.userId, userId))
+      .orderBy(desc(courseEnrollments.enrolledAt));
+
+    return Promise.all(results.map((e) => this.buildEnrollmentWithDetails(e)));
+  }
+
+  async getEnrollmentsByCourse(courseId: string): Promise<CourseEnrollmentWithDetails[]> {
+    const results = await db
+      .select()
+      .from(courseEnrollments)
+      .where(eq(courseEnrollments.courseId, courseId))
+      .orderBy(desc(courseEnrollments.enrolledAt));
+
+    return Promise.all(results.map((e) => this.buildEnrollmentWithDetails(e)));
+  }
+
+  async updateEnrollmentProgress(id: string, data: { progressPercent?: number; status?: string; completedAt?: Date; ceCreditsEarned?: string; certificateUrl?: string }): Promise<CourseEnrollment | undefined> {
+    const updateData: any = {};
+    if (data.progressPercent !== undefined) updateData.progressPercent = data.progressPercent;
+    if (data.status) updateData.status = data.status;
+    if (data.completedAt) updateData.completedAt = data.completedAt;
+    if (data.ceCreditsEarned) updateData.ceCreditsEarned = data.ceCreditsEarned;
+    if (data.certificateUrl) updateData.certificateUrl = data.certificateUrl;
+
+    const results = await db
+      .update(courseEnrollments)
+      .set(updateData)
+      .where(eq(courseEnrollments.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async dropFromCourse(id: string): Promise<CourseEnrollment | undefined> {
+    const results = await db
+      .update(courseEnrollments)
+      .set({ status: "dropped" })
+      .where(eq(courseEnrollments.id, id))
+      .returning();
+    return results[0];
+  }
+
+  private async buildEnrollmentWithDetails(enrollment: CourseEnrollment): Promise<CourseEnrollmentWithDetails> {
+    const courseResults = await db
+      .select()
+      .from(courses)
+      .where(eq(courses.id, enrollment.courseId));
+    const course = courseResults[0];
+
+    const user = await this.getUser(enrollment.userId);
+
+    return {
+      ...enrollment,
+      course: {
+        id: course?.id || '',
+        title: course?.title || '',
+        durationMinutes: course?.durationMinutes || null,
+        ceCredits: course?.ceCredits || null,
+        level: course?.level || 'beginner',
+      },
+      user: {
+        id: user?.id || '',
+        firstName: user?.firstName || null,
+        lastName: user?.lastName || null,
+        email: user?.email || null,
+      },
+    };
+  }
+
+  // Assessment operations
+  async createAssessment(data: InsertAssessment): Promise<Assessment> {
+    const results = await db.insert(assessments).values(data).returning();
+    return results[0];
+  }
+
+  async getAssessmentById(id: string): Promise<AssessmentWithDetails | undefined> {
+    const results = await db
+      .select()
+      .from(assessments)
+      .where(eq(assessments.id, id));
+
+    if (results.length === 0) return undefined;
+
+    return this.buildAssessmentWithDetails(results[0]);
+  }
+
+  async getAssessmentsByCourse(courseId: string): Promise<Assessment[]> {
+    return await db
+      .select()
+      .from(assessments)
+      .where(eq(assessments.courseId, courseId))
+      .orderBy(asc(assessments.createdAt));
+  }
+
+  async updateAssessment(id: string, data: Partial<InsertAssessment>): Promise<Assessment | undefined> {
+    const results = await db
+      .update(assessments)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(assessments.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteAssessment(id: string): Promise<void> {
+    await db.delete(assessments).where(eq(assessments.id, id));
+  }
+
+  private async buildAssessmentWithDetails(assessment: Assessment): Promise<AssessmentWithDetails> {
+    const courseResults = await db
+      .select()
+      .from(courses)
+      .where(eq(courses.id, assessment.courseId));
+    const course = courseResults[0];
+
+    let moduleDetails: AssessmentWithDetails['courseModule'] = null;
+    if (assessment.courseModuleId) {
+      const moduleResults = await db
+        .select()
+        .from(courseModules)
+        .where(eq(courseModules.id, assessment.courseModuleId));
+      if (moduleResults[0]) {
+        moduleDetails = { id: moduleResults[0].id, title: moduleResults[0].title };
+      }
+    }
+
+    const questions = await this.getAssessmentQuestions(assessment.id);
+
+    const attemptCountResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(assessmentAttempts)
+      .where(eq(assessmentAttempts.assessmentId, assessment.id));
+
+    return {
+      ...assessment,
+      course: {
+        id: course?.id || '',
+        title: course?.title || '',
+      },
+      courseModule: moduleDetails,
+      questions,
+      attemptCount: Number(attemptCountResult[0]?.count) || 0,
+    };
+  }
+
+  // Assessment Question operations
+  async createAssessmentQuestion(data: InsertAssessmentQuestion): Promise<AssessmentQuestion> {
+    const results = await db.insert(assessmentQuestions).values(data).returning();
+    return results[0];
+  }
+
+  async getAssessmentQuestions(assessmentId: string): Promise<AssessmentQuestion[]> {
+    return await db
+      .select()
+      .from(assessmentQuestions)
+      .where(eq(assessmentQuestions.assessmentId, assessmentId))
+      .orderBy(asc(assessmentQuestions.orderIndex));
+  }
+
+  async updateAssessmentQuestion(id: string, data: Partial<InsertAssessmentQuestion>): Promise<AssessmentQuestion | undefined> {
+    const results = await db
+      .update(assessmentQuestions)
+      .set(data)
+      .where(eq(assessmentQuestions.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteAssessmentQuestion(id: string): Promise<void> {
+    await db.delete(assessmentQuestions).where(eq(assessmentQuestions.id, id));
+  }
+
+  // Assessment Attempt operations
+  async startAssessmentAttempt(data: InsertAssessmentAttempt): Promise<AssessmentAttempt> {
+    const existingAttempts = await this.getAttemptCount(data.userId, data.assessmentId);
+    const attemptNumber = existingAttempts + 1;
+
+    const results = await db.insert(assessmentAttempts).values({
+      ...data,
+      attemptNumber,
+    }).returning();
+    return results[0];
+  }
+
+  async submitAssessmentAttempt(id: string, answers: any, score: number, passed: boolean): Promise<AssessmentAttempt | undefined> {
+    const results = await db
+      .update(assessmentAttempts)
+      .set({
+        answers,
+        score,
+        passed,
+        completedAt: new Date(),
+      })
+      .where(eq(assessmentAttempts.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async getAttemptsByUser(userId: string): Promise<AssessmentAttemptWithDetails[]> {
+    const results = await db
+      .select()
+      .from(assessmentAttempts)
+      .where(eq(assessmentAttempts.userId, userId))
+      .orderBy(desc(assessmentAttempts.startedAt));
+
+    return Promise.all(results.map((a) => this.buildAttemptWithDetails(a)));
+  }
+
+  async getAttemptsByAssessment(assessmentId: string): Promise<AssessmentAttemptWithDetails[]> {
+    const results = await db
+      .select()
+      .from(assessmentAttempts)
+      .where(eq(assessmentAttempts.assessmentId, assessmentId))
+      .orderBy(desc(assessmentAttempts.startedAt));
+
+    return Promise.all(results.map((a) => this.buildAttemptWithDetails(a)));
+  }
+
+  async getAttemptCount(userId: string, assessmentId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(assessmentAttempts)
+      .where(
+        and(
+          eq(assessmentAttempts.userId, userId),
+          eq(assessmentAttempts.assessmentId, assessmentId)
+        )
+      );
+    return Number(result[0]?.count) || 0;
+  }
+
+  private async buildAttemptWithDetails(attempt: AssessmentAttempt): Promise<AssessmentAttemptWithDetails> {
+    const assessmentResults = await db
+      .select()
+      .from(assessments)
+      .where(eq(assessments.id, attempt.assessmentId));
+    const assessment = assessmentResults[0];
+
+    const user = await this.getUser(attempt.userId);
+
+    return {
+      ...attempt,
+      assessment: {
+        id: assessment?.id || '',
+        title: assessment?.title || '',
+        passingScore: assessment?.passingScore || null,
+        maxAttempts: assessment?.maxAttempts || null,
+      },
+      user: {
+        id: user?.id || '',
+        firstName: user?.firstName || null,
+        lastName: user?.lastName || null,
+      },
+    };
+  }
+
+  // Login Lab operations
+  async createLoginLab(data: InsertLoginLab): Promise<LoginLab> {
+    const results = await db.insert(loginLabs).values(data).returning();
+    return results[0];
+  }
+
+  async getLoginLabById(id: string): Promise<LoginLabWithDetails | undefined> {
+    const results = await db
+      .select()
+      .from(loginLabs)
+      .where(eq(loginLabs.id, id));
+
+    if (results.length === 0) return undefined;
+
+    return this.buildLoginLabWithDetails(results[0]);
+  }
+
+  async getLoginLabs(filters?: { projectId?: string; hospitalId?: string; status?: string }): Promise<LoginLabWithDetails[]> {
+    const conditions = [];
+
+    if (filters?.projectId) {
+      conditions.push(eq(loginLabs.projectId, filters.projectId));
+    }
+    if (filters?.hospitalId) {
+      conditions.push(eq(loginLabs.hospitalId, filters.hospitalId));
+    }
+    if (filters?.status) {
+      conditions.push(eq(loginLabs.status, filters.status as any));
+    }
+
+    const query = conditions.length > 0
+      ? db.select().from(loginLabs).where(and(...conditions))
+      : db.select().from(loginLabs);
+
+    const results = await query.orderBy(desc(loginLabs.scheduledAt));
+    return Promise.all(results.map((l) => this.buildLoginLabWithDetails(l)));
+  }
+
+  async updateLoginLab(id: string, data: Partial<InsertLoginLab>): Promise<LoginLab | undefined> {
+    const results = await db
+      .update(loginLabs)
+      .set(data)
+      .where(eq(loginLabs.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteLoginLab(id: string): Promise<void> {
+    await db.delete(loginLabs).where(eq(loginLabs.id, id));
+  }
+
+  private async buildLoginLabWithDetails(lab: LoginLab): Promise<LoginLabWithDetails> {
+    const project = await this.getProject(lab.projectId);
+    const hospital = await this.getHospital(lab.hospitalId);
+
+    let moduleDetails: LoginLabWithDetails['module'] = null;
+    if (lab.moduleId) {
+      const module = await this.getHospitalModule(lab.moduleId);
+      if (module) {
+        moduleDetails = { id: module.id, name: module.name };
+      }
+    }
+
+    let facilitatorDetails: LoginLabWithDetails['facilitator'] = null;
+    if (lab.facilitatorId) {
+      const facilitator = await this.getUser(lab.facilitatorId);
+      if (facilitator) {
+        facilitatorDetails = { id: facilitator.id, firstName: facilitator.firstName, lastName: facilitator.lastName };
+      }
+    }
+
+    const participants = await this.getLabParticipants(lab.id);
+
+    return {
+      ...lab,
+      project: {
+        id: project?.id || '',
+        name: project?.name || '',
+      },
+      hospital: {
+        id: hospital?.id || '',
+        name: hospital?.name || '',
+      },
+      module: moduleDetails,
+      facilitator: facilitatorDetails,
+      participants,
+      participantCount: participants.length,
+    };
+  }
+
+  // Login Lab Participant operations
+  async addParticipantToLab(data: InsertLoginLabParticipant): Promise<LoginLabParticipant> {
+    const results = await db.insert(loginLabParticipants).values(data).returning();
+    return results[0];
+  }
+
+  async getLabParticipants(loginLabId: string): Promise<LoginLabParticipantWithUser[]> {
+    const results = await db
+      .select()
+      .from(loginLabParticipants)
+      .where(eq(loginLabParticipants.loginLabId, loginLabId));
+
+    return Promise.all(results.map(async (p) => {
+      const user = await this.getUser(p.userId);
+      return {
+        ...p,
+        user: {
+          id: user?.id || '',
+          firstName: user?.firstName || null,
+          lastName: user?.lastName || null,
+          email: user?.email || null,
+        },
+      };
+    }));
+  }
+
+  async validateParticipantAccess(id: string): Promise<LoginLabParticipant | undefined> {
+    const results = await db
+      .update(loginLabParticipants)
+      .set({ accessValidated: true })
+      .where(eq(loginLabParticipants.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async completeParticipantLab(id: string, customizationNotes?: string): Promise<LoginLabParticipant | undefined> {
+    const results = await db
+      .update(loginLabParticipants)
+      .set({
+        completedAt: new Date(),
+        customizationNotes: customizationNotes || null,
+      })
+      .where(eq(loginLabParticipants.id, id))
+      .returning();
+    return results[0];
+  }
+
+  // Knowledge Base operations
+  async createKnowledgeArticle(data: InsertKnowledgeArticle): Promise<KnowledgeArticle> {
+    const results = await db.insert(knowledgeArticles).values(data).returning();
+    return results[0];
+  }
+
+  async getArticleById(id: string): Promise<KnowledgeArticleWithDetails | undefined> {
+    const results = await db
+      .select()
+      .from(knowledgeArticles)
+      .where(eq(knowledgeArticles.id, id));
+
+    if (results.length === 0) return undefined;
+
+    return this.buildArticleWithDetails(results[0]);
+  }
+
+  async searchArticles(query: string, filters?: { category?: string; moduleId?: string; status?: string }): Promise<KnowledgeArticleWithDetails[]> {
+    const conditions = [];
+
+    if (query) {
+      conditions.push(
+        or(
+          ilike(knowledgeArticles.title, `%${query}%`),
+          ilike(knowledgeArticles.content, `%${query}%`)
+        )
+      );
+    }
+    if (filters?.category) {
+      conditions.push(eq(knowledgeArticles.category, filters.category));
+    }
+    if (filters?.moduleId) {
+      conditions.push(eq(knowledgeArticles.moduleId, filters.moduleId));
+    }
+    if (filters?.status) {
+      conditions.push(eq(knowledgeArticles.status, filters.status as any));
+    }
+
+    const queryBuilder = conditions.length > 0
+      ? db.select().from(knowledgeArticles).where(and(...conditions))
+      : db.select().from(knowledgeArticles);
+
+    const results = await queryBuilder.orderBy(desc(knowledgeArticles.updatedAt));
+    return Promise.all(results.map((a) => this.buildArticleWithDetails(a)));
+  }
+
+  async updateArticle(id: string, data: Partial<InsertKnowledgeArticle>): Promise<KnowledgeArticle | undefined> {
+    const results = await db
+      .update(knowledgeArticles)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(knowledgeArticles.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteArticle(id: string): Promise<void> {
+    await db.delete(knowledgeArticles).where(eq(knowledgeArticles.id, id));
+  }
+
+  async incrementArticleViews(id: string): Promise<void> {
+    await db
+      .update(knowledgeArticles)
+      .set({
+        viewCount: sql`${knowledgeArticles.viewCount} + 1`,
+      })
+      .where(eq(knowledgeArticles.id, id));
+  }
+
+  private async buildArticleWithDetails(article: KnowledgeArticle): Promise<KnowledgeArticleWithDetails> {
+    let moduleDetails: KnowledgeArticleWithDetails['module'] = null;
+    if (article.moduleId) {
+      const module = await this.getHospitalModule(article.moduleId);
+      if (module) {
+        moduleDetails = { id: module.id, name: module.name };
+      }
+    }
+
+    let authorDetails: KnowledgeArticleWithDetails['author'] = null;
+    if (article.authorId) {
+      const author = await this.getUser(article.authorId);
+      if (author) {
+        authorDetails = { id: author.id, firstName: author.firstName, lastName: author.lastName };
+      }
+    }
+
+    return {
+      ...article,
+      module: moduleDetails,
+      author: authorDetails,
+    };
+  }
+
+  // Training Analytics
+  async getTrainingAnalytics(): Promise<TrainingAnalytics> {
+    const totalCoursesResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(courses);
+
+    const publishedCoursesResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(courses)
+      .where(eq(courses.status, "published"));
+
+    const totalEnrollmentsResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(courseEnrollments);
+
+    const completedEnrollmentsResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(courseEnrollments)
+      .where(eq(courseEnrollments.status, "completed"));
+
+    const avgScoreResult = await db
+      .select({ avg: sql<number>`AVG(${assessmentAttempts.score})` })
+      .from(assessmentAttempts)
+      .where(sql`${assessmentAttempts.score} IS NOT NULL`);
+
+    const upcomingLabsResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(loginLabs)
+      .where(
+        and(
+          eq(loginLabs.status, "scheduled"),
+          gte(loginLabs.scheduledAt, new Date())
+        )
+      );
+
+    const totalArticlesResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(knowledgeArticles);
+
+    const beginnerResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(courses)
+      .where(eq(courses.level, "beginner"));
+
+    const intermediateResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(courses)
+      .where(eq(courses.level, "intermediate"));
+
+    const advancedResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(courses)
+      .where(eq(courses.level, "advanced"));
+
+    const enrolledResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(courseEnrollments)
+      .where(eq(courseEnrollments.status, "enrolled"));
+
+    const inProgressResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(courseEnrollments)
+      .where(eq(courseEnrollments.status, "in_progress"));
+
+    const droppedResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(courseEnrollments)
+      .where(eq(courseEnrollments.status, "dropped"));
+
+    const recentEnrollmentsResults = await db
+      .select()
+      .from(courseEnrollments)
+      .orderBy(desc(courseEnrollments.enrolledAt))
+      .limit(10);
+
+    const recentEnrollments = await Promise.all(
+      recentEnrollmentsResults.map((e) => this.buildEnrollmentWithDetails(e))
+    );
+
+    const popularCoursesResults = await db
+      .select({
+        courseId: courseEnrollments.courseId,
+        enrollmentCount: sql<number>`count(*)`,
+        completedCount: sql<number>`sum(case when ${courseEnrollments.status} = 'completed' then 1 else 0 end)`,
+      })
+      .from(courseEnrollments)
+      .groupBy(courseEnrollments.courseId)
+      .orderBy(desc(sql`count(*)`))
+      .limit(5);
+
+    const popularCourses = await Promise.all(
+      popularCoursesResults.map(async (pc) => {
+        const courseResults = await db
+          .select()
+          .from(courses)
+          .where(eq(courses.id, pc.courseId));
+        const enrollCount = Number(pc.enrollmentCount) || 0;
+        const completedCount = Number(pc.completedCount) || 0;
+        return {
+          courseId: pc.courseId,
+          title: courseResults[0]?.title || '',
+          enrollmentCount: enrollCount,
+          completionRate: enrollCount > 0 ? Math.round((completedCount / enrollCount) * 100) : 0,
+        };
+      })
+    );
+
+    const totalEnrollments = Number(totalEnrollmentsResult[0]?.count) || 0;
+    const completedEnrollments = Number(completedEnrollmentsResult[0]?.count) || 0;
+
+    return {
+      totalCourses: Number(totalCoursesResult[0]?.count) || 0,
+      publishedCourses: Number(publishedCoursesResult[0]?.count) || 0,
+      totalEnrollments,
+      completedEnrollments,
+      averageCompletionRate: totalEnrollments > 0 ? Math.round((completedEnrollments / totalEnrollments) * 100) : 0,
+      averageScore: Math.round(Number(avgScoreResult[0]?.avg) || 0),
+      upcomingLoginLabs: Number(upcomingLabsResult[0]?.count) || 0,
+      totalArticles: Number(totalArticlesResult[0]?.count) || 0,
+      coursesByLevel: {
+        beginner: Number(beginnerResult[0]?.count) || 0,
+        intermediate: Number(intermediateResult[0]?.count) || 0,
+        advanced: Number(advancedResult[0]?.count) || 0,
+      },
+      enrollmentsByStatus: {
+        enrolled: Number(enrolledResult[0]?.count) || 0,
+        in_progress: Number(inProgressResult[0]?.count) || 0,
+        completed: completedEnrollments,
+        dropped: Number(droppedResult[0]?.count) || 0,
+      },
+      recentEnrollments,
+      popularCourses,
     };
   }
 }
