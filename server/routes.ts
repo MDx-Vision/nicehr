@@ -24,6 +24,7 @@ import {
   insertRoiResponseSchema,
   insertProjectScheduleSchema,
   insertScheduleAssignmentSchema,
+  accountSettingsSchema,
 } from "@shared/schema";
 
 export async function registerRoutes(
@@ -390,6 +391,64 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching consultant profile:", error);
       res.status(500).json({ message: "Failed to fetch consultant profile" });
+    }
+  });
+
+  // Account Settings routes
+  app.get('/api/account/settings', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const settings = await storage.getAccountSettings(userId);
+      if (!settings) {
+        return res.status(404).json({ message: "Account not found" });
+      }
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching account settings:", error);
+      res.status(500).json({ message: "Failed to fetch account settings" });
+    }
+  });
+
+  app.patch('/api/account/settings', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validated = accountSettingsSchema.parse(req.body);
+      const user = await storage.updateAccountSettings(userId, validated);
+      if (!user) {
+        return res.status(404).json({ message: "Account not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      console.error("Error updating account settings:", error);
+      res.status(400).json({ message: "Failed to update account settings" });
+    }
+  });
+
+  app.post('/api/account/delete-request', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.requestAccountDeletion(userId);
+      if (!user) {
+        return res.status(404).json({ message: "Account not found" });
+      }
+      res.json({ message: "Deletion request submitted", deletionRequestedAt: user.deletionRequestedAt });
+    } catch (error) {
+      console.error("Error requesting account deletion:", error);
+      res.status(500).json({ message: "Failed to request account deletion" });
+    }
+  });
+
+  app.delete('/api/account/delete-request', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.cancelAccountDeletion(userId);
+      if (!user) {
+        return res.status(404).json({ message: "Account not found" });
+      }
+      res.json({ message: "Deletion request cancelled" });
+    } catch (error) {
+      console.error("Error cancelling account deletion:", error);
+      res.status(500).json({ message: "Failed to cancel account deletion" });
     }
   });
 

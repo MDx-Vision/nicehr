@@ -166,6 +166,12 @@ export interface IStorage {
   // Directory operations
   searchConsultantsDirectory(params: DirectorySearchParams): Promise<ConsultantDirectoryResult>;
   getConsultantProfile(consultantId: string): Promise<ConsultantProfile | null>;
+
+  // Account Settings operations
+  getAccountSettings(userId: string): Promise<AccountSettingsResult | null>;
+  updateAccountSettings(userId: string, settings: AccountSettingsUpdate): Promise<User | undefined>;
+  requestAccountDeletion(userId: string): Promise<User | undefined>;
+  cancelAccountDeletion(userId: string): Promise<User | undefined>;
 }
 
 export interface ConsultantSearchFilters {
@@ -252,6 +258,28 @@ export interface ConsultantProfile {
     averageKnowledge: number | null;
     count: number;
   };
+}
+
+export interface AccountSettingsResult {
+  id: string;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  profileImageUrl: string | null;
+  role: "admin" | "hospital_staff" | "consultant";
+  profileVisibility: "public" | "members_only" | "private";
+  emailNotifications: boolean;
+  showEmail: boolean;
+  showPhone: boolean;
+  deletionRequestedAt: Date | null;
+  createdAt: Date | null;
+}
+
+export interface AccountSettingsUpdate {
+  profileVisibility?: "public" | "members_only" | "private";
+  emailNotifications?: boolean;
+  showEmail?: boolean;
+  showPhone?: boolean;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -989,6 +1017,65 @@ export class DatabaseStorage implements IStorage {
         count: Number(ratingStats?.count || 0),
       },
     };
+  }
+
+  // Account Settings operations
+  async getAccountSettings(userId: string): Promise<AccountSettingsResult | null> {
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user) {
+      return null;
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      profileImageUrl: user.profileImageUrl,
+      role: user.role,
+      profileVisibility: user.profileVisibility,
+      emailNotifications: user.emailNotifications,
+      showEmail: user.showEmail,
+      showPhone: user.showPhone,
+      deletionRequestedAt: user.deletionRequestedAt,
+      createdAt: user.createdAt,
+    };
+  }
+
+  async updateAccountSettings(userId: string, settings: AccountSettingsUpdate): Promise<User | undefined> {
+    const [updated] = await db
+      .update(users)
+      .set({
+        ...settings,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return updated;
+  }
+
+  async requestAccountDeletion(userId: string): Promise<User | undefined> {
+    const [updated] = await db
+      .update(users)
+      .set({
+        deletionRequestedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return updated;
+  }
+
+  async cancelAccountDeletion(userId: string): Promise<User | undefined> {
+    const [updated] = await db
+      .update(users)
+      .set({
+        deletionRequestedAt: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return updated;
   }
 }
 

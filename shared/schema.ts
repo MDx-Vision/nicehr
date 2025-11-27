@@ -21,6 +21,7 @@ export const documentStatusEnum = pgEnum("document_status", ["pending", "approve
 export const projectStatusEnum = pgEnum("project_status", ["draft", "active", "completed", "cancelled"]);
 export const scheduleStatusEnum = pgEnum("schedule_status", ["pending", "approved", "rejected"]);
 export const shiftTypeEnum = pgEnum("shift_type", ["day", "night", "swing"]);
+export const profileVisibilityEnum = pgEnum("profile_visibility", ["public", "members_only", "private"]);
 
 // Session storage table for Replit Auth
 export const sessions = pgTable(
@@ -45,6 +46,11 @@ export const users = pgTable("users", {
   websiteUrl: varchar("website_url"),
   role: userRoleEnum("role").default("consultant").notNull(),
   isActive: boolean("is_active").default(true).notNull(),
+  profileVisibility: profileVisibilityEnum("profile_visibility").default("public").notNull(),
+  emailNotifications: boolean("email_notifications").default(true).notNull(),
+  showEmail: boolean("show_email").default(false).notNull(),
+  showPhone: boolean("show_phone").default(false).notNull(),
+  deletionRequestedAt: timestamp("deletion_requested_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -575,6 +581,16 @@ export const insertHospitalStaffSchema = createInsertSchema(hospitalStaff).omit(
   createdAt: true,
   updatedAt: true,
 });
+
+// Account settings schema for updates
+export const accountSettingsSchema = z.object({
+  profileVisibility: z.enum(["public", "members_only", "private"]).optional(),
+  emailNotifications: z.boolean().optional(),
+  showEmail: z.boolean().optional(),
+  showPhone: z.boolean().optional(),
+});
+
+export type AccountSettings = z.infer<typeof accountSettingsSchema>;
 
 // Types
 export type UpsertUser = typeof users.$inferInsert;
