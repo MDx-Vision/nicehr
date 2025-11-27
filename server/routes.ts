@@ -1197,5 +1197,161 @@ export async function registerRoutes(
     }
   });
 
+  // Admin Access Control routes
+  app.get('/api/admin/access-rules', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const rules = await storage.getAllAccessRules();
+      res.json(rules);
+    } catch (error) {
+      console.error("Error fetching access rules:", error);
+      res.status(500).json({ message: "Failed to fetch access rules" });
+    }
+  });
+
+  app.get('/api/admin/access-rules/:id', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const rule = await storage.getAccessRule(req.params.id);
+      if (!rule) {
+        return res.status(404).json({ message: "Access rule not found" });
+      }
+      res.json(rule);
+    } catch (error) {
+      console.error("Error fetching access rule:", error);
+      res.status(500).json({ message: "Failed to fetch access rule" });
+    }
+  });
+
+  app.post('/api/admin/access-rules', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const { name, resourceType, resourceKey, allowedRoles, deniedRoles, restrictionMessage, isActive } = req.body;
+      
+      if (!name || !resourceType || !resourceKey) {
+        return res.status(400).json({ message: "name, resourceType, and resourceKey are required" });
+      }
+
+      if (!['page', 'api', 'feature'].includes(resourceType)) {
+        return res.status(400).json({ message: "Invalid resourceType. Must be 'page', 'api', or 'feature'" });
+      }
+
+      const rule = await storage.createAccessRule({
+        name,
+        resourceType,
+        resourceKey,
+        allowedRoles: allowedRoles || [],
+        deniedRoles: deniedRoles || [],
+        restrictionMessage: restrictionMessage || null,
+        isActive: isActive !== undefined ? isActive : true,
+        createdBy: userId,
+      });
+      
+      res.status(201).json(rule);
+    } catch (error) {
+      console.error("Error creating access rule:", error);
+      res.status(500).json({ message: "Failed to create access rule" });
+    }
+  });
+
+  app.put('/api/admin/access-rules/:id', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const { name, resourceType, resourceKey, allowedRoles, deniedRoles, restrictionMessage, isActive } = req.body;
+      
+      const updateData: any = {};
+      if (name !== undefined) updateData.name = name;
+      if (resourceType !== undefined) {
+        if (!['page', 'api', 'feature'].includes(resourceType)) {
+          return res.status(400).json({ message: "Invalid resourceType. Must be 'page', 'api', or 'feature'" });
+        }
+        updateData.resourceType = resourceType;
+      }
+      if (resourceKey !== undefined) updateData.resourceKey = resourceKey;
+      if (allowedRoles !== undefined) updateData.allowedRoles = allowedRoles;
+      if (deniedRoles !== undefined) updateData.deniedRoles = deniedRoles;
+      if (restrictionMessage !== undefined) updateData.restrictionMessage = restrictionMessage;
+      if (isActive !== undefined) updateData.isActive = isActive;
+
+      const rule = await storage.updateAccessRule(req.params.id, updateData);
+      if (!rule) {
+        return res.status(404).json({ message: "Access rule not found" });
+      }
+      res.json(rule);
+    } catch (error) {
+      console.error("Error updating access rule:", error);
+      res.status(500).json({ message: "Failed to update access rule" });
+    }
+  });
+
+  app.delete('/api/admin/access-rules/:id', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      await storage.deleteAccessRule(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting access rule:", error);
+      res.status(500).json({ message: "Failed to delete access rule" });
+    }
+  });
+
+  app.get('/api/admin/access-audit', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const ruleId = req.query.ruleId as string | undefined;
+      const logs = await storage.getAccessAuditLogs(limit, ruleId);
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching access audit logs:", error);
+      res.status(500).json({ message: "Failed to fetch access audit logs" });
+    }
+  });
+
+  // User permissions API (for frontend to check access)
+  app.get('/api/permissions', optionalAuth, async (req: any, res) => {
+    try {
+      const user = req.user ? await storage.getUser(req.user.claims.sub) : null;
+      const userRole = user?.role || null;
+      
+      const allRules = await storage.getAllAccessRules();
+      const activeRules = allRules.filter(r => r.isActive);
+      
+      const restrictedPages: string[] = [];
+      const restrictedFeatures: string[] = [];
+      
+      for (const rule of activeRules) {
+        const allowedRoles = rule.allowedRoles as string[];
+        const deniedRoles = rule.deniedRoles as string[];
+        
+        let isRestricted = false;
+        
+        if (!userRole) {
+          if (allowedRoles.length > 0 && !allowedRoles.includes('guest')) {
+            isRestricted = true;
+          }
+        } else {
+          if (deniedRoles.includes(userRole)) {
+            isRestricted = true;
+          } else if (allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
+            isRestricted = true;
+          }
+        }
+        
+        if (isRestricted) {
+          if (rule.resourceType === 'page') {
+            restrictedPages.push(rule.resourceKey);
+          } else if (rule.resourceType === 'feature') {
+            restrictedFeatures.push(rule.resourceKey);
+          }
+        }
+      }
+      
+      res.json({
+        role: userRole,
+        restrictedPages,
+        restrictedFeatures,
+      });
+    } catch (error) {
+      console.error("Error fetching permissions:", error);
+      res.status(500).json({ message: "Failed to fetch permissions" });
+    }
+  });
+
   return httpServer;
 }
