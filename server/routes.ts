@@ -331,6 +331,68 @@ export async function registerRoutes(
     }
   });
 
+  // Consultant directory endpoint with filtering, sorting, and pagination
+  app.get('/api/directory/consultants', isAuthenticated, async (req, res) => {
+    try {
+      const params = {
+        search: req.query.search as string | undefined,
+        emrSystems: req.query['emrSystems[]'] 
+          ? (Array.isArray(req.query['emrSystems[]']) 
+              ? req.query['emrSystems[]'] as string[] 
+              : [req.query['emrSystems[]'] as string])
+          : undefined,
+        availability: req.query.availability as 'available' | 'unavailable' | 'all' | undefined,
+        experienceMin: req.query.experienceMin ? parseInt(req.query.experienceMin as string, 10) : undefined,
+        experienceMax: req.query.experienceMax ? parseInt(req.query.experienceMax as string, 10) : undefined,
+        modules: req.query['modules[]']
+          ? (Array.isArray(req.query['modules[]'])
+              ? req.query['modules[]'] as string[]
+              : [req.query['modules[]'] as string])
+          : undefined,
+        shiftPreference: req.query.shiftPreference as string | undefined,
+        sortBy: req.query.sortBy as 'name' | 'experience' | 'location' | 'rating' | undefined,
+        order: req.query.order as 'asc' | 'desc' | undefined,
+        page: req.query.page ? parseInt(req.query.page as string, 10) : 1,
+        pageSize: req.query.pageSize ? parseInt(req.query.pageSize as string, 10) : 12,
+      };
+
+      const result = await storage.searchConsultantsDirectory(params);
+
+      const totalPages = Math.ceil(result.totalCount / params.pageSize);
+
+      res.json({
+        consultants: result.consultants,
+        pagination: {
+          page: params.page,
+          pageSize: params.pageSize,
+          totalCount: result.totalCount,
+          totalPages,
+        },
+        filters: {
+          availableEmrSystems: result.availableEmrSystems,
+          availableModules: result.availableModules,
+        },
+      });
+    } catch (error) {
+      console.error("Error searching consultants directory:", error);
+      res.status(500).json({ message: "Failed to search consultants directory" });
+    }
+  });
+
+  // Consultant full profile endpoint
+  app.get('/api/consultants/:id/profile', isAuthenticated, async (req, res) => {
+    try {
+      const profile = await storage.getConsultantProfile(req.params.id);
+      if (!profile) {
+        return res.status(404).json({ message: "Consultant not found" });
+      }
+      res.json(profile);
+    } catch (error) {
+      console.error("Error fetching consultant profile:", error);
+      res.status(500).json({ message: "Failed to fetch consultant profile" });
+    }
+  });
+
   // Consultant documents routes
   app.get('/api/consultants/:consultantId/documents', isAuthenticated, async (req, res) => {
     try {

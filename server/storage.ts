@@ -162,6 +162,10 @@ export interface IStorage {
 
   // Dashboard stats
   getDashboardStats(): Promise<DashboardStats>;
+
+  // Directory operations
+  searchConsultantsDirectory(params: DirectorySearchParams): Promise<ConsultantDirectoryResult>;
+  getConsultantProfile(consultantId: string): Promise<ConsultantProfile | null>;
 }
 
 export interface ConsultantSearchFilters {
@@ -181,6 +185,73 @@ export interface DashboardStats {
   activeProjects: number;
   pendingDocuments: number;
   totalSavings: string;
+}
+
+export interface DirectorySearchParams {
+  search?: string;
+  emrSystems?: string[];
+  availability?: 'available' | 'unavailable' | 'all';
+  experienceMin?: number;
+  experienceMax?: number;
+  modules?: string[];
+  shiftPreference?: string;
+  sortBy?: 'name' | 'experience' | 'location' | 'rating';
+  order?: 'asc' | 'desc';
+  page?: number;
+  pageSize?: number;
+}
+
+export interface ConsultantDirectoryItem {
+  id: string;
+  tngId: string | null;
+  userId: string;
+  firstName: string | null;
+  lastName: string | null;
+  profileImageUrl: string | null;
+  location: string | null;
+  emrSystems: string[];
+  modules: string[];
+  yearsExperience: number;
+  isAvailable: boolean;
+  shiftPreference: string | null;
+  averageRating: number | null;
+  linkedinUrl: string | null;
+  websiteUrl: string | null;
+}
+
+export interface ConsultantDirectoryResult {
+  consultants: ConsultantDirectoryItem[];
+  totalCount: number;
+  availableEmrSystems: string[];
+  availableModules: string[];
+}
+
+export interface ConsultantProfile {
+  user: {
+    id: string;
+    email: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    profileImageUrl: string | null;
+    coverPhotoUrl: string | null;
+    linkedinUrl: string | null;
+    websiteUrl: string | null;
+  };
+  consultant: Consultant;
+  documents: {
+    pending: number;
+    approved: number;
+    rejected: number;
+    expired: number;
+    total: number;
+  };
+  ratings: {
+    averageOverall: number | null;
+    averageMannerism: number | null;
+    averageProfessionalism: number | null;
+    averageKnowledge: number | null;
+    count: number;
+  };
 }
 
 export class DatabaseStorage implements IStorage {
@@ -677,6 +748,246 @@ export class DatabaseStorage implements IStorage {
       activeProjects: Number(activeProjectCount?.count || 0),
       pendingDocuments: Number(pendingDocCount?.count || 0),
       totalSavings: savingsSum?.total || "0",
+    };
+  }
+
+  // Directory operations
+  async searchConsultantsDirectory(params: DirectorySearchParams): Promise<ConsultantDirectoryResult> {
+    const {
+      search,
+      emrSystems: filterEmrSystems,
+      availability,
+      experienceMin,
+      experienceMax,
+      modules: filterModules,
+      shiftPreference,
+      sortBy = 'name',
+      order = 'asc',
+      page = 1,
+      pageSize = 12,
+    } = params;
+
+    const conditions: any[] = [];
+
+    if (search) {
+      const searchPattern = `%${search}%`;
+      conditions.push(
+        or(
+          ilike(users.firstName, searchPattern),
+          ilike(users.lastName, searchPattern),
+          ilike(consultants.tngId, searchPattern),
+          ilike(consultants.location, searchPattern),
+          sql`EXISTS (SELECT 1 FROM unnest(${consultants.emrSystems}) AS emr WHERE emr ILIKE ${searchPattern})`
+        )
+      );
+    }
+
+    if (availability === 'available') {
+      conditions.push(eq(consultants.isAvailable, true));
+    } else if (availability === 'unavailable') {
+      conditions.push(eq(consultants.isAvailable, false));
+    }
+
+    if (experienceMin !== undefined) {
+      conditions.push(gte(consultants.yearsExperience, experienceMin));
+    }
+
+    if (experienceMax !== undefined) {
+      conditions.push(lte(consultants.yearsExperience, experienceMax));
+    }
+
+    if (shiftPreference && shiftPreference !== 'all' && shiftPreference !== 'both') {
+      conditions.push(eq(consultants.shiftPreference, shiftPreference as "day" | "night" | "swing"));
+    }
+
+    if (filterEmrSystems && filterEmrSystems.length > 0) {
+      conditions.push(
+        sql`${consultants.emrSystems} && ARRAY[${sql.join(filterEmrSystems.map(e => sql`${e}`), sql`, `)}]::text[]`
+      );
+    }
+
+    if (filterModules && filterModules.length > 0) {
+      conditions.push(
+        sql`${consultants.modules} && ARRAY[${sql.join(filterModules.map(m => sql`${m}`), sql`, `)}]::text[]`
+      );
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const avgRatingSubquery = db
+      .select({
+        consultantId: consultantRatings.consultantId,
+        avgRating: sql<number>`AVG(${consultantRatings.overallRating})`.as('avg_rating'),
+      })
+      .from(consultantRatings)
+      .groupBy(consultantRatings.consultantId)
+      .as('ratings_agg');
+
+    let orderByClause;
+    const isDesc = order === 'desc';
+    switch (sortBy) {
+      case 'experience':
+        orderByClause = isDesc ? desc(consultants.yearsExperience) : asc(consultants.yearsExperience);
+        break;
+      case 'location':
+        orderByClause = isDesc ? desc(consultants.location) : asc(consultants.location);
+        break;
+      case 'rating':
+        orderByClause = isDesc ? desc(avgRatingSubquery.avgRating) : asc(avgRatingSubquery.avgRating);
+        break;
+      case 'name':
+      default:
+        orderByClause = isDesc 
+          ? desc(sql`COALESCE(${users.lastName}, '') || ' ' || COALESCE(${users.firstName}, '')`) 
+          : asc(sql`COALESCE(${users.lastName}, '') || ' ' || COALESCE(${users.firstName}, '')`);
+        break;
+    }
+
+    const offset = (page - 1) * pageSize;
+
+    const consultantsQuery = db
+      .select({
+        id: consultants.id,
+        tngId: consultants.tngId,
+        userId: consultants.userId,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        profileImageUrl: users.profileImageUrl,
+        location: consultants.location,
+        emrSystems: consultants.emrSystems,
+        modules: consultants.modules,
+        yearsExperience: consultants.yearsExperience,
+        isAvailable: consultants.isAvailable,
+        shiftPreference: consultants.shiftPreference,
+        averageRating: avgRatingSubquery.avgRating,
+        linkedinUrl: sql<string | null>`COALESCE(${consultants.linkedinUrl}, ${users.linkedinUrl})`,
+        websiteUrl: sql<string | null>`COALESCE(${consultants.websiteUrl}, ${users.websiteUrl})`,
+      })
+      .from(consultants)
+      .innerJoin(users, eq(consultants.userId, users.id))
+      .leftJoin(avgRatingSubquery, eq(consultants.id, avgRatingSubquery.consultantId))
+      .where(whereClause)
+      .orderBy(orderByClause)
+      .limit(pageSize)
+      .offset(offset);
+
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(consultants)
+      .innerJoin(users, eq(consultants.userId, users.id))
+      .where(whereClause);
+
+    const totalCount = Number(countResult?.count || 0);
+
+    const consultantsResult = await consultantsQuery;
+
+    const allEmrSystems = await db
+      .select({ emrSystem: sql<string>`unnest(${consultants.emrSystems})` })
+      .from(consultants)
+      .where(sql`${consultants.emrSystems} IS NOT NULL AND array_length(${consultants.emrSystems}, 1) > 0`);
+
+    const allModules = await db
+      .select({ module: sql<string>`unnest(${consultants.modules})` })
+      .from(consultants)
+      .where(sql`${consultants.modules} IS NOT NULL AND array_length(${consultants.modules}, 1) > 0`);
+
+    const availableEmrSystems = Array.from(new Set(allEmrSystems.map(r => r.emrSystem).filter(Boolean))).sort();
+    const availableModules = Array.from(new Set(allModules.map(r => r.module).filter(Boolean))).sort();
+
+    const formattedConsultants: ConsultantDirectoryItem[] = consultantsResult.map(c => ({
+      id: c.id,
+      tngId: c.tngId,
+      userId: c.userId,
+      firstName: c.firstName,
+      lastName: c.lastName,
+      profileImageUrl: c.profileImageUrl,
+      location: c.location,
+      emrSystems: c.emrSystems || [],
+      modules: c.modules || [],
+      yearsExperience: c.yearsExperience || 0,
+      isAvailable: c.isAvailable,
+      shiftPreference: c.shiftPreference,
+      averageRating: c.averageRating ? Number(c.averageRating) : null,
+      linkedinUrl: c.linkedinUrl as string | null,
+      websiteUrl: c.websiteUrl as string | null,
+    }));
+
+    return {
+      consultants: formattedConsultants,
+      totalCount,
+      availableEmrSystems,
+      availableModules,
+    };
+  }
+
+  async getConsultantProfile(consultantId: string): Promise<ConsultantProfile | null> {
+    const [result] = await db
+      .select({
+        consultant: consultants,
+        user: users,
+      })
+      .from(consultants)
+      .innerJoin(users, eq(consultants.userId, users.id))
+      .where(eq(consultants.id, consultantId));
+
+    if (!result) {
+      return null;
+    }
+
+    const documentStats = await db
+      .select({
+        status: consultantDocuments.status,
+        count: sql<number>`count(*)`,
+      })
+      .from(consultantDocuments)
+      .where(eq(consultantDocuments.consultantId, consultantId))
+      .groupBy(consultantDocuments.status);
+
+    const docCounts = {
+      pending: 0,
+      approved: 0,
+      rejected: 0,
+      expired: 0,
+      total: 0,
+    };
+
+    documentStats.forEach(stat => {
+      const count = Number(stat.count);
+      docCounts[stat.status as keyof typeof docCounts] = count;
+      docCounts.total += count;
+    });
+
+    const [ratingStats] = await db
+      .select({
+        avgOverall: sql<number>`AVG(${consultantRatings.overallRating})`,
+        avgMannerism: sql<number>`AVG(${consultantRatings.mannerism})`,
+        avgProfessionalism: sql<number>`AVG(${consultantRatings.professionalism})`,
+        avgKnowledge: sql<number>`AVG(${consultantRatings.knowledge})`,
+        count: sql<number>`count(*)`,
+      })
+      .from(consultantRatings)
+      .where(eq(consultantRatings.consultantId, consultantId));
+
+    return {
+      user: {
+        id: result.user.id,
+        email: result.user.email,
+        firstName: result.user.firstName,
+        lastName: result.user.lastName,
+        profileImageUrl: result.user.profileImageUrl,
+        coverPhotoUrl: result.user.coverPhotoUrl,
+        linkedinUrl: result.user.linkedinUrl,
+        websiteUrl: result.user.websiteUrl,
+      },
+      consultant: result.consultant,
+      documents: docCounts,
+      ratings: {
+        averageOverall: ratingStats?.avgOverall ? Number(ratingStats.avgOverall) : null,
+        averageMannerism: ratingStats?.avgMannerism ? Number(ratingStats.avgMannerism) : null,
+        averageProfessionalism: ratingStats?.avgProfessionalism ? Number(ratingStats.avgProfessionalism) : null,
+        averageKnowledge: ratingStats?.avgKnowledge ? Number(ratingStats.avgKnowledge) : null,
+        count: Number(ratingStats?.count || 0),
+      },
     };
   }
 }
