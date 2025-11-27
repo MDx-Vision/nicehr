@@ -9,6 +9,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PermissionsProvider } from "@/hooks/use-permissions";
 
 import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
@@ -111,10 +112,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <PermissionsProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </PermissionsProvider>
     </QueryClientProvider>
   );
 }
