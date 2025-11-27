@@ -1604,10 +1604,17 @@ export async function registerRoutes(
     try {
       const { hospitalId } = req.params;
       const user = req.user;
+      const userId = user.claims.sub;
+      
+      // Get user's role from database
+      const dbUser = await storage.getUser(userId);
+      if (!dbUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
       
       // Check access: admins can access any hospital, staff can only access their own
-      if (user.claims.role !== 'admin') {
-        const staff = await storage.getHospitalStaffByUserId(user.claims.sub);
+      if (dbUser.role !== 'admin') {
+        const staff = await storage.getHospitalStaffByUserId(userId);
         if (!staff || staff.hospitalId !== hospitalId) {
           return res.status(403).json({ message: "Access denied" });
         }
@@ -1628,10 +1635,17 @@ export async function registerRoutes(
     try {
       const { consultantId } = req.params;
       const user = req.user;
+      const userId = user.claims.sub;
+      
+      // Get user's role from database
+      const dbUser = await storage.getUser(userId);
+      if (!dbUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
       
       // Check access: admins can access any consultant, consultants can only access their own
-      if (user.claims.role !== 'admin') {
-        const consultant = await storage.getConsultantByUserId(user.claims.sub);
+      if (dbUser.role !== 'admin') {
+        const consultant = await storage.getConsultantByUserId(userId);
         if (!consultant || consultant.id !== consultantId) {
           return res.status(403).json({ message: "Access denied" });
         }
@@ -1652,20 +1666,28 @@ export async function registerRoutes(
   app.get('/api/analytics/me', isAuthenticated, async (req: any, res) => {
     try {
       const user = req.user;
-      const role = user.claims.role;
+      const userId = user.claims.sub;
+      
+      // Get user's role from database (not from OIDC claims)
+      const dbUser = await storage.getUser(userId);
+      if (!dbUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const role = dbUser.role;
       
       if (role === 'admin') {
         const analytics = await storage.getPlatformAnalytics();
         res.json({ type: 'platform', data: analytics });
       } else if (role === 'hospital_staff') {
-        const staff = await storage.getHospitalStaffByUserId(user.claims.sub);
+        const staff = await storage.getHospitalStaffByUserId(userId);
         if (!staff) {
           return res.status(404).json({ message: "Hospital staff profile not found" });
         }
         const analytics = await storage.getHospitalAnalytics(staff.hospitalId);
         res.json({ type: 'hospital', data: analytics });
       } else if (role === 'consultant') {
-        const consultant = await storage.getConsultantByUserId(user.claims.sub);
+        const consultant = await storage.getConsultantByUserId(userId);
         if (!consultant) {
           return res.status(404).json({ message: "Consultant profile not found" });
         }
