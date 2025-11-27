@@ -400,14 +400,14 @@ function RequestSwapDialog({
               <Skeleton className="h-10 w-full" />
             ) : (
               <Select 
-                value={selectedTargetConsultant} 
-                onValueChange={setSelectedTargetConsultant}
+                value={selectedTargetConsultant || "anyone"} 
+                onValueChange={(val) => setSelectedTargetConsultant(val === "anyone" ? "" : val)}
               >
                 <SelectTrigger id="target-consultant" data-testid="select-target-consultant">
                   <SelectValue placeholder="Anyone available" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Anyone available</SelectItem>
+                  <SelectItem value="anyone">Anyone available</SelectItem>
                   {otherConsultants.map((consultant) => (
                     <SelectItem key={consultant.id} value={consultant.id}>
                       Consultant {consultant.id.slice(0, 8)}

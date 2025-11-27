@@ -32,6 +32,9 @@ import {
   Layers,
   ClipboardCheck,
   Radio,
+  Clock,
+  CalendarDays,
+  ArrowLeftRight,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -46,6 +49,9 @@ const adminItems = [
   { title: "Command Center", url: "/command-center", icon: Radio },
   { title: "Onboarding", url: "/onboarding", icon: ClipboardCheck },
   { title: "Schedules", url: "/schedules", icon: Calendar },
+  { title: "Timesheets", url: "/timesheets", icon: Clock },
+  { title: "Availability", url: "/availability", icon: CalendarDays },
+  { title: "Shift Swaps", url: "/shift-swaps", icon: ArrowLeftRight },
   { title: "Budget Calculator", url: "/budget", icon: Calculator },
   { title: "ROI Dashboard", url: "/roi", icon: BarChart3 },
   { title: "Documents", url: "/documents", icon: FileText },
@@ -59,6 +65,9 @@ const consultantItems = [
   { title: "My Onboarding", url: "/onboarding", icon: ClipboardCheck },
   { title: "Command Center", url: "/command-center", icon: Radio },
   { title: "My Schedule", url: "/my-schedule", icon: Calendar },
+  { title: "Timesheets", url: "/timesheets", icon: Clock },
+  { title: "Availability", url: "/availability", icon: CalendarDays },
+  { title: "Shift Swaps", url: "/shift-swaps", icon: ArrowLeftRight },
   { title: "Documents", url: "/my-documents", icon: FileText },
 ];
 
@@ -68,6 +77,8 @@ const hospitalStaffItems = [
   { title: "Projects", url: "/projects", icon: FolderKanban },
   { title: "Command Center", url: "/command-center", icon: Radio },
   { title: "Schedules", url: "/schedules", icon: Calendar },
+  { title: "Timesheets", url: "/timesheets", icon: Clock },
+  { title: "Shift Swaps", url: "/shift-swaps", icon: ArrowLeftRight },
   { title: "Consultants", url: "/consultants", icon: Users },
   { title: "ROI Survey", url: "/roi-survey", icon: BarChart3 },
 ];
