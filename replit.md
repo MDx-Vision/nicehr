@@ -4,9 +4,17 @@
 NICEHR is a comprehensive healthcare consultant management platform designed to streamline the process of matching healthcare consultants with hospital projects. The system supports multi-role authentication (Admin, Hospital Staff, Consultants) and provides tools for consultant onboarding, project scheduling, document management, and ROI analysis.
 
 ## Current State
-- **Status**: MVP Complete
+- **Status**: MVP Complete + Phase 1 Ultimate Member Features
 - **Last Updated**: November 27, 2025
 - **Authentication**: Replit Auth with role-based access control
+
+## Recent Changes (Phase 1 - Ultimate Member Features)
+1. **Auto-create consultant profiles**: New users automatically get a consultant profile on first login (no more 404 errors)
+2. **Enhanced user schema**: Added coverPhotoUrl, linkedinUrl, websiteUrl fields to users table
+3. **Object Storage integration**: File upload API with presigned URLs, ACL policies (public for profile photos, private for documents)
+4. **Enhanced Profile page**: Cover photo upload, profile photo upload, social links (LinkedIn, Website), bio editing
+5. **Document upload with ObjectUploader**: Replaced URL input with proper file upload using Uppy modal
+6. **13 document types seeded**: Resume/CV, Nursing License, BLS/ACLS/PALS Certifications, and more
 
 ## Architecture
 
@@ -24,11 +32,12 @@ NICEHR is a comprehensive healthcare consultant management platform designed to 
 ```
 ├── client/src/
 │   ├── components/
-│   │   ├── ui/           # shadcn components
+│   │   ├── ui/             # shadcn components
 │   │   ├── AppSidebar.tsx
-│   │   └── ThemeToggle.tsx
+│   │   ├── ThemeToggle.tsx
+│   │   └── ObjectUploader.tsx  # File upload component (Uppy)
 │   ├── hooks/
-│   │   ├── useAuth.ts    # Authentication hook
+│   │   ├── useAuth.ts      # Authentication hook
 │   │   └── use-toast.ts
 │   ├── lib/
 │   │   ├── queryClient.ts
@@ -45,18 +54,20 @@ NICEHR is a comprehensive healthcare consultant management platform designed to 
 │   │   ├── Documents.tsx
 │   │   ├── Search.tsx
 │   │   ├── Settings.tsx
-│   │   ├── Profile.tsx
+│   │   ├── Profile.tsx      # Enhanced with cover photo, social links
 │   │   ├── MySchedule.tsx
-│   │   ├── MyDocuments.tsx
+│   │   ├── MyDocuments.tsx  # Uses ObjectUploader for file uploads
 │   │   └── RoiSurvey.tsx
 │   └── App.tsx
 ├── server/
-│   ├── routes.ts         # API endpoints
-│   ├── storage.ts        # Database operations
-│   ├── replitAuth.ts     # Auth setup
-│   └── db.ts             # Database connection
+│   ├── routes.ts           # API endpoints
+│   ├── storage.ts          # Database operations
+│   ├── replitAuth.ts       # Auth setup (includes optionalAuth)
+│   ├── objectStorage.ts    # Object Storage service
+│   ├── objectAcl.ts        # ACL policies for files
+│   └── db.ts               # Database connection
 └── shared/
-    └── schema.ts         # Database schema + types
+    └── schema.ts           # Database schema + types
 ```
 
 ## Database Models
