@@ -846,5 +846,162 @@ export interface UserActivityWithUser extends UserActivity {
     email: string | null;
     profileImageUrl: string | null;
     role: "admin" | "hospital_staff" | "consultant";
+  } | null;
+}
+
+// ============================================
+// ANALYTICS TYPES
+// ============================================
+
+// Platform-wide analytics (Admin view)
+export interface PlatformAnalytics {
+  overview: {
+    totalConsultants: number;
+    activeConsultants: number;
+    totalHospitals: number;
+    activeHospitals: number;
+    totalProjects: number;
+    activeProjects: number;
+    totalUsers: number;
+    totalSavings: string;
   };
+  consultantsByStatus: {
+    onboarded: number;
+    pending: number;
+    available: number;
+    unavailable: number;
+  };
+  projectsByStatus: {
+    draft: number;
+    active: number;
+    completed: number;
+    cancelled: number;
+  };
+  documentCompliance: {
+    approved: number;
+    pending: number;
+    rejected: number;
+    expired: number;
+    total: number;
+    complianceRate: number;
+  };
+  activityTrend: Array<{
+    date: string;
+    count: number;
+  }>;
+  usersByRole: {
+    admin: number;
+    hospital_staff: number;
+    consultant: number;
+  };
+  recentActivity: Array<{
+    date: string;
+    logins: number;
+    actions: number;
+  }>;
+}
+
+// Hospital-specific analytics (Hospital Staff view)
+export interface HospitalAnalytics {
+  hospitalId: string;
+  hospitalName: string;
+  overview: {
+    totalProjects: number;
+    activeProjects: number;
+    completedProjects: number;
+    totalBudget: string;
+    totalSpent: string;
+    totalSavings: string;
+    averageRoi: number;
+  };
+  projectBreakdown: Array<{
+    id: string;
+    name: string;
+    status: string;
+    budget: string;
+    spent: string;
+    consultantsAssigned: number;
+    startDate: string | null;
+    endDate: string | null;
+  }>;
+  consultantPerformance: Array<{
+    consultantId: string;
+    name: string;
+    shiftsCompleted: number;
+    averageRating: number;
+    totalHours: number;
+  }>;
+  monthlySpending: Array<{
+    month: string;
+    amount: number;
+  }>;
+  savingsBreakdown: {
+    laborSavings: string;
+    benefitsSavings: string;
+    overheadSavings: string;
+    totalSavings: string;
+  };
+}
+
+// Consultant-specific analytics (Consultant view)
+export interface ConsultantAnalytics {
+  consultantId: string;
+  consultantName: string;
+  overview: {
+    totalShifts: number;
+    completedShifts: number;
+    upcomingShifts: number;
+    totalEarnings: string;
+    averageRating: number;
+    totalRatings: number;
+    utilizationRate: number;
+  };
+  documentStatus: {
+    approved: number;
+    pending: number;
+    rejected: number;
+    expired: number;
+    expiringSoon: number;
+    total: number;
+    complianceRate: number;
+  };
+  expiringDocuments: Array<{
+    id: string;
+    name: string;
+    typeName: string;
+    expirationDate: string;
+    daysUntilExpiry: number;
+  }>;
+  earningsByMonth: Array<{
+    month: string;
+    amount: number;
+  }>;
+  shiftHistory: Array<{
+    id: string;
+    projectName: string;
+    hospitalName: string;
+    date: string;
+    shiftType: string;
+    status: string;
+  }>;
+  skillsUtilization: Array<{
+    skill: string;
+    projectsUsed: number;
+  }>;
+}
+
+// Training & Certification tracking
+export interface TrainingStatus {
+  consultantId: string;
+  requiredDocuments: Array<{
+    typeId: string;
+    typeName: string;
+    isRequired: boolean;
+    status: "missing" | "pending" | "approved" | "expired" | "expiring_soon";
+    expirationDate: string | null;
+    daysUntilExpiry: number | null;
+  }>;
+  complianceScore: number;
+  nextRenewalDate: string | null;
+  overallStatus: "compliant" | "action_required" | "non_compliant";
 }
