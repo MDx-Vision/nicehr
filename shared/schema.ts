@@ -1005,3 +1005,433 @@ export interface TrainingStatus {
   nextRenewalDate: string | null;
   overallStatus: "compliant" | "action_required" | "non_compliant";
 }
+
+// ============================================
+// PHASE 8: PROJECT LIFECYCLE & ONBOARDING
+// ============================================
+
+// New Enums for Phase 8
+export const projectPhaseStatusEnum = pgEnum("project_phase_status", ["not_started", "in_progress", "completed", "skipped"]);
+export const taskPriorityEnum = pgEnum("task_priority", ["low", "medium", "high", "critical"]);
+export const taskStatusEnum = pgEnum("task_status", ["pending", "in_progress", "completed", "blocked", "cancelled"]);
+export const riskProbabilityEnum = pgEnum("risk_probability", ["low", "medium", "high"]);
+export const riskImpactEnum = pgEnum("risk_impact", ["low", "medium", "high", "critical"]);
+export const riskStatusEnum = pgEnum("risk_status", ["identified", "mitigating", "resolved", "accepted"]);
+export const onboardingTaskStatusEnum = pgEnum("onboarding_task_status", ["pending", "submitted", "under_review", "approved", "rejected"]);
+export const teamRoleCategoryEnum = pgEnum("team_role_category", ["nicehr", "hospital"]);
+
+// Project Phases - Tracking the 11 EHR implementation phases
+export const projectPhases = pgTable("project_phases", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  phaseName: varchar("phase_name").notNull(),
+  phaseNumber: integer("phase_number").notNull(),
+  description: text("description"),
+  status: projectPhaseStatusEnum("status").default("not_started").notNull(),
+  plannedStartDate: date("planned_start_date"),
+  plannedEndDate: date("planned_end_date"),
+  actualStartDate: date("actual_start_date"),
+  actualEndDate: date("actual_end_date"),
+  completionPercentage: integer("completion_percentage").default(0),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const projectPhasesRelations = relations(projectPhases, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [projectPhases.projectId],
+    references: [projects.id],
+  }),
+  tasks: many(projectTasks),
+  deliverables: many(phaseDeliverables),
+}));
+
+// Project Tasks - Tasks within each phase
+export const projectTasks = pgTable("project_tasks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  phaseId: varchar("phase_id").references(() => projectPhases.id),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  assignedTo: varchar("assigned_to").references(() => users.id),
+  priority: taskPriorityEnum("priority").default("medium").notNull(),
+  status: taskStatusEnum("status").default("pending").notNull(),
+  dueDate: date("due_date"),
+  completedAt: timestamp("completed_at"),
+  estimatedHours: decimal("estimated_hours", { precision: 6, scale: 2 }),
+  actualHours: decimal("actual_hours", { precision: 6, scale: 2 }),
+  orderIndex: integer("order_index").default(0),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const projectTasksRelations = relations(projectTasks, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectTasks.projectId],
+    references: [projects.id],
+  }),
+  phase: one(projectPhases, {
+    fields: [projectTasks.phaseId],
+    references: [projectPhases.id],
+  }),
+  assignee: one(users, {
+    fields: [projectTasks.assignedTo],
+    references: [users.id],
+  }),
+  creator: one(users, {
+    fields: [projectTasks.createdBy],
+    references: [users.id],
+  }),
+}));
+
+// Project Milestones - Key dates and deliverables
+export const projectMilestones = pgTable("project_milestones", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  phaseId: varchar("phase_id").references(() => projectPhases.id),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  dueDate: date("due_date").notNull(),
+  completedDate: date("completed_date"),
+  isCompleted: boolean("is_completed").default(false).notNull(),
+  isCritical: boolean("is_critical").default(false).notNull(),
+  reminderDays: integer("reminder_days").default(7),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const projectMilestonesRelations = relations(projectMilestones, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectMilestones.projectId],
+    references: [projects.id],
+  }),
+  phase: one(projectPhases, {
+    fields: [projectMilestones.phaseId],
+    references: [projectPhases.id],
+  }),
+  creator: one(users, {
+    fields: [projectMilestones.createdBy],
+    references: [users.id],
+  }),
+}));
+
+// Phase Deliverables - Documents/outputs per phase
+export const phaseDeliverables = pgTable("phase_deliverables", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  phaseId: varchar("phase_id").references(() => projectPhases.id).notNull(),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  fileUrl: varchar("file_url"),
+  fileName: varchar("file_name"),
+  isRequired: boolean("is_required").default(true).notNull(),
+  isSubmitted: boolean("is_submitted").default(false).notNull(),
+  submittedAt: timestamp("submitted_at"),
+  submittedBy: varchar("submitted_by").references(() => users.id),
+  isApproved: boolean("is_approved").default(false).notNull(),
+  approvedAt: timestamp("approved_at"),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const phaseDeliverablesRelations = relations(phaseDeliverables, ({ one }) => ({
+  phase: one(projectPhases, {
+    fields: [phaseDeliverables.phaseId],
+    references: [projectPhases.id],
+  }),
+  submitter: one(users, {
+    fields: [phaseDeliverables.submittedBy],
+    references: [users.id],
+  }),
+  approver: one(users, {
+    fields: [phaseDeliverables.approvedBy],
+    references: [users.id],
+  }),
+}));
+
+// Project Risks - Risk register
+export const projectRisks = pgTable("project_risks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  phaseId: varchar("phase_id").references(() => projectPhases.id),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  probability: riskProbabilityEnum("probability").default("medium").notNull(),
+  impact: riskImpactEnum("impact").default("medium").notNull(),
+  riskScore: integer("risk_score"),
+  mitigation: text("mitigation"),
+  contingency: text("contingency"),
+  status: riskStatusEnum("status").default("identified").notNull(),
+  ownerId: varchar("owner_id").references(() => users.id),
+  identifiedDate: date("identified_date").defaultNow(),
+  resolvedDate: date("resolved_date"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const projectRisksRelations = relations(projectRisks, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectRisks.projectId],
+    references: [projects.id],
+  }),
+  phase: one(projectPhases, {
+    fields: [projectRisks.phaseId],
+    references: [projectPhases.id],
+  }),
+  owner: one(users, {
+    fields: [projectRisks.ownerId],
+    references: [users.id],
+  }),
+  creator: one(users, {
+    fields: [projectRisks.createdBy],
+    references: [users.id],
+  }),
+}));
+
+// Team Role Templates - Predefined roles for NICEHR and Hospital teams
+export const teamRoleTemplates = pgTable("team_role_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  category: teamRoleCategoryEnum("category").notNull(),
+  responsibilities: text("responsibilities").array(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Project Team Assignments - Who is assigned to which project in what role
+export const projectTeamAssignments = pgTable("project_team_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  roleTemplateId: varchar("role_template_id").references(() => teamRoleTemplates.id),
+  customRoleName: varchar("custom_role_name"),
+  startDate: date("start_date"),
+  endDate: date("end_date"),
+  isActive: boolean("is_active").default(true).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const projectTeamAssignmentsRelations = relations(projectTeamAssignments, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectTeamAssignments.projectId],
+    references: [projects.id],
+  }),
+  user: one(users, {
+    fields: [projectTeamAssignments.userId],
+    references: [users.id],
+  }),
+  roleTemplate: one(teamRoleTemplates, {
+    fields: [projectTeamAssignments.roleTemplateId],
+    references: [teamRoleTemplates.id],
+  }),
+}));
+
+// Onboarding Tasks - Consultant onboarding checklist
+export const onboardingTasks = pgTable("onboarding_tasks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  consultantId: varchar("consultant_id").references(() => consultants.id).notNull(),
+  taskType: varchar("task_type").notNull(),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  documentTypeId: varchar("document_type_id").references(() => documentTypes.id),
+  isRequired: boolean("is_required").default(true).notNull(),
+  status: onboardingTaskStatusEnum("status").default("pending").notNull(),
+  dueDate: date("due_date"),
+  submittedAt: timestamp("submitted_at"),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  rejectionReason: text("rejection_reason"),
+  orderIndex: integer("order_index").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const onboardingTasksRelations = relations(onboardingTasks, ({ one }) => ({
+  consultant: one(consultants, {
+    fields: [onboardingTasks.consultantId],
+    references: [consultants.id],
+  }),
+  documentType: one(documentTypes, {
+    fields: [onboardingTasks.documentTypeId],
+    references: [documentTypes.id],
+  }),
+  reviewer: one(users, {
+    fields: [onboardingTasks.reviewedBy],
+    references: [users.id],
+  }),
+}));
+
+// ============================================
+// PHASE 8 INSERT SCHEMAS
+// ============================================
+
+export const insertProjectPhaseSchema = createInsertSchema(projectPhases).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProjectTaskSchema = createInsertSchema(projectTasks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProjectMilestoneSchema = createInsertSchema(projectMilestones).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPhaseDeliverableSchema = createInsertSchema(phaseDeliverables).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProjectRiskSchema = createInsertSchema(projectRisks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTeamRoleTemplateSchema = createInsertSchema(teamRoleTemplates).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertProjectTeamAssignmentSchema = createInsertSchema(projectTeamAssignments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertOnboardingTaskSchema = createInsertSchema(onboardingTasks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// ============================================
+// PHASE 8 TYPES
+// ============================================
+
+export type ProjectPhase = typeof projectPhases.$inferSelect;
+export type InsertProjectPhase = z.infer<typeof insertProjectPhaseSchema>;
+
+export type ProjectTask = typeof projectTasks.$inferSelect;
+export type InsertProjectTask = z.infer<typeof insertProjectTaskSchema>;
+
+export type ProjectMilestone = typeof projectMilestones.$inferSelect;
+export type InsertProjectMilestone = z.infer<typeof insertProjectMilestoneSchema>;
+
+export type PhaseDeliverable = typeof phaseDeliverables.$inferSelect;
+export type InsertPhaseDeliverable = z.infer<typeof insertPhaseDeliverableSchema>;
+
+export type ProjectRisk = typeof projectRisks.$inferSelect;
+export type InsertProjectRisk = z.infer<typeof insertProjectRiskSchema>;
+
+export type TeamRoleTemplate = typeof teamRoleTemplates.$inferSelect;
+export type InsertTeamRoleTemplate = z.infer<typeof insertTeamRoleTemplateSchema>;
+
+export type ProjectTeamAssignment = typeof projectTeamAssignments.$inferSelect;
+export type InsertProjectTeamAssignment = z.infer<typeof insertProjectTeamAssignmentSchema>;
+
+export type OnboardingTask = typeof onboardingTasks.$inferSelect;
+export type InsertOnboardingTask = z.infer<typeof insertOnboardingTaskSchema>;
+
+// Extended types for API responses
+export interface ProjectPhaseWithTasks extends ProjectPhase {
+  tasks: ProjectTask[];
+  deliverables: PhaseDeliverable[];
+}
+
+export interface ProjectLifecycle {
+  projectId: string;
+  projectName: string;
+  phases: ProjectPhaseWithTasks[];
+  milestones: ProjectMilestone[];
+  risks: ProjectRisk[];
+  teamAssignments: ProjectTeamAssignmentWithUser[];
+  overallProgress: number;
+}
+
+export interface ProjectTeamAssignmentWithUser extends ProjectTeamAssignment {
+  user: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+    profileImageUrl: string | null;
+  };
+  roleTemplate: TeamRoleTemplate | null;
+}
+
+export interface OnboardingProgress {
+  consultantId: string;
+  consultantName: string;
+  totalTasks: number;
+  completedTasks: number;
+  pendingTasks: number;
+  rejectedTasks: number;
+  progressPercentage: number;
+  tasks: OnboardingTask[];
+  isComplete: boolean;
+  nextDueDate: string | null;
+}
+
+// The 11 EHR Implementation Phases
+export const EHR_IMPLEMENTATION_PHASES = [
+  { number: 1, name: "Discovery and Needs Assessment", description: "Stakeholder engagement, project scope definition, workflow analysis, and technical infrastructure review" },
+  { number: 2, name: "Project Planning", description: "Scope definition, timeline and milestones, resource allocation, roles and responsibilities, communication strategy, risk management" },
+  { number: 3, name: "System Design and Customization", description: "Collaborate with stakeholders, review workflows/templates/forms, design clinical decision support tools, department-specific workflow development" },
+  { number: 4, name: "Build Phase", description: "Configure the system, develop custom templates/alerts/clinical decision support, set up user roles/permissions/access levels" },
+  { number: 5, name: "Data Migration Planning and Execution", description: "Develop data migration plan, extract/clean/validate data, test data migration, conduct data validation and integrity checks" },
+  { number: 6, name: "System Configuration and Integration", description: "Configure system settings, integrate EHR with existing systems, test interfaces for seamless data exchange" },
+  { number: 7, name: "Testing", description: "Unit testing, integrated testing, user acceptance testing (UAT), regression and volume testing, technical dress rehearsal, go/no-go decision making" },
+  { number: 8, name: "Training and Change Management", description: "Develop training materials, conduct training sessions, login labs, implement change management strategies, audit project work" },
+  { number: 9, name: "Go-Live Preparation", description: "Finalize data migration, create support plan, final system backup, create cutover plan, conduct technical dress rehearsal" },
+  { number: 10, name: "Go-Live Execution", description: "Execute go-live plan, provide on-site and remote support, monitor system performance and user feedback" },
+  { number: 11, name: "Post-Implementation Support", description: "Post-go-live support, gather user feedback, system performance reviews, develop long-term maintenance plan" },
+] as const;
+
+// Team Role Templates
+export const NICEHR_TEAM_ROLES = [
+  { name: "Sr. Program and Portfolio Manager", description: "Develops the project plan, assigns tasks, and oversees timelines", category: "nicehr" as const },
+  { name: "Risk Manager", description: "Identifies risks and creates mitigation strategies", category: "nicehr" as const },
+  { name: "Business Process Specialist", description: "Optimizes, automates, and oversees workflows to improve efficiency and ensure compliance", category: "nicehr" as const },
+  { name: "Program Manager", description: "Overall project oversight and stakeholder management", category: "nicehr" as const },
+  { name: "Clinical Analyst", description: "Workflow assessment and requirements gathering, supports UAT and validates clinical workflows", category: "nicehr" as const },
+  { name: "Implementation Consultant", description: "Technical and operational support", category: "nicehr" as const },
+  { name: "Technical Specialist", description: "Infrastructure assessment, planning and solution deliverables", category: "nicehr" as const },
+  { name: "Test Manager", description: "Coordinates all testing activities and documents results", category: "nicehr" as const },
+  { name: "Cutover Lead", description: "Coordinates and manages all activities related to cutover including any 3rd Party Vendors", category: "nicehr" as const },
+  { name: "Data Migration Lead", description: "Coordinates and manages all activities related to data migration including any 3rd Party Vendors", category: "nicehr" as const },
+  { name: "Technical Implementation Consultant", description: "Provides technical expertise during testing", category: "nicehr" as const },
+  { name: "Go-Live Coordinator", description: "Manages go-live activities and troubleshooting", category: "nicehr" as const },
+  { name: "Support Staff", description: "Provide on-site assistance to end-users", category: "nicehr" as const },
+  { name: "Training Coordinator", description: "Develops training materials and conducts sessions", category: "nicehr" as const },
+  { name: "Change Management Specialist", description: "Manages user engagement and communication", category: "nicehr" as const },
+  { name: "Trainer/Instructional Designer", description: "Assists the Training Coordinator and works with stakeholders", category: "nicehr" as const },
+] as const;
+
+export const HOSPITAL_TEAM_ROLES = [
+  { name: "Executive Leadership/Sponsor", description: "Approves the project plan and allocates resources", category: "hospital" as const },
+  { name: "Project Manager", description: "Collaborates with the NICEHR Senior Portfolio Manager", category: "hospital" as const },
+  { name: "Department Manager/Leader", description: "Provides operational input for planning, align departmental resources and change management", category: "hospital" as const },
+  { name: "Clinical Champion", description: "Workflow expertise and staff liaison, provides feedback on system design and customization", category: "hospital" as const },
+  { name: "Revenue Champion", description: "Revenue cycle workflow expertise and liaison", category: "hospital" as const },
+  { name: "IT Leadership", description: "Technical coordination and system integration, validates technical feasibility", category: "hospital" as const },
+  { name: "Integration Engineer", description: "Provides expertise for each module and legacy system", category: "hospital" as const },
+  { name: "Super User", description: "Validates functionality and provides feedback", category: "hospital" as const },
+  { name: "IT Specialist", description: "Addresses technical issues during go-live", category: "hospital" as const },
+  { name: "Executive Decision-Making Team", description: "Handles escalations and critical decisions", category: "hospital" as const },
+] as const;

@@ -22,6 +22,14 @@ import {
   contentAccessAudit,
   userActivities,
   notifications,
+  projectPhases,
+  projectTasks,
+  projectMilestones,
+  phaseDeliverables,
+  projectRisks,
+  teamRoleTemplates,
+  projectTeamAssignments,
+  onboardingTasks,
   type User,
   type UpsertUser,
   type Consultant,
@@ -72,6 +80,27 @@ import {
   type HospitalAnalytics,
   type ConsultantAnalytics,
   type TrainingStatus,
+  type ProjectPhase,
+  type InsertProjectPhase,
+  type ProjectTask,
+  type InsertProjectTask,
+  type ProjectMilestone,
+  type InsertProjectMilestone,
+  type PhaseDeliverable,
+  type InsertPhaseDeliverable,
+  type ProjectRisk,
+  type InsertProjectRisk,
+  type TeamRoleTemplate,
+  type InsertTeamRoleTemplate,
+  type ProjectTeamAssignment,
+  type InsertProjectTeamAssignment,
+  type OnboardingTask,
+  type InsertOnboardingTask,
+  type ProjectLifecycle,
+  type OnboardingProgress,
+  EHR_IMPLEMENTATION_PHASES,
+  NICEHR_TEAM_ROLES,
+  HOSPITAL_TEAM_ROLES,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, ilike, or, desc, asc, sql } from "drizzle-orm";
@@ -229,6 +258,67 @@ export interface IStorage {
   getHospitalAnalytics(hospitalId: string): Promise<HospitalAnalytics | null>;
   getConsultantAnalytics(consultantId: string): Promise<ConsultantAnalytics | null>;
   getTrainingStatus(consultantId: string): Promise<TrainingStatus | null>;
+
+  // ============================================
+  // PHASE 8: PROJECT LIFECYCLE & ONBOARDING
+  // ============================================
+
+  // Project Phase operations
+  getProjectPhases(projectId: string): Promise<ProjectPhase[]>;
+  getProjectPhase(id: string): Promise<ProjectPhase | undefined>;
+  createProjectPhase(phase: InsertProjectPhase): Promise<ProjectPhase>;
+  updateProjectPhase(id: string, phase: Partial<InsertProjectPhase>): Promise<ProjectPhase | undefined>;
+  initializeProjectPhases(projectId: string): Promise<ProjectPhase[]>;
+
+  // Project Task operations
+  getProjectTasks(projectId: string, phaseId?: string): Promise<ProjectTask[]>;
+  getProjectTask(id: string): Promise<ProjectTask | undefined>;
+  createProjectTask(task: InsertProjectTask): Promise<ProjectTask>;
+  updateProjectTask(id: string, task: Partial<InsertProjectTask>): Promise<ProjectTask | undefined>;
+  deleteProjectTask(id: string): Promise<boolean>;
+
+  // Project Milestone operations
+  getProjectMilestones(projectId: string): Promise<ProjectMilestone[]>;
+  getProjectMilestone(id: string): Promise<ProjectMilestone | undefined>;
+  createProjectMilestone(milestone: InsertProjectMilestone): Promise<ProjectMilestone>;
+  updateProjectMilestone(id: string, milestone: Partial<InsertProjectMilestone>): Promise<ProjectMilestone | undefined>;
+  deleteProjectMilestone(id: string): Promise<boolean>;
+
+  // Phase Deliverable operations
+  getPhaseDeliverables(phaseId: string): Promise<PhaseDeliverable[]>;
+  createPhaseDeliverable(deliverable: InsertPhaseDeliverable): Promise<PhaseDeliverable>;
+  updatePhaseDeliverable(id: string, deliverable: Partial<InsertPhaseDeliverable>): Promise<PhaseDeliverable | undefined>;
+
+  // Project Risk operations
+  getProjectRisks(projectId: string): Promise<ProjectRisk[]>;
+  getProjectRisk(id: string): Promise<ProjectRisk | undefined>;
+  createProjectRisk(risk: InsertProjectRisk): Promise<ProjectRisk>;
+  updateProjectRisk(id: string, risk: Partial<InsertProjectRisk>): Promise<ProjectRisk | undefined>;
+  deleteProjectRisk(id: string): Promise<boolean>;
+
+  // Team Role Template operations
+  getAllTeamRoleTemplates(): Promise<TeamRoleTemplate[]>;
+  getTeamRoleTemplatesByCategory(category: "nicehr" | "hospital"): Promise<TeamRoleTemplate[]>;
+  createTeamRoleTemplate(template: InsertTeamRoleTemplate): Promise<TeamRoleTemplate>;
+  initializeTeamRoleTemplates(): Promise<TeamRoleTemplate[]>;
+
+  // Project Team Assignment operations
+  getProjectTeamAssignments(projectId: string): Promise<ProjectTeamAssignment[]>;
+  createProjectTeamAssignment(assignment: InsertProjectTeamAssignment): Promise<ProjectTeamAssignment>;
+  updateProjectTeamAssignment(id: string, assignment: Partial<InsertProjectTeamAssignment>): Promise<ProjectTeamAssignment | undefined>;
+  deleteProjectTeamAssignment(id: string): Promise<boolean>;
+
+  // Onboarding Task operations
+  getOnboardingTasks(consultantId: string): Promise<OnboardingTask[]>;
+  getOnboardingTask(id: string): Promise<OnboardingTask | undefined>;
+  createOnboardingTask(task: InsertOnboardingTask): Promise<OnboardingTask>;
+  updateOnboardingTask(id: string, task: Partial<InsertOnboardingTask>): Promise<OnboardingTask | undefined>;
+  initializeOnboardingTasks(consultantId: string): Promise<OnboardingTask[]>;
+  getOnboardingProgress(consultantId: string): Promise<OnboardingProgress | null>;
+  getPendingOnboardingReviews(): Promise<OnboardingTask[]>;
+
+  // Project Lifecycle (combined view)
+  getProjectLifecycle(projectId: string): Promise<ProjectLifecycle | null>;
 }
 
 export interface ConsultantSearchFilters {
@@ -1922,6 +2012,460 @@ export class DatabaseStorage implements IStorage {
       complianceScore,
       nextRenewalDate,
       overallStatus,
+    };
+  }
+
+  // ============================================
+  // PHASE 8: PROJECT LIFECYCLE & ONBOARDING
+  // ============================================
+
+  // Project Phase operations
+  async getProjectPhases(projectId: string): Promise<ProjectPhase[]> {
+    return await db
+      .select()
+      .from(projectPhases)
+      .where(eq(projectPhases.projectId, projectId))
+      .orderBy(asc(projectPhases.phaseNumber));
+  }
+
+  async getProjectPhase(id: string): Promise<ProjectPhase | undefined> {
+    const results = await db.select().from(projectPhases).where(eq(projectPhases.id, id));
+    return results[0];
+  }
+
+  async createProjectPhase(phase: InsertProjectPhase): Promise<ProjectPhase> {
+    const results = await db.insert(projectPhases).values(phase).returning();
+    return results[0];
+  }
+
+  async updateProjectPhase(id: string, phase: Partial<InsertProjectPhase>): Promise<ProjectPhase | undefined> {
+    const results = await db
+      .update(projectPhases)
+      .set({ ...phase, updatedAt: new Date() })
+      .where(eq(projectPhases.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async initializeProjectPhases(projectId: string): Promise<ProjectPhase[]> {
+    const existingPhases = await this.getProjectPhases(projectId);
+    if (existingPhases.length > 0) {
+      return existingPhases;
+    }
+
+    const phasesToCreate = EHR_IMPLEMENTATION_PHASES.map((phase) => ({
+      projectId,
+      phaseName: phase.name,
+      phaseNumber: phase.number,
+      description: phase.description,
+      status: "not_started" as const,
+      completionPercentage: 0,
+    }));
+
+    const createdPhases: ProjectPhase[] = [];
+    for (const phase of phasesToCreate) {
+      const created = await this.createProjectPhase(phase);
+      createdPhases.push(created);
+    }
+
+    return createdPhases;
+  }
+
+  // Project Task operations
+  async getProjectTasks(projectId: string, phaseId?: string): Promise<ProjectTask[]> {
+    if (phaseId) {
+      return await db
+        .select()
+        .from(projectTasks)
+        .where(and(eq(projectTasks.projectId, projectId), eq(projectTasks.phaseId, phaseId)))
+        .orderBy(asc(projectTasks.orderIndex));
+    }
+    return await db
+      .select()
+      .from(projectTasks)
+      .where(eq(projectTasks.projectId, projectId))
+      .orderBy(asc(projectTasks.orderIndex));
+  }
+
+  async getProjectTask(id: string): Promise<ProjectTask | undefined> {
+    const results = await db.select().from(projectTasks).where(eq(projectTasks.id, id));
+    return results[0];
+  }
+
+  async createProjectTask(task: InsertProjectTask): Promise<ProjectTask> {
+    const results = await db.insert(projectTasks).values(task).returning();
+    return results[0];
+  }
+
+  async updateProjectTask(id: string, task: Partial<InsertProjectTask>): Promise<ProjectTask | undefined> {
+    const updateData: any = { ...task, updatedAt: new Date() };
+    if (task.status === "completed" && !task.completedAt) {
+      updateData.completedAt = new Date();
+    }
+    const results = await db
+      .update(projectTasks)
+      .set(updateData)
+      .where(eq(projectTasks.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteProjectTask(id: string): Promise<boolean> {
+    const results = await db.delete(projectTasks).where(eq(projectTasks.id, id)).returning();
+    return results.length > 0;
+  }
+
+  // Project Milestone operations
+  async getProjectMilestones(projectId: string): Promise<ProjectMilestone[]> {
+    return await db
+      .select()
+      .from(projectMilestones)
+      .where(eq(projectMilestones.projectId, projectId))
+      .orderBy(asc(projectMilestones.dueDate));
+  }
+
+  async getProjectMilestone(id: string): Promise<ProjectMilestone | undefined> {
+    const results = await db.select().from(projectMilestones).where(eq(projectMilestones.id, id));
+    return results[0];
+  }
+
+  async createProjectMilestone(milestone: InsertProjectMilestone): Promise<ProjectMilestone> {
+    const results = await db.insert(projectMilestones).values(milestone).returning();
+    return results[0];
+  }
+
+  async updateProjectMilestone(id: string, milestone: Partial<InsertProjectMilestone>): Promise<ProjectMilestone | undefined> {
+    const results = await db
+      .update(projectMilestones)
+      .set({ ...milestone, updatedAt: new Date() })
+      .where(eq(projectMilestones.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteProjectMilestone(id: string): Promise<boolean> {
+    const results = await db.delete(projectMilestones).where(eq(projectMilestones.id, id)).returning();
+    return results.length > 0;
+  }
+
+  // Phase Deliverable operations
+  async getPhaseDeliverables(phaseId: string): Promise<PhaseDeliverable[]> {
+    return await db
+      .select()
+      .from(phaseDeliverables)
+      .where(eq(phaseDeliverables.phaseId, phaseId));
+  }
+
+  async createPhaseDeliverable(deliverable: InsertPhaseDeliverable): Promise<PhaseDeliverable> {
+    const results = await db.insert(phaseDeliverables).values(deliverable).returning();
+    return results[0];
+  }
+
+  async updatePhaseDeliverable(id: string, deliverable: Partial<InsertPhaseDeliverable>): Promise<PhaseDeliverable | undefined> {
+    const results = await db
+      .update(phaseDeliverables)
+      .set({ ...deliverable, updatedAt: new Date() })
+      .where(eq(phaseDeliverables.id, id))
+      .returning();
+    return results[0];
+  }
+
+  // Project Risk operations
+  async getProjectRisks(projectId: string): Promise<ProjectRisk[]> {
+    return await db
+      .select()
+      .from(projectRisks)
+      .where(eq(projectRisks.projectId, projectId))
+      .orderBy(desc(projectRisks.riskScore));
+  }
+
+  async getProjectRisk(id: string): Promise<ProjectRisk | undefined> {
+    const results = await db.select().from(projectRisks).where(eq(projectRisks.id, id));
+    return results[0];
+  }
+
+  async createProjectRisk(risk: InsertProjectRisk): Promise<ProjectRisk> {
+    const probabilityScores = { low: 1, medium: 2, high: 3 };
+    const impactScores = { low: 1, medium: 2, high: 3, critical: 4 };
+    const riskScore = probabilityScores[risk.probability || 'medium'] * impactScores[risk.impact || 'medium'];
+    
+    const results = await db.insert(projectRisks).values({ ...risk, riskScore }).returning();
+    return results[0];
+  }
+
+  async updateProjectRisk(id: string, risk: Partial<InsertProjectRisk>): Promise<ProjectRisk | undefined> {
+    let riskScore: number | undefined;
+    if (risk.probability || risk.impact) {
+      const currentRisk = await this.getProjectRisk(id);
+      if (currentRisk) {
+        const probabilityScores = { low: 1, medium: 2, high: 3 };
+        const impactScores = { low: 1, medium: 2, high: 3, critical: 4 };
+        const prob = risk.probability || currentRisk.probability;
+        const imp = risk.impact || currentRisk.impact;
+        riskScore = probabilityScores[prob] * impactScores[imp];
+      }
+    }
+
+    const updateData: any = { ...risk, updatedAt: new Date() };
+    if (riskScore !== undefined) {
+      updateData.riskScore = riskScore;
+    }
+    if (risk.status === "resolved" && !risk.resolvedDate) {
+      updateData.resolvedDate = new Date().toISOString().split('T')[0];
+    }
+
+    const results = await db
+      .update(projectRisks)
+      .set(updateData)
+      .where(eq(projectRisks.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteProjectRisk(id: string): Promise<boolean> {
+    const results = await db.delete(projectRisks).where(eq(projectRisks.id, id)).returning();
+    return results.length > 0;
+  }
+
+  // Team Role Template operations
+  async getAllTeamRoleTemplates(): Promise<TeamRoleTemplate[]> {
+    return await db
+      .select()
+      .from(teamRoleTemplates)
+      .where(eq(teamRoleTemplates.isActive, true));
+  }
+
+  async getTeamRoleTemplatesByCategory(category: "nicehr" | "hospital"): Promise<TeamRoleTemplate[]> {
+    return await db
+      .select()
+      .from(teamRoleTemplates)
+      .where(and(eq(teamRoleTemplates.category, category), eq(teamRoleTemplates.isActive, true)));
+  }
+
+  async createTeamRoleTemplate(template: InsertTeamRoleTemplate): Promise<TeamRoleTemplate> {
+    const results = await db.insert(teamRoleTemplates).values(template).returning();
+    return results[0];
+  }
+
+  async initializeTeamRoleTemplates(): Promise<TeamRoleTemplate[]> {
+    const existing = await this.getAllTeamRoleTemplates();
+    if (existing.length > 0) {
+      return existing;
+    }
+
+    const allRoles = [...NICEHR_TEAM_ROLES, ...HOSPITAL_TEAM_ROLES];
+    const created: TeamRoleTemplate[] = [];
+
+    for (const role of allRoles) {
+      const template = await this.createTeamRoleTemplate({
+        name: role.name,
+        description: role.description,
+        category: role.category,
+        responsibilities: [],
+        isActive: true,
+      });
+      created.push(template);
+    }
+
+    return created;
+  }
+
+  // Project Team Assignment operations
+  async getProjectTeamAssignments(projectId: string): Promise<ProjectTeamAssignment[]> {
+    return await db
+      .select()
+      .from(projectTeamAssignments)
+      .where(eq(projectTeamAssignments.projectId, projectId));
+  }
+
+  async createProjectTeamAssignment(assignment: InsertProjectTeamAssignment): Promise<ProjectTeamAssignment> {
+    const results = await db.insert(projectTeamAssignments).values(assignment).returning();
+    return results[0];
+  }
+
+  async updateProjectTeamAssignment(id: string, assignment: Partial<InsertProjectTeamAssignment>): Promise<ProjectTeamAssignment | undefined> {
+    const results = await db
+      .update(projectTeamAssignments)
+      .set({ ...assignment, updatedAt: new Date() })
+      .where(eq(projectTeamAssignments.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteProjectTeamAssignment(id: string): Promise<boolean> {
+    const results = await db.delete(projectTeamAssignments).where(eq(projectTeamAssignments.id, id)).returning();
+    return results.length > 0;
+  }
+
+  // Onboarding Task operations
+  async getOnboardingTasks(consultantId: string): Promise<OnboardingTask[]> {
+    return await db
+      .select()
+      .from(onboardingTasks)
+      .where(eq(onboardingTasks.consultantId, consultantId))
+      .orderBy(asc(onboardingTasks.orderIndex));
+  }
+
+  async getOnboardingTask(id: string): Promise<OnboardingTask | undefined> {
+    const results = await db.select().from(onboardingTasks).where(eq(onboardingTasks.id, id));
+    return results[0];
+  }
+
+  async createOnboardingTask(task: InsertOnboardingTask): Promise<OnboardingTask> {
+    const results = await db.insert(onboardingTasks).values(task).returning();
+    return results[0];
+  }
+
+  async updateOnboardingTask(id: string, task: Partial<InsertOnboardingTask>): Promise<OnboardingTask | undefined> {
+    const results = await db
+      .update(onboardingTasks)
+      .set({ ...task, updatedAt: new Date() })
+      .where(eq(onboardingTasks.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async initializeOnboardingTasks(consultantId: string): Promise<OnboardingTask[]> {
+    const existingTasks = await this.getOnboardingTasks(consultantId);
+    if (existingTasks.length > 0) {
+      return existingTasks;
+    }
+
+    const allDocTypes = await this.getAllDocumentTypes();
+    const now = new Date();
+    const defaultDueDate = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+
+    const tasksToCreate: InsertOnboardingTask[] = allDocTypes.map((docType, index) => ({
+      consultantId,
+      taskType: "document",
+      title: `Upload ${docType.name}`,
+      description: docType.description || `Please upload your ${docType.name}`,
+      documentTypeId: docType.id,
+      isRequired: docType.isRequired,
+      status: "pending" as const,
+      dueDate: defaultDueDate.toISOString().split('T')[0],
+      orderIndex: index,
+    }));
+
+    tasksToCreate.push({
+      consultantId,
+      taskType: "profile",
+      title: "Complete Profile Information",
+      description: "Fill out all required profile fields including contact information and experience",
+      isRequired: true,
+      status: "pending" as const,
+      dueDate: defaultDueDate.toISOString().split('T')[0],
+      orderIndex: tasksToCreate.length,
+    });
+
+    const created: OnboardingTask[] = [];
+    for (const task of tasksToCreate) {
+      const result = await this.createOnboardingTask(task);
+      created.push(result);
+    }
+
+    return created;
+  }
+
+  async getOnboardingProgress(consultantId: string): Promise<OnboardingProgress | null> {
+    const consultant = await this.getConsultant(consultantId);
+    if (!consultant) return null;
+
+    const user = await this.getUser(consultant.userId);
+    const tasks = await this.getOnboardingTasks(consultantId);
+
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter(t => t.status === "approved").length;
+    const pendingTasks = tasks.filter(t => t.status === "pending" || t.status === "submitted" || t.status === "under_review").length;
+    const rejectedTasks = tasks.filter(t => t.status === "rejected").length;
+    const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+    const pendingWithDue = tasks.filter(t => t.status !== "approved" && t.dueDate);
+    const nextDueDate = pendingWithDue.length > 0 
+      ? pendingWithDue.sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime())[0]?.dueDate || null
+      : null;
+
+    return {
+      consultantId,
+      consultantName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Unknown',
+      totalTasks,
+      completedTasks,
+      pendingTasks,
+      rejectedTasks,
+      progressPercentage,
+      tasks,
+      isComplete: completedTasks === totalTasks && totalTasks > 0,
+      nextDueDate,
+    };
+  }
+
+  async getPendingOnboardingReviews(): Promise<OnboardingTask[]> {
+    return await db
+      .select()
+      .from(onboardingTasks)
+      .where(or(
+        eq(onboardingTasks.status, "submitted"),
+        eq(onboardingTasks.status, "under_review")
+      ))
+      .orderBy(asc(onboardingTasks.submittedAt));
+  }
+
+  // Project Lifecycle (combined view)
+  async getProjectLifecycle(projectId: string): Promise<ProjectLifecycle | null> {
+    const project = await this.getProject(projectId);
+    if (!project) return null;
+
+    const phases = await this.getProjectPhases(projectId);
+    const milestones = await this.getProjectMilestones(projectId);
+    const risks = await this.getProjectRisks(projectId);
+    const teamAssignmentsRaw = await this.getProjectTeamAssignments(projectId);
+
+    const phasesWithDetails = await Promise.all(
+      phases.map(async (phase) => {
+        const tasks = await this.getProjectTasks(projectId, phase.id);
+        const deliverables = await this.getPhaseDeliverables(phase.id);
+        return { ...phase, tasks, deliverables };
+      })
+    );
+
+    const teamAssignments = await Promise.all(
+      teamAssignmentsRaw.map(async (assignment) => {
+        const user = await this.getUser(assignment.userId);
+        let roleTemplate: TeamRoleTemplate | null = null;
+        if (assignment.roleTemplateId) {
+          const templates = await db
+            .select()
+            .from(teamRoleTemplates)
+            .where(eq(teamRoleTemplates.id, assignment.roleTemplateId));
+          roleTemplate = templates[0] || null;
+        }
+        return {
+          ...assignment,
+          user: {
+            id: user?.id || '',
+            firstName: user?.firstName || null,
+            lastName: user?.lastName || null,
+            email: user?.email || null,
+            profileImageUrl: user?.profileImageUrl || null,
+          },
+          roleTemplate,
+        };
+      })
+    );
+
+    const completedPhases = phases.filter(p => p.status === "completed").length;
+    const overallProgress = phases.length > 0 
+      ? Math.round((completedPhases / phases.length) * 100) 
+      : 0;
+
+    return {
+      projectId,
+      projectName: project.name,
+      phases: phasesWithDetails,
+      milestones,
+      risks,
+      teamAssignments,
+      overallProgress,
     };
   }
 }
