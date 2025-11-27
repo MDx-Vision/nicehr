@@ -62,6 +62,8 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateUserRole(id: string, role: "admin" | "hospital_staff" | "consultant"): Promise<User | undefined>;
+  updateUserProfilePhoto(id: string, photoUrl: string): Promise<User | undefined>;
+  updateUserCoverPhoto(id: string, coverPhotoUrl: string): Promise<User | undefined>;
 
   // Consultant operations
   getConsultant(id: string): Promise<Consultant | undefined>;
@@ -228,6 +230,24 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .update(users)
       .set({ role, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async updateUserProfilePhoto(id: string, photoUrl: string): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ profileImageUrl: photoUrl, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async updateUserCoverPhoto(id: string, coverPhotoUrl: string): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ coverPhotoUrl: coverPhotoUrl, updatedAt: new Date() })
       .where(eq(users.id, id))
       .returning();
     return user;

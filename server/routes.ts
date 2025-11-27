@@ -3,6 +3,11 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, requireRole } from "./replitAuth";
 import {
+  ObjectStorageService,
+  ObjectNotFoundError,
+} from "./objectStorage";
+import { ObjectPermission } from "./objectAcl";
+import {
   insertHospitalSchema,
   insertHospitalUnitSchema,
   insertHospitalModuleSchema,
@@ -739,6 +744,137 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error completing survey:", error);
       res.status(500).json({ message: "Failed to complete survey" });
+    }
+  });
+
+  // Object Storage routes
+  
+  // Serve private objects with ACL check
+  app.get("/objects/:objectPath(*)", isAuthenticated, async (req: any, res) => {
+    const userId = req.user?.claims?.sub;
+    const objectStorageService = new ObjectStorageService();
+    try {
+      const objectFile = await objectStorageService.getObjectEntityFile(req.path);
+      const canAccess = await objectStorageService.canAccessObjectEntity({
+        objectFile,
+        userId: userId,
+        requestedPermission: ObjectPermission.READ,
+      });
+      if (!canAccess) {
+        return res.sendStatus(401);
+      }
+      objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error("Error checking object access:", error);
+      if (error instanceof ObjectNotFoundError) {
+        return res.sendStatus(404);
+      }
+      return res.sendStatus(500);
+    }
+  });
+
+  // Get presigned upload URL
+  app.post("/api/objects/upload", isAuthenticated, async (req, res) => {
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error("Error getting upload URL:", error);
+      res.status(500).json({ message: "Failed to get upload URL" });
+    }
+  });
+
+  // Update profile photo
+  app.put("/api/users/:id/profile-photo", isAuthenticated, async (req: any, res) => {
+    try {
+      if (!req.body.photoUrl) {
+        return res.status(400).json({ message: "photoUrl is required" });
+      }
+
+      const userId = req.user?.claims?.sub;
+      const objectStorageService = new ObjectStorageService();
+      
+      const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
+        req.body.photoUrl,
+        {
+          owner: userId,
+          visibility: "public",
+        }
+      );
+
+      const user = await storage.updateUserProfilePhoto(req.params.id, objectPath);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({ objectPath, user });
+    } catch (error) {
+      console.error("Error updating profile photo:", error);
+      res.status(500).json({ message: "Failed to update profile photo" });
+    }
+  });
+
+  // Update cover photo
+  app.put("/api/users/:id/cover-photo", isAuthenticated, async (req: any, res) => {
+    try {
+      if (!req.body.coverPhotoUrl) {
+        return res.status(400).json({ message: "coverPhotoUrl is required" });
+      }
+
+      const userId = req.user?.claims?.sub;
+      const objectStorageService = new ObjectStorageService();
+      
+      const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
+        req.body.coverPhotoUrl,
+        {
+          owner: userId,
+          visibility: "public",
+        }
+      );
+
+      const user = await storage.updateUserCoverPhoto(req.params.id, objectPath);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({ objectPath, user });
+    } catch (error) {
+      console.error("Error updating cover photo:", error);
+      res.status(500).json({ message: "Failed to update cover photo" });
+    }
+  });
+
+  // Upload consultant document
+  app.put("/api/consultants/:id/documents", isAuthenticated, async (req: any, res) => {
+    try {
+      if (!req.body.fileUrl || !req.body.documentTypeId || !req.body.fileName) {
+        return res.status(400).json({ message: "fileUrl, documentTypeId, and fileName are required" });
+      }
+
+      const userId = req.user?.claims?.sub;
+      const objectStorageService = new ObjectStorageService();
+      
+      const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
+        req.body.fileUrl,
+        {
+          owner: userId,
+          visibility: "private",
+        }
+      );
+
+      const document = await storage.createConsultantDocument({
+        consultantId: req.params.id,
+        documentTypeId: req.body.documentTypeId,
+        fileName: req.body.fileName,
+        fileUrl: objectPath,
+        expirationDate: req.body.expirationDate,
+      });
+
+      res.status(201).json({ objectPath, document });
+    } catch (error) {
+      console.error("Error uploading consultant document:", error);
+      res.status(500).json({ message: "Failed to upload consultant document" });
     }
   });
 
