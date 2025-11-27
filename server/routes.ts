@@ -401,14 +401,18 @@ export async function registerRoutes(
           return res.status(403).json({ message: "This profile is private" });
         }
 
-        // Hide email if showEmail is false and not own profile
-        if (!userSettings.showEmail && !isOwnProfile) {
-          profile.user.email = null;
-        }
+        // Hide contact information if not the owner and settings restrict visibility
+        if (!isOwnProfile) {
+          // Hide email if showEmail is false
+          if (!userSettings.showEmail) {
+            profile.user.email = null;
+          }
 
-        // Hide phone if showPhone is false and not own profile
-        if (!userSettings.showPhone && !isOwnProfile) {
-          profile.consultant.phone = null;
+          // Hide phone and address if showPhone is false (phone-related contact info)
+          if (!userSettings.showPhone) {
+            profile.consultant.phone = null;
+            profile.consultant.address = null;
+          }
         }
       }
 
