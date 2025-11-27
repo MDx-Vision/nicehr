@@ -25,6 +25,7 @@ import {
   Settings,
   LogOut,
   Search,
+  UserCog,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -111,6 +112,26 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Account</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location === "/account"}
+                  data-testid="nav-account"
+                >
+                  <Link href="/account">
+                    <UserCog className="w-4 h-4" />
+                    <span>Account Settings</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

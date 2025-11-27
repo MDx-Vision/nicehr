@@ -25,6 +25,7 @@ import Profile from "@/pages/Profile";
 import MySchedule from "@/pages/MySchedule";
 import MyDocuments from "@/pages/MyDocuments";
 import RoiSurvey from "@/pages/RoiSurvey";
+import AccountSettings from "@/pages/AccountSettings";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -101,6 +102,7 @@ function Router() {
       <Route path="/my-schedule" component={() => <ProtectedRoute component={MySchedule} />} />
       <Route path="/my-documents" component={() => <ProtectedRoute component={MyDocuments} />} />
       <Route path="/roi-survey" component={() => <ProtectedRoute component={RoiSurvey} />} />
+      <Route path="/account" component={() => <ProtectedRoute component={AccountSettings} />} />
       <Route component={NotFound} />
     </Switch>
   );
