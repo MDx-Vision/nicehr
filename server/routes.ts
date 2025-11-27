@@ -1589,5 +1589,96 @@ export async function registerRoutes(
     }
   });
 
+  // Analytics routes
+  app.get('/api/analytics/platform', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const analytics = await storage.getPlatformAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching platform analytics:", error);
+      res.status(500).json({ message: "Failed to fetch platform analytics" });
+    }
+  });
+
+  app.get('/api/analytics/hospital/:hospitalId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { hospitalId } = req.params;
+      const user = req.user;
+      
+      // Check access: admins can access any hospital, staff can only access their own
+      if (user.claims.role !== 'admin') {
+        const staff = await storage.getHospitalStaffByUserId(user.claims.sub);
+        if (!staff || staff.hospitalId !== hospitalId) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+      }
+      
+      const analytics = await storage.getHospitalAnalytics(hospitalId);
+      if (!analytics) {
+        return res.status(404).json({ message: "Hospital not found" });
+      }
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching hospital analytics:", error);
+      res.status(500).json({ message: "Failed to fetch hospital analytics" });
+    }
+  });
+
+  app.get('/api/analytics/consultant/:consultantId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { consultantId } = req.params;
+      const user = req.user;
+      
+      // Check access: admins can access any consultant, consultants can only access their own
+      if (user.claims.role !== 'admin') {
+        const consultant = await storage.getConsultantByUserId(user.claims.sub);
+        if (!consultant || consultant.id !== consultantId) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+      }
+      
+      const analytics = await storage.getConsultantAnalytics(consultantId);
+      if (!analytics) {
+        return res.status(404).json({ message: "Consultant not found" });
+      }
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching consultant analytics:", error);
+      res.status(500).json({ message: "Failed to fetch consultant analytics" });
+    }
+  });
+
+  // Get current user's analytics based on role
+  app.get('/api/analytics/me', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const role = user.claims.role;
+      
+      if (role === 'admin') {
+        const analytics = await storage.getPlatformAnalytics();
+        res.json({ type: 'platform', data: analytics });
+      } else if (role === 'hospital_staff') {
+        const staff = await storage.getHospitalStaffByUserId(user.claims.sub);
+        if (!staff) {
+          return res.status(404).json({ message: "Hospital staff profile not found" });
+        }
+        const analytics = await storage.getHospitalAnalytics(staff.hospitalId);
+        res.json({ type: 'hospital', data: analytics });
+      } else if (role === 'consultant') {
+        const consultant = await storage.getConsultantByUserId(user.claims.sub);
+        if (!consultant) {
+          return res.status(404).json({ message: "Consultant profile not found" });
+        }
+        const analytics = await storage.getConsultantAnalytics(consultant.id);
+        res.json({ type: 'consultant', data: analytics });
+      } else {
+        res.status(400).json({ message: "Unknown user role" });
+      }
+    } catch (error) {
+      console.error("Error fetching user analytics:", error);
+      res.status(500).json({ message: "Failed to fetch analytics" });
+    }
+  });
+
   return httpServer;
 }
