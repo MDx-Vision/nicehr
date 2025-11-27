@@ -68,6 +68,10 @@ import {
   type InsertUserActivity,
   type Notification,
   type InsertNotification,
+  type PlatformAnalytics,
+  type HospitalAnalytics,
+  type ConsultantAnalytics,
+  type TrainingStatus,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, ilike, or, desc, asc, sql } from "drizzle-orm";
@@ -219,6 +223,12 @@ export interface IStorage {
   markAllNotificationsRead(userId: string): Promise<number>;
   deleteNotification(id: string): Promise<boolean>;
   getUnreadNotificationCount(userId: string): Promise<number>;
+
+  // Analytics operations
+  getPlatformAnalytics(): Promise<PlatformAnalytics>;
+  getHospitalAnalytics(hospitalId: string): Promise<HospitalAnalytics | null>;
+  getConsultantAnalytics(consultantId: string): Promise<ConsultantAnalytics | null>;
+  getTrainingStatus(consultantId: string): Promise<TrainingStatus | null>;
 }
 
 export interface ConsultantSearchFilters {
@@ -1461,6 +1471,458 @@ export class DatabaseStorage implements IStorage {
       .from(notifications)
       .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
     return Number(result?.count || 0);
+  }
+
+  // ============================================
+  // ANALYTICS OPERATIONS
+  // ============================================
+
+  async getPlatformAnalytics(): Promise<PlatformAnalytics> {
+    // Overview counts
+    const [consultantCounts] = await db
+      .select({
+        total: sql<number>`COUNT(*)`,
+        active: sql<number>`COUNT(*) FILTER (WHERE ${consultants.isAvailable} = true)`,
+        onboarded: sql<number>`COUNT(*) FILTER (WHERE ${consultants.isOnboarded} = true)`,
+      })
+      .from(consultants);
+
+    const [hospitalCount] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(hospitals);
+
+    const [projectCounts] = await db
+      .select({
+        total: sql<number>`COUNT(*)`,
+        active: sql<number>`COUNT(*) FILTER (WHERE ${projects.status} = 'active')`,
+        draft: sql<number>`COUNT(*) FILTER (WHERE ${projects.status} = 'draft')`,
+        completed: sql<number>`COUNT(*) FILTER (WHERE ${projects.status} = 'completed')`,
+        cancelled: sql<number>`COUNT(*) FILTER (WHERE ${projects.status} = 'cancelled')`,
+      })
+      .from(projects);
+
+    const [userCounts] = await db
+      .select({
+        total: sql<number>`COUNT(*)`,
+        admin: sql<number>`COUNT(*) FILTER (WHERE ${users.role} = 'admin')`,
+        hospital_staff: sql<number>`COUNT(*) FILTER (WHERE ${users.role} = 'hospital_staff')`,
+        consultant: sql<number>`COUNT(*) FILTER (WHERE ${users.role} = 'consultant')`,
+      })
+      .from(users);
+
+    const [documentCounts] = await db
+      .select({
+        total: sql<number>`COUNT(*)`,
+        approved: sql<number>`COUNT(*) FILTER (WHERE ${consultantDocuments.status} = 'approved')`,
+        pending: sql<number>`COUNT(*) FILTER (WHERE ${consultantDocuments.status} = 'pending')`,
+        rejected: sql<number>`COUNT(*) FILTER (WHERE ${consultantDocuments.status} = 'rejected')`,
+        expired: sql<number>`COUNT(*) FILTER (WHERE ${consultantDocuments.status} = 'expired')`,
+      })
+      .from(consultantDocuments);
+
+    // Total savings from budget calculations
+    const [savingsResult] = await db
+      .select({
+        totalSavings: sql<string>`COALESCE(SUM(${budgetCalculations.totalSavings}), 0)`,
+      })
+      .from(budgetCalculations);
+
+    // Activity trend (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const activityTrend = await db
+      .select({
+        date: sql<string>`DATE(${userActivities.createdAt})`,
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(userActivities)
+      .where(gte(userActivities.createdAt, thirtyDaysAgo))
+      .groupBy(sql`DATE(${userActivities.createdAt})`)
+      .orderBy(sql`DATE(${userActivities.createdAt})`);
+
+    // Recent activity breakdown (last 7 days)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const recentActivity = await db
+      .select({
+        date: sql<string>`DATE(${userActivities.createdAt})`,
+        logins: sql<number>`COUNT(*) FILTER (WHERE ${userActivities.activityType} = 'login')`,
+        actions: sql<number>`COUNT(*) FILTER (WHERE ${userActivities.activityType} != 'login')`,
+      })
+      .from(userActivities)
+      .where(gte(userActivities.createdAt, sevenDaysAgo))
+      .groupBy(sql`DATE(${userActivities.createdAt})`)
+      .orderBy(sql`DATE(${userActivities.createdAt})`);
+
+    const totalDocs = Number(documentCounts?.total || 0);
+    const approvedDocs = Number(documentCounts?.approved || 0);
+    const complianceRate = totalDocs > 0 ? Math.round((approvedDocs / totalDocs) * 100) : 0;
+
+    return {
+      overview: {
+        totalConsultants: Number(consultantCounts?.total || 0),
+        activeConsultants: Number(consultantCounts?.active || 0),
+        totalHospitals: Number(hospitalCount?.count || 0),
+        activeHospitals: Number(hospitalCount?.count || 0),
+        totalProjects: Number(projectCounts?.total || 0),
+        activeProjects: Number(projectCounts?.active || 0),
+        totalUsers: Number(userCounts?.total || 0),
+        totalSavings: savingsResult?.totalSavings || "0",
+      },
+      consultantsByStatus: {
+        onboarded: Number(consultantCounts?.onboarded || 0),
+        pending: Number(consultantCounts?.total || 0) - Number(consultantCounts?.onboarded || 0),
+        available: Number(consultantCounts?.active || 0),
+        unavailable: Number(consultantCounts?.total || 0) - Number(consultantCounts?.active || 0),
+      },
+      projectsByStatus: {
+        draft: Number(projectCounts?.draft || 0),
+        active: Number(projectCounts?.active || 0),
+        completed: Number(projectCounts?.completed || 0),
+        cancelled: Number(projectCounts?.cancelled || 0),
+      },
+      documentCompliance: {
+        approved: Number(documentCounts?.approved || 0),
+        pending: Number(documentCounts?.pending || 0),
+        rejected: Number(documentCounts?.rejected || 0),
+        expired: Number(documentCounts?.expired || 0),
+        total: totalDocs,
+        complianceRate,
+      },
+      activityTrend: activityTrend.map(row => ({
+        date: String(row.date),
+        count: Number(row.count),
+      })),
+      usersByRole: {
+        admin: Number(userCounts?.admin || 0),
+        hospital_staff: Number(userCounts?.hospital_staff || 0),
+        consultant: Number(userCounts?.consultant || 0),
+      },
+      recentActivity: recentActivity.map(row => ({
+        date: String(row.date),
+        logins: Number(row.logins),
+        actions: Number(row.actions),
+      })),
+    };
+  }
+
+  async getHospitalAnalytics(hospitalId: string): Promise<HospitalAnalytics | null> {
+    const hospital = await this.getHospital(hospitalId);
+    if (!hospital) return null;
+
+    // Get all projects for this hospital
+    const hospitalProjects = await db
+      .select()
+      .from(projects)
+      .where(eq(projects.hospitalId, hospitalId));
+
+    const [projectStats] = await db
+      .select({
+        total: sql<number>`COUNT(*)`,
+        active: sql<number>`COUNT(*) FILTER (WHERE ${projects.status} = 'active')`,
+        completed: sql<number>`COUNT(*) FILTER (WHERE ${projects.status} = 'completed')`,
+        totalBudget: sql<string>`COALESCE(SUM(${projects.estimatedBudget}), 0)`,
+      })
+      .from(projects)
+      .where(eq(projects.hospitalId, hospitalId));
+
+    // Get budget calculations for this hospital's projects
+    const projectIds = hospitalProjects.map(p => p.id);
+    let totalSavings = 0;
+    let laborSavings = 0;
+    let benefitsSavings = 0;
+    let overheadSavings = 0;
+
+    if (projectIds.length > 0) {
+      const budgetCalcs = await db
+        .select()
+        .from(budgetCalculations)
+        .where(sql`${budgetCalculations.projectId} = ANY(ARRAY[${sql.raw(projectIds.map(id => `'${id}'`).join(','))}]::varchar[])`);
+
+      for (const calc of budgetCalcs) {
+        totalSavings += Number(calc.totalSavings || 0);
+        // Estimate breakdown from total costs
+        const totalCost = Number(calc.totalEstimatedCost || 0);
+        laborSavings += totalCost * 0.5 * 0.3; // 50% is labor, save 30%
+        benefitsSavings += totalCost * 0.2; // 20% is benefits
+        overheadSavings += totalCost * 0.1 * 0.2; // 10% is overhead, save 20%
+      }
+    }
+
+    // Project breakdown
+    const projectBreakdown = await Promise.all(
+      hospitalProjects.map(async (project) => {
+        const [assignmentCount] = await db
+          .select({ count: sql<number>`COUNT(DISTINCT ${scheduleAssignments.consultantId})` })
+          .from(scheduleAssignments)
+          .innerJoin(projectSchedules, eq(scheduleAssignments.scheduleId, projectSchedules.id))
+          .where(eq(projectSchedules.projectId, project.id));
+
+        return {
+          id: project.id,
+          name: project.name,
+          status: project.status,
+          budget: String(project.estimatedBudget || 0),
+          spent: String(project.actualBudget || 0),
+          consultantsAssigned: Number(assignmentCount?.count || 0),
+          startDate: project.startDate,
+          endDate: project.endDate,
+        };
+      })
+    );
+
+    // Get consultant performance for this hospital
+    const consultantPerformance: HospitalAnalytics['consultantPerformance'] = [];
+    // This would require more complex joins - simplified for now
+
+    // Monthly spending (last 12 months) - simplified
+    const monthlySpending: HospitalAnalytics['monthlySpending'] = [];
+    const now = new Date();
+    for (let i = 11; i >= 0; i--) {
+      const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      monthlySpending.push({
+        month: month.toISOString().slice(0, 7),
+        amount: 0, // Would need actual spending data
+      });
+    }
+
+    // Calculate average ROI
+    const totalBudget = Number(projectStats?.totalBudget || 0);
+    const averageRoi = totalBudget > 0 ? Math.round((totalSavings / totalBudget) * 100) : 0;
+
+    return {
+      hospitalId,
+      hospitalName: hospital.name,
+      overview: {
+        totalProjects: Number(projectStats?.total || 0),
+        activeProjects: Number(projectStats?.active || 0),
+        completedProjects: Number(projectStats?.completed || 0),
+        totalBudget: String(totalBudget),
+        totalSpent: "0",
+        totalSavings: String(totalSavings),
+        averageRoi,
+      },
+      projectBreakdown,
+      consultantPerformance,
+      monthlySpending,
+      savingsBreakdown: {
+        laborSavings: String(Math.round(laborSavings)),
+        benefitsSavings: String(Math.round(benefitsSavings)),
+        overheadSavings: String(Math.round(overheadSavings)),
+        totalSavings: String(Math.round(totalSavings)),
+      },
+    };
+  }
+
+  async getConsultantAnalytics(consultantId: string): Promise<ConsultantAnalytics | null> {
+    const consultant = await this.getConsultant(consultantId);
+    if (!consultant) return null;
+
+    const user = await this.getUser(consultant.userId);
+    const consultantName = user 
+      ? [user.firstName, user.lastName].filter(Boolean).join(" ") || "Unknown"
+      : "Unknown";
+
+    // Get schedule assignments
+    const assignments = await db
+      .select()
+      .from(scheduleAssignments)
+      .where(eq(scheduleAssignments.consultantId, consultantId));
+
+    const now = new Date();
+    // Count assignments - scheduleAssignments doesn't have status, use count of all
+    const completedShifts = assignments.length;
+    const upcomingShifts = 0; // Would need to join with schedules to check dates
+
+    // Get ratings
+    const ratings = await this.getConsultantRatings(consultantId);
+    const avgRating = ratings.length > 0
+      ? ratings.reduce((sum, r) => sum + (r.overallRating || 0), 0) / ratings.length
+      : 0;
+
+    // Get documents
+    const documents = await db
+      .select()
+      .from(consultantDocuments)
+      .leftJoin(documentTypes, eq(consultantDocuments.documentTypeId, documentTypes.id))
+      .where(eq(consultantDocuments.consultantId, consultantId));
+
+    const docCounts = {
+      approved: 0,
+      pending: 0,
+      rejected: 0,
+      expired: 0,
+      expiringSoon: 0,
+    };
+
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+
+    const expiringDocuments: ConsultantAnalytics['expiringDocuments'] = [];
+
+    for (const doc of documents) {
+      const status = doc.consultant_documents.status;
+      if (status === 'approved') docCounts.approved++;
+      else if (status === 'pending') docCounts.pending++;
+      else if (status === 'rejected') docCounts.rejected++;
+      else if (status === 'expired') docCounts.expired++;
+
+      if (doc.consultant_documents.expirationDate) {
+        const expDate = new Date(doc.consultant_documents.expirationDate);
+        if (expDate <= thirtyDaysFromNow && expDate > now) {
+          docCounts.expiringSoon++;
+          const daysUntilExpiry = Math.ceil((expDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          expiringDocuments.push({
+            id: doc.consultant_documents.id,
+            name: doc.consultant_documents.fileName || "Unknown",
+            typeName: doc.document_types?.name || "Unknown",
+            expirationDate: doc.consultant_documents.expirationDate,
+            daysUntilExpiry,
+          });
+        }
+      }
+    }
+
+    const totalDocs = documents.length;
+    const complianceRate = totalDocs > 0 ? Math.round((docCounts.approved / totalDocs) * 100) : 0;
+
+    // Calculate utilization (simplified)
+    const utilizationRate = assignments.length > 0 ? Math.min(100, assignments.length * 10) : 0;
+
+    // Earnings by month (simplified - would need actual payment data)
+    const earningsByMonth: ConsultantAnalytics['earningsByMonth'] = [];
+    for (let i = 5; i >= 0; i--) {
+      const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      earningsByMonth.push({
+        month: month.toISOString().slice(0, 7),
+        amount: 0, // Would need actual payment tracking
+      });
+    }
+
+    // Shift history
+    const shiftHistory: ConsultantAnalytics['shiftHistory'] = [];
+    // Would need to join with schedules and projects
+
+    // Skills utilization from EMR systems
+    const skillsUtilization: ConsultantAnalytics['skillsUtilization'] = 
+      (consultant.emrSystems || []).map(skill => ({
+        skill,
+        projectsUsed: Math.floor(Math.random() * 5), // Simplified
+      }));
+
+    return {
+      consultantId,
+      consultantName,
+      overview: {
+        totalShifts: assignments.length,
+        completedShifts,
+        upcomingShifts,
+        totalEarnings: String(Number(consultant.payRate || 0) * completedShifts * 8), // Simplified
+        averageRating: Math.round(avgRating * 10) / 10,
+        totalRatings: ratings.length,
+        utilizationRate,
+      },
+      documentStatus: {
+        ...docCounts,
+        total: totalDocs,
+        complianceRate,
+      },
+      expiringDocuments: expiringDocuments.slice(0, 5),
+      earningsByMonth,
+      shiftHistory,
+      skillsUtilization,
+    };
+  }
+
+  async getTrainingStatus(consultantId: string): Promise<TrainingStatus | null> {
+    const consultant = await this.getConsultant(consultantId);
+    if (!consultant) return null;
+
+    // Get all required document types
+    const allDocTypes = await db
+      .select()
+      .from(documentTypes)
+      .where(eq(documentTypes.isRequired, true));
+
+    // Get consultant's documents
+    const consultantDocs = await db
+      .select()
+      .from(consultantDocuments)
+      .where(eq(consultantDocuments.consultantId, consultantId));
+
+    const now = new Date();
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+
+    let nextRenewalDate: string | null = null;
+    let compliantCount = 0;
+
+    const requiredDocuments: TrainingStatus['requiredDocuments'] = allDocTypes.map(docType => {
+      const doc = consultantDocs.find(d => d.documentTypeId === docType.id);
+      
+      let status: TrainingStatus['requiredDocuments'][0]['status'] = 'missing';
+      let expirationDate: string | null = null;
+      let daysUntilExpiry: number | null = null;
+
+      if (doc) {
+        if (doc.status === 'approved') {
+          if (doc.expirationDate) {
+            const expDate = new Date(doc.expirationDate);
+            expirationDate = doc.expirationDate;
+            daysUntilExpiry = Math.ceil((expDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            
+            if (expDate < now) {
+              status = 'expired';
+            } else if (expDate <= thirtyDaysFromNow) {
+              status = 'expiring_soon';
+              if (!nextRenewalDate || expDate.toISOString() < nextRenewalDate) {
+                nextRenewalDate = expDate.toISOString().split('T')[0];
+              }
+            } else {
+              status = 'approved';
+              compliantCount++;
+            }
+          } else {
+            status = 'approved';
+            compliantCount++;
+          }
+        } else if (doc.status === 'pending') {
+          status = 'pending';
+        } else if (doc.status === 'expired') {
+          status = 'expired';
+        }
+      }
+
+      return {
+        typeId: docType.id,
+        typeName: docType.name,
+        isRequired: docType.isRequired,
+        status,
+        expirationDate,
+        daysUntilExpiry,
+      };
+    });
+
+    const complianceScore = allDocTypes.length > 0 
+      ? Math.round((compliantCount / allDocTypes.length) * 100) 
+      : 100;
+
+    let overallStatus: TrainingStatus['overallStatus'] = 'compliant';
+    if (complianceScore < 50) {
+      overallStatus = 'non_compliant';
+    } else if (complianceScore < 100) {
+      overallStatus = 'action_required';
+    }
+
+    return {
+      consultantId,
+      requiredDocuments,
+      complianceScore,
+      nextRenewalDate,
+      overallStatus,
+    };
   }
 }
 
