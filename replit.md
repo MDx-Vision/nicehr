@@ -22,6 +22,7 @@ The application is built with a React, Vite, and TypeScript frontend, an Express
 - **Consultant Management**: Profiles with experience tracking, EMR badges, ratings, document uploads, and advanced search/filtering capabilities.
 - **Project Lifecycle Management**: An 11-phase EHR implementation methodology with visual progress tracking, tasks, milestones, and risk registers.
 - **Onboarding Workflow**: Streamlined consultant onboarding with task categories, progress tracking, and admin review/approval.
+- **Go-Live Command Center**: Real-time dashboard for managing go-live operations including digital sign-in/out, support ticket dispatch with SLA tracking, and shift handoff notes with acknowledgments.
 - **Scheduling**: Tools for creating shifts, assigning consultants, and managing approval workflows.
 - **Document Management**: Secure upload, status tracking, expiration alerts, and type-specific document handling.
 - **Analytics & Reporting**: Role-specific dashboards providing platform metrics, hospital ROI analysis, and consultant performance insights.
@@ -29,6 +30,9 @@ The application is built with a React, Vite, and TypeScript frontend, an Express
 - **Content Restriction System**: Role-based access control for pages, APIs, and features, with audit logging.
 - **Account Management**: User settings for privacy, notification preferences, and account deletion requests.
 - **Email Notifications**: Template-based email service integrated via Resend for various system events.
+
+## Recent Changes
+- **November 27, 2025**: Completed Phase 9 (Go-Live Command Center) - Added digital sign-in/out system, support ticket dispatch with priority levels and SLA tracking, shift handoff notes with acknowledgment workflow, and real-time KPI dashboard. Database tables: goLiveSignIns, supportTickets, shiftHandoffs.
 
 ### System Design Choices
 The architecture emphasizes modularity and scalability, with clear separation between frontend, backend, and shared components. Database schema includes dedicated tables for project phases, tasks, risks, onboarding, activities, notifications, email logs, and content access rules to support complex workflows. API endpoints are logically structured for CRUD operations and specialized functions, ensuring efficient data exchange. The use of middleware for activity logging, authentication, and access control centralizes these critical functions.
