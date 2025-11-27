@@ -4,11 +4,21 @@
 NICEHR is a comprehensive healthcare consultant management platform designed to streamline the process of matching healthcare consultants with hospital projects. The system supports multi-role authentication (Admin, Hospital Staff, Consultants) and provides tools for consultant onboarding, project scheduling, document management, and ROI analysis.
 
 ## Current State
-- **Status**: MVP Complete + Phase 1 Ultimate Member Features
+- **Status**: MVP Complete + Phase 1 & 2 Ultimate Member Features
 - **Last Updated**: November 27, 2025
 - **Authentication**: Replit Auth with role-based access control
 
-## Recent Changes (Phase 1 - Ultimate Member Features)
+## Recent Changes (Phase 2 - Member Directories)
+1. **Enhanced Directory API** (`/api/directory/consultants`): Advanced filtering, sorting, and pagination
+2. **Consultant Profile API** (`/api/consultants/:id/profile`): Full profile with documents and ratings
+3. **Enhanced Consultant Cards**: Profile photos, EMR badges, ratings, grid/list views
+4. **Advanced Filter Panel**: EMR systems, availability, experience range, modules, shift preference
+5. **Sorting Options**: Sort by name, experience, location, rating (asc/desc)
+6. **View Toggle**: Grid and list view modes
+7. **Pagination**: Server-side pagination for large result sets
+8. **Consultant Detail Modal**: Full profile view with stats, documents summary, ratings breakdown
+
+## Phase 1 Changes (Ultimate Member Profiles)
 1. **Auto-create consultant profiles**: New users automatically get a consultant profile on first login (no more 404 errors)
 2. **Enhanced user schema**: Added coverPhotoUrl, linkedinUrl, websiteUrl fields to users table
 3. **Object Storage integration**: File upload API with presigned URLs, ACL policies (public for profile photos, private for documents)
@@ -32,12 +42,14 @@ NICEHR is a comprehensive healthcare consultant management platform designed to 
 ```
 ├── client/src/
 │   ├── components/
-│   │   ├── ui/             # shadcn components
+│   │   ├── ui/                       # shadcn components
 │   │   ├── AppSidebar.tsx
 │   │   ├── ThemeToggle.tsx
-│   │   └── ObjectUploader.tsx  # File upload component (Uppy)
+│   │   ├── ObjectUploader.tsx        # File upload component (Uppy)
+│   │   ├── ConsultantCard.tsx        # Consultant card (grid/list views)
+│   │   └── ConsultantDetailModal.tsx # Full profile modal
 │   ├── hooks/
-│   │   ├── useAuth.ts      # Authentication hook
+│   │   ├── useAuth.ts                # Authentication hook
 │   │   └── use-toast.ts
 │   ├── lib/
 │   │   ├── queryClient.ts
@@ -52,22 +64,22 @@ NICEHR is a comprehensive healthcare consultant management platform designed to 
 │   │   ├── BudgetCalculator.tsx
 │   │   ├── RoiDashboard.tsx
 │   │   ├── Documents.tsx
-│   │   ├── Search.tsx
+│   │   ├── Search.tsx                # Enhanced with filters, sorting, pagination
 │   │   ├── Settings.tsx
-│   │   ├── Profile.tsx      # Enhanced with cover photo, social links
+│   │   ├── Profile.tsx               # Enhanced with cover photo, social links
 │   │   ├── MySchedule.tsx
-│   │   ├── MyDocuments.tsx  # Uses ObjectUploader for file uploads
+│   │   ├── MyDocuments.tsx           # Uses ObjectUploader for file uploads
 │   │   └── RoiSurvey.tsx
 │   └── App.tsx
 ├── server/
-│   ├── routes.ts           # API endpoints
-│   ├── storage.ts          # Database operations
-│   ├── replitAuth.ts       # Auth setup (includes optionalAuth)
-│   ├── objectStorage.ts    # Object Storage service
-│   ├── objectAcl.ts        # ACL policies for files
-│   └── db.ts               # Database connection
+│   ├── routes.ts                     # API endpoints
+│   ├── storage.ts                    # Database operations
+│   ├── replitAuth.ts                 # Auth setup (includes optionalAuth)
+│   ├── objectStorage.ts              # Object Storage service
+│   ├── objectAcl.ts                  # ACL policies for files
+│   └── db.ts                         # Database connection
 └── shared/
-    └── schema.ts           # Database schema + types
+    └── schema.ts                     # Database schema + types
 ```
 
 ## Database Models
