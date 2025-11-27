@@ -31,6 +31,8 @@ import AccountSettings from "@/pages/AccountSettings";
 import AccessControl from "@/pages/AccessControl";
 import ActivityLog from "@/pages/ActivityLog";
 import Analytics from "@/pages/Analytics";
+import ProjectPhases from "@/pages/ProjectPhases";
+import ConsultantOnboarding from "@/pages/ConsultantOnboarding";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -158,6 +160,8 @@ function Router() {
       <Route path="/access-control" component={() => <ProtectedRoute component={AccessControl} requiredRoles={["admin"]} />} />
       <Route path="/activity-log" component={() => <ProtectedRoute component={ActivityLog} requiredRoles={["admin"]} />} />
       <Route path="/analytics" component={() => <ProtectedRoute component={Analytics} />} />
+      <Route path="/project-phases" component={() => <ProtectedRoute component={ProjectPhases} />} />
+      <Route path="/onboarding" component={() => <ProtectedRoute component={ConsultantOnboarding} />} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -4,11 +4,45 @@
 NICEHR is a comprehensive healthcare consultant management platform designed to streamline the process of matching healthcare consultants with hospital projects. The system supports multi-role authentication (Admin, Hospital Staff, Consultants) and provides tools for consultant onboarding, project scheduling, document management, and ROI analysis.
 
 ## Current State
-- **Status**: MVP Complete + Phases 1-7 (Analytics Dashboard)
+- **Status**: MVP Complete + Phases 1-8 (Project Lifecycle & Onboarding)
 - **Last Updated**: November 27, 2025
 - **Authentication**: Replit Auth with role-based access control
 
-## Recent Changes (Phase 7 - Analytics Dashboard)
+## Recent Changes (Phase 8 - Project Lifecycle & Onboarding)
+1. **Database Schema Additions**: 7 new enums and 7 new tables for project lifecycle tracking
+   - **Enums**: projectPhaseStatusEnum, taskPriorityEnum, taskStatusEnum, riskProbabilityEnum, riskImpactEnum, riskStatusEnum, onboardingTaskStatusEnum, teamRoleCategoryEnum
+   - **Tables**: projectPhases, projectTasks, projectMilestones, phaseDeliverables, projectRisks, teamRoleTemplates, projectTeamAssignments, onboardingTasks
+2. **Project Phase Tracking**: 11-phase EHR implementation methodology
+   - Assessment, Planning, Design, Build, Testing, Training, Data Migration, Go-Live Prep, Go-Live, Stabilization, Optimization
+   - Visual progress tracker with phase status indicators
+   - Phase-level tasks, milestones, and notes
+3. **Project Phases Page** (/project-phases):
+   - Phase progress visualization with completion percentages
+   - Tab-based navigation: All Phases, Milestones, Risks
+   - Create/edit phase details with status and dates
+   - Initialize all 11 phases for a project
+4. **Milestones Tab**: Track key deliverables and checkpoints
+   - Title, description, due date, completion status
+5. **Risk Register**: Identify and mitigate project risks
+   - Probability, impact, mitigation strategy, status tracking
+6. **Consultant Onboarding Page** (/onboarding):
+   - Task categories: Documentation, Credentials, Compliance, Training, Orientation
+   - Progress tracking with status breakdown
+   - Submit for review workflow
+   - Admin review with approve/reject actions
+   - Rejection reasons for revision requests
+7. **API Endpoints (30+ new routes)**:
+   - `/api/projects/:id/phases` - Project phases CRUD
+   - `/api/phases/:id` - Individual phase operations
+   - `/api/phases/:id/tasks` - Phase tasks
+   - `/api/projects/:id/milestones` - Project milestones
+   - `/api/projects/:id/risks` - Risk register
+   - `/api/consultants/:id/onboarding` - Onboarding tasks
+   - `/api/onboarding-tasks/:id` - Individual task operations
+   - `/api/admin/onboarding/pending` - Pending review tasks
+8. **Sidebar Navigation**: Added Project Phases and Onboarding links for all roles
+
+### Phase 7 Changes (Analytics Dashboard)
 1. **Analytics Schema Types**: Added PlatformAnalytics, HospitalAnalytics, ConsultantAnalytics interfaces in shared/schema.ts
 2. **Storage Methods**: getPlatformAnalytics, getHospitalAnalytics, getConsultantAnalytics for role-specific data aggregation
 3. **API Routes**: 

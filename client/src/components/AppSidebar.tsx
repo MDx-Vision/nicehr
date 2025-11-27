@@ -29,6 +29,8 @@ import {
   Shield,
   Activity,
   LineChart,
+  Layers,
+  ClipboardCheck,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -39,6 +41,8 @@ const adminItems = [
   { title: "Hospitals", url: "/hospitals", icon: Building2 },
   { title: "Consultants", url: "/consultants", icon: Users },
   { title: "Projects", url: "/projects", icon: FolderKanban },
+  { title: "Project Phases", url: "/project-phases", icon: Layers },
+  { title: "Onboarding", url: "/onboarding", icon: ClipboardCheck },
   { title: "Schedules", url: "/schedules", icon: Calendar },
   { title: "Budget Calculator", url: "/budget", icon: Calculator },
   { title: "ROI Dashboard", url: "/roi", icon: BarChart3 },
@@ -50,6 +54,7 @@ const consultantItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Analytics", url: "/analytics", icon: LineChart },
   { title: "My Profile", url: "/profile", icon: Users },
+  { title: "My Onboarding", url: "/onboarding", icon: ClipboardCheck },
   { title: "My Schedule", url: "/my-schedule", icon: Calendar },
   { title: "Documents", url: "/my-documents", icon: FileText },
 ];
