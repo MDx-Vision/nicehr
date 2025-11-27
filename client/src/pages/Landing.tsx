@@ -33,14 +33,19 @@ export default function Landing() {
               <Button size="lg" asChild data-testid="button-get-started">
                 <a href="/api/login">Get Started</a>
               </Button>
-              <Button size="lg" variant="outline" data-testid="button-learn-more">
+              <Button 
+                size="lg" 
+                variant="outline" 
+                data-testid="button-learn-more"
+                onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
+              >
                 Learn More
               </Button>
             </div>
           </div>
         </section>
 
-        <section className="py-16 px-4">
+        <section id="features" className="py-16 px-4">
           <div className="container mx-auto">
             <h2 className="text-3xl font-bold text-center mb-12">Platform Features</h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
