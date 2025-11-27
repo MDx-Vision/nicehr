@@ -1919,3 +1919,506 @@ export interface ShiftSwapRequestWithDetails extends ShiftSwapRequest {
     lastName: string | null;
   } | null;
 }
+
+// ============================================
+// PHASE 11: TRAINING & COMPETENCY
+// ============================================
+
+// Enums for Phase 11
+export const courseStatusEnum = pgEnum("course_status", ["draft", "published", "archived"]);
+export const courseLevelEnum = pgEnum("course_level", ["beginner", "intermediate", "advanced"]);
+export const courseTypeEnum = pgEnum("course_type", ["online", "in_person", "hybrid"]);
+export const enrollmentStatusEnum = pgEnum("enrollment_status", ["enrolled", "in_progress", "completed", "dropped"]);
+export const questionTypeEnum = pgEnum("question_type", ["multiple_choice", "true_false", "short_answer"]);
+export const assessmentStatusEnum = pgEnum("assessment_status", ["not_started", "in_progress", "passed", "failed"]);
+export const labSessionStatusEnum = pgEnum("lab_session_status", ["scheduled", "in_progress", "completed", "cancelled"]);
+export const articleStatusEnum = pgEnum("article_status", ["draft", "published", "archived"]);
+
+// Training courses
+export const courses = pgTable("courses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  courseType: courseTypeEnum("course_type").default("online").notNull(),
+  level: courseLevelEnum("level").default("beginner").notNull(),
+  status: courseStatusEnum("status").default("draft").notNull(),
+  durationMinutes: integer("duration_minutes"),
+  ceCredits: decimal("ce_credits", { precision: 5, scale: 2 }),
+  moduleId: varchar("module_id").references(() => hospitalModules.id),
+  hospitalId: varchar("hospital_id").references(() => hospitals.id),
+  thumbnailUrl: varchar("thumbnail_url"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_courses_status").on(table.status),
+  index("idx_courses_module").on(table.moduleId),
+  index("idx_courses_hospital").on(table.hospitalId),
+]);
+
+export const coursesRelations = relations(courses, ({ one, many }) => ({
+  module: one(hospitalModules, {
+    fields: [courses.moduleId],
+    references: [hospitalModules.id],
+  }),
+  hospital: one(hospitals, {
+    fields: [courses.hospitalId],
+    references: [hospitals.id],
+  }),
+  creator: one(users, {
+    fields: [courses.createdBy],
+    references: [users.id],
+  }),
+  courseModules: many(courseModules),
+  enrollments: many(courseEnrollments),
+  assessments: many(assessments),
+}));
+
+// Course content modules/chapters
+export const courseModules = pgTable("course_modules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").references(() => courses.id).notNull(),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  orderIndex: integer("order_index").default(0).notNull(),
+  contentType: varchar("content_type"),
+  contentUrl: varchar("content_url"),
+  durationMinutes: integer("duration_minutes"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_course_modules_course").on(table.courseId),
+]);
+
+export const courseModulesRelations = relations(courseModules, ({ one, many }) => ({
+  course: one(courses, {
+    fields: [courseModules.courseId],
+    references: [courses.id],
+  }),
+  assessments: many(assessments),
+}));
+
+// User enrollments in courses
+export const courseEnrollments = pgTable("course_enrollments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").references(() => courses.id).notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  status: enrollmentStatusEnum("status").default("enrolled").notNull(),
+  enrolledAt: timestamp("enrolled_at").defaultNow(),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  progressPercent: integer("progress_percent").default(0),
+  ceCreditsEarned: decimal("ce_credits_earned", { precision: 5, scale: 2 }),
+  certificateUrl: varchar("certificate_url"),
+}, (table) => [
+  index("idx_enrollments_course").on(table.courseId),
+  index("idx_enrollments_user").on(table.userId),
+  index("idx_enrollments_status").on(table.status),
+]);
+
+export const courseEnrollmentsRelations = relations(courseEnrollments, ({ one }) => ({
+  course: one(courses, {
+    fields: [courseEnrollments.courseId],
+    references: [courses.id],
+  }),
+  user: one(users, {
+    fields: [courseEnrollments.userId],
+    references: [users.id],
+  }),
+}));
+
+// Course assessments/quizzes
+export const assessments = pgTable("assessments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").references(() => courses.id).notNull(),
+  courseModuleId: varchar("course_module_id").references(() => courseModules.id),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  passingScore: integer("passing_score").default(70),
+  maxAttempts: integer("max_attempts").default(3),
+  timeLimitMinutes: integer("time_limit_minutes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_assessments_course").on(table.courseId),
+  index("idx_assessments_module").on(table.courseModuleId),
+]);
+
+export const assessmentsRelations = relations(assessments, ({ one, many }) => ({
+  course: one(courses, {
+    fields: [assessments.courseId],
+    references: [courses.id],
+  }),
+  courseModule: one(courseModules, {
+    fields: [assessments.courseModuleId],
+    references: [courseModules.id],
+  }),
+  questions: many(assessmentQuestions),
+  attempts: many(assessmentAttempts),
+}));
+
+// Questions for assessments
+export const assessmentQuestions = pgTable("assessment_questions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assessmentId: varchar("assessment_id").references(() => assessments.id).notNull(),
+  questionType: questionTypeEnum("question_type").default("multiple_choice").notNull(),
+  questionText: text("question_text").notNull(),
+  options: jsonb("options"),
+  correctAnswer: text("correct_answer").notNull(),
+  points: integer("points").default(1),
+  orderIndex: integer("order_index").default(0),
+}, (table) => [
+  index("idx_questions_assessment").on(table.assessmentId),
+]);
+
+export const assessmentQuestionsRelations = relations(assessmentQuestions, ({ one }) => ({
+  assessment: one(assessments, {
+    fields: [assessmentQuestions.assessmentId],
+    references: [assessments.id],
+  }),
+}));
+
+// User attempts at assessments
+export const assessmentAttempts = pgTable("assessment_attempts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assessmentId: varchar("assessment_id").references(() => assessments.id).notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  attemptNumber: integer("attempt_number").default(1).notNull(),
+  score: integer("score"),
+  passed: boolean("passed").default(false),
+  startedAt: timestamp("started_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  answers: jsonb("answers"),
+}, (table) => [
+  index("idx_attempts_assessment").on(table.assessmentId),
+  index("idx_attempts_user").on(table.userId),
+]);
+
+export const assessmentAttemptsRelations = relations(assessmentAttempts, ({ one }) => ({
+  assessment: one(assessments, {
+    fields: [assessmentAttempts.assessmentId],
+    references: [assessments.id],
+  }),
+  user: one(users, {
+    fields: [assessmentAttempts.userId],
+    references: [users.id],
+  }),
+}));
+
+// Login lab sessions for EMR training
+export const loginLabs = pgTable("login_labs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  hospitalId: varchar("hospital_id").references(() => hospitals.id).notNull(),
+  moduleId: varchar("module_id").references(() => hospitalModules.id),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  facilitatorId: varchar("facilitator_id").references(() => users.id),
+  scheduledAt: timestamp("scheduled_at").notNull(),
+  durationMinutes: integer("duration_minutes").default(60),
+  maxParticipants: integer("max_participants").default(20),
+  status: labSessionStatusEnum("status").default("scheduled").notNull(),
+  location: varchar("location"),
+  room: varchar("room"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_login_labs_project").on(table.projectId),
+  index("idx_login_labs_hospital").on(table.hospitalId),
+  index("idx_login_labs_status").on(table.status),
+  index("idx_login_labs_scheduled").on(table.scheduledAt),
+]);
+
+export const loginLabsRelations = relations(loginLabs, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [loginLabs.projectId],
+    references: [projects.id],
+  }),
+  hospital: one(hospitals, {
+    fields: [loginLabs.hospitalId],
+    references: [hospitals.id],
+  }),
+  module: one(hospitalModules, {
+    fields: [loginLabs.moduleId],
+    references: [hospitalModules.id],
+  }),
+  facilitator: one(users, {
+    fields: [loginLabs.facilitatorId],
+    references: [users.id],
+  }),
+  participants: many(loginLabParticipants),
+}));
+
+// Participants in login labs
+export const loginLabParticipants = pgTable("login_lab_participants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  loginLabId: varchar("login_lab_id").references(() => loginLabs.id).notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  accessValidated: boolean("access_validated").default(false),
+  customizationNotes: text("customization_notes"),
+  attendedAt: timestamp("attended_at"),
+  completedAt: timestamp("completed_at"),
+}, (table) => [
+  index("idx_lab_participants_lab").on(table.loginLabId),
+  index("idx_lab_participants_user").on(table.userId),
+]);
+
+export const loginLabParticipantsRelations = relations(loginLabParticipants, ({ one }) => ({
+  loginLab: one(loginLabs, {
+    fields: [loginLabParticipants.loginLabId],
+    references: [loginLabs.id],
+  }),
+  user: one(users, {
+    fields: [loginLabParticipants.userId],
+    references: [users.id],
+  }),
+}));
+
+// Knowledge base articles
+export const knowledgeArticles = pgTable("knowledge_articles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: varchar("title").notNull(),
+  content: text("content").notNull(),
+  category: varchar("category"),
+  moduleId: varchar("module_id").references(() => hospitalModules.id),
+  tags: text("tags").array(),
+  status: articleStatusEnum("status").default("draft").notNull(),
+  authorId: varchar("author_id").references(() => users.id),
+  version: integer("version").default(1),
+  viewCount: integer("view_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_articles_status").on(table.status),
+  index("idx_articles_module").on(table.moduleId),
+  index("idx_articles_category").on(table.category),
+  index("idx_articles_author").on(table.authorId),
+]);
+
+export const knowledgeArticlesRelations = relations(knowledgeArticles, ({ one }) => ({
+  module: one(hospitalModules, {
+    fields: [knowledgeArticles.moduleId],
+    references: [hospitalModules.id],
+  }),
+  author: one(users, {
+    fields: [knowledgeArticles.authorId],
+    references: [users.id],
+  }),
+}));
+
+// ============================================
+// PHASE 11 INSERT SCHEMAS
+// ============================================
+
+export const insertCourseSchema = createInsertSchema(courses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCourseModuleSchema = createInsertSchema(courseModules).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCourseEnrollmentSchema = createInsertSchema(courseEnrollments).omit({
+  id: true,
+  enrolledAt: true,
+});
+
+export const insertAssessmentSchema = createInsertSchema(assessments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAssessmentQuestionSchema = createInsertSchema(assessmentQuestions).omit({
+  id: true,
+});
+
+export const insertAssessmentAttemptSchema = createInsertSchema(assessmentAttempts).omit({
+  id: true,
+  startedAt: true,
+});
+
+export const insertLoginLabSchema = createInsertSchema(loginLabs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertLoginLabParticipantSchema = createInsertSchema(loginLabParticipants).omit({
+  id: true,
+});
+
+export const insertKnowledgeArticleSchema = createInsertSchema(knowledgeArticles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// ============================================
+// PHASE 11 TYPES
+// ============================================
+
+export type Course = typeof courses.$inferSelect;
+export type InsertCourse = z.infer<typeof insertCourseSchema>;
+
+export type CourseModule = typeof courseModules.$inferSelect;
+export type InsertCourseModule = z.infer<typeof insertCourseModuleSchema>;
+
+export type CourseEnrollment = typeof courseEnrollments.$inferSelect;
+export type InsertCourseEnrollment = z.infer<typeof insertCourseEnrollmentSchema>;
+
+export type Assessment = typeof assessments.$inferSelect;
+export type InsertAssessment = z.infer<typeof insertAssessmentSchema>;
+
+export type AssessmentQuestion = typeof assessmentQuestions.$inferSelect;
+export type InsertAssessmentQuestion = z.infer<typeof insertAssessmentQuestionSchema>;
+
+export type AssessmentAttempt = typeof assessmentAttempts.$inferSelect;
+export type InsertAssessmentAttempt = z.infer<typeof insertAssessmentAttemptSchema>;
+
+export type LoginLab = typeof loginLabs.$inferSelect;
+export type InsertLoginLab = z.infer<typeof insertLoginLabSchema>;
+
+export type LoginLabParticipant = typeof loginLabParticipants.$inferSelect;
+export type InsertLoginLabParticipant = z.infer<typeof insertLoginLabParticipantSchema>;
+
+export type KnowledgeArticle = typeof knowledgeArticles.$inferSelect;
+export type InsertKnowledgeArticle = z.infer<typeof insertKnowledgeArticleSchema>;
+
+// ============================================
+// PHASE 11 EXTENDED TYPES
+// ============================================
+
+export interface CourseWithDetails extends Course {
+  module: {
+    id: string;
+    name: string;
+  } | null;
+  hospital: {
+    id: string;
+    name: string;
+  } | null;
+  creator: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+  courseModules: CourseModule[];
+  enrollmentCount: number;
+}
+
+export interface CourseEnrollmentWithDetails extends CourseEnrollment {
+  course: {
+    id: string;
+    title: string;
+    durationMinutes: number | null;
+    ceCredits: string | null;
+    level: "beginner" | "intermediate" | "advanced";
+  };
+  user: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+  };
+}
+
+export interface AssessmentWithDetails extends Assessment {
+  course: {
+    id: string;
+    title: string;
+  };
+  courseModule: {
+    id: string;
+    title: string;
+  } | null;
+  questions: AssessmentQuestion[];
+  attemptCount: number;
+}
+
+export interface AssessmentAttemptWithDetails extends AssessmentAttempt {
+  assessment: {
+    id: string;
+    title: string;
+    passingScore: number | null;
+    maxAttempts: number | null;
+  };
+  user: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  };
+}
+
+export interface LoginLabWithDetails extends LoginLab {
+  project: {
+    id: string;
+    name: string;
+  };
+  hospital: {
+    id: string;
+    name: string;
+  };
+  module: {
+    id: string;
+    name: string;
+  } | null;
+  facilitator: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+  participants: LoginLabParticipantWithUser[];
+  participantCount: number;
+}
+
+export interface LoginLabParticipantWithUser extends LoginLabParticipant {
+  user: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+  };
+}
+
+export interface KnowledgeArticleWithDetails extends KnowledgeArticle {
+  module: {
+    id: string;
+    name: string;
+  } | null;
+  author: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+}
+
+// Training Dashboard Analytics
+export interface TrainingAnalytics {
+  totalCourses: number;
+  publishedCourses: number;
+  totalEnrollments: number;
+  completedEnrollments: number;
+  averageCompletionRate: number;
+  averageScore: number;
+  upcomingLoginLabs: number;
+  totalArticles: number;
+  coursesByLevel: {
+    beginner: number;
+    intermediate: number;
+    advanced: number;
+  };
+  enrollmentsByStatus: {
+    enrolled: number;
+    in_progress: number;
+    completed: number;
+    dropped: number;
+  };
+  recentEnrollments: CourseEnrollmentWithDetails[];
+  popularCourses: Array<{
+    courseId: string;
+    title: string;
+    enrollmentCount: number;
+    completionRate: number;
+  }>;
+}
