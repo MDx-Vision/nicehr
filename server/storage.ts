@@ -66,6 +66,7 @@ export interface IStorage {
   // Consultant operations
   getConsultant(id: string): Promise<Consultant | undefined>;
   getConsultantByUserId(userId: string): Promise<Consultant | undefined>;
+  getOrCreateConsultantByUserId(userId: string): Promise<Consultant>;
   getAllConsultants(): Promise<Consultant[]>;
   createConsultant(consultant: InsertConsultant): Promise<Consultant>;
   updateConsultant(id: string, consultant: Partial<InsertConsultant>): Promise<Consultant | undefined>;
@@ -241,6 +242,19 @@ export class DatabaseStorage implements IStorage {
   async getConsultantByUserId(userId: string): Promise<Consultant | undefined> {
     const [consultant] = await db.select().from(consultants).where(eq(consultants.userId, userId));
     return consultant;
+  }
+
+  async getOrCreateConsultantByUserId(userId: string): Promise<Consultant> {
+    const existing = await this.getConsultantByUserId(userId);
+    if (existing) {
+      return existing;
+    }
+    const tngId = `TNG-${Date.now().toString(36).toUpperCase()}`;
+    const [newConsultant] = await db
+      .insert(consultants)
+      .values({ userId, tngId })
+      .returning();
+    return newConsultant;
   }
 
   async getAllConsultants(): Promise<Consultant[]> {

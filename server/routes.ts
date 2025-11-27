@@ -265,10 +265,7 @@ export async function registerRoutes(
 
   app.get('/api/consultants/user/:userId', isAuthenticated, async (req, res) => {
     try {
-      const consultant = await storage.getConsultantByUserId(req.params.userId);
-      if (!consultant) {
-        return res.status(404).json({ message: "Consultant not found" });
-      }
+      const consultant = await storage.getOrCreateConsultantByUserId(req.params.userId);
       res.json(consultant);
     } catch (error) {
       console.error("Error fetching consultant:", error);
