@@ -35,6 +35,7 @@ import ProjectPhases from "@/pages/ProjectPhases";
 import ConsultantOnboarding from "@/pages/ConsultantOnboarding";
 import CommandCenter from "@/pages/CommandCenter";
 import Timesheets from "@/pages/Timesheets";
+import Availability from "@/pages/Availability";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -166,6 +167,7 @@ function Router() {
       <Route path="/onboarding" component={() => <ProtectedRoute component={ConsultantOnboarding} />} />
       <Route path="/command-center" component={() => <ProtectedRoute component={CommandCenter} />} />
       <Route path="/timesheets" component={() => <ProtectedRoute component={Timesheets} />} />
+      <Route path="/availability" component={() => <ProtectedRoute component={Availability} />} />
       <Route component={NotFound} />
     </Switch>
   );
