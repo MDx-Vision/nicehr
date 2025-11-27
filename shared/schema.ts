@@ -473,6 +473,23 @@ export const roiResponses = pgTable("roi_responses", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Email status enum
+export const emailStatusEnum = pgEnum("email_status", ["sent", "failed", "pending"]);
+
+// Email notification logs for tracking sent emails
+export const emailNotifications = pgTable("email_notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
+  recipientEmail: varchar("recipient_email").notNull(),
+  templateType: varchar("template_type").notNull(),
+  subject: varchar("subject").notNull(),
+  status: emailStatusEnum("status").default("pending").notNull(),
+  error: text("error"),
+  metadata: jsonb("metadata"),
+  sentAt: timestamp("sent_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const roiResponsesRelations = relations(roiResponses, ({ one }) => ({
   survey: one(roiSurveys, {
     fields: [roiResponses.surveyId],
@@ -647,3 +664,6 @@ export type InsertRoiSurvey = z.infer<typeof insertRoiSurveySchema>;
 
 export type RoiResponse = typeof roiResponses.$inferSelect;
 export type InsertRoiResponse = z.infer<typeof insertRoiResponseSchema>;
+
+export type EmailNotification = typeof emailNotifications.$inferSelect;
+export type InsertEmailNotification = typeof emailNotifications.$inferInsert;

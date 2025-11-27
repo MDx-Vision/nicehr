@@ -418,19 +418,8 @@ const emailTemplates: Record<EmailTemplateType, { subject: string; getHtml: (dat
   }
 };
 
-// Email notification log entry
-export interface EmailNotificationLog {
-  userId: string;
-  templateType: EmailTemplateType;
-  recipientEmail: string;
-  subject: string;
-  status: 'sent' | 'failed';
-  error?: string;
-  sentAt: Date;
-}
-
-// In-memory log for now (can be moved to database later)
-const emailLogs: EmailNotificationLog[] = [];
+// Import storage for database logging
+import { storage } from './storage';
 
 // Main email sending function
 export async function sendEmail(
@@ -454,31 +443,37 @@ export async function sendEmail(
       html: template.getHtml(data)
     });
 
-    // Log success
-    const logEntry: EmailNotificationLog = {
-      userId: userId || 'unknown',
-      templateType,
+    // Log to database
+    await storage.createEmailNotification({
+      userId: userId || null,
       recipientEmail: to,
+      templateType,
       subject: template.subject,
       status: 'sent',
-      sentAt: new Date()
-    };
-    emailLogs.push(logEntry);
+      metadata: data,
+      sentAt: new Date(),
+    });
+    
     console.log(`[Email] Sent ${templateType} email to ${to}`);
 
     return { success: true };
   } catch (error: any) {
-    // Log failure
-    const logEntry: EmailNotificationLog = {
-      userId: userId || 'unknown',
-      templateType,
-      recipientEmail: to,
-      subject: emailTemplates[templateType]?.subject || 'Unknown',
-      status: 'failed',
-      error: error.message,
-      sentAt: new Date()
-    };
-    emailLogs.push(logEntry);
+    // Log failure to database
+    try {
+      await storage.createEmailNotification({
+        userId: userId || null,
+        recipientEmail: to,
+        templateType,
+        subject: emailTemplates[templateType]?.subject || 'Unknown',
+        status: 'failed',
+        error: error.message,
+        metadata: data,
+        sentAt: new Date(),
+      });
+    } catch (logError) {
+      console.error('[Email] Failed to log email error:', logError);
+    }
+    
     console.error(`[Email] Failed to send ${templateType} email to ${to}:`, error.message);
 
     return { success: false, error: error.message };
@@ -488,11 +483,6 @@ export async function sendEmail(
 // Helper function to check if user has email notifications enabled
 export async function shouldSendEmail(user: { emailNotifications?: boolean; email?: string | null }): Promise<boolean> {
   return user.emailNotifications !== false && !!user.email;
-}
-
-// Get recent email logs (for admin panel)
-export function getEmailLogs(limit: number = 100): EmailNotificationLog[] {
-  return emailLogs.slice(-limit);
 }
 
 // Notification helper functions

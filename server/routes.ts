@@ -26,6 +26,13 @@ import {
   insertScheduleAssignmentSchema,
   accountSettingsSchema,
 } from "@shared/schema";
+import {
+  sendWelcomeEmail,
+  sendDocumentApprovedEmail,
+  sendDocumentRejectedEmail,
+  sendScheduleAssignedEmail,
+  sendAccountDeletionRequestedEmail,
+} from "./emailService";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -460,6 +467,19 @@ export async function registerRoutes(
       if (!user) {
         return res.status(404).json({ message: "Account not found" });
       }
+      
+      // Send email notification for account deletion request
+      if (user.email) {
+        try {
+          await sendAccountDeletionRequestedEmail(
+            user,
+            user.deletionRequestedAt?.toLocaleDateString() || new Date().toLocaleDateString()
+          );
+        } catch (emailError) {
+          console.error("Error sending account deletion email:", emailError);
+        }
+      }
+      
       res.json({ message: "Deletion request submitted", deletionRequestedAt: user.deletionRequestedAt });
     } catch (error) {
       console.error("Error requesting account deletion:", error);
@@ -518,6 +538,27 @@ export async function registerRoutes(
       if (!document) {
         return res.status(404).json({ message: "Document not found" });
       }
+      
+      // Send email notification for document status change
+      try {
+        const consultant = await storage.getConsultant(document.consultantId);
+        if (consultant) {
+          const user = await storage.getUser(consultant.userId);
+          if (user) {
+            const docType = await storage.getDocumentType(document.documentTypeId);
+            const documentTypeName = docType?.name || 'Document';
+            
+            if (status === 'approved') {
+              await sendDocumentApprovedEmail(user, documentTypeName);
+            } else if (status === 'rejected') {
+              await sendDocumentRejectedEmail(user, documentTypeName, notes);
+            }
+          }
+        }
+      } catch (emailError) {
+        console.error("Error sending document status email:", emailError);
+      }
+      
       res.json(document);
     } catch (error) {
       console.error("Error updating document status:", error);
@@ -785,6 +826,31 @@ export async function registerRoutes(
         scheduleId: req.params.scheduleId,
       });
       const assignment = await storage.createScheduleAssignment(validated);
+      
+      // Send email notification to assigned consultant
+      try {
+        const consultant = await storage.getConsultant(validated.consultantId);
+        if (consultant) {
+          const user = await storage.getUser(consultant.userId);
+          const schedule = await storage.getSchedule(req.params.scheduleId);
+          if (user && schedule) {
+            const project = await storage.getProject(schedule.projectId);
+            if (project) {
+              const hospital = project.hospitalId ? await storage.getHospital(project.hospitalId) : null;
+              await sendScheduleAssignedEmail(user, {
+                projectName: project.name,
+                hospitalName: hospital?.name || 'TBD',
+                shiftDate: schedule.scheduleDate || 'TBD',
+                shiftTime: schedule.shiftType === 'day' ? '7:00 AM - 7:00 PM' : schedule.shiftType === 'night' ? '7:00 PM - 7:00 AM' : '3:00 PM - 11:00 PM',
+                shiftType: schedule.shiftType || 'day',
+              });
+            }
+          }
+        }
+      } catch (emailError) {
+        console.error("Error sending schedule assignment email:", emailError);
+      }
+      
       res.status(201).json(assignment);
     } catch (error) {
       console.error("Error creating assignment:", error);

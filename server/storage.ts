@@ -17,6 +17,7 @@ import {
   roiQuestions,
   roiSurveys,
   roiResponses,
+  emailNotifications,
   type User,
   type UpsertUser,
   type Consultant,
@@ -53,6 +54,8 @@ import {
   type InsertRoiSurvey,
   type RoiResponse,
   type InsertRoiResponse,
+  type EmailNotification,
+  type InsertEmailNotification,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, ilike, or, desc, asc, sql } from "drizzle-orm";
@@ -130,6 +133,7 @@ export interface IStorage {
 
   // Document Type operations
   getAllDocumentTypes(): Promise<DocumentType[]>;
+  getDocumentType(id: string): Promise<DocumentType | undefined>;
   createDocumentType(docType: InsertDocumentType): Promise<DocumentType>;
 
   // Consultant Document operations
@@ -648,6 +652,11 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(documentTypes);
   }
 
+  async getDocumentType(id: string): Promise<DocumentType | undefined> {
+    const [docType] = await db.select().from(documentTypes).where(eq(documentTypes.id, id));
+    return docType;
+  }
+
   async createDocumentType(docType: InsertDocumentType): Promise<DocumentType> {
     const [newDocType] = await db.insert(documentTypes).values(docType).returning();
     return newDocType;
@@ -1085,6 +1094,46 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId))
       .returning();
     return updated;
+  }
+
+  // Email notification operations
+  async createEmailNotification(notification: Omit<InsertEmailNotification, 'id' | 'createdAt'>): Promise<EmailNotification> {
+    const [created] = await db
+      .insert(emailNotifications)
+      .values(notification)
+      .returning();
+    return created;
+  }
+
+  async getEmailNotifications(limit: number = 100, userId?: string): Promise<EmailNotification[]> {
+    if (userId) {
+      return db
+        .select()
+        .from(emailNotifications)
+        .where(eq(emailNotifications.userId, userId))
+        .orderBy(desc(emailNotifications.createdAt))
+        .limit(limit);
+    }
+    return db
+      .select()
+      .from(emailNotifications)
+      .orderBy(desc(emailNotifications.createdAt))
+      .limit(limit);
+  }
+
+  async getEmailNotificationStats(): Promise<{ sent: number; failed: number; total: number }> {
+    const [stats] = await db
+      .select({
+        sent: sql<number>`COUNT(*) FILTER (WHERE status = 'sent')`,
+        failed: sql<number>`COUNT(*) FILTER (WHERE status = 'failed')`,
+        total: sql<number>`COUNT(*)`,
+      })
+      .from(emailNotifications);
+    return {
+      sent: Number(stats?.sent || 0),
+      failed: Number(stats?.failed || 0),
+      total: Number(stats?.total || 0),
+    };
   }
 }
 
