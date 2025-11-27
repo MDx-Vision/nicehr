@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,11 +23,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText, Upload, CheckCircle, XCircle, Clock, Plus, AlertTriangle } from "lucide-react";
+import { ObjectUploader } from "@/components/ObjectUploader";
+import { FileText, Upload, CheckCircle, XCircle, Clock, Plus, AlertTriangle, FileUp } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import type { Consultant, ConsultantDocument, DocumentType } from "@shared/schema";
+import type { UploadResult } from "@uppy/core";
 import { format } from "date-fns";
 
 export default function MyDocuments() {
@@ -35,7 +36,9 @@ export default function MyDocuments() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedDocType, setSelectedDocType] = useState("");
-  const [fileUrl, setFileUrl] = useState("");
+  const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null);
+  const [uploadedFileName, setUploadedFileName] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
 
   const { data: consultant, isLoading: consultantLoading } = useQuery<Consultant>({
     queryKey: ["/api/consultants/user", user?.id],
@@ -51,32 +54,80 @@ export default function MyDocuments() {
     queryKey: ["/api/document-types"],
   });
 
-  const uploadMutation = useMutation({
-    mutationFn: async (data: { documentTypeId: string; fileUrl: string }) => {
-      return await apiRequest("POST", `/api/consultants/${consultant?.id}/documents`, {
-        ...data,
-        fileName: "Document",
-        fileSize: 0,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/consultants", consultant?.id, "documents"] });
-      toast({ title: "Document uploaded successfully" });
-      setIsDialogOpen(false);
-      setSelectedDocType("");
-      setFileUrl("");
-    },
-    onError: () => {
-      toast({ title: "Failed to upload document", variant: "destructive" });
-    },
-  });
+  const handleGetUploadParameters = async () => {
+    const res = await fetch('/api/objects/upload', { 
+      method: 'POST', 
+      credentials: 'include' 
+    });
+    const { uploadURL } = await res.json();
+    return { method: 'PUT' as const, url: uploadURL };
+  };
 
-  const handleUpload = () => {
-    if (!selectedDocType || !fileUrl) {
-      toast({ title: "Please fill in all fields", variant: "destructive" });
+  const handleUploadComplete = async (result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
+    if (result.successful?.[0]) {
+      const uploadedFile = result.successful[0];
+      const fileName = uploadedFile.name || 'Document';
+      const uploadUrl = uploadedFile.uploadURL;
+      
+      if (!selectedDocType) {
+        toast({ title: "Please select a document type first", variant: "destructive" });
+        return;
+      }
+
+      setIsUploading(true);
+      
+      try {
+        const res = await fetch(`/api/consultants/${consultant?.id}/documents`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ 
+            fileUrl: uploadUrl,
+            documentTypeId: selectedDocType,
+            fileName: fileName,
+          })
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          setUploadedFileUrl(data.objectPath);
+          setUploadedFileName(fileName);
+          toast({ title: "File uploaded successfully" });
+        } else {
+          const error = await res.json();
+          toast({ title: error.message || "Failed to save document", variant: "destructive" });
+        }
+      } catch (error) {
+        console.error('Failed to save document:', error);
+        toast({ title: "Failed to save document", variant: "destructive" });
+      } finally {
+        setIsUploading(false);
+      }
+    }
+  };
+
+  const handleSaveDocument = () => {
+    if (!selectedDocType || !uploadedFileUrl) {
+      toast({ title: "Please select a document type and upload a file", variant: "destructive" });
       return;
     }
-    uploadMutation.mutate({ documentTypeId: selectedDocType, fileUrl });
+    queryClient.invalidateQueries({ queryKey: ["/api/consultants", consultant?.id, "documents"] });
+    toast({ title: "Document saved successfully" });
+    setIsDialogOpen(false);
+    resetForm();
+  };
+
+  const resetForm = () => {
+    setSelectedDocType("");
+    setUploadedFileUrl(null);
+    setUploadedFileName("");
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    setIsDialogOpen(open);
+    if (!open) {
+      resetForm();
+    }
   };
 
   const getStatusIcon = (status: string) => {
@@ -122,7 +173,7 @@ export default function MyDocuments() {
             Upload and manage your required documents
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
           <DialogTrigger asChild>
             <Button data-testid="button-upload-document">
               <Upload className="w-4 h-4 mr-2" />
@@ -133,7 +184,7 @@ export default function MyDocuments() {
             <DialogHeader>
               <DialogTitle>Upload Document</DialogTitle>
               <DialogDescription>
-                Select a document type and provide the file URL
+                Select a document type and upload your file
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -153,24 +204,39 @@ export default function MyDocuments() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>File URL</Label>
-                <Input
-                  placeholder="https://..."
-                  value={fileUrl}
-                  onChange={(e) => setFileUrl(e.target.value)}
-                  data-testid="input-file-url"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Upload your file to Object Storage and paste the URL here
-                </p>
+                <Label>Upload Document</Label>
+                <ObjectUploader
+                  maxNumberOfFiles={1}
+                  maxFileSize={52428800}
+                  onGetUploadParameters={handleGetUploadParameters}
+                  onComplete={handleUploadComplete}
+                  buttonClassName="w-full"
+                >
+                  <FileUp className="w-4 h-4 mr-2" />
+                  {uploadedFileName ? `Selected: ${uploadedFileName}` : "Choose File"}
+                </ObjectUploader>
+                {uploadedFileUrl && (
+                  <p className="text-xs text-green-600" data-testid="text-upload-success">
+                    File uploaded successfully
+                  </p>
+                )}
+                {isUploading && (
+                  <p className="text-xs text-muted-foreground">
+                    Saving document...
+                  </p>
+                )}
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              <Button variant="outline" onClick={() => handleDialogClose(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleUpload} disabled={uploadMutation.isPending} data-testid="button-submit-document">
-                Upload
+              <Button 
+                onClick={handleSaveDocument} 
+                disabled={!uploadedFileUrl || isUploading} 
+                data-testid="button-submit-document"
+              >
+                Save Document
               </Button>
             </DialogFooter>
           </DialogContent>
