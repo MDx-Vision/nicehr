@@ -37,6 +37,10 @@ import {
   insertGoLiveSignInSchema,
   insertSupportTicketSchema,
   insertShiftHandoffSchema,
+  insertTimesheetSchema,
+  insertTimesheetEntrySchema,
+  insertAvailabilityBlockSchema,
+  insertShiftSwapRequestSchema,
 } from "@shared/schema";
 import {
   sendWelcomeEmail,
@@ -2691,6 +2695,611 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error acknowledging handoff:", error);
       res.status(500).json({ message: "Failed to acknowledge handoff" });
+    }
+  });
+
+  // ============================================
+  // PHASE 10: TIMESHEET, AVAILABILITY & SHIFT SWAP ROUTES
+  // ============================================
+
+  // Timesheet Routes
+  app.get('/api/timesheets', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const consultant = await storage.getConsultantByUserId(userId);
+      if (!consultant) {
+        return res.status(404).json({ message: "Consultant profile not found" });
+      }
+      const timesheets = await storage.getTimesheetsByConsultant(consultant.id);
+      res.json(timesheets);
+    } catch (error) {
+      console.error("Error fetching timesheets:", error);
+      res.status(500).json({ message: "Failed to fetch timesheets" });
+    }
+  });
+
+  app.get('/api/timesheets/:id', isAuthenticated, async (req, res) => {
+    try {
+      const timesheet = await storage.getTimesheetById(req.params.id);
+      if (!timesheet) {
+        return res.status(404).json({ message: "Timesheet not found" });
+      }
+      res.json(timesheet);
+    } catch (error) {
+      console.error("Error fetching timesheet:", error);
+      res.status(500).json({ message: "Failed to fetch timesheet" });
+    }
+  });
+
+  app.post('/api/timesheets', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const consultant = await storage.getConsultantByUserId(userId);
+      if (!consultant) {
+        return res.status(404).json({ message: "Consultant profile not found" });
+      }
+      
+      const validated = insertTimesheetSchema.parse({
+        ...req.body,
+        consultantId: consultant.id,
+      });
+      const timesheet = await storage.createTimesheet(validated);
+      
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'timesheet',
+        resourceId: timesheet.id,
+        resourceName: `Timesheet for week of ${timesheet.weekStartDate}`,
+        description: 'Created new timesheet',
+      }, req);
+      
+      res.status(201).json(timesheet);
+    } catch (error) {
+      console.error("Error creating timesheet:", error);
+      res.status(400).json({ message: "Failed to create timesheet" });
+    }
+  });
+
+  app.patch('/api/timesheets/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const updateData = insertTimesheetSchema.partial().parse(req.body);
+      const timesheet = await storage.updateTimesheet(req.params.id, updateData);
+      if (!timesheet) {
+        return res.status(404).json({ message: "Timesheet not found" });
+      }
+      
+      await logActivity(userId, {
+        activityType: 'update',
+        resourceType: 'timesheet',
+        resourceId: timesheet.id,
+        resourceName: `Timesheet for week of ${timesheet.weekStartDate}`,
+        description: 'Updated timesheet',
+      }, req);
+      
+      res.json(timesheet);
+    } catch (error) {
+      console.error("Error updating timesheet:", error);
+      res.status(500).json({ message: "Failed to update timesheet" });
+    }
+  });
+
+  app.post('/api/timesheets/:id/submit', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const timesheet = await storage.submitTimesheet(req.params.id);
+      if (!timesheet) {
+        return res.status(404).json({ message: "Timesheet not found" });
+      }
+      
+      await logActivity(userId, {
+        activityType: 'update',
+        resourceType: 'timesheet',
+        resourceId: timesheet.id,
+        resourceName: `Timesheet for week of ${timesheet.weekStartDate}`,
+        description: 'Submitted timesheet for approval',
+      }, req);
+      
+      res.json(timesheet);
+    } catch (error) {
+      console.error("Error submitting timesheet:", error);
+      res.status(500).json({ message: "Failed to submit timesheet" });
+    }
+  });
+
+  app.post('/api/timesheets/:id/approve', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const approverId = req.user.claims.sub;
+      const timesheet = await storage.approveTimesheet(req.params.id, approverId);
+      if (!timesheet) {
+        return res.status(404).json({ message: "Timesheet not found" });
+      }
+      
+      await logActivity(approverId, {
+        activityType: 'update',
+        resourceType: 'timesheet',
+        resourceId: timesheet.id,
+        resourceName: `Timesheet for week of ${timesheet.weekStartDate}`,
+        description: 'Approved timesheet',
+      }, req);
+      
+      const timesheetDetails = await storage.getTimesheetById(timesheet.id);
+      if (timesheetDetails?.consultant?.userId) {
+        await storage.createNotification({
+          userId: timesheetDetails.consultant.userId,
+          type: 'success',
+          title: 'Timesheet Approved',
+          message: `Your timesheet for week of ${timesheet.weekStartDate} has been approved`,
+          link: `/timesheets/${timesheet.id}`,
+        });
+      }
+      
+      res.json(timesheet);
+    } catch (error) {
+      console.error("Error approving timesheet:", error);
+      res.status(500).json({ message: "Failed to approve timesheet" });
+    }
+  });
+
+  app.post('/api/timesheets/:id/reject', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { reason } = req.body;
+      if (!reason) {
+        return res.status(400).json({ message: "Rejection reason is required" });
+      }
+      
+      const timesheet = await storage.rejectTimesheet(req.params.id, reason);
+      if (!timesheet) {
+        return res.status(404).json({ message: "Timesheet not found" });
+      }
+      
+      await logActivity(userId, {
+        activityType: 'update',
+        resourceType: 'timesheet',
+        resourceId: timesheet.id,
+        resourceName: `Timesheet for week of ${timesheet.weekStartDate}`,
+        description: `Rejected timesheet: ${reason}`,
+      }, req);
+      
+      const timesheetDetails = await storage.getTimesheetById(timesheet.id);
+      if (timesheetDetails?.consultant?.userId) {
+        await storage.createNotification({
+          userId: timesheetDetails.consultant.userId,
+          type: 'warning',
+          title: 'Timesheet Rejected',
+          message: `Your timesheet for week of ${timesheet.weekStartDate} was rejected: ${reason}`,
+          link: `/timesheets/${timesheet.id}`,
+        });
+      }
+      
+      res.json(timesheet);
+    } catch (error) {
+      console.error("Error rejecting timesheet:", error);
+      res.status(500).json({ message: "Failed to reject timesheet" });
+    }
+  });
+
+  app.get('/api/projects/:projectId/timesheets', isAuthenticated, async (req, res) => {
+    try {
+      const timesheets = await storage.getTimesheetsByProject(req.params.projectId);
+      res.json(timesheets);
+    } catch (error) {
+      console.error("Error fetching project timesheets:", error);
+      res.status(500).json({ message: "Failed to fetch project timesheets" });
+    }
+  });
+
+  app.get('/api/admin/timesheets/pending', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const timesheets = await storage.getPendingTimesheets();
+      res.json(timesheets);
+    } catch (error) {
+      console.error("Error fetching pending timesheets:", error);
+      res.status(500).json({ message: "Failed to fetch pending timesheets" });
+    }
+  });
+
+  // Timesheet Entry Routes
+  app.get('/api/timesheets/:timesheetId/entries', isAuthenticated, async (req, res) => {
+    try {
+      const entries = await storage.getTimesheetEntries(req.params.timesheetId);
+      res.json(entries);
+    } catch (error) {
+      console.error("Error fetching timesheet entries:", error);
+      res.status(500).json({ message: "Failed to fetch timesheet entries" });
+    }
+  });
+
+  app.post('/api/timesheets/:timesheetId/entries', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validated = insertTimesheetEntrySchema.parse({
+        ...req.body,
+        timesheetId: req.params.timesheetId,
+      });
+      const entry = await storage.createTimesheetEntry(validated);
+      
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'timesheet_entry',
+        resourceId: entry.id,
+        resourceName: `Timesheet entry`,
+        description: 'Added timesheet entry',
+      }, req);
+      
+      res.status(201).json(entry);
+    } catch (error) {
+      console.error("Error creating timesheet entry:", error);
+      res.status(400).json({ message: "Failed to create timesheet entry" });
+    }
+  });
+
+  app.patch('/api/timesheet-entries/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const updateData = insertTimesheetEntrySchema.partial().parse(req.body);
+      const entry = await storage.updateTimesheetEntry(req.params.id, updateData);
+      if (!entry) {
+        return res.status(404).json({ message: "Timesheet entry not found" });
+      }
+      
+      await logActivity(userId, {
+        activityType: 'update',
+        resourceType: 'timesheet_entry',
+        resourceId: entry.id,
+        resourceName: `Timesheet entry`,
+        description: 'Updated timesheet entry',
+      }, req);
+      
+      res.json(entry);
+    } catch (error) {
+      console.error("Error updating timesheet entry:", error);
+      res.status(500).json({ message: "Failed to update timesheet entry" });
+    }
+  });
+
+  app.delete('/api/timesheet-entries/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await storage.deleteTimesheetEntry(req.params.id);
+      
+      await logActivity(userId, {
+        activityType: 'delete',
+        resourceType: 'timesheet_entry',
+        resourceId: req.params.id,
+        resourceName: `Timesheet entry`,
+        description: 'Deleted timesheet entry',
+      }, req);
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting timesheet entry:", error);
+      res.status(500).json({ message: "Failed to delete timesheet entry" });
+    }
+  });
+
+  app.post('/api/timesheets/:timesheetId/clock-in', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { location } = req.body;
+      const entry = await storage.clockIn(req.params.timesheetId, location);
+      
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'timesheet_entry',
+        resourceId: entry.id,
+        resourceName: `Clock in`,
+        description: `Clocked in${location ? ` at ${location}` : ''}`,
+      }, req);
+      
+      res.status(201).json(entry);
+    } catch (error) {
+      console.error("Error clocking in:", error);
+      res.status(500).json({ message: "Failed to clock in" });
+    }
+  });
+
+  app.post('/api/timesheet-entries/:id/clock-out', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const entry = await storage.clockOut(req.params.id);
+      if (!entry) {
+        return res.status(404).json({ message: "Timesheet entry not found" });
+      }
+      
+      await logActivity(userId, {
+        activityType: 'update',
+        resourceType: 'timesheet_entry',
+        resourceId: entry.id,
+        resourceName: `Clock out`,
+        description: 'Clocked out',
+      }, req);
+      
+      res.json(entry);
+    } catch (error) {
+      console.error("Error clocking out:", error);
+      res.status(500).json({ message: "Failed to clock out" });
+    }
+  });
+
+  // Availability Routes
+  app.get('/api/availability', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const consultant = await storage.getConsultantByUserId(userId);
+      if (!consultant) {
+        return res.status(404).json({ message: "Consultant profile not found" });
+      }
+      
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      
+      const availability = await storage.getAvailabilityByConsultant(consultant.id, startDate, endDate);
+      res.json(availability);
+    } catch (error) {
+      console.error("Error fetching availability:", error);
+      res.status(500).json({ message: "Failed to fetch availability" });
+    }
+  });
+
+  app.get('/api/consultants/:consultantId/availability', isAuthenticated, async (req, res) => {
+    try {
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      
+      const availability = await storage.getAvailabilityByConsultant(req.params.consultantId, startDate, endDate);
+      res.json(availability);
+    } catch (error) {
+      console.error("Error fetching consultant availability:", error);
+      res.status(500).json({ message: "Failed to fetch consultant availability" });
+    }
+  });
+
+  app.post('/api/availability', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const consultant = await storage.getConsultantByUserId(userId);
+      if (!consultant) {
+        return res.status(404).json({ message: "Consultant profile not found" });
+      }
+      
+      const validated = insertAvailabilityBlockSchema.parse({
+        ...req.body,
+        consultantId: consultant.id,
+      });
+      const block = await storage.createAvailabilityBlock(validated);
+      
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'availability',
+        resourceId: block.id,
+        resourceName: `Availability block`,
+        description: `Set availability: ${block.blockType}`,
+      }, req);
+      
+      res.status(201).json(block);
+    } catch (error) {
+      console.error("Error creating availability block:", error);
+      res.status(400).json({ message: "Failed to create availability block" });
+    }
+  });
+
+  app.patch('/api/availability/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const updateData = insertAvailabilityBlockSchema.partial().parse(req.body);
+      const block = await storage.updateAvailabilityBlock(req.params.id, updateData);
+      if (!block) {
+        return res.status(404).json({ message: "Availability block not found" });
+      }
+      
+      await logActivity(userId, {
+        activityType: 'update',
+        resourceType: 'availability',
+        resourceId: block.id,
+        resourceName: `Availability block`,
+        description: 'Updated availability',
+      }, req);
+      
+      res.json(block);
+    } catch (error) {
+      console.error("Error updating availability block:", error);
+      res.status(500).json({ message: "Failed to update availability block" });
+    }
+  });
+
+  app.delete('/api/availability/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await storage.deleteAvailabilityBlock(req.params.id);
+      
+      await logActivity(userId, {
+        activityType: 'delete',
+        resourceType: 'availability',
+        resourceId: req.params.id,
+        resourceName: `Availability block`,
+        description: 'Deleted availability block',
+      }, req);
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting availability block:", error);
+      res.status(500).json({ message: "Failed to delete availability block" });
+    }
+  });
+
+  // Shift Swap Routes
+  app.get('/api/shift-swaps', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const consultant = await storage.getConsultantByUserId(userId);
+      if (!consultant) {
+        return res.status(404).json({ message: "Consultant profile not found" });
+      }
+      const swapRequests = await storage.getSwapRequestsByConsultant(consultant.id);
+      res.json(swapRequests);
+    } catch (error) {
+      console.error("Error fetching shift swap requests:", error);
+      res.status(500).json({ message: "Failed to fetch shift swap requests" });
+    }
+  });
+
+  app.get('/api/shift-swaps/:id', isAuthenticated, async (req, res) => {
+    try {
+      const swapRequest = await storage.getSwapRequestById(req.params.id);
+      if (!swapRequest) {
+        return res.status(404).json({ message: "Shift swap request not found" });
+      }
+      res.json(swapRequest);
+    } catch (error) {
+      console.error("Error fetching shift swap request:", error);
+      res.status(500).json({ message: "Failed to fetch shift swap request" });
+    }
+  });
+
+  app.post('/api/shift-swaps', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const consultant = await storage.getConsultantByUserId(userId);
+      if (!consultant) {
+        return res.status(404).json({ message: "Consultant profile not found" });
+      }
+      
+      const validated = insertShiftSwapRequestSchema.parse({
+        ...req.body,
+        requesterId: consultant.id,
+      });
+      const swapRequest = await storage.createShiftSwapRequest(validated);
+      
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'shift_swap',
+        resourceId: swapRequest.id,
+        resourceName: `Shift swap request`,
+        description: 'Created shift swap request',
+      }, req);
+      
+      if (validated.targetConsultantId) {
+        const targetConsultant = await storage.getConsultant(validated.targetConsultantId);
+        if (targetConsultant?.userId) {
+          await storage.createNotification({
+            userId: targetConsultant.userId,
+            type: 'schedule',
+            title: 'Shift Swap Request',
+            message: 'You have received a shift swap request',
+            link: `/shift-swaps/${swapRequest.id}`,
+          });
+        }
+      }
+      
+      res.status(201).json(swapRequest);
+    } catch (error) {
+      console.error("Error creating shift swap request:", error);
+      res.status(400).json({ message: "Failed to create shift swap request" });
+    }
+  });
+
+  app.post('/api/shift-swaps/:id/approve', isAuthenticated, async (req: any, res) => {
+    try {
+      const responderId = req.user.claims.sub;
+      const { notes } = req.body;
+      const swapRequest = await storage.approveSwapRequest(req.params.id, responderId, notes);
+      if (!swapRequest) {
+        return res.status(404).json({ message: "Shift swap request not found" });
+      }
+      
+      await logActivity(responderId, {
+        activityType: 'update',
+        resourceType: 'shift_swap',
+        resourceId: swapRequest.id,
+        resourceName: `Shift swap request`,
+        description: 'Approved shift swap request',
+      }, req);
+      
+      const requester = await storage.getConsultant(swapRequest.requesterId);
+      if (requester?.userId) {
+        await storage.createNotification({
+          userId: requester.userId,
+          type: 'success',
+          title: 'Shift Swap Approved',
+          message: 'Your shift swap request has been approved',
+          link: `/shift-swaps/${swapRequest.id}`,
+        });
+      }
+      
+      res.json(swapRequest);
+    } catch (error) {
+      console.error("Error approving shift swap request:", error);
+      res.status(500).json({ message: "Failed to approve shift swap request" });
+    }
+  });
+
+  app.post('/api/shift-swaps/:id/reject', isAuthenticated, async (req: any, res) => {
+    try {
+      const responderId = req.user.claims.sub;
+      const { notes } = req.body;
+      const swapRequest = await storage.rejectSwapRequest(req.params.id, responderId, notes);
+      if (!swapRequest) {
+        return res.status(404).json({ message: "Shift swap request not found" });
+      }
+      
+      await logActivity(responderId, {
+        activityType: 'update',
+        resourceType: 'shift_swap',
+        resourceId: swapRequest.id,
+        resourceName: `Shift swap request`,
+        description: 'Rejected shift swap request',
+      }, req);
+      
+      const requester = await storage.getConsultant(swapRequest.requesterId);
+      if (requester?.userId) {
+        await storage.createNotification({
+          userId: requester.userId,
+          type: 'warning',
+          title: 'Shift Swap Rejected',
+          message: 'Your shift swap request has been rejected',
+          link: `/shift-swaps/${swapRequest.id}`,
+        });
+      }
+      
+      res.json(swapRequest);
+    } catch (error) {
+      console.error("Error rejecting shift swap request:", error);
+      res.status(500).json({ message: "Failed to reject shift swap request" });
+    }
+  });
+
+  app.post('/api/shift-swaps/:id/cancel', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const swapRequest = await storage.cancelSwapRequest(req.params.id);
+      if (!swapRequest) {
+        return res.status(404).json({ message: "Shift swap request not found" });
+      }
+      
+      await logActivity(userId, {
+        activityType: 'update',
+        resourceType: 'shift_swap',
+        resourceId: swapRequest.id,
+        resourceName: `Shift swap request`,
+        description: 'Cancelled shift swap request',
+      }, req);
+      
+      res.json(swapRequest);
+    } catch (error) {
+      console.error("Error cancelling shift swap request:", error);
+      res.status(500).json({ message: "Failed to cancel shift swap request" });
+    }
+  });
+
+  app.get('/api/admin/shift-swaps/pending', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const pendingRequests = await storage.getPendingSwapRequests();
+      res.json(pendingRequests);
+    } catch (error) {
+      console.error("Error fetching pending shift swap requests:", error);
+      res.status(500).json({ message: "Failed to fetch pending shift swap requests" });
     }
   });
 
