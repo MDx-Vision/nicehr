@@ -26,6 +26,14 @@ import {
   insertProjectScheduleSchema,
   insertScheduleAssignmentSchema,
   accountSettingsSchema,
+  insertProjectPhaseSchema,
+  insertProjectTaskSchema,
+  insertProjectMilestoneSchema,
+  insertPhaseDeliverableSchema,
+  insertProjectRiskSchema,
+  insertTeamRoleTemplateSchema,
+  insertProjectTeamAssignmentSchema,
+  insertOnboardingTaskSchema,
 } from "@shared/schema";
 import {
   sendWelcomeEmail,
@@ -1699,6 +1707,605 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching user analytics:", error);
       res.status(500).json({ message: "Failed to fetch analytics" });
+    }
+  });
+
+  // ============================================
+  // PHASE 8: PROJECT LIFECYCLE & ONBOARDING
+  // ============================================
+
+  // Project Phases routes
+  app.get('/api/projects/:projectId/phases', isAuthenticated, async (req, res) => {
+    try {
+      const phases = await storage.getProjectPhases(req.params.projectId);
+      res.json(phases);
+    } catch (error) {
+      console.error("Error fetching project phases:", error);
+      res.status(500).json({ message: "Failed to fetch project phases" });
+    }
+  });
+
+  app.post('/api/projects/:projectId/phases/initialize', isAuthenticated, async (req: any, res) => {
+    try {
+      const phases = await storage.initializeProjectPhases(req.params.projectId);
+      await logActivity(req.user.claims.sub, {
+        activityType: 'create',
+        resourceType: 'project_phase',
+        resourceId: req.params.projectId,
+        description: `Initialized ${phases.length} project phases`,
+      }, req);
+      res.status(201).json(phases);
+    } catch (error) {
+      console.error("Error initializing project phases:", error);
+      res.status(500).json({ message: "Failed to initialize project phases" });
+    }
+  });
+
+  app.get('/api/phases/:id', isAuthenticated, async (req, res) => {
+    try {
+      const phase = await storage.getProjectPhase(req.params.id);
+      if (!phase) {
+        return res.status(404).json({ message: "Phase not found" });
+      }
+      res.json(phase);
+    } catch (error) {
+      console.error("Error fetching phase:", error);
+      res.status(500).json({ message: "Failed to fetch phase" });
+    }
+  });
+
+  app.patch('/api/phases/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const updateData = insertProjectPhaseSchema.partial().parse(req.body);
+      const phase = await storage.updateProjectPhase(req.params.id, updateData);
+      if (!phase) {
+        return res.status(404).json({ message: "Phase not found" });
+      }
+      await logActivity(req.user.claims.sub, {
+        activityType: 'update',
+        resourceType: 'project_phase',
+        resourceId: req.params.id,
+        resourceName: phase.phaseName,
+        description: `Updated project phase ${phase.phaseName}`,
+      }, req);
+      res.json(phase);
+    } catch (error) {
+      console.error("Error updating phase:", error);
+      res.status(500).json({ message: "Failed to update phase" });
+    }
+  });
+
+  // Project Tasks routes
+  app.get('/api/projects/:projectId/tasks', isAuthenticated, async (req, res) => {
+    try {
+      const { phaseId } = req.query;
+      const tasks = await storage.getProjectTasks(req.params.projectId, phaseId as string);
+      res.json(tasks);
+    } catch (error) {
+      console.error("Error fetching project tasks:", error);
+      res.status(500).json({ message: "Failed to fetch project tasks" });
+    }
+  });
+
+  app.post('/api/projects/:projectId/tasks', isAuthenticated, async (req: any, res) => {
+    try {
+      const taskData = insertProjectTaskSchema.parse({
+        ...req.body,
+        projectId: req.params.projectId,
+      });
+      const task = await storage.createProjectTask(taskData);
+      await logActivity(req.user.claims.sub, {
+        activityType: 'create',
+        resourceType: 'project_task',
+        resourceId: task.id,
+        resourceName: task.title,
+        description: `Created task: ${task.title}`,
+      }, req);
+      res.status(201).json(task);
+    } catch (error) {
+      console.error("Error creating task:", error);
+      res.status(500).json({ message: "Failed to create task" });
+    }
+  });
+
+  app.get('/api/tasks/:id', isAuthenticated, async (req, res) => {
+    try {
+      const task = await storage.getProjectTask(req.params.id);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      res.json(task);
+    } catch (error) {
+      console.error("Error fetching task:", error);
+      res.status(500).json({ message: "Failed to fetch task" });
+    }
+  });
+
+  app.patch('/api/tasks/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const updateData = insertProjectTaskSchema.partial().parse(req.body);
+      const task = await storage.updateProjectTask(req.params.id, updateData);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      await logActivity(req.user.claims.sub, {
+        activityType: 'update',
+        resourceType: 'project_task',
+        resourceId: req.params.id,
+        resourceName: task.title,
+        description: `Updated task: ${task.title}`,
+      }, req);
+      res.json(task);
+    } catch (error) {
+      console.error("Error updating task:", error);
+      res.status(500).json({ message: "Failed to update task" });
+    }
+  });
+
+  app.delete('/api/tasks/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const deleted = await storage.deleteProjectTask(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      await logActivity(req.user.claims.sub, {
+        activityType: 'delete',
+        resourceType: 'project_task',
+        resourceId: req.params.id,
+        description: `Deleted project task`,
+      }, req);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      res.status(500).json({ message: "Failed to delete task" });
+    }
+  });
+
+  // Project Milestones routes
+  app.get('/api/projects/:projectId/milestones', isAuthenticated, async (req, res) => {
+    try {
+      const milestones = await storage.getProjectMilestones(req.params.projectId);
+      res.json(milestones);
+    } catch (error) {
+      console.error("Error fetching milestones:", error);
+      res.status(500).json({ message: "Failed to fetch milestones" });
+    }
+  });
+
+  app.post('/api/projects/:projectId/milestones', isAuthenticated, async (req: any, res) => {
+    try {
+      const milestoneData = insertProjectMilestoneSchema.parse({
+        ...req.body,
+        projectId: req.params.projectId,
+      });
+      const milestone = await storage.createProjectMilestone(milestoneData);
+      await logActivity(req.user.claims.sub, {
+        activityType: 'create',
+        resourceType: 'project_milestone',
+        resourceId: milestone.id,
+        resourceName: milestone.title,
+        description: `Created milestone: ${milestone.title}`,
+      }, req);
+      res.status(201).json(milestone);
+    } catch (error) {
+      console.error("Error creating milestone:", error);
+      res.status(500).json({ message: "Failed to create milestone" });
+    }
+  });
+
+  app.patch('/api/milestones/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const updateData = insertProjectMilestoneSchema.partial().parse(req.body);
+      const milestone = await storage.updateProjectMilestone(req.params.id, updateData);
+      if (!milestone) {
+        return res.status(404).json({ message: "Milestone not found" });
+      }
+      await logActivity(req.user.claims.sub, {
+        activityType: 'update',
+        resourceType: 'project_milestone',
+        resourceId: req.params.id,
+        resourceName: milestone.title,
+        description: `Updated milestone: ${milestone.title}`,
+      }, req);
+      res.json(milestone);
+    } catch (error) {
+      console.error("Error updating milestone:", error);
+      res.status(500).json({ message: "Failed to update milestone" });
+    }
+  });
+
+  app.delete('/api/milestones/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const deleted = await storage.deleteProjectMilestone(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Milestone not found" });
+      }
+      await logActivity(req.user.claims.sub, {
+        activityType: 'delete',
+        resourceType: 'project_milestone',
+        resourceId: req.params.id,
+        description: `Deleted project milestone`,
+      }, req);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting milestone:", error);
+      res.status(500).json({ message: "Failed to delete milestone" });
+    }
+  });
+
+  // Phase Deliverables routes
+  app.get('/api/phases/:phaseId/deliverables', isAuthenticated, async (req, res) => {
+    try {
+      const deliverables = await storage.getPhaseDeliverables(req.params.phaseId);
+      res.json(deliverables);
+    } catch (error) {
+      console.error("Error fetching deliverables:", error);
+      res.status(500).json({ message: "Failed to fetch deliverables" });
+    }
+  });
+
+  app.post('/api/phases/:phaseId/deliverables', isAuthenticated, async (req: any, res) => {
+    try {
+      const deliverableData = insertPhaseDeliverableSchema.parse({
+        ...req.body,
+        phaseId: req.params.phaseId,
+      });
+      const deliverable = await storage.createPhaseDeliverable(deliverableData);
+      await logActivity(req.user.claims.sub, {
+        activityType: 'create',
+        resourceType: 'phase_deliverable',
+        resourceId: deliverable.id,
+        resourceName: deliverable.title,
+        description: `Created deliverable: ${deliverable.title}`,
+      }, req);
+      res.status(201).json(deliverable);
+    } catch (error) {
+      console.error("Error creating deliverable:", error);
+      res.status(500).json({ message: "Failed to create deliverable" });
+    }
+  });
+
+  app.patch('/api/deliverables/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const updateData = insertPhaseDeliverableSchema.partial().parse(req.body);
+      const deliverable = await storage.updatePhaseDeliverable(req.params.id, updateData);
+      if (!deliverable) {
+        return res.status(404).json({ message: "Deliverable not found" });
+      }
+      await logActivity(req.user.claims.sub, {
+        activityType: 'update',
+        resourceType: 'phase_deliverable',
+        resourceId: req.params.id,
+        resourceName: deliverable.title,
+        description: `Updated deliverable: ${deliverable.title}`,
+      }, req);
+      res.json(deliverable);
+    } catch (error) {
+      console.error("Error updating deliverable:", error);
+      res.status(500).json({ message: "Failed to update deliverable" });
+    }
+  });
+
+  // Project Risks routes
+  app.get('/api/projects/:projectId/risks', isAuthenticated, async (req, res) => {
+    try {
+      const risks = await storage.getProjectRisks(req.params.projectId);
+      res.json(risks);
+    } catch (error) {
+      console.error("Error fetching project risks:", error);
+      res.status(500).json({ message: "Failed to fetch project risks" });
+    }
+  });
+
+  app.post('/api/projects/:projectId/risks', isAuthenticated, async (req: any, res) => {
+    try {
+      const riskData = insertProjectRiskSchema.parse({
+        ...req.body,
+        projectId: req.params.projectId,
+        createdBy: req.user.claims.sub,
+      });
+      const risk = await storage.createProjectRisk(riskData);
+      await logActivity(req.user.claims.sub, {
+        activityType: 'create',
+        resourceType: 'project_risk',
+        resourceId: risk.id,
+        resourceName: risk.title,
+        description: `Created risk: ${risk.title}`,
+      }, req);
+      res.status(201).json(risk);
+    } catch (error) {
+      console.error("Error creating risk:", error);
+      res.status(500).json({ message: "Failed to create risk" });
+    }
+  });
+
+  app.get('/api/risks/:id', isAuthenticated, async (req, res) => {
+    try {
+      const risk = await storage.getProjectRisk(req.params.id);
+      if (!risk) {
+        return res.status(404).json({ message: "Risk not found" });
+      }
+      res.json(risk);
+    } catch (error) {
+      console.error("Error fetching risk:", error);
+      res.status(500).json({ message: "Failed to fetch risk" });
+    }
+  });
+
+  app.patch('/api/risks/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const updateData = insertProjectRiskSchema.partial().parse(req.body);
+      const risk = await storage.updateProjectRisk(req.params.id, updateData);
+      if (!risk) {
+        return res.status(404).json({ message: "Risk not found" });
+      }
+      await logActivity(req.user.claims.sub, {
+        activityType: 'update',
+        resourceType: 'project_risk',
+        resourceId: req.params.id,
+        resourceName: risk.title,
+        description: `Updated risk: ${risk.title}`,
+      }, req);
+      res.json(risk);
+    } catch (error) {
+      console.error("Error updating risk:", error);
+      res.status(500).json({ message: "Failed to update risk" });
+    }
+  });
+
+  app.delete('/api/risks/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const deleted = await storage.deleteProjectRisk(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Risk not found" });
+      }
+      await logActivity(req.user.claims.sub, {
+        activityType: 'delete',
+        resourceType: 'project_risk',
+        resourceId: req.params.id,
+        description: `Deleted project risk`,
+      }, req);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting risk:", error);
+      res.status(500).json({ message: "Failed to delete risk" });
+    }
+  });
+
+  // Team Role Templates routes
+  app.get('/api/team-roles', isAuthenticated, async (req, res) => {
+    try {
+      const { category } = req.query;
+      if (category && (category === 'nicehr' || category === 'hospital')) {
+        const templates = await storage.getTeamRoleTemplatesByCategory(category);
+        res.json(templates);
+      } else {
+        const templates = await storage.getAllTeamRoleTemplates();
+        res.json(templates);
+      }
+    } catch (error) {
+      console.error("Error fetching team roles:", error);
+      res.status(500).json({ message: "Failed to fetch team roles" });
+    }
+  });
+
+  app.post('/api/team-roles/initialize', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const templates = await storage.initializeTeamRoleTemplates();
+      await logActivity(req.user.claims.sub, {
+        activityType: 'create',
+        resourceType: 'team_role_template',
+        description: `Initialized ${templates.length} team role templates`,
+      }, req);
+      res.status(201).json(templates);
+    } catch (error) {
+      console.error("Error initializing team roles:", error);
+      res.status(500).json({ message: "Failed to initialize team roles" });
+    }
+  });
+
+  app.post('/api/team-roles', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const templateData = insertTeamRoleTemplateSchema.parse(req.body);
+      const template = await storage.createTeamRoleTemplate(templateData);
+      await logActivity(req.user.claims.sub, {
+        activityType: 'create',
+        resourceType: 'team_role_template',
+        resourceId: template.id,
+        resourceName: template.name,
+        description: `Created team role: ${template.name}`,
+      }, req);
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Error creating team role:", error);
+      res.status(500).json({ message: "Failed to create team role" });
+    }
+  });
+
+  // Project Team Assignment routes
+  app.get('/api/projects/:projectId/team', isAuthenticated, async (req, res) => {
+    try {
+      const assignments = await storage.getProjectTeamAssignments(req.params.projectId);
+      res.json(assignments);
+    } catch (error) {
+      console.error("Error fetching project team:", error);
+      res.status(500).json({ message: "Failed to fetch project team" });
+    }
+  });
+
+  app.post('/api/projects/:projectId/team', isAuthenticated, async (req: any, res) => {
+    try {
+      const assignmentData = insertProjectTeamAssignmentSchema.parse({
+        ...req.body,
+        projectId: req.params.projectId,
+        assignedBy: req.user.claims.sub,
+      });
+      const assignment = await storage.createProjectTeamAssignment(assignmentData);
+      await logActivity(req.user.claims.sub, {
+        activityType: 'assign',
+        resourceType: 'project_team_assignment',
+        resourceId: assignment.id,
+        description: `Assigned team member to project`,
+      }, req);
+      res.status(201).json(assignment);
+    } catch (error) {
+      console.error("Error creating team assignment:", error);
+      res.status(500).json({ message: "Failed to create team assignment" });
+    }
+  });
+
+  app.patch('/api/team-assignments/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const updateData = insertProjectTeamAssignmentSchema.partial().parse(req.body);
+      const assignment = await storage.updateProjectTeamAssignment(req.params.id, updateData);
+      if (!assignment) {
+        return res.status(404).json({ message: "Assignment not found" });
+      }
+      await logActivity(req.user.claims.sub, {
+        activityType: 'update',
+        resourceType: 'project_team_assignment',
+        resourceId: req.params.id,
+        description: `Updated team assignment`,
+      }, req);
+      res.json(assignment);
+    } catch (error) {
+      console.error("Error updating team assignment:", error);
+      res.status(500).json({ message: "Failed to update team assignment" });
+    }
+  });
+
+  app.delete('/api/team-assignments/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const deleted = await storage.deleteProjectTeamAssignment(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Assignment not found" });
+      }
+      await logActivity(req.user.claims.sub, {
+        activityType: 'delete',
+        resourceType: 'project_team_assignment',
+        resourceId: req.params.id,
+        description: `Removed team member from project`,
+      }, req);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting team assignment:", error);
+      res.status(500).json({ message: "Failed to delete team assignment" });
+    }
+  });
+
+  // Onboarding Tasks routes
+  app.get('/api/consultants/:consultantId/onboarding', isAuthenticated, async (req: any, res) => {
+    try {
+      const { consultantId } = req.params;
+      const userId = req.user.claims.sub;
+      const dbUser = await storage.getUser(userId);
+      
+      if (dbUser?.role !== 'admin') {
+        const consultant = await storage.getConsultantByUserId(userId);
+        if (!consultant || consultant.id !== consultantId) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+      }
+      
+      const tasks = await storage.getOnboardingTasks(consultantId);
+      res.json(tasks);
+    } catch (error) {
+      console.error("Error fetching onboarding tasks:", error);
+      res.status(500).json({ message: "Failed to fetch onboarding tasks" });
+    }
+  });
+
+  app.post('/api/consultants/:consultantId/onboarding/initialize', isAuthenticated, async (req: any, res) => {
+    try {
+      const { consultantId } = req.params;
+      const tasks = await storage.initializeOnboardingTasks(consultantId);
+      await logActivity(req.user.claims.sub, {
+        activityType: 'create',
+        resourceType: 'onboarding_task',
+        resourceId: consultantId,
+        description: `Initialized ${tasks.length} onboarding tasks`,
+      }, req);
+      res.status(201).json(tasks);
+    } catch (error) {
+      console.error("Error initializing onboarding tasks:", error);
+      res.status(500).json({ message: "Failed to initialize onboarding tasks" });
+    }
+  });
+
+  app.get('/api/consultants/:consultantId/onboarding/progress', isAuthenticated, async (req: any, res) => {
+    try {
+      const { consultantId } = req.params;
+      const userId = req.user.claims.sub;
+      const dbUser = await storage.getUser(userId);
+      
+      if (dbUser?.role !== 'admin') {
+        const consultant = await storage.getConsultantByUserId(userId);
+        if (!consultant || consultant.id !== consultantId) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+      }
+      
+      const progress = await storage.getOnboardingProgress(consultantId);
+      if (!progress) {
+        return res.status(404).json({ message: "Consultant not found" });
+      }
+      res.json(progress);
+    } catch (error) {
+      console.error("Error fetching onboarding progress:", error);
+      res.status(500).json({ message: "Failed to fetch onboarding progress" });
+    }
+  });
+
+  app.patch('/api/onboarding-tasks/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const updateData = insertOnboardingTaskSchema.partial().parse(req.body);
+      if (updateData.status === 'submitted') {
+        (updateData as any).submittedAt = new Date();
+      }
+      if (updateData.status === 'approved' || updateData.status === 'rejected') {
+        (updateData as any).reviewedBy = req.user.claims.sub;
+        (updateData as any).reviewedAt = new Date();
+      }
+      
+      const task = await storage.updateOnboardingTask(req.params.id, updateData);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      await logActivity(req.user.claims.sub, {
+        activityType: 'update',
+        resourceType: 'onboarding_task',
+        resourceId: req.params.id,
+        resourceName: task.title,
+        description: `Updated onboarding task: ${task.title}`,
+      }, req);
+      res.json(task);
+    } catch (error) {
+      console.error("Error updating onboarding task:", error);
+      res.status(500).json({ message: "Failed to update onboarding task" });
+    }
+  });
+
+  app.get('/api/admin/onboarding/pending', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const pendingTasks = await storage.getPendingOnboardingReviews();
+      res.json(pendingTasks);
+    } catch (error) {
+      console.error("Error fetching pending onboarding reviews:", error);
+      res.status(500).json({ message: "Failed to fetch pending onboarding reviews" });
+    }
+  });
+
+  // Project Lifecycle (combined view)
+  app.get('/api/projects/:projectId/lifecycle', isAuthenticated, async (req, res) => {
+    try {
+      const lifecycle = await storage.getProjectLifecycle(req.params.projectId);
+      if (!lifecycle) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      res.json(lifecycle);
+    } catch (error) {
+      console.error("Error fetching project lifecycle:", error);
+      res.status(500).json({ message: "Failed to fetch project lifecycle" });
     }
   });
 
