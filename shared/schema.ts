@@ -11,6 +11,8 @@ import {
   jsonb,
   index,
   pgEnum,
+  real,
+  time,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -1637,4 +1639,283 @@ export interface CommandCenterStats {
   criticalTickets: number;
   pendingHandoffs: number;
   averageResponseTime: number;
+}
+
+// ============================================
+// PHASE 10: SCHEDULING & TIME MANAGEMENT
+// ============================================
+
+// Timesheet status enum
+export const timesheetStatusEnum = pgEnum("timesheet_status", [
+  "draft",
+  "submitted",
+  "approved",
+  "rejected",
+  "paid"
+]);
+
+// Availability type enum
+export const availabilityTypeEnum = pgEnum("availability_type", [
+  "available",
+  "unavailable",
+  "vacation",
+  "sick",
+  "training",
+  "other"
+]);
+
+// Swap request status enum
+export const swapRequestStatusEnum = pgEnum("swap_request_status", [
+  "pending",
+  "approved",
+  "rejected",
+  "cancelled"
+]);
+
+// Timesheets table - tracks hours worked by consultants
+export const timesheets = pgTable("timesheets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  consultantId: varchar("consultant_id").references(() => consultants.id).notNull(),
+  projectId: varchar("project_id").references(() => projects.id),
+  scheduleId: varchar("schedule_id").references(() => projectSchedules.id),
+  weekStartDate: date("week_start_date").notNull(),
+  weekEndDate: date("week_end_date").notNull(),
+  status: timesheetStatusEnum("status").default("draft").notNull(),
+  totalHours: real("total_hours").default(0).notNull(),
+  regularHours: real("regular_hours").default(0).notNull(),
+  overtimeHours: real("overtime_hours").default(0).notNull(),
+  submittedAt: timestamp("submitted_at"),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  rejectionReason: text("rejection_reason"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_timesheets_consultant").on(table.consultantId),
+  index("idx_timesheets_project").on(table.projectId),
+  index("idx_timesheets_week").on(table.weekStartDate),
+  index("idx_timesheets_status").on(table.status),
+]);
+
+// Timesheet entries - individual clock in/out records
+export const timesheetEntries = pgTable("timesheet_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  timesheetId: varchar("timesheet_id").references(() => timesheets.id).notNull(),
+  entryDate: date("entry_date").notNull(),
+  clockIn: timestamp("clock_in"),
+  clockOut: timestamp("clock_out"),
+  breakMinutes: integer("break_minutes").default(0),
+  totalHours: real("total_hours").default(0),
+  location: varchar("location"),
+  notes: text("notes"),
+  isManualEntry: boolean("is_manual_entry").default(false),
+  editedBy: varchar("edited_by").references(() => users.id),
+  editReason: text("edit_reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_timesheet_entries_timesheet").on(table.timesheetId),
+  index("idx_timesheet_entries_date").on(table.entryDate),
+]);
+
+export const timesheetsRelations = relations(timesheets, ({ one, many }) => ({
+  consultant: one(consultants, {
+    fields: [timesheets.consultantId],
+    references: [consultants.id],
+  }),
+  project: one(projects, {
+    fields: [timesheets.projectId],
+    references: [projects.id],
+  }),
+  schedule: one(projectSchedules, {
+    fields: [timesheets.scheduleId],
+    references: [projectSchedules.id],
+  }),
+  approver: one(users, {
+    fields: [timesheets.approvedBy],
+    references: [users.id],
+  }),
+  entries: many(timesheetEntries),
+}));
+
+export const timesheetEntriesRelations = relations(timesheetEntries, ({ one }) => ({
+  timesheet: one(timesheets, {
+    fields: [timesheetEntries.timesheetId],
+    references: [timesheets.id],
+  }),
+  editor: one(users, {
+    fields: [timesheetEntries.editedBy],
+    references: [users.id],
+  }),
+}));
+
+// Availability blocks - consultants mark their availability
+export const availabilityBlocks = pgTable("availability_blocks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  consultantId: varchar("consultant_id").references(() => consultants.id).notNull(),
+  type: availabilityTypeEnum("type").default("available").notNull(),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  startTime: time("start_time"),
+  endTime: time("end_time"),
+  isAllDay: boolean("is_all_day").default(true),
+  isRecurring: boolean("is_recurring").default(false),
+  recurringPattern: varchar("recurring_pattern"),
+  title: varchar("title"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_availability_consultant").on(table.consultantId),
+  index("idx_availability_dates").on(table.startDate, table.endDate),
+  index("idx_availability_type").on(table.type),
+]);
+
+export const availabilityBlocksRelations = relations(availabilityBlocks, ({ one }) => ({
+  consultant: one(consultants, {
+    fields: [availabilityBlocks.consultantId],
+    references: [consultants.id],
+  }),
+}));
+
+// Shift swap requests - consultants can request to swap shifts
+export const shiftSwapRequests = pgTable("shift_swap_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  requesterId: varchar("requester_id").references(() => consultants.id).notNull(),
+  targetConsultantId: varchar("target_consultant_id").references(() => consultants.id),
+  originalAssignmentId: varchar("original_assignment_id").references(() => scheduleAssignments.id).notNull(),
+  targetAssignmentId: varchar("target_assignment_id").references(() => scheduleAssignments.id),
+  status: swapRequestStatusEnum("status").default("pending").notNull(),
+  reason: text("reason"),
+  requestedAt: timestamp("requested_at").defaultNow(),
+  respondedAt: timestamp("responded_at"),
+  respondedBy: varchar("responded_by").references(() => users.id),
+  responseNotes: text("response_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_swap_requester").on(table.requesterId),
+  index("idx_swap_target").on(table.targetConsultantId),
+  index("idx_swap_status").on(table.status),
+]);
+
+export const shiftSwapRequestsRelations = relations(shiftSwapRequests, ({ one }) => ({
+  requester: one(consultants, {
+    fields: [shiftSwapRequests.requesterId],
+    references: [consultants.id],
+  }),
+  targetConsultant: one(consultants, {
+    fields: [shiftSwapRequests.targetConsultantId],
+    references: [consultants.id],
+  }),
+  originalAssignment: one(scheduleAssignments, {
+    fields: [shiftSwapRequests.originalAssignmentId],
+    references: [scheduleAssignments.id],
+  }),
+  targetAssignment: one(scheduleAssignments, {
+    fields: [shiftSwapRequests.targetAssignmentId],
+    references: [scheduleAssignments.id],
+  }),
+  responder: one(users, {
+    fields: [shiftSwapRequests.respondedBy],
+    references: [users.id],
+  }),
+}));
+
+// Insert schemas for Phase 10
+export const insertTimesheetSchema = createInsertSchema(timesheets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTimesheetEntrySchema = createInsertSchema(timesheetEntries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAvailabilityBlockSchema = createInsertSchema(availabilityBlocks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertShiftSwapRequestSchema = createInsertSchema(shiftSwapRequests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Phase 10 Types
+export type Timesheet = typeof timesheets.$inferSelect;
+export type InsertTimesheet = z.infer<typeof insertTimesheetSchema>;
+
+export type TimesheetEntry = typeof timesheetEntries.$inferSelect;
+export type InsertTimesheetEntry = z.infer<typeof insertTimesheetEntrySchema>;
+
+export type AvailabilityBlock = typeof availabilityBlocks.$inferSelect;
+export type InsertAvailabilityBlock = z.infer<typeof insertAvailabilityBlockSchema>;
+
+export type ShiftSwapRequest = typeof shiftSwapRequests.$inferSelect;
+export type InsertShiftSwapRequest = z.infer<typeof insertShiftSwapRequestSchema>;
+
+// Extended types for Phase 10
+export interface TimesheetWithDetails extends Timesheet {
+  consultant: {
+    id: string;
+    userId: string;
+    user: {
+      firstName: string | null;
+      lastName: string | null;
+    };
+  };
+  project: {
+    id: string;
+    name: string;
+  } | null;
+  approver: {
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+  entries: TimesheetEntry[];
+}
+
+export interface AvailabilityBlockWithDetails extends AvailabilityBlock {
+  consultant: {
+    id: string;
+    user: {
+      firstName: string | null;
+      lastName: string | null;
+    };
+  };
+}
+
+export interface ShiftSwapRequestWithDetails extends ShiftSwapRequest {
+  requester: {
+    id: string;
+    user: {
+      firstName: string | null;
+      lastName: string | null;
+    };
+  };
+  targetConsultant: {
+    id: string;
+    user: {
+      firstName: string | null;
+      lastName: string | null;
+    };
+  } | null;
+  originalAssignment: {
+    id: string;
+    schedule: {
+      scheduleDate: string;
+      shiftType: string;
+    };
+  };
+  responder: {
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
 }
