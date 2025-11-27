@@ -29,6 +29,7 @@ import {
   X
 } from "lucide-react";
 import { ConsultantCard, ConsultantCardSkeleton } from "@/components/ConsultantCard";
+import { ConsultantDetailModal } from "@/components/ConsultantDetailModal";
 import type { Hospital, Project } from "@shared/schema";
 
 interface ConsultantDirectoryItem {
@@ -114,6 +115,8 @@ export default function Search() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [selectedConsultantId, setSelectedConsultantId] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
@@ -483,7 +486,8 @@ export default function Search() {
                       consultant={consultant}
                       viewMode={viewMode}
                       onClick={() => {
-                        console.log('Open consultant detail modal:', consultant.id);
+                        setSelectedConsultantId(consultant.id);
+                        setIsModalOpen(true);
                       }}
                     />
                   ))}
@@ -648,6 +652,17 @@ export default function Search() {
           )}
         </div>
       )}
+
+      <ConsultantDetailModal
+        consultantId={selectedConsultantId}
+        open={isModalOpen}
+        onOpenChange={(open) => {
+          setIsModalOpen(open);
+          if (!open) {
+            setSelectedConsultantId(null);
+          }
+        }}
+      />
     </div>
   );
 }
