@@ -445,18 +445,32 @@ export default function ProjectPhases() {
           <CardTitle className="text-lg">Select Project</CardTitle>
         </CardHeader>
         <CardContent>
-          <Select value={selectedProject} onValueChange={setSelectedProject}>
-            <SelectTrigger className="max-w-md" data-testid="select-project">
-              <SelectValue placeholder="Choose a project to view phases" />
-            </SelectTrigger>
-            <SelectContent>
-              {projects?.map((project) => (
-                <SelectItem key={project.id} value={project.id}>
-                  {project.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {projects && projects.length > 0 ? (
+            <Select value={selectedProject} onValueChange={setSelectedProject}>
+              <SelectTrigger className="max-w-md" data-testid="select-project">
+                <SelectValue placeholder="Choose a project to view phases" />
+              </SelectTrigger>
+              <SelectContent>
+                {projects.map((project) => (
+                  <SelectItem key={project.id} value={project.id}>
+                    {project.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <div className="text-center py-8 space-y-4">
+              <div className="text-muted-foreground">
+                <Target className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p className="font-medium">No Projects Found</p>
+                <p className="text-sm">Create a project first to start tracking implementation phases.</p>
+              </div>
+              <Button onClick={() => setLocation("/projects")} data-testid="button-go-to-projects">
+                <Plus className="w-4 h-4 mr-2" />
+                Go to Projects
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
