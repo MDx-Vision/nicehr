@@ -797,6 +797,15 @@ export class DatabaseStorage implements IStorage {
 
     const conditions: any[] = [];
 
+    // Filter out private profiles from directory search
+    // Only show public and members_only profiles (all authenticated users are "members")
+    conditions.push(
+      or(
+        eq(users.profileVisibility, 'public'),
+        eq(users.profileVisibility, 'members_only')
+      )
+    );
+
     if (search) {
       const searchPattern = `%${search}%`;
       conditions.push(

@@ -380,13 +380,38 @@ export async function registerRoutes(
     }
   });
 
-  // Consultant full profile endpoint
-  app.get('/api/consultants/:id/profile', isAuthenticated, async (req, res) => {
+  // Consultant full profile endpoint with privacy settings enforcement
+  app.get('/api/consultants/:id/profile', isAuthenticated, async (req: any, res) => {
     try {
       const profile = await storage.getConsultantProfile(req.params.id);
       if (!profile) {
         return res.status(404).json({ message: "Consultant not found" });
       }
+
+      // Check profile visibility
+      const currentUserId = req.user?.claims?.sub;
+      const isOwnProfile = profile.user.id === currentUserId;
+      
+      // Get user settings for this profile
+      const userSettings = await storage.getAccountSettings(profile.user.id);
+      
+      if (userSettings) {
+        // If profile is private and not the owner, deny access
+        if (userSettings.profileVisibility === 'private' && !isOwnProfile) {
+          return res.status(403).json({ message: "This profile is private" });
+        }
+
+        // Hide email if showEmail is false and not own profile
+        if (!userSettings.showEmail && !isOwnProfile) {
+          profile.user.email = null;
+        }
+
+        // Hide phone if showPhone is false and not own profile
+        if (!userSettings.showPhone && !isOwnProfile) {
+          profile.consultant.phone = null;
+        }
+      }
+
       res.json(profile);
     } catch (error) {
       console.error("Error fetching consultant profile:", error);
