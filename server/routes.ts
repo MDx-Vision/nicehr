@@ -1174,5 +1174,28 @@ export async function registerRoutes(
     }
   });
 
+  // Admin Email Log routes
+  app.get('/api/admin/email-logs', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const userId = req.query.userId as string | undefined;
+      const logs = await storage.getEmailNotifications(limit, userId);
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching email logs:", error);
+      res.status(500).json({ message: "Failed to fetch email logs" });
+    }
+  });
+
+  app.get('/api/admin/email-stats', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const stats = await storage.getEmailNotificationStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching email stats:", error);
+      res.status(500).json({ message: "Failed to fetch email stats" });
+    }
+  });
+
   return httpServer;
 }

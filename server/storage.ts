@@ -176,6 +176,11 @@ export interface IStorage {
   updateAccountSettings(userId: string, settings: AccountSettingsUpdate): Promise<User | undefined>;
   requestAccountDeletion(userId: string): Promise<User | undefined>;
   cancelAccountDeletion(userId: string): Promise<User | undefined>;
+
+  // Email Notification operations
+  createEmailNotification(notification: Omit<InsertEmailNotification, 'id' | 'createdAt'>): Promise<EmailNotification>;
+  getEmailNotifications(limit?: number, userId?: string): Promise<EmailNotification[]>;
+  getEmailNotificationStats(): Promise<{ sent: number; failed: number; total: number }>;
 }
 
 export interface ConsultantSearchFilters {
