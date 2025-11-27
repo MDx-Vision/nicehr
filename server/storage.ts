@@ -33,6 +33,10 @@ import {
   goLiveSignIns,
   supportTickets,
   shiftHandoffs,
+  timesheets,
+  timesheetEntries,
+  availabilityBlocks,
+  shiftSwapRequests,
   type User,
   type UpsertUser,
   type Consultant,
@@ -111,6 +115,17 @@ import {
   type SupportTicketWithDetails,
   type ShiftHandoffWithDetails,
   type CommandCenterStats,
+  type Timesheet,
+  type InsertTimesheet,
+  type TimesheetEntry,
+  type InsertTimesheetEntry,
+  type AvailabilityBlock,
+  type InsertAvailabilityBlock,
+  type ShiftSwapRequest,
+  type InsertShiftSwapRequest,
+  type TimesheetWithDetails,
+  type AvailabilityBlockWithDetails,
+  type ShiftSwapRequestWithDetails,
   EHR_IMPLEMENTATION_PHASES,
   NICEHR_TEAM_ROLES,
   HOSPITAL_TEAM_ROLES,
@@ -366,6 +381,44 @@ export interface IStorage {
 
   // Command Center Stats
   getCommandCenterStats(projectId: string): Promise<CommandCenterStats>;
+
+  // ============================================
+  // PHASE 10: SCHEDULING & TIME MANAGEMENT
+  // ============================================
+
+  // Timesheet methods
+  createTimesheet(data: InsertTimesheet): Promise<Timesheet>;
+  getTimesheetById(id: string): Promise<TimesheetWithDetails | undefined>;
+  getTimesheetsByConsultant(consultantId: string): Promise<TimesheetWithDetails[]>;
+  getTimesheetsByProject(projectId: string): Promise<TimesheetWithDetails[]>;
+  getPendingTimesheets(): Promise<TimesheetWithDetails[]>;
+  updateTimesheet(id: string, data: Partial<InsertTimesheet>): Promise<Timesheet | undefined>;
+  submitTimesheet(id: string): Promise<Timesheet | undefined>;
+  approveTimesheet(id: string, approverId: string): Promise<Timesheet | undefined>;
+  rejectTimesheet(id: string, reason: string): Promise<Timesheet | undefined>;
+
+  // Timesheet entry methods
+  createTimesheetEntry(data: InsertTimesheetEntry): Promise<TimesheetEntry>;
+  getTimesheetEntries(timesheetId: string): Promise<TimesheetEntry[]>;
+  updateTimesheetEntry(id: string, data: Partial<InsertTimesheetEntry>): Promise<TimesheetEntry | undefined>;
+  deleteTimesheetEntry(id: string): Promise<void>;
+  clockIn(timesheetId: string, location?: string): Promise<TimesheetEntry>;
+  clockOut(entryId: string): Promise<TimesheetEntry | undefined>;
+
+  // Availability methods
+  createAvailabilityBlock(data: InsertAvailabilityBlock): Promise<AvailabilityBlock>;
+  getAvailabilityByConsultant(consultantId: string, startDate?: Date, endDate?: Date): Promise<AvailabilityBlock[]>;
+  updateAvailabilityBlock(id: string, data: Partial<InsertAvailabilityBlock>): Promise<AvailabilityBlock | undefined>;
+  deleteAvailabilityBlock(id: string): Promise<void>;
+
+  // Shift swap methods
+  createShiftSwapRequest(data: InsertShiftSwapRequest): Promise<ShiftSwapRequest>;
+  getSwapRequestById(id: string): Promise<ShiftSwapRequestWithDetails | undefined>;
+  getSwapRequestsByConsultant(consultantId: string): Promise<ShiftSwapRequestWithDetails[]>;
+  getPendingSwapRequests(): Promise<ShiftSwapRequestWithDetails[]>;
+  approveSwapRequest(id: string, responderId: string, notes?: string): Promise<ShiftSwapRequest | undefined>;
+  rejectSwapRequest(id: string, responderId: string, notes?: string): Promise<ShiftSwapRequest | undefined>;
+  cancelSwapRequest(id: string): Promise<ShiftSwapRequest | undefined>;
 }
 
 export interface ConsultantSearchFilters {
@@ -2937,6 +2990,446 @@ export class DatabaseStorage implements IStorage {
       criticalTickets: Number(criticalTicketsResult[0]?.count) || 0,
       pendingHandoffs: Number(pendingHandoffsResult[0]?.count) || 0,
       averageResponseTime: Math.round(Number(avgResponseTimeResult[0]?.avg) || 0),
+    };
+  }
+
+  // ============================================
+  // PHASE 10: SCHEDULING & TIME MANAGEMENT
+  // ============================================
+
+  // Timesheet operations
+  async createTimesheet(data: InsertTimesheet): Promise<Timesheet> {
+    const results = await db.insert(timesheets).values(data).returning();
+    return results[0];
+  }
+
+  async getTimesheetById(id: string): Promise<TimesheetWithDetails | undefined> {
+    const results = await db
+      .select()
+      .from(timesheets)
+      .where(eq(timesheets.id, id));
+
+    if (results.length === 0) return undefined;
+
+    const timesheet = results[0];
+    return this.buildTimesheetWithDetails(timesheet);
+  }
+
+  async getTimesheetsByConsultant(consultantId: string): Promise<TimesheetWithDetails[]> {
+    const results = await db
+      .select()
+      .from(timesheets)
+      .where(eq(timesheets.consultantId, consultantId))
+      .orderBy(desc(timesheets.weekStartDate));
+
+    return Promise.all(results.map((ts) => this.buildTimesheetWithDetails(ts)));
+  }
+
+  async getTimesheetsByProject(projectId: string): Promise<TimesheetWithDetails[]> {
+    const results = await db
+      .select()
+      .from(timesheets)
+      .where(eq(timesheets.projectId, projectId))
+      .orderBy(desc(timesheets.weekStartDate));
+
+    return Promise.all(results.map((ts) => this.buildTimesheetWithDetails(ts)));
+  }
+
+  async getPendingTimesheets(): Promise<TimesheetWithDetails[]> {
+    const results = await db
+      .select()
+      .from(timesheets)
+      .where(eq(timesheets.status, "submitted"))
+      .orderBy(asc(timesheets.submittedAt));
+
+    return Promise.all(results.map((ts) => this.buildTimesheetWithDetails(ts)));
+  }
+
+  async updateTimesheet(id: string, data: Partial<InsertTimesheet>): Promise<Timesheet | undefined> {
+    const results = await db
+      .update(timesheets)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(timesheets.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async submitTimesheet(id: string): Promise<Timesheet | undefined> {
+    const results = await db
+      .update(timesheets)
+      .set({
+        status: "submitted",
+        submittedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(timesheets.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async approveTimesheet(id: string, approverId: string): Promise<Timesheet | undefined> {
+    const results = await db
+      .update(timesheets)
+      .set({
+        status: "approved",
+        approvedBy: approverId,
+        approvedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(timesheets.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async rejectTimesheet(id: string, reason: string): Promise<Timesheet | undefined> {
+    const results = await db
+      .update(timesheets)
+      .set({
+        status: "rejected",
+        rejectionReason: reason,
+        updatedAt: new Date(),
+      })
+      .where(eq(timesheets.id, id))
+      .returning();
+    return results[0];
+  }
+
+  private async buildTimesheetWithDetails(timesheet: Timesheet): Promise<TimesheetWithDetails> {
+    const consultant = await this.getConsultant(timesheet.consultantId);
+    const user = consultant ? await this.getUser(consultant.userId) : null;
+    const entries = await this.getTimesheetEntries(timesheet.id);
+
+    let projectDetails: { id: string; name: string } | null = null;
+    if (timesheet.projectId) {
+      const project = await this.getProject(timesheet.projectId);
+      if (project) {
+        projectDetails = { id: project.id, name: project.name };
+      }
+    }
+
+    let approverDetails: { firstName: string | null; lastName: string | null } | null = null;
+    if (timesheet.approvedBy) {
+      const approver = await this.getUser(timesheet.approvedBy);
+      if (approver) {
+        approverDetails = { firstName: approver.firstName, lastName: approver.lastName };
+      }
+    }
+
+    return {
+      ...timesheet,
+      consultant: {
+        id: consultant?.id || '',
+        userId: consultant?.userId || '',
+        user: {
+          firstName: user?.firstName || null,
+          lastName: user?.lastName || null,
+        },
+      },
+      project: projectDetails,
+      approver: approverDetails,
+      entries,
+    };
+  }
+
+  // Timesheet Entry operations
+  async createTimesheetEntry(data: InsertTimesheetEntry): Promise<TimesheetEntry> {
+    const results = await db.insert(timesheetEntries).values(data).returning();
+    await this.recalculateTimesheetHours(data.timesheetId);
+    return results[0];
+  }
+
+  async getTimesheetEntries(timesheetId: string): Promise<TimesheetEntry[]> {
+    return await db
+      .select()
+      .from(timesheetEntries)
+      .where(eq(timesheetEntries.timesheetId, timesheetId))
+      .orderBy(asc(timesheetEntries.entryDate), asc(timesheetEntries.clockIn));
+  }
+
+  async updateTimesheetEntry(id: string, data: Partial<InsertTimesheetEntry>): Promise<TimesheetEntry | undefined> {
+    const existingEntry = await db.select().from(timesheetEntries).where(eq(timesheetEntries.id, id));
+    if (existingEntry.length === 0) return undefined;
+
+    const results = await db
+      .update(timesheetEntries)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(timesheetEntries.id, id))
+      .returning();
+
+    if (results[0]) {
+      await this.recalculateTimesheetHours(existingEntry[0].timesheetId);
+    }
+    return results[0];
+  }
+
+  async deleteTimesheetEntry(id: string): Promise<void> {
+    const existingEntry = await db.select().from(timesheetEntries).where(eq(timesheetEntries.id, id));
+    if (existingEntry.length === 0) return;
+
+    await db.delete(timesheetEntries).where(eq(timesheetEntries.id, id));
+    await this.recalculateTimesheetHours(existingEntry[0].timesheetId);
+  }
+
+  async clockIn(timesheetId: string, location?: string): Promise<TimesheetEntry> {
+    const now = new Date();
+    const entryDate = now.toISOString().split('T')[0];
+
+    const results = await db.insert(timesheetEntries).values({
+      timesheetId,
+      entryDate,
+      clockIn: now,
+      location: location || null,
+      isManualEntry: false,
+    }).returning();
+
+    return results[0];
+  }
+
+  async clockOut(entryId: string): Promise<TimesheetEntry | undefined> {
+    const existingEntry = await db.select().from(timesheetEntries).where(eq(timesheetEntries.id, entryId));
+    if (existingEntry.length === 0 || !existingEntry[0].clockIn) return undefined;
+
+    const now = new Date();
+    const clockInTime = new Date(existingEntry[0].clockIn);
+    const breakMinutes = existingEntry[0].breakMinutes || 0;
+
+    const diffMs = now.getTime() - clockInTime.getTime();
+    const totalMinutes = Math.max(0, (diffMs / (1000 * 60)) - breakMinutes);
+    const totalHours = Math.round((totalMinutes / 60) * 100) / 100;
+
+    const results = await db
+      .update(timesheetEntries)
+      .set({
+        clockOut: now,
+        totalHours,
+        updatedAt: new Date(),
+      })
+      .where(eq(timesheetEntries.id, entryId))
+      .returning();
+
+    if (results[0]) {
+      await this.recalculateTimesheetHours(existingEntry[0].timesheetId);
+    }
+
+    return results[0];
+  }
+
+  private async recalculateTimesheetHours(timesheetId: string): Promise<void> {
+    const entries = await this.getTimesheetEntries(timesheetId);
+    const totalHours = entries.reduce((sum, entry) => sum + (entry.totalHours || 0), 0);
+
+    const regularHours = Math.min(totalHours, 40);
+    const overtimeHours = Math.max(0, totalHours - 40);
+
+    await db
+      .update(timesheets)
+      .set({
+        totalHours,
+        regularHours,
+        overtimeHours,
+        updatedAt: new Date(),
+      })
+      .where(eq(timesheets.id, timesheetId));
+  }
+
+  // Availability Block operations
+  async createAvailabilityBlock(data: InsertAvailabilityBlock): Promise<AvailabilityBlock> {
+    const results = await db.insert(availabilityBlocks).values(data).returning();
+    return results[0];
+  }
+
+  async getAvailabilityByConsultant(consultantId: string, startDate?: Date, endDate?: Date): Promise<AvailabilityBlock[]> {
+    let query = db
+      .select()
+      .from(availabilityBlocks)
+      .where(eq(availabilityBlocks.consultantId, consultantId));
+
+    if (startDate && endDate) {
+      const startDateStr = startDate.toISOString().split('T')[0];
+      const endDateStr = endDate.toISOString().split('T')[0];
+      query = db
+        .select()
+        .from(availabilityBlocks)
+        .where(
+          and(
+            eq(availabilityBlocks.consultantId, consultantId),
+            or(
+              and(
+                gte(availabilityBlocks.startDate, startDateStr),
+                lte(availabilityBlocks.startDate, endDateStr)
+              ),
+              and(
+                gte(availabilityBlocks.endDate, startDateStr),
+                lte(availabilityBlocks.endDate, endDateStr)
+              ),
+              and(
+                lte(availabilityBlocks.startDate, startDateStr),
+                gte(availabilityBlocks.endDate, endDateStr)
+              )
+            )
+          )
+        );
+    }
+
+    return await query.orderBy(asc(availabilityBlocks.startDate));
+  }
+
+  async updateAvailabilityBlock(id: string, data: Partial<InsertAvailabilityBlock>): Promise<AvailabilityBlock | undefined> {
+    const results = await db
+      .update(availabilityBlocks)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(availabilityBlocks.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteAvailabilityBlock(id: string): Promise<void> {
+    await db.delete(availabilityBlocks).where(eq(availabilityBlocks.id, id));
+  }
+
+  // Shift Swap Request operations
+  async createShiftSwapRequest(data: InsertShiftSwapRequest): Promise<ShiftSwapRequest> {
+    const results = await db.insert(shiftSwapRequests).values(data).returning();
+    return results[0];
+  }
+
+  async getSwapRequestById(id: string): Promise<ShiftSwapRequestWithDetails | undefined> {
+    const results = await db
+      .select()
+      .from(shiftSwapRequests)
+      .where(eq(shiftSwapRequests.id, id));
+
+    if (results.length === 0) return undefined;
+
+    return this.buildSwapRequestWithDetails(results[0]);
+  }
+
+  async getSwapRequestsByConsultant(consultantId: string): Promise<ShiftSwapRequestWithDetails[]> {
+    const results = await db
+      .select()
+      .from(shiftSwapRequests)
+      .where(
+        or(
+          eq(shiftSwapRequests.requesterId, consultantId),
+          eq(shiftSwapRequests.targetConsultantId, consultantId)
+        )
+      )
+      .orderBy(desc(shiftSwapRequests.createdAt));
+
+    return Promise.all(results.map((req) => this.buildSwapRequestWithDetails(req)));
+  }
+
+  async getPendingSwapRequests(): Promise<ShiftSwapRequestWithDetails[]> {
+    const results = await db
+      .select()
+      .from(shiftSwapRequests)
+      .where(eq(shiftSwapRequests.status, "pending"))
+      .orderBy(asc(shiftSwapRequests.requestedAt));
+
+    return Promise.all(results.map((req) => this.buildSwapRequestWithDetails(req)));
+  }
+
+  async approveSwapRequest(id: string, responderId: string, notes?: string): Promise<ShiftSwapRequest | undefined> {
+    const results = await db
+      .update(shiftSwapRequests)
+      .set({
+        status: "approved",
+        respondedBy: responderId,
+        respondedAt: new Date(),
+        responseNotes: notes || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(shiftSwapRequests.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async rejectSwapRequest(id: string, responderId: string, notes?: string): Promise<ShiftSwapRequest | undefined> {
+    const results = await db
+      .update(shiftSwapRequests)
+      .set({
+        status: "rejected",
+        respondedBy: responderId,
+        respondedAt: new Date(),
+        responseNotes: notes || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(shiftSwapRequests.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async cancelSwapRequest(id: string): Promise<ShiftSwapRequest | undefined> {
+    const results = await db
+      .update(shiftSwapRequests)
+      .set({
+        status: "cancelled",
+        updatedAt: new Date(),
+      })
+      .where(eq(shiftSwapRequests.id, id))
+      .returning();
+    return results[0];
+  }
+
+  private async buildSwapRequestWithDetails(request: ShiftSwapRequest): Promise<ShiftSwapRequestWithDetails> {
+    const requester = await this.getConsultant(request.requesterId);
+    const requesterUser = requester ? await this.getUser(requester.userId) : null;
+
+    let targetConsultantDetails: ShiftSwapRequestWithDetails['targetConsultant'] = null;
+    if (request.targetConsultantId) {
+      const targetConsultant = await this.getConsultant(request.targetConsultantId);
+      if (targetConsultant) {
+        const targetUser = await this.getUser(targetConsultant.userId);
+        targetConsultantDetails = {
+          id: targetConsultant.id,
+          user: {
+            firstName: targetUser?.firstName || null,
+            lastName: targetUser?.lastName || null,
+          },
+        };
+      }
+    }
+
+    const originalAssignmentResults = await db
+      .select({
+        assignment: scheduleAssignments,
+        schedule: projectSchedules,
+      })
+      .from(scheduleAssignments)
+      .innerJoin(projectSchedules, eq(scheduleAssignments.scheduleId, projectSchedules.id))
+      .where(eq(scheduleAssignments.id, request.originalAssignmentId));
+
+    const originalAssignment = originalAssignmentResults[0];
+
+    let responderDetails: ShiftSwapRequestWithDetails['responder'] = null;
+    if (request.respondedBy) {
+      const responder = await this.getUser(request.respondedBy);
+      if (responder) {
+        responderDetails = {
+          firstName: responder.firstName,
+          lastName: responder.lastName,
+        };
+      }
+    }
+
+    return {
+      ...request,
+      requester: {
+        id: requester?.id || '',
+        user: {
+          firstName: requesterUser?.firstName || null,
+          lastName: requesterUser?.lastName || null,
+        },
+      },
+      targetConsultant: targetConsultantDetails,
+      originalAssignment: {
+        id: originalAssignment?.assignment?.id || '',
+        schedule: {
+          scheduleDate: originalAssignment?.schedule?.scheduleDate || '',
+          shiftType: originalAssignment?.schedule?.shiftType || '',
+        },
+      },
+      responder: responderDetails,
     };
   }
 }
