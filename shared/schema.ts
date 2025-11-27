@@ -1435,3 +1435,206 @@ export const HOSPITAL_TEAM_ROLES = [
   { name: "IT Specialist", description: "Addresses technical issues during go-live", category: "hospital" as const },
   { name: "Executive Decision-Making Team", description: "Handles escalations and critical decisions", category: "hospital" as const },
 ] as const;
+
+// ============================================
+// PHASE 9: GO-LIVE COMMAND CENTER
+// ============================================
+
+// Enums for Phase 9
+export const signInStatusEnum = pgEnum("sign_in_status", ["checked_in", "checked_out", "no_show"]);
+export const ticketPriorityEnum = pgEnum("ticket_priority", ["low", "medium", "high", "critical"]);
+export const ticketStatusEnum = pgEnum("ticket_status", ["open", "in_progress", "escalated", "resolved", "closed"]);
+export const ticketCategoryEnum = pgEnum("ticket_category", ["technical", "clinical", "workflow", "training", "access", "integration", "other"]);
+export const handoffStatusEnum = pgEnum("handoff_status", ["pending", "acknowledged", "completed"]);
+
+// Go-Live Sign-Ins - Track consultant check-in/check-out at go-live sites
+export const goLiveSignIns = pgTable("go_live_signins", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  consultantId: varchar("consultant_id").references(() => consultants.id).notNull(),
+  scheduleId: varchar("schedule_id").references(() => projectSchedules.id),
+  signInTime: timestamp("sign_in_time"),
+  signOutTime: timestamp("sign_out_time"),
+  status: signInStatusEnum("status").default("checked_in").notNull(),
+  location: varchar("location"),
+  unit: varchar("unit"),
+  badgeNumber: varchar("badge_number"),
+  notes: text("notes"),
+  lateArrival: boolean("late_arrival").default(false),
+  lateMinutes: integer("late_minutes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const goLiveSignInsRelations = relations(goLiveSignIns, ({ one }) => ({
+  project: one(projects, {
+    fields: [goLiveSignIns.projectId],
+    references: [projects.id],
+  }),
+  consultant: one(consultants, {
+    fields: [goLiveSignIns.consultantId],
+    references: [consultants.id],
+  }),
+  schedule: one(projectSchedules, {
+    fields: [goLiveSignIns.scheduleId],
+    references: [projectSchedules.id],
+  }),
+}));
+
+export const insertGoLiveSignInSchema = createInsertSchema(goLiveSignIns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Support Tickets - Track issues during go-live
+export const supportTickets = pgTable("support_tickets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketNumber: varchar("ticket_number").unique(),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  reportedById: varchar("reported_by_id").references(() => users.id),
+  assignedToId: varchar("assigned_to_id").references(() => consultants.id),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  category: ticketCategoryEnum("category").default("other").notNull(),
+  priority: ticketPriorityEnum("priority").default("medium").notNull(),
+  status: ticketStatusEnum("status").default("open").notNull(),
+  unit: varchar("unit"),
+  module: varchar("module"),
+  affectedUsers: integer("affected_users"),
+  resolution: text("resolution"),
+  responseTime: integer("response_time_minutes"),
+  resolutionTime: integer("resolution_time_minutes"),
+  escalatedAt: timestamp("escalated_at"),
+  resolvedAt: timestamp("resolved_at"),
+  closedAt: timestamp("closed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const supportTicketsRelations = relations(supportTickets, ({ one }) => ({
+  project: one(projects, {
+    fields: [supportTickets.projectId],
+    references: [projects.id],
+  }),
+  reportedBy: one(users, {
+    fields: [supportTickets.reportedById],
+    references: [users.id],
+  }),
+  assignedTo: one(consultants, {
+    fields: [supportTickets.assignedToId],
+    references: [consultants.id],
+  }),
+}));
+
+export const insertSupportTicketSchema = createInsertSchema(supportTickets).omit({
+  id: true,
+  ticketNumber: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Shift Handoffs - Track shift-to-shift communication
+export const shiftHandoffs = pgTable("shift_handoffs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  outgoingConsultantId: varchar("outgoing_consultant_id").references(() => consultants.id).notNull(),
+  incomingConsultantId: varchar("incoming_consultant_id").references(() => consultants.id),
+  shiftDate: date("shift_date").notNull(),
+  outgoingShiftType: shiftTypeEnum("outgoing_shift_type").notNull(),
+  incomingShiftType: shiftTypeEnum("incoming_shift_type"),
+  activeIssues: text("active_issues"),
+  pendingTasks: text("pending_tasks"),
+  escalations: text("escalations"),
+  generalNotes: text("general_notes"),
+  unitsCoovered: text("units_covered").array(),
+  status: handoffStatusEnum("status").default("pending").notNull(),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const shiftHandoffsRelations = relations(shiftHandoffs, ({ one }) => ({
+  project: one(projects, {
+    fields: [shiftHandoffs.projectId],
+    references: [projects.id],
+  }),
+  outgoingConsultant: one(consultants, {
+    fields: [shiftHandoffs.outgoingConsultantId],
+    references: [consultants.id],
+  }),
+  incomingConsultant: one(consultants, {
+    fields: [shiftHandoffs.incomingConsultantId],
+    references: [consultants.id],
+  }),
+}));
+
+export const insertShiftHandoffSchema = createInsertSchema(shiftHandoffs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Phase 9 Types
+export type GoLiveSignIn = typeof goLiveSignIns.$inferSelect;
+export type InsertGoLiveSignIn = z.infer<typeof insertGoLiveSignInSchema>;
+
+export type SupportTicket = typeof supportTickets.$inferSelect;
+export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;
+
+export type ShiftHandoff = typeof shiftHandoffs.$inferSelect;
+export type InsertShiftHandoff = z.infer<typeof insertShiftHandoffSchema>;
+
+// Extended types for Command Center
+export interface GoLiveSignInWithDetails extends GoLiveSignIn {
+  consultant: {
+    id: string;
+    userId: string;
+    tngId: string | null;
+  };
+  user: {
+    firstName: string | null;
+    lastName: string | null;
+    profileImageUrl: string | null;
+  };
+}
+
+export interface SupportTicketWithDetails extends SupportTicket {
+  reportedBy: {
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+  assignedTo: {
+    id: string;
+    user: {
+      firstName: string | null;
+      lastName: string | null;
+    };
+  } | null;
+}
+
+export interface ShiftHandoffWithDetails extends ShiftHandoff {
+  outgoingConsultant: {
+    id: string;
+    user: {
+      firstName: string | null;
+      lastName: string | null;
+    };
+  };
+  incomingConsultant: {
+    id: string;
+    user: {
+      firstName: string | null;
+      lastName: string | null;
+    };
+  } | null;
+}
+
+export interface CommandCenterStats {
+  activeConsultants: number;
+  checkedInToday: number;
+  openTickets: number;
+  criticalTickets: number;
+  pendingHandoffs: number;
+  averageResponseTime: number;
+}

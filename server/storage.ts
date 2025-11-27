@@ -30,6 +30,9 @@ import {
   teamRoleTemplates,
   projectTeamAssignments,
   onboardingTasks,
+  goLiveSignIns,
+  supportTickets,
+  shiftHandoffs,
   type User,
   type UpsertUser,
   type Consultant,
@@ -98,6 +101,16 @@ import {
   type InsertOnboardingTask,
   type ProjectLifecycle,
   type OnboardingProgress,
+  type GoLiveSignIn,
+  type InsertGoLiveSignIn,
+  type SupportTicket,
+  type InsertSupportTicket,
+  type ShiftHandoff,
+  type InsertShiftHandoff,
+  type GoLiveSignInWithDetails,
+  type SupportTicketWithDetails,
+  type ShiftHandoffWithDetails,
+  type CommandCenterStats,
   EHR_IMPLEMENTATION_PHASES,
   NICEHR_TEAM_ROLES,
   HOSPITAL_TEAM_ROLES,
@@ -319,6 +332,40 @@ export interface IStorage {
 
   // Project Lifecycle (combined view)
   getProjectLifecycle(projectId: string): Promise<ProjectLifecycle | null>;
+
+  // ============================================
+  // PHASE 9: GO-LIVE COMMAND CENTER
+  // ============================================
+
+  // Go-Live Sign-In operations
+  getGoLiveSignIns(projectId: string): Promise<GoLiveSignIn[]>;
+  getGoLiveSignIn(id: string): Promise<GoLiveSignIn | undefined>;
+  getActiveSignIns(projectId: string): Promise<GoLiveSignInWithDetails[]>;
+  getTodaySignIns(projectId: string): Promise<GoLiveSignIn[]>;
+  createGoLiveSignIn(signIn: InsertGoLiveSignIn): Promise<GoLiveSignIn>;
+  updateGoLiveSignIn(id: string, signIn: Partial<InsertGoLiveSignIn>): Promise<GoLiveSignIn | undefined>;
+  signOutConsultant(id: string): Promise<GoLiveSignIn | undefined>;
+
+  // Support Ticket operations
+  getSupportTickets(projectId: string): Promise<SupportTicket[]>;
+  getSupportTicket(id: string): Promise<SupportTicket | undefined>;
+  getOpenTickets(projectId: string): Promise<SupportTicketWithDetails[]>;
+  createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket>;
+  updateSupportTicket(id: string, ticket: Partial<InsertSupportTicket>): Promise<SupportTicket | undefined>;
+  assignTicket(id: string, consultantId: string): Promise<SupportTicket | undefined>;
+  resolveTicket(id: string, resolution: string): Promise<SupportTicket | undefined>;
+  escalateTicket(id: string): Promise<SupportTicket | undefined>;
+
+  // Shift Handoff operations
+  getShiftHandoffs(projectId: string): Promise<ShiftHandoff[]>;
+  getShiftHandoff(id: string): Promise<ShiftHandoff | undefined>;
+  getPendingHandoffs(projectId: string): Promise<ShiftHandoffWithDetails[]>;
+  createShiftHandoff(handoff: InsertShiftHandoff): Promise<ShiftHandoff>;
+  updateShiftHandoff(id: string, handoff: Partial<InsertShiftHandoff>): Promise<ShiftHandoff | undefined>;
+  acknowledgeHandoff(id: string, incomingConsultantId: string): Promise<ShiftHandoff | undefined>;
+
+  // Command Center Stats
+  getCommandCenterStats(projectId: string): Promise<CommandCenterStats>;
 }
 
 export interface ConsultantSearchFilters {
