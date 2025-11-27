@@ -4,11 +4,36 @@
 NICEHR is a comprehensive healthcare consultant management platform designed to streamline the process of matching healthcare consultants with hospital projects. The system supports multi-role authentication (Admin, Hospital Staff, Consultants) and provides tools for consultant onboarding, project scheduling, document management, and ROI analysis.
 
 ## Current State
-- **Status**: MVP Complete + Phases 1-5 Ultimate Member Features
+- **Status**: MVP Complete + Phases 1-6 Ultimate Member Features
 - **Last Updated**: November 27, 2025
 - **Authentication**: Replit Auth with role-based access control
 
-## Recent Changes (Phase 5 - Content Restriction)
+## Recent Changes (Phase 6 - Activity & Analytics)
+1. **Database Schema**: user_activities and notifications tables for activity tracking and in-app alerts
+2. **Activity Logging**: logActivity function and activityLoggerMiddleware for automatic action tracking
+3. **Activity Types**: login, logout, create, update, delete, upload, download, approve, reject, assign, submit
+4. **Notification Types**: info, success, warning, error with read/unread status
+5. **API Routes**: 
+   - GET/POST /api/activities - Activity CRUD
+   - GET /api/activities/recent - Recent activities feed
+   - GET/POST /api/notifications - Notification CRUD
+   - GET /api/notifications/unread-count - Unread count
+   - PATCH /api/notifications/:id/read - Mark as read
+   - POST /api/notifications/mark-all-read - Mark all as read
+6. **NotificationCenter Component**: Bell icon in header with unread badge, dropdown list, mark read/delete actions
+7. **ActivityFeed Component**: Dashboard widget showing recent platform activity
+8. **ActivityLog Page**: Admin page at /activity-log for viewing/filtering all user activities
+9. **Auth Integration**: Login/logout activities automatically logged
+10. **CRUD Integration**: Resource creation activities logged (hospitals, consultants)
+
+### Activity Tracking Features
+- **User Context**: Captures userId, IP address, user agent
+- **Resource Tracking**: resourceType, resourceId, resourceName for CRUD operations
+- **Metadata Support**: Additional data storage for complex activities
+- **Filtering**: Filter by activity type, user, date range, search query
+- **Pagination**: Server-side pagination for large activity logs
+
+## Phase 5 Changes (Content Restriction)
 1. **Database Schema**: content_access_rules and content_access_audit tables for role-based access control
 2. **Access Rules API**: CRUD endpoints at /api/admin/access-rules for managing content restrictions
 3. **Permissions API**: GET /api/permissions returns user's restricted pages/features based on role
@@ -92,7 +117,9 @@ NICEHR is a comprehensive healthcare consultant management platform designed to 
 │   │   ├── ThemeToggle.tsx
 │   │   ├── ObjectUploader.tsx        # File upload component (Uppy)
 │   │   ├── ConsultantCard.tsx        # Consultant card (grid/list views)
-│   │   └── ConsultantDetailModal.tsx # Full profile modal
+│   │   ├── ConsultantDetailModal.tsx # Full profile modal
+│   │   ├── NotificationCenter.tsx    # Bell icon notification dropdown
+│   │   └── ActivityFeed.tsx          # Recent activity widget
 │   ├── hooks/
 │   │   ├── useAuth.ts                # Authentication hook
 │   │   ├── use-toast.ts
@@ -116,13 +143,15 @@ NICEHR is a comprehensive healthcare consultant management platform designed to 
 │   │   ├── MySchedule.tsx
 │   │   ├── MyDocuments.tsx           # Uses ObjectUploader for file uploads
 │   │   ├── RoiSurvey.tsx
-│   │   └── AccessControl.tsx         # Admin access control management
+│   │   ├── AccessControl.tsx         # Admin access control management
+│   │   └── ActivityLog.tsx           # Admin activity log viewer
 │   └── App.tsx
 ├── server/
 │   ├── routes.ts                     # API endpoints
 │   ├── storage.ts                    # Database operations
 │   ├── replitAuth.ts                 # Auth setup (includes optionalAuth)
 │   ├── objectStorage.ts              # Object Storage service
+│   ├── activityLogger.ts             # Activity logging functions and middleware
 │   ├── objectAcl.ts                  # ACL policies for files
 │   ├── emailService.ts               # Resend email integration with templates
 │   ├── accessControl.ts              # Content access control middleware

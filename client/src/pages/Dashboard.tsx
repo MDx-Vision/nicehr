@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Building2, Users, FolderKanban, FileText, DollarSign, UserCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { ActivityFeed } from "@/components/ActivityFeed";
 
 interface DashboardStats {
   totalConsultants: number;
@@ -41,6 +42,7 @@ export default function Dashboard() {
       </div>
 
       {isAdmin && (
+        <>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Card data-testid="card-total-consultants">
             <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
@@ -136,6 +138,11 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </div>
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <ActivityFeed limit={10} />
+        </div>
+        </>
       )}
 
       {isConsultant && (

@@ -7,6 +7,7 @@ import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
+import { logActivity } from "./activityLogger";
 
 const getOidcConfig = memoize(
   async () => {
@@ -113,10 +114,36 @@ export async function setupAuth(app: Express) {
     passport.authenticate(`replitauth:${req.hostname}`, {
       successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",
+    }, async (err: any, user: any) => {
+      if (err || !user) {
+        return res.redirect("/api/login");
+      }
+      req.login(user, async (loginErr) => {
+        if (loginErr) {
+          return next(loginErr);
+        }
+        if (user?.claims?.sub) {
+          await logActivity(user.claims.sub, {
+            activityType: "login",
+            description: "User logged in successfully",
+          }, req);
+        }
+        return res.redirect("/");
+      });
     })(req, res, next);
   });
 
-  app.get("/api/logout", (req, res) => {
+  app.get("/api/logout", async (req, res) => {
+    const user = req.user as any;
+    const userId = user?.claims?.sub;
+    
+    if (userId) {
+      await logActivity(userId, {
+        activityType: "logout",
+        description: "User logged out",
+      }, req);
+    }
+    
     req.logout(() => {
       res.redirect(
         client.buildEndSessionUrl(config, {

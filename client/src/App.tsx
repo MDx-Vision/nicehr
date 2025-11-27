@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NotificationCenter } from "@/components/NotificationCenter";
 import { useAuth } from "@/hooks/useAuth";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,6 +29,7 @@ import MyDocuments from "@/pages/MyDocuments";
 import RoiSurvey from "@/pages/RoiSurvey";
 import AccountSettings from "@/pages/AccountSettings";
 import AccessControl from "@/pages/AccessControl";
+import ActivityLog from "@/pages/ActivityLog";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -43,7 +45,10 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col flex-1 overflow-hidden">
           <header className="flex items-center justify-between gap-2 p-3 border-b bg-card">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <ThemeToggle />
+            <div className="flex items-center gap-2">
+              <NotificationCenter />
+              <ThemeToggle />
+            </div>
           </header>
           <main className="flex-1 overflow-auto p-6">
             {children}
@@ -150,6 +155,7 @@ function Router() {
       <Route path="/roi-survey" component={() => <ProtectedRoute component={RoiSurvey} />} />
       <Route path="/account" component={() => <ProtectedRoute component={AccountSettings} />} />
       <Route path="/access-control" component={() => <ProtectedRoute component={AccessControl} requiredRoles={["admin"]} />} />
+      <Route path="/activity-log" component={() => <ProtectedRoute component={ActivityLog} requiredRoles={["admin"]} />} />
       <Route component={NotFound} />
     </Switch>
   );

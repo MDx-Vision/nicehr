@@ -7,6 +7,7 @@ import {
   ObjectNotFoundError,
 } from "./objectStorage";
 import { ObjectPermission } from "./objectAcl";
+import { logActivity } from "./activityLogger";
 import {
   insertHospitalSchema,
   insertHospitalUnitSchema,
@@ -132,10 +133,22 @@ export async function registerRoutes(
     }
   });
 
-  app.post('/api/hospitals', isAuthenticated, requireRole('admin'), async (req, res) => {
+  app.post('/api/hospitals', isAuthenticated, requireRole('admin'), async (req: any, res) => {
     try {
+      const userId = req.user?.claims?.sub;
       const validated = insertHospitalSchema.parse(req.body);
       const hospital = await storage.createHospital(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: "create",
+          resourceType: "hospital",
+          resourceId: hospital.id,
+          resourceName: validated.name,
+          description: "Created new hospital",
+        }, req);
+      }
+      
       res.status(201).json(hospital);
     } catch (error) {
       console.error("Error creating hospital:", error);
@@ -143,12 +156,24 @@ export async function registerRoutes(
     }
   });
 
-  app.patch('/api/hospitals/:id', isAuthenticated, requireRole('admin'), async (req, res) => {
+  app.patch('/api/hospitals/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
     try {
+      const userId = req.user?.claims?.sub;
       const hospital = await storage.updateHospital(req.params.id, req.body);
       if (!hospital) {
         return res.status(404).json({ message: "Hospital not found" });
       }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: "update",
+          resourceType: "hospital",
+          resourceId: hospital.id,
+          resourceName: hospital.name,
+          description: "Updated hospital details",
+        }, req);
+      }
+      
       res.json(hospital);
     } catch (error) {
       console.error("Error updating hospital:", error);
@@ -156,9 +181,26 @@ export async function registerRoutes(
     }
   });
 
-  app.delete('/api/hospitals/:id', isAuthenticated, requireRole('admin'), async (req, res) => {
+  app.delete('/api/hospitals/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
     try {
-      await storage.deleteHospital(req.params.id);
+      const userId = req.user?.claims?.sub;
+      const hospitalId = req.params.id;
+      
+      const hospital = await storage.getHospital(hospitalId);
+      const hospitalName = hospital?.name || hospitalId;
+      
+      await storage.deleteHospital(hospitalId);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: "delete",
+          resourceType: "hospital",
+          resourceId: hospitalId,
+          resourceName: hospitalName,
+          description: "Deleted hospital",
+        }, req);
+      }
+      
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting hospital:", error);
@@ -314,11 +356,23 @@ export async function registerRoutes(
 
   app.post('/api/consultants', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user?.claims?.sub;
       const validated = insertConsultantSchema.parse({
         ...req.body,
-        userId: req.body.userId || req.user.claims.sub,
+        userId: req.body.userId || userId,
       });
       const consultant = await storage.createConsultant(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: "create",
+          resourceType: "consultant",
+          resourceId: consultant.id,
+          resourceName: [validated.firstName, validated.lastName].filter(Boolean).join(" ") || "New Consultant",
+          description: "Created new consultant profile",
+        }, req);
+      }
+      
       res.status(201).json(consultant);
     } catch (error) {
       console.error("Error creating consultant:", error);
@@ -326,12 +380,24 @@ export async function registerRoutes(
     }
   });
 
-  app.patch('/api/consultants/:id', isAuthenticated, async (req, res) => {
+  app.patch('/api/consultants/:id', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user?.claims?.sub;
       const consultant = await storage.updateConsultant(req.params.id, req.body);
       if (!consultant) {
         return res.status(404).json({ message: "Consultant not found" });
       }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: "update",
+          resourceType: "consultant",
+          resourceId: consultant.id,
+          resourceName: consultant.tngId || consultant.id,
+          description: "Updated consultant profile",
+        }, req);
+      }
+      
       res.json(consultant);
     } catch (error) {
       console.error("Error updating consultant:", error);
@@ -512,13 +578,25 @@ export async function registerRoutes(
     }
   });
 
-  app.post('/api/consultants/:consultantId/documents', isAuthenticated, async (req, res) => {
+  app.post('/api/consultants/:consultantId/documents', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user?.claims?.sub;
       const validated = insertConsultantDocumentSchema.parse({
         ...req.body,
         consultantId: req.params.consultantId,
       });
       const document = await storage.createConsultantDocument(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: "upload",
+          resourceType: "document",
+          resourceId: document.id,
+          resourceName: validated.fileName,
+          description: "Uploaded consultant document",
+        }, req);
+      }
+      
       res.status(201).json(document);
     } catch (error) {
       console.error("Error creating document:", error);
@@ -528,15 +606,28 @@ export async function registerRoutes(
 
   app.patch('/api/documents/:id/status', isAuthenticated, requireRole('admin'), async (req: any, res) => {
     try {
+      const userId = req.user?.claims?.sub;
       const { status, notes } = req.body;
       const document = await storage.updateDocumentStatus(
         req.params.id,
         status,
-        req.user.claims.sub,
+        userId,
         notes
       );
       if (!document) {
         return res.status(404).json({ message: "Document not found" });
+      }
+      
+      // Log activity for document status update
+      if (userId) {
+        const activityType = status === 'approved' ? 'approve' : status === 'rejected' ? 'reject' : 'update';
+        await logActivity(userId, {
+          activityType,
+          resourceType: "document",
+          resourceId: document.id,
+          resourceName: document.fileName,
+          description: `Document ${status}`,
+        }, req);
       }
       
       // Send email notification for document status change
@@ -685,11 +776,23 @@ export async function registerRoutes(
 
   app.post('/api/projects', isAuthenticated, requireRole('admin'), async (req: any, res) => {
     try {
+      const userId = req.user?.claims?.sub;
       const validated = insertProjectSchema.parse({
         ...req.body,
-        createdBy: req.user.claims.sub,
+        createdBy: userId,
       });
       const project = await storage.createProject(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: "create",
+          resourceType: "project",
+          resourceId: project.id,
+          resourceName: validated.name,
+          description: "Created new project",
+        }, req);
+      }
+      
       res.status(201).json(project);
     } catch (error) {
       console.error("Error creating project:", error);
@@ -1350,6 +1453,139 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching permissions:", error);
       res.status(500).json({ message: "Failed to fetch permissions" });
+    }
+  });
+
+  // User Activity routes
+  app.get('/api/activities', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const activities = await storage.getUserActivities(userId, limit);
+      res.json(activities);
+    } catch (error) {
+      console.error("Error fetching user activities:", error);
+      res.status(500).json({ message: "Failed to fetch activities" });
+    }
+  });
+
+  app.get('/api/activities/recent', isAuthenticated, async (req: any, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const activities = await storage.getRecentActivities(limit);
+      res.json(activities);
+    } catch (error) {
+      console.error("Error fetching recent activities:", error);
+      res.status(500).json({ message: "Failed to fetch recent activities" });
+    }
+  });
+
+  app.get('/api/activities/stats', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.query.userId as string | undefined;
+      const stats = await storage.getActivityStats(userId);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching activity stats:", error);
+      res.status(500).json({ message: "Failed to fetch activity stats" });
+    }
+  });
+
+  // Admin: View all user activities
+  app.get('/api/admin/activities', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const activities = await storage.getRecentActivities(limit);
+      res.json(activities);
+    } catch (error) {
+      console.error("Error fetching all activities:", error);
+      res.status(500).json({ message: "Failed to fetch activities" });
+    }
+  });
+
+  // Notification routes
+  app.get('/api/notifications', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const unreadOnly = req.query.unreadOnly === 'true';
+      const notifications = await storage.getUserNotifications(userId, limit, unreadOnly);
+      res.json(notifications);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  });
+
+  app.get('/api/notifications/unread-count', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const count = await storage.getUnreadNotificationCount(userId);
+      res.json({ count });
+    } catch (error) {
+      console.error("Error fetching unread count:", error);
+      res.status(500).json({ message: "Failed to fetch unread count" });
+    }
+  });
+
+  app.patch('/api/notifications/:id/read', isAuthenticated, async (req: any, res) => {
+    try {
+      const notification = await storage.markNotificationRead(req.params.id);
+      if (!notification) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+      res.json(notification);
+    } catch (error) {
+      console.error("Error marking notification read:", error);
+      res.status(500).json({ message: "Failed to mark notification read" });
+    }
+  });
+
+  app.post('/api/notifications/mark-all-read', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const count = await storage.markAllNotificationsRead(userId);
+      res.json({ success: true, count });
+    } catch (error) {
+      console.error("Error marking all notifications read:", error);
+      res.status(500).json({ message: "Failed to mark all notifications read" });
+    }
+  });
+
+  app.delete('/api/notifications/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.deleteNotification(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+      res.status(500).json({ message: "Failed to delete notification" });
+    }
+  });
+
+  // Admin: Create notification for a user
+  app.post('/api/admin/notifications', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const { userId, type, title, message, link, metadata } = req.body;
+      
+      if (!userId || !title || !message) {
+        return res.status(400).json({ message: "userId, title, and message are required" });
+      }
+
+      const notification = await storage.createNotification({
+        userId,
+        type: type || 'info',
+        title,
+        message,
+        link: link || null,
+        isRead: false,
+        readAt: null,
+        metadata: metadata || null,
+      });
+      
+      res.status(201).json(notification);
+    } catch (error) {
+      console.error("Error creating notification:", error);
+      res.status(500).json({ message: "Failed to create notification" });
     }
   });
 

@@ -20,6 +20,8 @@ import {
   emailNotifications,
   contentAccessRules,
   contentAccessAudit,
+  userActivities,
+  notifications,
   type User,
   type UpsertUser,
   type Consultant,
@@ -62,6 +64,10 @@ import {
   type InsertContentAccessRule,
   type ContentAccessAuditLog,
   type InsertContentAccessAuditLog,
+  type UserActivity,
+  type InsertUserActivity,
+  type Notification,
+  type InsertNotification,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, ilike, or, desc, asc, sql } from "drizzle-orm";
@@ -199,6 +205,20 @@ export interface IStorage {
   // Content Access Audit operations
   logAccessAttempt(audit: Omit<InsertContentAccessAuditLog, 'id' | 'createdAt'>): Promise<ContentAccessAuditLog>;
   getAccessAuditLogs(limit?: number, ruleId?: string): Promise<ContentAccessAuditLog[]>;
+
+  // User Activity operations
+  logUserActivity(activity: Omit<InsertUserActivity, 'id' | 'createdAt'>): Promise<UserActivity>;
+  getUserActivities(userId: string, limit?: number): Promise<UserActivity[]>;
+  getRecentActivities(limit?: number): Promise<UserActivityWithUser[]>;
+  getActivityStats(userId?: string): Promise<ActivityStats>;
+
+  // Notification operations
+  createNotification(notification: Omit<InsertNotification, 'id' | 'createdAt'>): Promise<Notification>;
+  getUserNotifications(userId: string, limit?: number, unreadOnly?: boolean): Promise<Notification[]>;
+  markNotificationRead(id: string): Promise<Notification | undefined>;
+  markAllNotificationsRead(userId: string): Promise<number>;
+  deleteNotification(id: string): Promise<boolean>;
+  getUnreadNotificationCount(userId: string): Promise<number>;
 }
 
 export interface ConsultantSearchFilters {
@@ -307,6 +327,30 @@ export interface AccountSettingsUpdate {
   emailNotifications?: boolean;
   showEmail?: boolean;
   showPhone?: boolean;
+}
+
+export interface UserActivityWithUser {
+  id: string;
+  userId: string;
+  activityType: string;
+  resourceType: string | null;
+  resourceId: string | null;
+  resourceName: string | null;
+  description: string | null;
+  createdAt: Date | null;
+  user: {
+    firstName: string | null;
+    lastName: string | null;
+    profileImageUrl: string | null;
+    role: string;
+  };
+}
+
+export interface ActivityStats {
+  totalActivities: number;
+  todayActivities: number;
+  weekActivities: number;
+  byType: Record<string, number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1247,6 +1291,176 @@ export class DatabaseStorage implements IStorage {
       .from(contentAccessAudit)
       .orderBy(desc(contentAccessAudit.createdAt))
       .limit(limit);
+  }
+
+  // User Activity operations
+  async logUserActivity(
+    activity: Omit<InsertUserActivity, 'id' | 'createdAt'>
+  ): Promise<UserActivity> {
+    const [created] = await db
+      .insert(userActivities)
+      .values(activity)
+      .returning();
+    return created;
+  }
+
+  async getUserActivities(userId: string, limit: number = 50): Promise<UserActivity[]> {
+    return db
+      .select()
+      .from(userActivities)
+      .where(eq(userActivities.userId, userId))
+      .orderBy(desc(userActivities.createdAt))
+      .limit(limit);
+  }
+
+  async getRecentActivities(limit: number = 50): Promise<UserActivityWithUser[]> {
+    const results = await db
+      .select({
+        id: userActivities.id,
+        userId: userActivities.userId,
+        activityType: userActivities.activityType,
+        resourceType: userActivities.resourceType,
+        resourceId: userActivities.resourceId,
+        resourceName: userActivities.resourceName,
+        description: userActivities.description,
+        createdAt: userActivities.createdAt,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        profileImageUrl: users.profileImageUrl,
+        role: users.role,
+      })
+      .from(userActivities)
+      .leftJoin(users, eq(userActivities.userId, users.id))
+      .orderBy(desc(userActivities.createdAt))
+      .limit(limit);
+
+    return results.map((r) => ({
+      id: r.id,
+      userId: r.userId,
+      activityType: r.activityType,
+      resourceType: r.resourceType,
+      resourceId: r.resourceId,
+      resourceName: r.resourceName,
+      description: r.description,
+      createdAt: r.createdAt,
+      user: {
+        firstName: r.firstName,
+        lastName: r.lastName,
+        profileImageUrl: r.profileImageUrl,
+        role: r.role || 'consultant',
+      },
+    }));
+  }
+
+  async getActivityStats(userId?: string): Promise<ActivityStats> {
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - 7);
+
+    const baseCondition = userId ? eq(userActivities.userId, userId) : undefined;
+
+    const [totalResult] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(userActivities)
+      .where(baseCondition);
+
+    const [todayResult] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(userActivities)
+      .where(
+        baseCondition
+          ? and(baseCondition, gte(userActivities.createdAt, startOfDay))
+          : gte(userActivities.createdAt, startOfDay)
+      );
+
+    const [weekResult] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(userActivities)
+      .where(
+        baseCondition
+          ? and(baseCondition, gte(userActivities.createdAt, startOfWeek))
+          : gte(userActivities.createdAt, startOfWeek)
+      );
+
+    const byTypeResults = await db
+      .select({
+        activityType: userActivities.activityType,
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(userActivities)
+      .where(baseCondition)
+      .groupBy(userActivities.activityType);
+
+    const byType: Record<string, number> = {};
+    for (const row of byTypeResults) {
+      byType[row.activityType] = Number(row.count);
+    }
+
+    return {
+      totalActivities: Number(totalResult?.count || 0),
+      todayActivities: Number(todayResult?.count || 0),
+      weekActivities: Number(weekResult?.count || 0),
+      byType,
+    };
+  }
+
+  // Notification operations
+  async createNotification(
+    notification: Omit<InsertNotification, 'id' | 'createdAt'>
+  ): Promise<Notification> {
+    const [created] = await db
+      .insert(notifications)
+      .values(notification)
+      .returning();
+    return created;
+  }
+
+  async getUserNotifications(
+    userId: string,
+    limit: number = 50,
+    unreadOnly: boolean = false
+  ): Promise<Notification[]> {
+    const conditions = [eq(notifications.userId, userId)];
+    if (unreadOnly) {
+      conditions.push(eq(notifications.isRead, false));
+    }
+    return db
+      .select()
+      .from(notifications)
+      .where(and(...conditions))
+      .orderBy(desc(notifications.createdAt))
+      .limit(limit);
+  }
+
+  async markNotificationRead(id: string): Promise<Notification | undefined> {
+    const [updated] = await db
+      .update(notifications)
+      .set({ isRead: true, readAt: new Date() })
+      .where(eq(notifications.id, id))
+      .returning();
+    return updated;
+  }
+
+  async markAllNotificationsRead(userId: string): Promise<number> {
+    const result = await db
+      .update(notifications)
+      .set({ isRead: true, readAt: new Date() })
+      .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
+    return result.rowCount || 0;
+  }
+
+  async deleteNotification(id: string): Promise<boolean> {
+    await db.delete(notifications).where(eq(notifications.id, id));
+    return true;
+  }
+
+  async getUnreadNotificationCount(userId: string): Promise<number> {
+    const [result] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(notifications)
+      .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
+    return Number(result?.count || 0);
   }
 }
 

@@ -27,6 +27,7 @@ import {
   Search,
   UserCog,
   Shield,
+  Activity,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -166,6 +167,18 @@ export function AppSidebar() {
                     <Link href="/access-control">
                       <Shield className="w-4 h-4" />
                       <span>Access Control</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location === "/activity-log"}
+                    data-testid="nav-activity-log"
+                  >
+                    <Link href="/activity-log">
+                      <Activity className="w-4 h-4" />
+                      <span>Activity Log</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

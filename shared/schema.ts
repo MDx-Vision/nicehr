@@ -740,3 +740,111 @@ export const insertContentAccessAuditSchema = createInsertSchema(contentAccessAu
   id: true,
   createdAt: true,
 });
+
+// Activity type enum for user activity tracking
+export const activityTypeEnum = pgEnum("activity_type", [
+  "login",
+  "logout",
+  "page_view",
+  "create",
+  "update",
+  "delete",
+  "upload",
+  "download",
+  "approve",
+  "reject",
+  "assign",
+  "submit"
+]);
+
+// User activities table for tracking user actions
+export const userActivities = pgTable("user_activities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  activityType: activityTypeEnum("activity_type").notNull(),
+  resourceType: varchar("resource_type"),
+  resourceId: varchar("resource_id"),
+  resourceName: varchar("resource_name"),
+  description: text("description"),
+  metadata: jsonb("metadata"),
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_user_activities_user").on(table.userId),
+  index("idx_user_activities_type").on(table.activityType),
+  index("idx_user_activities_created").on(table.createdAt),
+]);
+
+export const userActivitiesRelations = relations(userActivities, ({ one }) => ({
+  user: one(users, {
+    fields: [userActivities.userId],
+    references: [users.id],
+  }),
+}));
+
+// Notification type enum
+export const notificationTypeEnum = pgEnum("notification_type", [
+  "info",
+  "success",
+  "warning",
+  "error",
+  "schedule",
+  "document",
+  "project",
+  "system"
+]);
+
+// In-app notifications table
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  type: notificationTypeEnum("type").default("info").notNull(),
+  title: varchar("title").notNull(),
+  message: text("message").notNull(),
+  link: varchar("link"),
+  isRead: boolean("is_read").default(false).notNull(),
+  readAt: timestamp("read_at"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_notifications_user").on(table.userId),
+  index("idx_notifications_read").on(table.isRead),
+  index("idx_notifications_created").on(table.createdAt),
+]);
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
+  }),
+}));
+
+// Insert schemas for new tables
+export const insertUserActivitySchema = createInsertSchema(userActivities).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for new tables
+export type UserActivity = typeof userActivities.$inferSelect;
+export type InsertUserActivity = z.infer<typeof insertUserActivitySchema>;
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+
+// Extended types for API responses with joined relations
+export interface UserActivityWithUser extends UserActivity {
+  user: {
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+    profileImageUrl: string | null;
+    role: "admin" | "hospital_staff" | "consultant";
+  };
+}
