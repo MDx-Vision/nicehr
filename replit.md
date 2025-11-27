@@ -4,11 +4,29 @@
 NICEHR is a comprehensive healthcare consultant management platform designed to streamline the process of matching healthcare consultants with hospital projects. The system supports multi-role authentication (Admin, Hospital Staff, Consultants) and provides tools for consultant onboarding, project scheduling, document management, and ROI analysis.
 
 ## Current State
-- **Status**: MVP Complete + Phases 1-4 Ultimate Member Features
+- **Status**: MVP Complete + Phases 1-5 Ultimate Member Features
 - **Last Updated**: November 27, 2025
 - **Authentication**: Replit Auth with role-based access control
 
-## Recent Changes (Phase 4 - Email Notifications)
+## Recent Changes (Phase 5 - Content Restriction)
+1. **Database Schema**: content_access_rules and content_access_audit tables for role-based access control
+2. **Access Rules API**: CRUD endpoints at /api/admin/access-rules for managing content restrictions
+3. **Permissions API**: GET /api/permissions returns user's restricted pages/features based on role
+4. **Frontend Guards**: ProtectedRoute with requiredRoles prop for role-based page access
+5. **Permission Context**: PermissionsProvider and usePermissions hook for frontend permission checks
+6. **Sidebar Filtering**: Menu items filtered based on page access permissions
+7. **Access Control UI**: Admin page at /access-control for managing rules and viewing audit logs
+8. **Audit Logging**: Access denials logged to content_access_audit table for security monitoring
+
+### Content Access Rule Features
+- **Resource Types**: page, api, feature
+- **Allowed Roles**: Whitelist of roles that can access the resource
+- **Denied Roles**: Blacklist of roles that cannot access the resource
+- **Restriction Messages**: Custom messages shown when access is denied
+- **Active/Inactive Toggle**: Enable/disable rules without deleting
+- **Audit Trail**: Track all access denials with user, role, IP, and timestamp
+
+## Phase 4 Changes (Email Notifications)
 1. **Email Service**: Resend integration via Replit Connectors with template-based email sending
 2. **Email Templates**: Welcome, schedule assigned/updated/cancelled, document approved/rejected/expiring, account deletion
 3. **Email Logging**: Database-backed audit trail with email_notifications table tracking all sent/failed emails
@@ -77,7 +95,8 @@ NICEHR is a comprehensive healthcare consultant management platform designed to 
 │   │   └── ConsultantDetailModal.tsx # Full profile modal
 │   ├── hooks/
 │   │   ├── useAuth.ts                # Authentication hook
-│   │   └── use-toast.ts
+│   │   ├── use-toast.ts
+│   │   └── use-permissions.tsx       # Permissions context and hook
 │   ├── lib/
 │   │   ├── queryClient.ts
 │   │   └── authUtils.ts
@@ -96,7 +115,8 @@ NICEHR is a comprehensive healthcare consultant management platform designed to 
 │   │   ├── Profile.tsx               # Enhanced with cover photo, social links
 │   │   ├── MySchedule.tsx
 │   │   ├── MyDocuments.tsx           # Uses ObjectUploader for file uploads
-│   │   └── RoiSurvey.tsx
+│   │   ├── RoiSurvey.tsx
+│   │   └── AccessControl.tsx         # Admin access control management
 │   └── App.tsx
 ├── server/
 │   ├── routes.ts                     # API endpoints
@@ -105,6 +125,7 @@ NICEHR is a comprehensive healthcare consultant management platform designed to 
 │   ├── objectStorage.ts              # Object Storage service
 │   ├── objectAcl.ts                  # ACL policies for files
 │   ├── emailService.ts               # Resend email integration with templates
+│   ├── accessControl.ts              # Content access control middleware
 │   └── db.ts                         # Database connection
 └── shared/
     └── schema.ts                     # Database schema + types
@@ -130,6 +151,8 @@ NICEHR is a comprehensive healthcare consultant management platform designed to 
 - **roiSurveys**: Survey instances
 - **roiResponses**: Survey responses
 - **emailNotifications**: Audit log for all sent/failed email notifications
+- **contentAccessRules**: Role-based content restriction rules
+- **contentAccessAudit**: Audit log for access denials
 
 ## User Roles
 1. **Admin**: Full system access - manage hospitals, consultants, projects, settings
