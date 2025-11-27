@@ -4,11 +4,30 @@
 NICEHR is a comprehensive healthcare consultant management platform designed to streamline the process of matching healthcare consultants with hospital projects. The system supports multi-role authentication (Admin, Hospital Staff, Consultants) and provides tools for consultant onboarding, project scheduling, document management, and ROI analysis.
 
 ## Current State
-- **Status**: MVP Complete + Phases 1, 2 & 3 Ultimate Member Features
+- **Status**: MVP Complete + Phases 1-4 Ultimate Member Features
 - **Last Updated**: November 27, 2025
 - **Authentication**: Replit Auth with role-based access control
 
-## Recent Changes (Phase 3 - Account Management)
+## Recent Changes (Phase 4 - Email Notifications)
+1. **Email Service**: Resend integration via Replit Connectors with template-based email sending
+2. **Email Templates**: Welcome, schedule assigned/updated/cancelled, document approved/rejected/expiring, account deletion
+3. **Email Logging**: Database-backed audit trail with email_notifications table tracking all sent/failed emails
+4. **Workflow Integration**: Automatic emails on document status changes, schedule assignments, account deletion requests
+5. **User Preferences**: Respects emailNotifications toggle before sending
+6. **Admin Endpoints**: GET /api/admin/email-logs and GET /api/admin/email-stats for monitoring
+
+### Email Notification Types
+- **welcome**: Sent on first login
+- **schedule_assigned**: When consultant assigned to a shift
+- **schedule_updated**: When shift details change
+- **schedule_cancelled**: When shift is cancelled
+- **document_approved**: When admin approves a document
+- **document_rejected**: When admin rejects a document
+- **document_expiring**: Alert before document expires
+- **account_deletion_requested**: Confirmation of deletion request
+- **account_deletion_completed**: Final confirmation
+
+## Phase 3 Changes (Account Management)
 1. **User Preferences Schema**: Added profileVisibility (public/members_only/private), emailNotifications, showEmail, showPhone, deletionRequestedAt fields to users table
 2. **Account Settings API**: GET/PATCH /api/account/settings for privacy and notification preferences
 3. **Deletion Request API**: POST/DELETE /api/account/delete-request for account deletion workflow
@@ -85,6 +104,7 @@ NICEHR is a comprehensive healthcare consultant management platform designed to 
 │   ├── replitAuth.ts                 # Auth setup (includes optionalAuth)
 │   ├── objectStorage.ts              # Object Storage service
 │   ├── objectAcl.ts                  # ACL policies for files
+│   ├── emailService.ts               # Resend email integration with templates
 │   └── db.ts                         # Database connection
 └── shared/
     └── schema.ts                     # Database schema + types
@@ -109,6 +129,7 @@ NICEHR is a comprehensive healthcare consultant management platform designed to 
 - **roiQuestions**: Survey questions for ROI measurement
 - **roiSurveys**: Survey instances
 - **roiResponses**: Survey responses
+- **emailNotifications**: Audit log for all sent/failed email notifications
 
 ## User Roles
 1. **Admin**: Full system access - manage hospitals, consultants, projects, settings
