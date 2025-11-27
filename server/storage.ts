@@ -18,6 +18,8 @@ import {
   roiSurveys,
   roiResponses,
   emailNotifications,
+  contentAccessRules,
+  contentAccessAudit,
   type User,
   type UpsertUser,
   type Consultant,
@@ -56,6 +58,10 @@ import {
   type InsertRoiResponse,
   type EmailNotification,
   type InsertEmailNotification,
+  type ContentAccessRule,
+  type InsertContentAccessRule,
+  type ContentAccessAuditLog,
+  type InsertContentAccessAuditLog,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, ilike, or, desc, asc, sql } from "drizzle-orm";
@@ -181,6 +187,18 @@ export interface IStorage {
   createEmailNotification(notification: Omit<InsertEmailNotification, 'id' | 'createdAt'>): Promise<EmailNotification>;
   getEmailNotifications(limit?: number, userId?: string): Promise<EmailNotification[]>;
   getEmailNotificationStats(): Promise<{ sent: number; failed: number; total: number }>;
+
+  // Content Access Rule operations
+  getAllAccessRules(): Promise<ContentAccessRule[]>;
+  getAccessRule(id: string): Promise<ContentAccessRule | undefined>;
+  getAccessRuleByResource(resourceType: "page" | "api" | "feature", resourceKey: string): Promise<ContentAccessRule | undefined>;
+  createAccessRule(rule: Omit<InsertContentAccessRule, 'id' | 'createdAt' | 'updatedAt'>): Promise<ContentAccessRule>;
+  updateAccessRule(id: string, rule: Partial<InsertContentAccessRule>): Promise<ContentAccessRule | undefined>;
+  deleteAccessRule(id: string): Promise<boolean>;
+  
+  // Content Access Audit operations
+  logAccessAttempt(audit: Omit<InsertContentAccessAuditLog, 'id' | 'createdAt'>): Promise<ContentAccessAuditLog>;
+  getAccessAuditLogs(limit?: number, ruleId?: string): Promise<ContentAccessAuditLog[]>;
 }
 
 export interface ConsultantSearchFilters {
@@ -1139,6 +1157,96 @@ export class DatabaseStorage implements IStorage {
       failed: Number(stats?.failed || 0),
       total: Number(stats?.total || 0),
     };
+  }
+
+  // Content Access Rule operations
+  async getAllAccessRules(): Promise<ContentAccessRule[]> {
+    return db
+      .select()
+      .from(contentAccessRules)
+      .orderBy(desc(contentAccessRules.createdAt));
+  }
+
+  async getAccessRule(id: string): Promise<ContentAccessRule | undefined> {
+    const [rule] = await db
+      .select()
+      .from(contentAccessRules)
+      .where(eq(contentAccessRules.id, id));
+    return rule;
+  }
+
+  async getAccessRuleByResource(
+    resourceType: "page" | "api" | "feature",
+    resourceKey: string
+  ): Promise<ContentAccessRule | undefined> {
+    const [rule] = await db
+      .select()
+      .from(contentAccessRules)
+      .where(
+        and(
+          eq(contentAccessRules.resourceType, resourceType),
+          eq(contentAccessRules.resourceKey, resourceKey),
+          eq(contentAccessRules.isActive, true)
+        )
+      );
+    return rule;
+  }
+
+  async createAccessRule(
+    rule: Omit<InsertContentAccessRule, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<ContentAccessRule> {
+    const [created] = await db
+      .insert(contentAccessRules)
+      .values(rule)
+      .returning();
+    return created;
+  }
+
+  async updateAccessRule(
+    id: string,
+    rule: Partial<InsertContentAccessRule>
+  ): Promise<ContentAccessRule | undefined> {
+    const [updated] = await db
+      .update(contentAccessRules)
+      .set({
+        ...rule,
+        updatedAt: new Date(),
+      })
+      .where(eq(contentAccessRules.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteAccessRule(id: string): Promise<boolean> {
+    await db.delete(contentAccessRules).where(eq(contentAccessRules.id, id));
+    return true;
+  }
+
+  // Content Access Audit operations
+  async logAccessAttempt(
+    audit: Omit<InsertContentAccessAuditLog, 'id' | 'createdAt'>
+  ): Promise<ContentAccessAuditLog> {
+    const [created] = await db
+      .insert(contentAccessAudit)
+      .values(audit)
+      .returning();
+    return created;
+  }
+
+  async getAccessAuditLogs(limit: number = 100, ruleId?: string): Promise<ContentAccessAuditLog[]> {
+    if (ruleId) {
+      return db
+        .select()
+        .from(contentAccessAudit)
+        .where(eq(contentAccessAudit.ruleId, ruleId))
+        .orderBy(desc(contentAccessAudit.createdAt))
+        .limit(limit);
+    }
+    return db
+      .select()
+      .from(contentAccessAudit)
+      .orderBy(desc(contentAccessAudit.createdAt))
+      .limit(limit);
   }
 }
 

@@ -490,6 +490,61 @@ export const emailNotifications = pgTable("email_notifications", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Resource type enum for content access rules
+export const resourceTypeEnum = pgEnum("resource_type", ["page", "api", "feature"]);
+
+// Content access rules table for role-based content restriction
+export const contentAccessRules = pgTable("content_access_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  resourceType: resourceTypeEnum("resource_type").notNull(),
+  resourceKey: varchar("resource_key").notNull(),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  allowedRoles: text("allowed_roles").array().notNull(),
+  deniedRoles: text("denied_roles").array(),
+  restrictionMessage: text("restriction_message"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_content_access_resource").on(table.resourceType, table.resourceKey),
+]);
+
+// Content access audit log for tracking access violations
+export const contentAccessAudit = pgTable("content_access_audit", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
+  ruleId: varchar("rule_id").references(() => contentAccessRules.id),
+  resourceType: resourceTypeEnum("resource_type").notNull(),
+  resourceKey: varchar("resource_key").notNull(),
+  action: varchar("action").notNull(),
+  allowed: boolean("allowed").notNull(),
+  userRole: varchar("user_role"),
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const contentAccessRulesRelations = relations(contentAccessRules, ({ one, many }) => ({
+  createdByUser: one(users, {
+    fields: [contentAccessRules.createdBy],
+    references: [users.id],
+  }),
+  auditLogs: many(contentAccessAudit),
+}));
+
+export const contentAccessAuditRelations = relations(contentAccessAudit, ({ one }) => ({
+  user: one(users, {
+    fields: [contentAccessAudit.userId],
+    references: [users.id],
+  }),
+  rule: one(contentAccessRules, {
+    fields: [contentAccessAudit.ruleId],
+    references: [contentAccessRules.id],
+  }),
+}));
+
 export const roiResponsesRelations = relations(roiResponses, ({ one }) => ({
   survey: one(roiSurveys, {
     fields: [roiResponses.surveyId],
@@ -667,3 +722,21 @@ export type InsertRoiResponse = z.infer<typeof insertRoiResponseSchema>;
 
 export type EmailNotification = typeof emailNotifications.$inferSelect;
 export type InsertEmailNotification = typeof emailNotifications.$inferInsert;
+
+export type ContentAccessRule = typeof contentAccessRules.$inferSelect;
+export type InsertContentAccessRule = typeof contentAccessRules.$inferInsert;
+
+export type ContentAccessAuditLog = typeof contentAccessAudit.$inferSelect;
+export type InsertContentAccessAuditLog = typeof contentAccessAudit.$inferInsert;
+
+// Content access rule insert schema
+export const insertContentAccessRuleSchema = createInsertSchema(contentAccessRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertContentAccessAuditSchema = createInsertSchema(contentAccessAudit).omit({
+  id: true,
+  createdAt: true,
+});
