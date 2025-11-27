@@ -2515,6 +2515,430 @@ export class DatabaseStorage implements IStorage {
       overallProgress,
     };
   }
+
+  // ============================================
+  // PHASE 9: GO-LIVE COMMAND CENTER
+  // ============================================
+
+  // Go-Live Sign-In operations
+  async getGoLiveSignIns(projectId: string): Promise<GoLiveSignIn[]> {
+    return await db
+      .select()
+      .from(goLiveSignIns)
+      .where(eq(goLiveSignIns.projectId, projectId))
+      .orderBy(desc(goLiveSignIns.signInTime));
+  }
+
+  async getGoLiveSignIn(id: string): Promise<GoLiveSignIn | undefined> {
+    const results = await db.select().from(goLiveSignIns).where(eq(goLiveSignIns.id, id));
+    return results[0];
+  }
+
+  async getActiveSignIns(projectId: string): Promise<GoLiveSignInWithDetails[]> {
+    const results = await db
+      .select({
+        signIn: goLiveSignIns,
+        consultant: {
+          id: consultants.id,
+          userId: consultants.userId,
+          tngId: consultants.tngId,
+        },
+        user: {
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
+        },
+      })
+      .from(goLiveSignIns)
+      .innerJoin(consultants, eq(goLiveSignIns.consultantId, consultants.id))
+      .innerJoin(users, eq(consultants.userId, users.id))
+      .where(
+        and(
+          eq(goLiveSignIns.projectId, projectId),
+          sql`${goLiveSignIns.signOutTime} IS NULL`,
+          eq(goLiveSignIns.status, "checked_in")
+        )
+      )
+      .orderBy(desc(goLiveSignIns.signInTime));
+
+    return results.map((row) => ({
+      ...row.signIn,
+      consultant: row.consultant,
+      user: row.user,
+    }));
+  }
+
+  async getTodaySignIns(projectId: string): Promise<GoLiveSignIn[]> {
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+
+    return await db
+      .select()
+      .from(goLiveSignIns)
+      .where(
+        and(
+          eq(goLiveSignIns.projectId, projectId),
+          gte(goLiveSignIns.signInTime, startOfDay),
+          lte(goLiveSignIns.signInTime, endOfDay)
+        )
+      )
+      .orderBy(desc(goLiveSignIns.signInTime));
+  }
+
+  async createGoLiveSignIn(signIn: InsertGoLiveSignIn): Promise<GoLiveSignIn> {
+    const results = await db.insert(goLiveSignIns).values({
+      ...signIn,
+      signInTime: signIn.signInTime || new Date(),
+    }).returning();
+    return results[0];
+  }
+
+  async updateGoLiveSignIn(id: string, signIn: Partial<InsertGoLiveSignIn>): Promise<GoLiveSignIn | undefined> {
+    const results = await db
+      .update(goLiveSignIns)
+      .set({ ...signIn, updatedAt: new Date() })
+      .where(eq(goLiveSignIns.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async signOutConsultant(id: string): Promise<GoLiveSignIn | undefined> {
+    const results = await db
+      .update(goLiveSignIns)
+      .set({
+        signOutTime: new Date(),
+        status: "checked_out",
+        updatedAt: new Date(),
+      })
+      .where(eq(goLiveSignIns.id, id))
+      .returning();
+    return results[0];
+  }
+
+  // Support Ticket operations
+  async getSupportTickets(projectId: string): Promise<SupportTicket[]> {
+    return await db
+      .select()
+      .from(supportTickets)
+      .where(eq(supportTickets.projectId, projectId))
+      .orderBy(desc(supportTickets.createdAt));
+  }
+
+  async getSupportTicket(id: string): Promise<SupportTicket | undefined> {
+    const results = await db.select().from(supportTickets).where(eq(supportTickets.id, id));
+    return results[0];
+  }
+
+  async getOpenTickets(projectId: string): Promise<SupportTicketWithDetails[]> {
+    const results = await db
+      .select({
+        ticket: supportTickets,
+        reportedBy: {
+          firstName: users.firstName,
+          lastName: users.lastName,
+        },
+      })
+      .from(supportTickets)
+      .leftJoin(users, eq(supportTickets.reportedById, users.id))
+      .where(
+        and(
+          eq(supportTickets.projectId, projectId),
+          sql`${supportTickets.status} NOT IN ('resolved', 'closed')`
+        )
+      )
+      .orderBy(desc(supportTickets.priority), desc(supportTickets.createdAt));
+
+    const ticketsWithAssignee = await Promise.all(
+      results.map(async (row) => {
+        let assignedTo: SupportTicketWithDetails['assignedTo'] = null;
+        
+        if (row.ticket.assignedToId) {
+          const consultant = await this.getConsultant(row.ticket.assignedToId);
+          if (consultant) {
+            const user = await this.getUser(consultant.userId);
+            assignedTo = {
+              id: consultant.id,
+              user: {
+                firstName: user?.firstName || null,
+                lastName: user?.lastName || null,
+              },
+            };
+          }
+        }
+
+        return {
+          ...row.ticket,
+          reportedBy: row.reportedBy,
+          assignedTo,
+        };
+      })
+    );
+
+    return ticketsWithAssignee;
+  }
+
+  async createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket> {
+    const ticketCount = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(supportTickets)
+      .where(eq(supportTickets.projectId, ticket.projectId));
+    
+    const nextNumber = (ticketCount[0]?.count || 0) + 1;
+    const ticketNumber = `TKT-${ticket.projectId.substring(0, 8).toUpperCase()}-${String(nextNumber).padStart(4, '0')}`;
+
+    const results = await db.insert(supportTickets).values({
+      ...ticket,
+      ticketNumber,
+    }).returning();
+    return results[0];
+  }
+
+  async updateSupportTicket(id: string, ticket: Partial<InsertSupportTicket>): Promise<SupportTicket | undefined> {
+    const results = await db
+      .update(supportTickets)
+      .set({ ...ticket, updatedAt: new Date() })
+      .where(eq(supportTickets.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async assignTicket(id: string, consultantId: string): Promise<SupportTicket | undefined> {
+    const existingTicket = await this.getSupportTicket(id);
+    if (!existingTicket) return undefined;
+
+    const now = new Date();
+    const createdAt = existingTicket.createdAt || now;
+    const responseTimeMinutes = Math.round((now.getTime() - new Date(createdAt).getTime()) / (1000 * 60));
+
+    const results = await db
+      .update(supportTickets)
+      .set({
+        assignedToId: consultantId,
+        status: "in_progress",
+        responseTime: responseTimeMinutes,
+        updatedAt: now,
+      })
+      .where(eq(supportTickets.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async resolveTicket(id: string, resolution: string): Promise<SupportTicket | undefined> {
+    const existingTicket = await this.getSupportTicket(id);
+    if (!existingTicket) return undefined;
+
+    const now = new Date();
+    const createdAt = existingTicket.createdAt || now;
+    const resolutionTimeMinutes = Math.round((now.getTime() - new Date(createdAt).getTime()) / (1000 * 60));
+
+    const results = await db
+      .update(supportTickets)
+      .set({
+        status: "resolved",
+        resolution,
+        resolvedAt: now,
+        resolutionTime: resolutionTimeMinutes,
+        updatedAt: now,
+      })
+      .where(eq(supportTickets.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async escalateTicket(id: string): Promise<SupportTicket | undefined> {
+    const now = new Date();
+    const results = await db
+      .update(supportTickets)
+      .set({
+        status: "escalated",
+        escalatedAt: now,
+        updatedAt: now,
+      })
+      .where(eq(supportTickets.id, id))
+      .returning();
+    return results[0];
+  }
+
+  // Shift Handoff operations
+  async getShiftHandoffs(projectId: string): Promise<ShiftHandoff[]> {
+    return await db
+      .select()
+      .from(shiftHandoffs)
+      .where(eq(shiftHandoffs.projectId, projectId))
+      .orderBy(desc(shiftHandoffs.createdAt));
+  }
+
+  async getShiftHandoff(id: string): Promise<ShiftHandoff | undefined> {
+    const results = await db.select().from(shiftHandoffs).where(eq(shiftHandoffs.id, id));
+    return results[0];
+  }
+
+  async getPendingHandoffs(projectId: string): Promise<ShiftHandoffWithDetails[]> {
+    const results = await db
+      .select({
+        handoff: shiftHandoffs,
+        outgoingConsultant: {
+          id: consultants.id,
+        },
+      })
+      .from(shiftHandoffs)
+      .innerJoin(consultants, eq(shiftHandoffs.outgoingConsultantId, consultants.id))
+      .where(
+        and(
+          eq(shiftHandoffs.projectId, projectId),
+          sql`${shiftHandoffs.acknowledgedAt} IS NULL`,
+          eq(shiftHandoffs.status, "pending")
+        )
+      )
+      .orderBy(desc(shiftHandoffs.createdAt));
+
+    const handoffsWithDetails = await Promise.all(
+      results.map(async (row) => {
+        const outgoingConsultant = await this.getConsultant(row.handoff.outgoingConsultantId);
+        const outgoingUser = outgoingConsultant 
+          ? await this.getUser(outgoingConsultant.userId)
+          : null;
+
+        let incomingConsultantDetails: ShiftHandoffWithDetails['incomingConsultant'] = null;
+        if (row.handoff.incomingConsultantId) {
+          const incomingConsultant = await this.getConsultant(row.handoff.incomingConsultantId);
+          if (incomingConsultant) {
+            const incomingUser = await this.getUser(incomingConsultant.userId);
+            incomingConsultantDetails = {
+              id: incomingConsultant.id,
+              user: {
+                firstName: incomingUser?.firstName || null,
+                lastName: incomingUser?.lastName || null,
+              },
+            };
+          }
+        }
+
+        return {
+          ...row.handoff,
+          outgoingConsultant: {
+            id: outgoingConsultant?.id || '',
+            user: {
+              firstName: outgoingUser?.firstName || null,
+              lastName: outgoingUser?.lastName || null,
+            },
+          },
+          incomingConsultant: incomingConsultantDetails,
+        };
+      })
+    );
+
+    return handoffsWithDetails;
+  }
+
+  async createShiftHandoff(handoff: InsertShiftHandoff): Promise<ShiftHandoff> {
+    const results = await db.insert(shiftHandoffs).values(handoff).returning();
+    return results[0];
+  }
+
+  async updateShiftHandoff(id: string, handoff: Partial<InsertShiftHandoff>): Promise<ShiftHandoff | undefined> {
+    const results = await db
+      .update(shiftHandoffs)
+      .set({ ...handoff, updatedAt: new Date() })
+      .where(eq(shiftHandoffs.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async acknowledgeHandoff(id: string, incomingConsultantId: string): Promise<ShiftHandoff | undefined> {
+    const results = await db
+      .update(shiftHandoffs)
+      .set({
+        incomingConsultantId,
+        acknowledgedAt: new Date(),
+        status: "acknowledged",
+        updatedAt: new Date(),
+      })
+      .where(eq(shiftHandoffs.id, id))
+      .returning();
+    return results[0];
+  }
+
+  // Command Center Stats
+  async getCommandCenterStats(projectId: string): Promise<CommandCenterStats> {
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+
+    const activeSignInsResult = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(goLiveSignIns)
+      .where(
+        and(
+          eq(goLiveSignIns.projectId, projectId),
+          sql`${goLiveSignIns.signOutTime} IS NULL`,
+          eq(goLiveSignIns.status, "checked_in")
+        )
+      );
+
+    const checkedInTodayResult = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(goLiveSignIns)
+      .where(
+        and(
+          eq(goLiveSignIns.projectId, projectId),
+          gte(goLiveSignIns.signInTime, startOfDay),
+          lte(goLiveSignIns.signInTime, endOfDay)
+        )
+      );
+
+    const openTicketsResult = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(supportTickets)
+      .where(
+        and(
+          eq(supportTickets.projectId, projectId),
+          sql`${supportTickets.status} NOT IN ('resolved', 'closed')`
+        )
+      );
+
+    const criticalTicketsResult = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(supportTickets)
+      .where(
+        and(
+          eq(supportTickets.projectId, projectId),
+          eq(supportTickets.priority, "critical"),
+          sql`${supportTickets.status} NOT IN ('resolved', 'closed')`
+        )
+      );
+
+    const pendingHandoffsResult = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(shiftHandoffs)
+      .where(
+        and(
+          eq(shiftHandoffs.projectId, projectId),
+          sql`${shiftHandoffs.acknowledgedAt} IS NULL`,
+          eq(shiftHandoffs.status, "pending")
+        )
+      );
+
+    const avgResponseTimeResult = await db
+      .select({ avg: sql<number>`AVG(${supportTickets.responseTime})` })
+      .from(supportTickets)
+      .where(
+        and(
+          eq(supportTickets.projectId, projectId),
+          sql`${supportTickets.responseTime} IS NOT NULL`
+        )
+      );
+
+    return {
+      activeConsultants: Number(activeSignInsResult[0]?.count) || 0,
+      checkedInToday: Number(checkedInTodayResult[0]?.count) || 0,
+      openTickets: Number(openTicketsResult[0]?.count) || 0,
+      criticalTickets: Number(criticalTicketsResult[0]?.count) || 0,
+      pendingHandoffs: Number(pendingHandoffsResult[0]?.count) || 0,
+      averageResponseTime: Math.round(Number(avgResponseTimeResult[0]?.avg) || 0),
+    };
+  }
 }
 
 export const storage = new DatabaseStorage();

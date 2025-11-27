@@ -34,6 +34,9 @@ import {
   insertTeamRoleTemplateSchema,
   insertProjectTeamAssignmentSchema,
   insertOnboardingTaskSchema,
+  insertGoLiveSignInSchema,
+  insertSupportTicketSchema,
+  insertShiftHandoffSchema,
 } from "@shared/schema";
 import {
   sendWelcomeEmail,
@@ -376,7 +379,7 @@ export async function registerRoutes(
           activityType: "create",
           resourceType: "consultant",
           resourceId: consultant.id,
-          resourceName: [validated.firstName, validated.lastName].filter(Boolean).join(" ") || "New Consultant",
+          resourceName: consultant.tngId || "New Consultant",
           description: "Created new consultant profile",
         }, req);
       }
@@ -2306,6 +2309,388 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching project lifecycle:", error);
       res.status(500).json({ message: "Failed to fetch project lifecycle" });
+    }
+  });
+
+  // ============================================
+  // PHASE 9: GO-LIVE COMMAND CENTER ROUTES
+  // ============================================
+
+  // Command Center Stats
+  app.get('/api/projects/:projectId/command-center/stats', isAuthenticated, async (req, res) => {
+    try {
+      const stats = await storage.getCommandCenterStats(req.params.projectId);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching command center stats:", error);
+      res.status(500).json({ message: "Failed to fetch command center stats" });
+    }
+  });
+
+  // Go-Live Sign-In Routes
+  app.get('/api/projects/:projectId/go-live/signins', isAuthenticated, async (req, res) => {
+    try {
+      const signIns = await storage.getGoLiveSignIns(req.params.projectId);
+      res.json(signIns);
+    } catch (error) {
+      console.error("Error fetching sign-ins:", error);
+      res.status(500).json({ message: "Failed to fetch sign-ins" });
+    }
+  });
+
+  app.get('/api/projects/:projectId/go-live/signins/active', isAuthenticated, async (req, res) => {
+    try {
+      const activeSignIns = await storage.getActiveSignIns(req.params.projectId);
+      res.json(activeSignIns);
+    } catch (error) {
+      console.error("Error fetching active sign-ins:", error);
+      res.status(500).json({ message: "Failed to fetch active sign-ins" });
+    }
+  });
+
+  app.get('/api/projects/:projectId/go-live/signins/today', isAuthenticated, async (req, res) => {
+    try {
+      const todaySignIns = await storage.getTodaySignIns(req.params.projectId);
+      res.json(todaySignIns);
+    } catch (error) {
+      console.error("Error fetching today's sign-ins:", error);
+      res.status(500).json({ message: "Failed to fetch today's sign-ins" });
+    }
+  });
+
+  app.get('/api/go-live/signins/:id', isAuthenticated, async (req, res) => {
+    try {
+      const signIn = await storage.getGoLiveSignIn(req.params.id);
+      if (!signIn) {
+        return res.status(404).json({ message: "Sign-in not found" });
+      }
+      res.json(signIn);
+    } catch (error) {
+      console.error("Error fetching sign-in:", error);
+      res.status(500).json({ message: "Failed to fetch sign-in" });
+    }
+  });
+
+  app.post('/api/projects/:projectId/go-live/signins', isAuthenticated, async (req: any, res) => {
+    try {
+      const validated = insertGoLiveSignInSchema.parse({
+        ...req.body,
+        projectId: req.params.projectId,
+      });
+      const signIn = await storage.createGoLiveSignIn(validated);
+      
+      await logActivity(req.user.claims.sub, {
+        activityType: 'create',
+        resourceType: 'go_live_signin',
+        resourceId: signIn.id,
+        resourceName: `Sign-in for project`,
+        description: `Checked in for go-live support`,
+      }, req);
+      
+      res.status(201).json(signIn);
+    } catch (error) {
+      console.error("Error creating sign-in:", error);
+      res.status(400).json({ message: "Failed to create sign-in" });
+    }
+  });
+
+  app.patch('/api/go-live/signins/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const updateData = insertGoLiveSignInSchema.partial().parse(req.body);
+      const signIn = await storage.updateGoLiveSignIn(req.params.id, updateData);
+      if (!signIn) {
+        return res.status(404).json({ message: "Sign-in not found" });
+      }
+      res.json(signIn);
+    } catch (error) {
+      console.error("Error updating sign-in:", error);
+      res.status(500).json({ message: "Failed to update sign-in" });
+    }
+  });
+
+  app.post('/api/go-live/signins/:id/signout', isAuthenticated, async (req: any, res) => {
+    try {
+      const signIn = await storage.signOutConsultant(req.params.id);
+      if (!signIn) {
+        return res.status(404).json({ message: "Sign-in not found" });
+      }
+      
+      await logActivity(req.user.claims.sub, {
+        activityType: 'update',
+        resourceType: 'go_live_signin',
+        resourceId: signIn.id,
+        resourceName: `Sign-out`,
+        description: `Checked out from go-live support`,
+      }, req);
+      
+      res.json(signIn);
+    } catch (error) {
+      console.error("Error signing out:", error);
+      res.status(500).json({ message: "Failed to sign out" });
+    }
+  });
+
+  // Support Ticket Routes
+  app.get('/api/projects/:projectId/support/tickets', isAuthenticated, async (req, res) => {
+    try {
+      const tickets = await storage.getSupportTickets(req.params.projectId);
+      res.json(tickets);
+    } catch (error) {
+      console.error("Error fetching support tickets:", error);
+      res.status(500).json({ message: "Failed to fetch support tickets" });
+    }
+  });
+
+  app.get('/api/projects/:projectId/support/tickets/open', isAuthenticated, async (req, res) => {
+    try {
+      const openTickets = await storage.getOpenTickets(req.params.projectId);
+      res.json(openTickets);
+    } catch (error) {
+      console.error("Error fetching open tickets:", error);
+      res.status(500).json({ message: "Failed to fetch open tickets" });
+    }
+  });
+
+  app.get('/api/support/tickets/:id', isAuthenticated, async (req, res) => {
+    try {
+      const ticket = await storage.getSupportTicket(req.params.id);
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+      res.json(ticket);
+    } catch (error) {
+      console.error("Error fetching ticket:", error);
+      res.status(500).json({ message: "Failed to fetch ticket" });
+    }
+  });
+
+  app.post('/api/projects/:projectId/support/tickets', isAuthenticated, async (req: any, res) => {
+    try {
+      const validated = insertSupportTicketSchema.parse({
+        ...req.body,
+        projectId: req.params.projectId,
+        reportedBy: req.user.claims.sub,
+      });
+      const ticket = await storage.createSupportTicket(validated);
+      
+      await logActivity(req.user.claims.sub, {
+        activityType: 'create',
+        resourceType: 'support_ticket',
+        resourceId: ticket.id,
+        resourceName: ticket.ticketNumber || `Ticket ${ticket.id}`,
+        description: `Created support ticket: ${ticket.title}`,
+      }, req);
+      
+      res.status(201).json(ticket);
+    } catch (error) {
+      console.error("Error creating support ticket:", error);
+      res.status(400).json({ message: "Failed to create support ticket" });
+    }
+  });
+
+  app.patch('/api/support/tickets/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const updateData = insertSupportTicketSchema.partial().parse(req.body);
+      const ticket = await storage.updateSupportTicket(req.params.id, updateData);
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+      res.json(ticket);
+    } catch (error) {
+      console.error("Error updating ticket:", error);
+      res.status(500).json({ message: "Failed to update ticket" });
+    }
+  });
+
+  app.post('/api/support/tickets/:id/assign', isAuthenticated, async (req: any, res) => {
+    try {
+      const { consultantId } = req.body;
+      if (!consultantId) {
+        return res.status(400).json({ message: "Consultant ID required" });
+      }
+      const ticket = await storage.assignTicket(req.params.id, consultantId);
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+      
+      await logActivity(req.user.claims.sub, {
+        activityType: 'update',
+        resourceType: 'support_ticket',
+        resourceId: ticket.id,
+        resourceName: ticket.ticketNumber || `Ticket ${ticket.id}`,
+        description: `Assigned ticket to consultant`,
+      }, req);
+      
+      res.json(ticket);
+    } catch (error) {
+      console.error("Error assigning ticket:", error);
+      res.status(500).json({ message: "Failed to assign ticket" });
+    }
+  });
+
+  app.post('/api/support/tickets/:id/resolve', isAuthenticated, async (req: any, res) => {
+    try {
+      const { resolution } = req.body;
+      if (!resolution) {
+        return res.status(400).json({ message: "Resolution required" });
+      }
+      const ticket = await storage.resolveTicket(req.params.id, resolution);
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+      
+      await logActivity(req.user.claims.sub, {
+        activityType: 'update',
+        resourceType: 'support_ticket',
+        resourceId: ticket.id,
+        resourceName: ticket.ticketNumber || `Ticket ${ticket.id}`,
+        description: `Resolved ticket: ${ticket.title}`,
+      }, req);
+      
+      res.json(ticket);
+    } catch (error) {
+      console.error("Error resolving ticket:", error);
+      res.status(500).json({ message: "Failed to resolve ticket" });
+    }
+  });
+
+  app.post('/api/support/tickets/:id/escalate', isAuthenticated, async (req: any, res) => {
+    try {
+      const ticket = await storage.escalateTicket(req.params.id);
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+      
+      await logActivity(req.user.claims.sub, {
+        activityType: 'update',
+        resourceType: 'support_ticket',
+        resourceId: ticket.id,
+        resourceName: ticket.ticketNumber || `Ticket ${ticket.id}`,
+        description: `Escalated ticket: ${ticket.title}`,
+      }, req);
+      
+      // Create notification for admins about escalation
+      const admins = await storage.getAllConsultants();
+      for (const admin of admins) {
+        await storage.createNotification({
+          userId: admin.userId,
+          type: 'warning',
+          title: 'Ticket Escalated',
+          message: `Support ticket ${ticket.ticketNumber} has been escalated: ${ticket.title}`,
+          link: `/command-center?ticket=${ticket.id}`,
+        });
+      }
+      
+      res.json(ticket);
+    } catch (error) {
+      console.error("Error escalating ticket:", error);
+      res.status(500).json({ message: "Failed to escalate ticket" });
+    }
+  });
+
+  // Shift Handoff Routes
+  app.get('/api/projects/:projectId/shift/handoffs', isAuthenticated, async (req, res) => {
+    try {
+      const handoffs = await storage.getShiftHandoffs(req.params.projectId);
+      res.json(handoffs);
+    } catch (error) {
+      console.error("Error fetching shift handoffs:", error);
+      res.status(500).json({ message: "Failed to fetch shift handoffs" });
+    }
+  });
+
+  app.get('/api/projects/:projectId/shift/handoffs/pending', isAuthenticated, async (req, res) => {
+    try {
+      const pendingHandoffs = await storage.getPendingHandoffs(req.params.projectId);
+      res.json(pendingHandoffs);
+    } catch (error) {
+      console.error("Error fetching pending handoffs:", error);
+      res.status(500).json({ message: "Failed to fetch pending handoffs" });
+    }
+  });
+
+  app.get('/api/shift/handoffs/:id', isAuthenticated, async (req, res) => {
+    try {
+      const handoff = await storage.getShiftHandoff(req.params.id);
+      if (!handoff) {
+        return res.status(404).json({ message: "Handoff not found" });
+      }
+      res.json(handoff);
+    } catch (error) {
+      console.error("Error fetching handoff:", error);
+      res.status(500).json({ message: "Failed to fetch handoff" });
+    }
+  });
+
+  app.post('/api/projects/:projectId/shift/handoffs', isAuthenticated, async (req: any, res) => {
+    try {
+      const validated = insertShiftHandoffSchema.parse({
+        ...req.body,
+        projectId: req.params.projectId,
+        outgoingConsultantId: req.body.outgoingConsultantId || req.user.claims.sub,
+      });
+      const handoff = await storage.createShiftHandoff(validated);
+      
+      await logActivity(req.user.claims.sub, {
+        activityType: 'create',
+        resourceType: 'shift_handoff',
+        resourceId: handoff.id,
+        resourceName: `Shift handoff`,
+        description: `Created shift handoff notes`,
+      }, req);
+      
+      // Notify incoming consultant if specified
+      if (validated.incomingConsultantId) {
+        await storage.createNotification({
+          userId: validated.incomingConsultantId,
+          type: 'schedule',
+          title: 'Shift Handoff Pending',
+          message: 'You have a new shift handoff awaiting acknowledgment',
+          link: `/command-center?handoff=${handoff.id}`,
+        });
+      }
+      
+      res.status(201).json(handoff);
+    } catch (error) {
+      console.error("Error creating handoff:", error);
+      res.status(400).json({ message: "Failed to create handoff" });
+    }
+  });
+
+  app.patch('/api/shift/handoffs/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const updateData = insertShiftHandoffSchema.partial().parse(req.body);
+      const handoff = await storage.updateShiftHandoff(req.params.id, updateData);
+      if (!handoff) {
+        return res.status(404).json({ message: "Handoff not found" });
+      }
+      res.json(handoff);
+    } catch (error) {
+      console.error("Error updating handoff:", error);
+      res.status(500).json({ message: "Failed to update handoff" });
+    }
+  });
+
+  app.post('/api/shift/handoffs/:id/acknowledge', isAuthenticated, async (req: any, res) => {
+    try {
+      const consultantId = req.user.claims.sub;
+      const handoff = await storage.acknowledgeHandoff(req.params.id, consultantId);
+      if (!handoff) {
+        return res.status(404).json({ message: "Handoff not found" });
+      }
+      
+      await logActivity(consultantId, {
+        activityType: 'update',
+        resourceType: 'shift_handoff',
+        resourceId: handoff.id,
+        resourceName: `Shift handoff`,
+        description: `Acknowledged shift handoff`,
+      }, req);
+      
+      res.json(handoff);
+    } catch (error) {
+      console.error("Error acknowledging handoff:", error);
+      res.status(500).json({ message: "Failed to acknowledge handoff" });
     }
   });
 

@@ -31,6 +31,7 @@ import {
   LineChart,
   Layers,
   ClipboardCheck,
+  Radio,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -42,6 +43,7 @@ const adminItems = [
   { title: "Consultants", url: "/consultants", icon: Users },
   { title: "Projects", url: "/projects", icon: FolderKanban },
   { title: "Project Phases", url: "/project-phases", icon: Layers },
+  { title: "Command Center", url: "/command-center", icon: Radio },
   { title: "Onboarding", url: "/onboarding", icon: ClipboardCheck },
   { title: "Schedules", url: "/schedules", icon: Calendar },
   { title: "Budget Calculator", url: "/budget", icon: Calculator },
@@ -55,6 +57,7 @@ const consultantItems = [
   { title: "Analytics", url: "/analytics", icon: LineChart },
   { title: "My Profile", url: "/profile", icon: Users },
   { title: "My Onboarding", url: "/onboarding", icon: ClipboardCheck },
+  { title: "Command Center", url: "/command-center", icon: Radio },
   { title: "My Schedule", url: "/my-schedule", icon: Calendar },
   { title: "Documents", url: "/my-documents", icon: FileText },
 ];
@@ -63,6 +66,7 @@ const hospitalStaffItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Analytics", url: "/analytics", icon: LineChart },
   { title: "Projects", url: "/projects", icon: FolderKanban },
+  { title: "Command Center", url: "/command-center", icon: Radio },
   { title: "Schedules", url: "/schedules", icon: Calendar },
   { title: "Consultants", url: "/consultants", icon: Users },
   { title: "ROI Survey", url: "/roi-survey", icon: BarChart3 },

@@ -33,6 +33,7 @@ import ActivityLog from "@/pages/ActivityLog";
 import Analytics from "@/pages/Analytics";
 import ProjectPhases from "@/pages/ProjectPhases";
 import ConsultantOnboarding from "@/pages/ConsultantOnboarding";
+import CommandCenter from "@/pages/CommandCenter";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -162,6 +163,7 @@ function Router() {
       <Route path="/analytics" component={() => <ProtectedRoute component={Analytics} />} />
       <Route path="/project-phases" component={() => <ProtectedRoute component={ProjectPhases} />} />
       <Route path="/onboarding" component={() => <ProtectedRoute component={ConsultantOnboarding} />} />
+      <Route path="/command-center" component={() => <ProtectedRoute component={CommandCenter} />} />
       <Route component={NotFound} />
     </Switch>
   );
