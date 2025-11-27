@@ -110,7 +110,7 @@ export default function Search() {
   const [availabilityFilter, setAvailabilityFilter] = useState<'available' | 'unavailable' | 'all'>('all');
   const [experienceRange, setExperienceRange] = useState<[number, number]>([0, 30]);
   const [modulesFilter, setModulesFilter] = useState<string[]>([]);
-  const [shiftFilter, setShiftFilter] = useState<string>('');
+  const [shiftFilter, setShiftFilter] = useState<string>('any');
   const [sortBy, setSortBy] = useState<'name' | 'experience' | 'location' | 'rating'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [page, setPage] = useState(1);
@@ -127,7 +127,7 @@ export default function Search() {
     if (availabilityFilter !== 'all') params.append('availability', availabilityFilter);
     if (experienceRange[0] > 0) params.append('experienceMin', experienceRange[0].toString());
     if (experienceRange[1] < 30) params.append('experienceMax', experienceRange[1].toString());
-    if (shiftFilter) params.append('shiftPreference', shiftFilter);
+    if (shiftFilter && shiftFilter !== 'any') params.append('shiftPreference', shiftFilter);
     if (sortBy) params.append('sortBy', sortBy);
     if (sortOrder) params.append('order', sortOrder);
     params.append('page', page.toString());
@@ -213,7 +213,7 @@ export default function Search() {
     setAvailabilityFilter('all');
     setExperienceRange([0, 30]);
     setModulesFilter([]);
-    setShiftFilter('');
+    setShiftFilter('any');
     setSortBy('name');
     setSortOrder('asc');
     setPage(1);
@@ -224,7 +224,7 @@ export default function Search() {
     experienceRange[0] > 0 || 
     experienceRange[1] < 30 ||
     modulesFilter.length > 0 || 
-    shiftFilter !== '';
+    shiftFilter !== 'any';
 
   return (
     <div className="space-y-6">
@@ -350,7 +350,7 @@ export default function Search() {
                       <SelectValue placeholder="Any" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Any</SelectItem>
+                      <SelectItem value="any">Any</SelectItem>
                       <SelectItem value="day">Day</SelectItem>
                       <SelectItem value="night">Night</SelectItem>
                       <SelectItem value="swing">Swing</SelectItem>
