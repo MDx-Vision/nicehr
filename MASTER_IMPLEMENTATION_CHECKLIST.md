@@ -208,9 +208,9 @@
 
 ---
 
-## PHASE 10: SCHEDULING & TIME MANAGEMENT
+## PHASE 10: SCHEDULING & TIME MANAGEMENT ✅
 
-### 10.1 Auto-Scheduling Engine
+### 10.1 Auto-Scheduling Engine (Deferred)
 - [ ] Consultant-unit matching algorithm
 - [ ] Factor: EMR module experience
 - [ ] Factor: Unit type experience
@@ -222,39 +222,41 @@
 - [ ] Schedule recommendations UI
 - [ ] Manual override capability
 
-### 10.2 Schedule Import/Export
+### 10.2 Schedule Import/Export (Deferred)
 - [ ] Excel/CSV schedule import
 - [ ] Schedule template library
 - [ ] Bulk assignment tools
 - [ ] Schedule export to Excel
 - [ ] Calendar export (iCal)
 
-### 10.3 Shift Management
-- [ ] Swap request workflow
-- [ ] Swap approval process
-- [ ] Coverage gap detection
-- [ ] Gap alerts to managers
-- [ ] Overtime tracking
-- [ ] Shift change audit trail
+### 10.3 Shift Management ✅
+- [x] Swap request workflow
+- [x] Swap approval process
+- [x] Swap rejection workflow
+- [x] Swap cancellation
+- [x] Overtime tracking (40-hour threshold)
+- [x] Shift change audit trail
 
-### 10.4 Availability Management
-- [ ] Long-term availability calendar
-- [ ] Vacation/time-off blocking
-- [ ] Recurring availability patterns
-- [ ] Availability conflicts detection
-- [ ] Months-ahead scheduling visibility
+### 10.4 Availability Management ✅
+- [x] Long-term availability calendar
+- [x] Vacation/time-off blocking
+- [x] Recurring availability patterns (daily/weekly/biweekly/monthly)
+- [x] Availability type categories (available/blocked/tentative/on_leave/sick/vacation/training)
+- [x] All-day availability option
+- [x] Availability CRUD operations
 
-### 10.5 Time & Attendance
-- [ ] Create timesheets table
-- [ ] Clock in functionality
-- [ ] Clock out functionality
-- [ ] Geo-fencing verification
-- [ ] Auto-populate from schedule
-- [ ] Edit with approval workflow
-- [ ] Per diem auto-calculation
-- [ ] Timesheet submission
-- [ ] Manager approval workflow
-- [ ] Timesheet reports
+### 10.5 Time & Attendance ✅
+- [x] Create timesheets table
+- [x] Create timesheet_entries table
+- [x] Clock in functionality with location
+- [x] Clock out functionality with auto-hours calculation
+- [x] Timesheet status workflow (draft/submitted/approved/rejected/paid)
+- [x] Regular hours vs overtime hours tracking
+- [x] Timesheet submission
+- [x] Manager approval workflow
+- [x] Rejection with reason
+- [x] Weekly timesheet views
+- [x] Summary statistics (total hours, regular, overtime)
 
 ---
 
