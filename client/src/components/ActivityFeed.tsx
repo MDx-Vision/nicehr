@@ -146,9 +146,10 @@ export function ActivityFeed({ limit = 10, showTitle = true, className = "" }: A
               {activities.slice(0, limit).map((activity) => {
                 const IconComponent = activityIcons[activity.activityType] || Activity;
                 const iconColor = activityColors[activity.activityType] || "text-gray-500";
-                const userName = [activity.user.firstName, activity.user.lastName]
-                  .filter(Boolean)
-                  .join(" ") || "Unknown User";
+                const user = activity.user;
+                const userName = user 
+                  ? ([user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "Unknown User")
+                  : "Unknown User";
 
                 return (
                   <div 
@@ -158,11 +159,11 @@ export function ActivityFeed({ limit = 10, showTitle = true, className = "" }: A
                   >
                     <Avatar className="h-8 w-8 flex-shrink-0">
                       <AvatarImage 
-                        src={activity.user.profileImageUrl || undefined} 
+                        src={user?.profileImageUrl || undefined} 
                         alt={userName} 
                       />
                       <AvatarFallback className="text-xs">
-                        {getInitials(activity.user.firstName, activity.user.lastName)}
+                        {getInitials(user?.firstName || null, user?.lastName || null)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">

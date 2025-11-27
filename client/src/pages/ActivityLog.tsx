@@ -112,15 +112,18 @@ export default function ActivityLog() {
   const uniqueUsers = Array.from(new Map(
     activities.map(a => [a.userId, { 
       id: a.userId, 
-      name: [a.user.firstName, a.user.lastName].filter(Boolean).join(" ") || a.user.email 
+      name: a.user ? ([a.user.firstName, a.user.lastName].filter(Boolean).join(" ") || a.user.email) : "Unknown User"
     }])
   ).values());
 
   const uniqueActivityTypes = Array.from(new Set(activities.map(a => a.activityType)));
 
   const filteredActivities = activities.filter(activity => {
+    const userSearchFields = activity.user 
+      ? [activity.user.firstName, activity.user.lastName, activity.user.email]
+      : [];
     const matchesSearch = searchQuery === "" || 
-      [activity.user.firstName, activity.user.lastName, activity.user.email, activity.resourceName, activity.description]
+      [...userSearchFields, activity.resourceName, activity.description]
         .filter(Boolean)
         .join(" ")
         .toLowerCase()
@@ -250,9 +253,10 @@ export default function ActivityLog() {
                   {filteredActivities.map(activity => {
                     const IconComponent = activityIcons[activity.activityType] || Activity;
                     const badgeClass = activityColors[activity.activityType] || "bg-gray-500/10 text-gray-500";
-                    const userName = [activity.user.firstName, activity.user.lastName]
-                      .filter(Boolean)
-                      .join(" ") || "Unknown User";
+                    const user = activity.user;
+                    const userName = user 
+                      ? ([user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "Unknown User")
+                      : "Unknown User";
 
                     return (
                       <TableRow key={activity.id} data-testid={`activity-row-${activity.id}`}>
@@ -260,22 +264,24 @@ export default function ActivityLog() {
                           <div className="flex items-center gap-3">
                             <Avatar className="h-9 w-9">
                               <AvatarImage 
-                                src={activity.user.profileImageUrl || undefined} 
+                                src={user?.profileImageUrl || undefined} 
                                 alt={userName}
                               />
                               <AvatarFallback>
-                                {getInitials(activity.user.firstName, activity.user.lastName)}
+                                {getInitials(user?.firstName || null, user?.lastName || null)}
                               </AvatarFallback>
                             </Avatar>
                             <div>
                               <p className="font-medium">{userName}</p>
-                              <p className="text-xs text-muted-foreground">{activity.user.email}</p>
-                              <Badge 
-                                variant="secondary" 
-                                className={`text-xs ${roleColors[activity.user.role] || ""}`}
-                              >
-                                {activity.user.role.replace("_", " ")}
-                              </Badge>
+                              <p className="text-xs text-muted-foreground">{user?.email || "No email"}</p>
+                              {user?.role && (
+                                <Badge 
+                                  variant="secondary" 
+                                  className={`text-xs ${roleColors[user.role] || ""}`}
+                                >
+                                  {user.role.replace("_", " ")}
+                                </Badge>
+                              )}
                             </div>
                           </div>
                         </TableCell>
