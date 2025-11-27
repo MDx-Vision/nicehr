@@ -4,11 +4,19 @@
 NICEHR is a comprehensive healthcare consultant management platform designed to streamline the process of matching healthcare consultants with hospital projects. The system supports multi-role authentication (Admin, Hospital Staff, Consultants) and provides tools for consultant onboarding, project scheduling, document management, and ROI analysis.
 
 ## Current State
-- **Status**: MVP Complete + Phase 1 & 2 Ultimate Member Features
+- **Status**: MVP Complete + Phases 1, 2 & 3 Ultimate Member Features
 - **Last Updated**: November 27, 2025
 - **Authentication**: Replit Auth with role-based access control
 
-## Recent Changes (Phase 2 - Member Directories)
+## Recent Changes (Phase 3 - Account Management)
+1. **User Preferences Schema**: Added profileVisibility (public/members_only/private), emailNotifications, showEmail, showPhone, deletionRequestedAt fields to users table
+2. **Account Settings API**: GET/PATCH /api/account/settings for privacy and notification preferences
+3. **Deletion Request API**: POST/DELETE /api/account/delete-request for account deletion workflow
+4. **Privacy Enforcement**: Directory search filters private profiles, profile endpoint hides email/phone based on settings
+5. **AccountSettings Page**: Full settings UI with privacy controls, notification preferences, and deletion request flow
+6. **Sidebar Navigation**: Added Account Settings link accessible to all user roles
+
+## Phase 2 Changes (Member Directories)
 1. **Enhanced Directory API** (`/api/directory/consultants`): Advanced filtering, sorting, and pagination
 2. **Consultant Profile API** (`/api/consultants/:id/profile`): Full profile with documents and ratings
 3. **Enhanced Consultant Cards**: Profile photos, EMR badges, ratings, grid/list views
