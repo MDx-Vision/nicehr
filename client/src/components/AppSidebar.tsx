@@ -28,12 +28,14 @@ import {
   UserCog,
   Shield,
   Activity,
+  LineChart,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/use-permissions";
 
 const adminItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Analytics", url: "/analytics", icon: LineChart },
   { title: "Hospitals", url: "/hospitals", icon: Building2 },
   { title: "Consultants", url: "/consultants", icon: Users },
   { title: "Projects", url: "/projects", icon: FolderKanban },
@@ -46,6 +48,7 @@ const adminItems = [
 
 const consultantItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Analytics", url: "/analytics", icon: LineChart },
   { title: "My Profile", url: "/profile", icon: Users },
   { title: "My Schedule", url: "/my-schedule", icon: Calendar },
   { title: "Documents", url: "/my-documents", icon: FileText },
@@ -53,6 +56,7 @@ const consultantItems = [
 
 const hospitalStaffItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Analytics", url: "/analytics", icon: LineChart },
   { title: "Projects", url: "/projects", icon: FolderKanban },
   { title: "Schedules", url: "/schedules", icon: Calendar },
   { title: "Consultants", url: "/consultants", icon: Users },

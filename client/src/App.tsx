@@ -30,6 +30,7 @@ import RoiSurvey from "@/pages/RoiSurvey";
 import AccountSettings from "@/pages/AccountSettings";
 import AccessControl from "@/pages/AccessControl";
 import ActivityLog from "@/pages/ActivityLog";
+import Analytics from "@/pages/Analytics";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -156,6 +157,7 @@ function Router() {
       <Route path="/account" component={() => <ProtectedRoute component={AccountSettings} />} />
       <Route path="/access-control" component={() => <ProtectedRoute component={AccessControl} requiredRoles={["admin"]} />} />
       <Route path="/activity-log" component={() => <ProtectedRoute component={ActivityLog} requiredRoles={["admin"]} />} />
+      <Route path="/analytics" component={() => <ProtectedRoute component={Analytics} />} />
       <Route component={NotFound} />
     </Switch>
   );

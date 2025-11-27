@@ -371,20 +371,20 @@ function ConsultantDashboard({ data }: { data: ConsultantAnalytics }) {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <KpiCard
           title="Completed Shifts"
-          value={data.performance.completedShifts}
-          subtitle={`${data.performance.upcomingShifts} upcoming`}
+          value={data.overview.completedShifts}
+          subtitle={`${data.overview.upcomingShifts} upcoming`}
           icon={Calendar}
           data-testid="kpi-completed-shifts"
         />
         <KpiCard
           title="Average Rating"
-          value={data.performance.averageRating.toFixed(1)}
+          value={data.overview.averageRating.toFixed(1)}
           icon={Star}
           data-testid="kpi-average-rating"
         />
         <KpiCard
           title="Utilization Rate"
-          value={`${data.performance.utilizationRate}%`}
+          value={`${data.overview.utilizationRate}%`}
           icon={Activity}
           data-testid="kpi-utilization-rate"
         />
@@ -408,28 +408,18 @@ function ConsultantDashboard({ data }: { data: ConsultantAnalytics }) {
           data-testid="chart-document-status"
         />
 
-        <Card data-testid="card-training-status">
+        <Card data-testid="card-skills-utilization">
           <CardHeader>
-            <CardTitle className="text-base">Training Status</CardTitle>
+            <CardTitle className="text-base">Skills Utilization</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {data.trainingStatus.length === 0 ? (
-              <p className="text-muted-foreground text-center py-4">No training modules assigned</p>
+            {data.skillsUtilization.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">No skills data available</p>
             ) : (
-              data.trainingStatus.map((training) => (
-                <div key={training.moduleId} className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{training.moduleName}</span>
-                    <span className="text-xs text-muted-foreground capitalize">{training.status}</span>
-                  </div>
-                  <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
-                    <div
-                      className={`h-full transition-all ${
-                        training.status === 'completed' ? 'bg-green-500' : 'bg-primary'
-                      }`}
-                      style={{ width: `${training.progress}%` }}
-                    />
-                  </div>
+              data.skillsUtilization.map((skill) => (
+                <div key={skill.skill} className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{skill.skill}</span>
+                  <span className="text-xs text-muted-foreground">{skill.projectsUsed} projects</span>
                 </div>
               ))
             )}
@@ -465,14 +455,14 @@ function ConsultantDashboard({ data }: { data: ConsultantAnalytics }) {
         </Card>
       )}
 
-      {data.upcomingShifts.length > 0 && (
-        <Card data-testid="card-upcoming-shifts">
+      {data.shiftHistory.length > 0 && (
+        <Card data-testid="card-shift-history">
           <CardHeader>
-            <CardTitle className="text-base">Upcoming Shifts</CardTitle>
+            <CardTitle className="text-base">Recent Shift History</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {data.upcomingShifts.map((shift) => (
+              {data.shiftHistory.slice(0, 5).map((shift) => (
                 <div key={shift.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div>
                     <p className="font-medium text-sm">{shift.projectName}</p>
@@ -480,11 +470,9 @@ function ConsultantDashboard({ data }: { data: ConsultantAnalytics }) {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium">
-                      {new Date(shift.startTime).toLocaleDateString()}
+                      {shift.date ? new Date(shift.date).toLocaleDateString() : 'N/A'}
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(shift.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
+                    <p className="text-xs text-muted-foreground capitalize">{shift.status}</p>
                   </div>
                 </div>
               ))}
