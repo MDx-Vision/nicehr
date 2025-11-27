@@ -26,8 +26,10 @@ import {
   LogOut,
   Search,
   UserCog,
+  Shield,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/use-permissions";
 
 const adminItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
@@ -59,6 +61,7 @@ const hospitalStaffItems = [
 export function AppSidebar() {
   const [location] = useLocation();
   const { user, isAdmin, isConsultant, isHospitalStaff } = useAuth();
+  const { hasPageAccess } = usePermissions();
 
   const getMenuItems = () => {
     if (isAdmin) return adminItems;
@@ -67,7 +70,8 @@ export function AppSidebar() {
     return adminItems;
   };
 
-  const menuItems = getMenuItems();
+  const allMenuItems = getMenuItems();
+  const menuItems = allMenuItems.filter(item => hasPageAccess(item.url));
 
   const getInitials = () => {
     if (user?.firstName && user?.lastName) {
@@ -150,6 +154,18 @@ export function AppSidebar() {
                     <Link href="/settings">
                       <Settings className="w-4 h-4" />
                       <span>Settings</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location === "/access-control"}
+                    data-testid="nav-access-control"
+                  >
+                    <Link href="/access-control">
+                      <Shield className="w-4 h-4" />
+                      <span>Access Control</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
