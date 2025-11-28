@@ -196,6 +196,14 @@ import {
   paycheckStubs,
   budgetScenarios,
   scenarioMetrics,
+  travelPreferences,
+  travelBookings,
+  travelItineraries,
+  itineraryBookings,
+  carpoolGroups,
+  carpoolMembers,
+  shuttleSchedules,
+  transportationContacts,
   type PerDiemPolicy,
   type InsertPerDiemPolicy,
   type MileageRate,
@@ -228,6 +236,28 @@ import {
   type BudgetScenarioWithMetrics,
   type ExpenseAnalytics,
   type PayrollAnalytics,
+  type TravelPreference,
+  type InsertTravelPreference,
+  type TravelBooking,
+  type InsertTravelBooking,
+  type TravelBookingWithDetails,
+  type TravelItinerary,
+  type InsertTravelItinerary,
+  type TravelItineraryWithDetails,
+  type ItineraryBooking,
+  type InsertItineraryBooking,
+  type CarpoolGroup,
+  type InsertCarpoolGroup,
+  type CarpoolGroupWithDetails,
+  type CarpoolMember,
+  type InsertCarpoolMember,
+  type CarpoolMemberWithDetails,
+  type ShuttleSchedule,
+  type InsertShuttleSchedule,
+  type TransportationContact,
+  type InsertTransportationContact,
+  type TravelAnalytics,
+  type CarpoolAnalytics,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, ilike, or, desc, asc, sql } from "drizzle-orm";
@@ -690,6 +720,63 @@ export interface IStorage {
   listScenarioMetrics(scenarioId: string): Promise<ScenarioMetric[]>;
   createScenarioMetric(metric: InsertScenarioMetric): Promise<ScenarioMetric>;
   updateScenarioMetric(id: string, data: Partial<InsertScenarioMetric>): Promise<ScenarioMetric | undefined>;
+
+  // ============================================
+  // PHASE 14: TRAVEL MANAGEMENT
+  // ============================================
+
+  // Travel Preferences operations
+  getTravelPreferences(consultantId: string): Promise<TravelPreference | undefined>;
+  upsertTravelPreferences(data: InsertTravelPreference): Promise<TravelPreference>;
+  updateTravelPreferences(consultantId: string, data: Partial<InsertTravelPreference>): Promise<TravelPreference | undefined>;
+
+  // Travel Booking operations
+  listTravelBookings(filters?: { consultantId?: string; projectId?: string; bookingType?: string; status?: string }): Promise<TravelBookingWithDetails[]>;
+  getTravelBooking(id: string): Promise<TravelBookingWithDetails | undefined>;
+  createTravelBooking(booking: InsertTravelBooking): Promise<TravelBooking>;
+  updateTravelBooking(id: string, data: Partial<InsertTravelBooking>): Promise<TravelBooking | undefined>;
+  deleteTravelBooking(id: string): Promise<boolean>;
+
+  // Travel Itinerary operations
+  listTravelItineraries(filters?: { consultantId?: string; projectId?: string; status?: string }): Promise<TravelItineraryWithDetails[]>;
+  getTravelItinerary(id: string): Promise<TravelItineraryWithDetails | undefined>;
+  createTravelItinerary(itinerary: InsertTravelItinerary): Promise<TravelItinerary>;
+  updateTravelItinerary(id: string, data: Partial<InsertTravelItinerary>): Promise<TravelItinerary | undefined>;
+  deleteTravelItinerary(id: string): Promise<boolean>;
+  addBookingToItinerary(data: InsertItineraryBooking): Promise<ItineraryBooking>;
+  removeBookingFromItinerary(itineraryId: string, bookingId: string): Promise<boolean>;
+
+  // Carpool Group operations
+  listCarpoolGroups(filters?: { projectId?: string; status?: string; driverId?: string }): Promise<CarpoolGroupWithDetails[]>;
+  getCarpoolGroup(id: string): Promise<CarpoolGroupWithDetails | undefined>;
+  createCarpoolGroup(group: InsertCarpoolGroup): Promise<CarpoolGroup>;
+  updateCarpoolGroup(id: string, data: Partial<InsertCarpoolGroup>): Promise<CarpoolGroup | undefined>;
+  deleteCarpoolGroup(id: string): Promise<boolean>;
+
+  // Carpool Member operations
+  addCarpoolMember(data: InsertCarpoolMember): Promise<CarpoolMember>;
+  updateCarpoolMember(id: string, data: Partial<InsertCarpoolMember>): Promise<CarpoolMember | undefined>;
+  removeCarpoolMember(id: string): Promise<boolean>;
+  listCarpoolMembers(carpoolId: string): Promise<CarpoolMemberWithDetails[]>;
+  getAvailableCarpools(projectId: string, date: string): Promise<CarpoolGroupWithDetails[]>;
+
+  // Shuttle Schedule operations
+  listShuttleSchedules(filters?: { projectId?: string; isActive?: boolean }): Promise<ShuttleSchedule[]>;
+  getShuttleSchedule(id: string): Promise<ShuttleSchedule | undefined>;
+  createShuttleSchedule(schedule: InsertShuttleSchedule): Promise<ShuttleSchedule>;
+  updateShuttleSchedule(id: string, data: Partial<InsertShuttleSchedule>): Promise<ShuttleSchedule | undefined>;
+  deleteShuttleSchedule(id: string): Promise<boolean>;
+
+  // Transportation Contact operations
+  listTransportationContacts(filters?: { projectId?: string; role?: string; isActive?: boolean }): Promise<TransportationContact[]>;
+  getTransportationContact(id: string): Promise<TransportationContact | undefined>;
+  createTransportationContact(contact: InsertTransportationContact): Promise<TransportationContact>;
+  updateTransportationContact(id: string, data: Partial<InsertTransportationContact>): Promise<TransportationContact | undefined>;
+  deleteTransportationContact(id: string): Promise<boolean>;
+
+  // Travel Analytics
+  getTravelAnalytics(filters?: { projectId?: string }): Promise<TravelAnalytics>;
+  getCarpoolAnalytics(filters?: { projectId?: string }): Promise<CarpoolAnalytics>;
 }
 
 export interface ConsultantSearchFilters {
@@ -5743,6 +5830,593 @@ export class DatabaseStorage implements IStorage {
       .where(eq(scenarioMetrics.id, id))
       .returning();
     return results[0];
+  }
+
+  // ============================================
+  // PHASE 14: TRAVEL MANAGEMENT IMPLEMENTATIONS
+  // ============================================
+
+  // Travel Preferences Operations
+  async getTravelPreferences(consultantId: string): Promise<TravelPreference | undefined> {
+    const results = await db
+      .select()
+      .from(travelPreferences)
+      .where(eq(travelPreferences.consultantId, consultantId));
+    return results[0];
+  }
+
+  async upsertTravelPreferences(data: InsertTravelPreference): Promise<TravelPreference> {
+    const existing = await this.getTravelPreferences(data.consultantId);
+    if (existing) {
+      const results = await db
+        .update(travelPreferences)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(travelPreferences.consultantId, data.consultantId))
+        .returning();
+      return results[0];
+    }
+    const results = await db.insert(travelPreferences).values(data).returning();
+    return results[0];
+  }
+
+  async updateTravelPreferences(consultantId: string, data: Partial<InsertTravelPreference>): Promise<TravelPreference | undefined> {
+    const results = await db
+      .update(travelPreferences)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(travelPreferences.consultantId, consultantId))
+      .returning();
+    return results[0];
+  }
+
+  // Travel Booking Operations
+  async listTravelBookings(filters?: {
+    consultantId?: string;
+    projectId?: string;
+    bookingType?: string;
+    status?: string;
+  }): Promise<TravelBookingWithDetails[]> {
+    const conditions: any[] = [];
+    if (filters?.consultantId) conditions.push(eq(travelBookings.consultantId, filters.consultantId));
+    if (filters?.projectId) conditions.push(eq(travelBookings.projectId, filters.projectId));
+    if (filters?.bookingType) conditions.push(eq(travelBookings.bookingType, filters.bookingType as any));
+    if (filters?.status) conditions.push(eq(travelBookings.status, filters.status as any));
+
+    const results = conditions.length > 0
+      ? await db.select().from(travelBookings).where(and(...conditions)).orderBy(desc(travelBookings.createdAt))
+      : await db.select().from(travelBookings).orderBy(desc(travelBookings.createdAt));
+
+    return Promise.all(results.map((b) => this.buildTravelBookingWithDetails(b)));
+  }
+
+  async getTravelBooking(id: string): Promise<TravelBookingWithDetails | undefined> {
+    const results = await db.select().from(travelBookings).where(eq(travelBookings.id, id));
+    if (!results[0]) return undefined;
+    return this.buildTravelBookingWithDetails(results[0]);
+  }
+
+  async createTravelBooking(booking: InsertTravelBooking): Promise<TravelBooking> {
+    const results = await db.insert(travelBookings).values(booking).returning();
+    return results[0];
+  }
+
+  async updateTravelBooking(id: string, data: Partial<InsertTravelBooking>): Promise<TravelBooking | undefined> {
+    const results = await db
+      .update(travelBookings)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(travelBookings.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteTravelBooking(id: string): Promise<boolean> {
+    await db.delete(itineraryBookings).where(eq(itineraryBookings.bookingId, id));
+    const result = await db.delete(travelBookings).where(eq(travelBookings.id, id));
+    return true;
+  }
+
+  private async buildTravelBookingWithDetails(booking: TravelBooking): Promise<TravelBookingWithDetails> {
+    const consultant = await this.getConsultant(booking.consultantId);
+    const consultantUser = consultant ? await this.getUser(consultant.userId) : null;
+
+    let projectData: TravelBookingWithDetails["project"] = null;
+    if (booking.projectId) {
+      const project = await this.getProject(booking.projectId);
+      if (project) {
+        projectData = { id: project.id, name: project.name };
+      }
+    }
+
+    let bookedByData: TravelBookingWithDetails["bookedBy"] = null;
+    if (booking.bookedById) {
+      const bookedBy = await this.getUser(booking.bookedById);
+      if (bookedBy) {
+        bookedByData = {
+          id: bookedBy.id,
+          firstName: bookedBy.firstName,
+          lastName: bookedBy.lastName,
+        };
+      }
+    }
+
+    return {
+      ...booking,
+      consultant: {
+        id: consultant?.id || "",
+        user: {
+          firstName: consultantUser?.firstName || null,
+          lastName: consultantUser?.lastName || null,
+        },
+      },
+      project: projectData,
+      bookedBy: bookedByData,
+    };
+  }
+
+  // Travel Itinerary Operations
+  async listTravelItineraries(filters?: {
+    consultantId?: string;
+    projectId?: string;
+    status?: string;
+  }): Promise<TravelItineraryWithDetails[]> {
+    const conditions: any[] = [];
+    if (filters?.consultantId) conditions.push(eq(travelItineraries.consultantId, filters.consultantId));
+    if (filters?.projectId) conditions.push(eq(travelItineraries.projectId, filters.projectId));
+    if (filters?.status) conditions.push(eq(travelItineraries.status, filters.status as any));
+
+    const results = conditions.length > 0
+      ? await db.select().from(travelItineraries).where(and(...conditions)).orderBy(desc(travelItineraries.startDate))
+      : await db.select().from(travelItineraries).orderBy(desc(travelItineraries.startDate));
+
+    return Promise.all(results.map((i) => this.buildTravelItineraryWithDetails(i)));
+  }
+
+  async getTravelItinerary(id: string): Promise<TravelItineraryWithDetails | undefined> {
+    const results = await db.select().from(travelItineraries).where(eq(travelItineraries.id, id));
+    if (!results[0]) return undefined;
+    return this.buildTravelItineraryWithDetails(results[0]);
+  }
+
+  async createTravelItinerary(itinerary: InsertTravelItinerary): Promise<TravelItinerary> {
+    const results = await db.insert(travelItineraries).values(itinerary).returning();
+    return results[0];
+  }
+
+  async updateTravelItinerary(id: string, data: Partial<InsertTravelItinerary>): Promise<TravelItinerary | undefined> {
+    const results = await db
+      .update(travelItineraries)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(travelItineraries.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteTravelItinerary(id: string): Promise<boolean> {
+    await db.delete(itineraryBookings).where(eq(itineraryBookings.itineraryId, id));
+    await db.delete(travelItineraries).where(eq(travelItineraries.id, id));
+    return true;
+  }
+
+  async addBookingToItinerary(data: InsertItineraryBooking): Promise<ItineraryBooking> {
+    const results = await db.insert(itineraryBookings).values(data).returning();
+    return results[0];
+  }
+
+  async removeBookingFromItinerary(itineraryId: string, bookingId: string): Promise<boolean> {
+    await db
+      .delete(itineraryBookings)
+      .where(and(eq(itineraryBookings.itineraryId, itineraryId), eq(itineraryBookings.bookingId, bookingId)));
+    return true;
+  }
+
+  private async buildTravelItineraryWithDetails(itinerary: TravelItinerary): Promise<TravelItineraryWithDetails> {
+    const consultant = await this.getConsultant(itinerary.consultantId);
+    const consultantUser = consultant ? await this.getUser(consultant.userId) : null;
+
+    let projectData: TravelItineraryWithDetails["project"] = null;
+    if (itinerary.projectId) {
+      const project = await this.getProject(itinerary.projectId);
+      if (project) {
+        projectData = { id: project.id, name: project.name };
+      }
+    }
+
+    let createdByData: TravelItineraryWithDetails["createdBy"] = null;
+    if (itinerary.createdById) {
+      const createdBy = await this.getUser(itinerary.createdById);
+      if (createdBy) {
+        createdByData = {
+          id: createdBy.id,
+          firstName: createdBy.firstName,
+          lastName: createdBy.lastName,
+        };
+      }
+    }
+
+    const itineraryBookingsResults = await db
+      .select()
+      .from(itineraryBookings)
+      .where(eq(itineraryBookings.itineraryId, itinerary.id))
+      .orderBy(asc(itineraryBookings.sequenceOrder));
+
+    const bookings: TravelBookingWithDetails[] = [];
+    for (const ib of itineraryBookingsResults) {
+      const booking = await this.getTravelBooking(ib.bookingId);
+      if (booking) {
+        bookings.push(booking);
+      }
+    }
+
+    return {
+      ...itinerary,
+      consultant: {
+        id: consultant?.id || "",
+        user: {
+          firstName: consultantUser?.firstName || null,
+          lastName: consultantUser?.lastName || null,
+        },
+      },
+      project: projectData,
+      createdBy: createdByData,
+      bookings,
+    };
+  }
+
+  // Carpool Group Operations
+  async listCarpoolGroups(filters?: {
+    projectId?: string;
+    status?: string;
+    driverId?: string;
+  }): Promise<CarpoolGroupWithDetails[]> {
+    const conditions: any[] = [];
+    if (filters?.projectId) conditions.push(eq(carpoolGroups.projectId, filters.projectId));
+    if (filters?.status) conditions.push(eq(carpoolGroups.status, filters.status as any));
+    if (filters?.driverId) conditions.push(eq(carpoolGroups.driverId, filters.driverId));
+
+    const results = conditions.length > 0
+      ? await db.select().from(carpoolGroups).where(and(...conditions)).orderBy(desc(carpoolGroups.departureDate))
+      : await db.select().from(carpoolGroups).orderBy(desc(carpoolGroups.departureDate));
+
+    return Promise.all(results.map((g) => this.buildCarpoolGroupWithDetails(g)));
+  }
+
+  async getCarpoolGroup(id: string): Promise<CarpoolGroupWithDetails | undefined> {
+    const results = await db.select().from(carpoolGroups).where(eq(carpoolGroups.id, id));
+    if (!results[0]) return undefined;
+    return this.buildCarpoolGroupWithDetails(results[0]);
+  }
+
+  async createCarpoolGroup(group: InsertCarpoolGroup): Promise<CarpoolGroup> {
+    const results = await db.insert(carpoolGroups).values(group).returning();
+    return results[0];
+  }
+
+  async updateCarpoolGroup(id: string, data: Partial<InsertCarpoolGroup>): Promise<CarpoolGroup | undefined> {
+    const results = await db
+      .update(carpoolGroups)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(carpoolGroups.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteCarpoolGroup(id: string): Promise<boolean> {
+    await db.delete(carpoolMembers).where(eq(carpoolMembers.carpoolId, id));
+    await db.delete(carpoolGroups).where(eq(carpoolGroups.id, id));
+    return true;
+  }
+
+  // Carpool Member Operations
+  async addCarpoolMember(data: InsertCarpoolMember): Promise<CarpoolMember> {
+    const results = await db.insert(carpoolMembers).values(data).returning();
+    return results[0];
+  }
+
+  async updateCarpoolMember(id: string, data: Partial<InsertCarpoolMember>): Promise<CarpoolMember | undefined> {
+    const results = await db
+      .update(carpoolMembers)
+      .set(data)
+      .where(eq(carpoolMembers.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async removeCarpoolMember(id: string): Promise<boolean> {
+    await db.delete(carpoolMembers).where(eq(carpoolMembers.id, id));
+    return true;
+  }
+
+  async listCarpoolMembers(carpoolId: string): Promise<CarpoolMemberWithDetails[]> {
+    const results = await db
+      .select()
+      .from(carpoolMembers)
+      .where(eq(carpoolMembers.carpoolId, carpoolId));
+
+    return Promise.all(results.map((m) => this.buildCarpoolMemberWithDetails(m)));
+  }
+
+  async getAvailableCarpools(projectId: string, date: string): Promise<CarpoolGroupWithDetails[]> {
+    const results = await db
+      .select()
+      .from(carpoolGroups)
+      .where(
+        and(
+          eq(carpoolGroups.projectId, projectId),
+          eq(carpoolGroups.departureDate, date),
+          eq(carpoolGroups.status, "open")
+        )
+      )
+      .orderBy(asc(carpoolGroups.departureTime));
+
+    return Promise.all(results.map((g) => this.buildCarpoolGroupWithDetails(g)));
+  }
+
+  private async buildCarpoolGroupWithDetails(group: CarpoolGroup): Promise<CarpoolGroupWithDetails> {
+    const project = await this.getProject(group.projectId);
+
+    let driverData: CarpoolGroupWithDetails["driver"] = null;
+    if (group.driverId) {
+      const driver = await this.getConsultant(group.driverId);
+      const driverUser = driver ? await this.getUser(driver.userId) : null;
+      if (driver) {
+        driverData = {
+          id: driver.id,
+          user: {
+            firstName: driverUser?.firstName || null,
+            lastName: driverUser?.lastName || null,
+          },
+        };
+      }
+    }
+
+    const members = await this.listCarpoolMembers(group.id);
+
+    return {
+      ...group,
+      project: {
+        id: project?.id || "",
+        name: project?.name || "Unknown",
+      },
+      driver: driverData,
+      members,
+    };
+  }
+
+  private async buildCarpoolMemberWithDetails(member: CarpoolMember): Promise<CarpoolMemberWithDetails> {
+    const consultant = await this.getConsultant(member.consultantId);
+    const consultantUser = consultant ? await this.getUser(consultant.userId) : null;
+
+    return {
+      ...member,
+      consultant: {
+        id: consultant?.id || "",
+        user: {
+          firstName: consultantUser?.firstName || null,
+          lastName: consultantUser?.lastName || null,
+        },
+      },
+    };
+  }
+
+  // Shuttle Schedule Operations
+  async listShuttleSchedules(filters?: {
+    projectId?: string;
+    isActive?: boolean;
+  }): Promise<ShuttleSchedule[]> {
+    const conditions: any[] = [];
+    if (filters?.projectId) conditions.push(eq(shuttleSchedules.projectId, filters.projectId));
+    if (filters?.isActive !== undefined) conditions.push(eq(shuttleSchedules.isActive, filters.isActive));
+
+    const results = conditions.length > 0
+      ? await db.select().from(shuttleSchedules).where(and(...conditions)).orderBy(asc(shuttleSchedules.departureTime))
+      : await db.select().from(shuttleSchedules).orderBy(asc(shuttleSchedules.departureTime));
+
+    return results;
+  }
+
+  async getShuttleSchedule(id: string): Promise<ShuttleSchedule | undefined> {
+    const results = await db.select().from(shuttleSchedules).where(eq(shuttleSchedules.id, id));
+    return results[0];
+  }
+
+  async createShuttleSchedule(schedule: InsertShuttleSchedule): Promise<ShuttleSchedule> {
+    const results = await db.insert(shuttleSchedules).values(schedule).returning();
+    return results[0];
+  }
+
+  async updateShuttleSchedule(id: string, data: Partial<InsertShuttleSchedule>): Promise<ShuttleSchedule | undefined> {
+    const results = await db
+      .update(shuttleSchedules)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(shuttleSchedules.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteShuttleSchedule(id: string): Promise<boolean> {
+    await db.delete(shuttleSchedules).where(eq(shuttleSchedules.id, id));
+    return true;
+  }
+
+  // Transportation Contact Operations
+  async listTransportationContacts(filters?: {
+    projectId?: string;
+    role?: string;
+    isActive?: boolean;
+  }): Promise<TransportationContact[]> {
+    const conditions: any[] = [];
+    if (filters?.projectId) conditions.push(eq(transportationContacts.projectId, filters.projectId));
+    if (filters?.role) conditions.push(eq(transportationContacts.role, filters.role as any));
+    if (filters?.isActive !== undefined) conditions.push(eq(transportationContacts.isActive, filters.isActive));
+
+    const results = conditions.length > 0
+      ? await db.select().from(transportationContacts).where(and(...conditions)).orderBy(asc(transportationContacts.name))
+      : await db.select().from(transportationContacts).orderBy(asc(transportationContacts.name));
+
+    return results;
+  }
+
+  async getTransportationContact(id: string): Promise<TransportationContact | undefined> {
+    const results = await db.select().from(transportationContacts).where(eq(transportationContacts.id, id));
+    return results[0];
+  }
+
+  async createTransportationContact(contact: InsertTransportationContact): Promise<TransportationContact> {
+    const results = await db.insert(transportationContacts).values(contact).returning();
+    return results[0];
+  }
+
+  async updateTransportationContact(id: string, data: Partial<InsertTransportationContact>): Promise<TransportationContact | undefined> {
+    const results = await db
+      .update(transportationContacts)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(transportationContacts.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteTransportationContact(id: string): Promise<boolean> {
+    await db.delete(transportationContacts).where(eq(transportationContacts.id, id));
+    return true;
+  }
+
+  // Travel Analytics
+  async getTravelAnalytics(filters?: { projectId?: string }): Promise<TravelAnalytics> {
+    const conditions: any[] = [];
+    if (filters?.projectId) conditions.push(eq(travelBookings.projectId, filters.projectId));
+
+    const totalResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(travelBookings)
+      .where(conditions.length > 0 ? and(...conditions) : undefined);
+
+    const pendingResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(travelBookings)
+      .where(conditions.length > 0 
+        ? and(...conditions, eq(travelBookings.status, "pending"))
+        : eq(travelBookings.status, "pending"));
+
+    const confirmedResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(travelBookings)
+      .where(conditions.length > 0
+        ? and(...conditions, eq(travelBookings.status, "confirmed"))
+        : eq(travelBookings.status, "confirmed"));
+
+    const estimatedCostResult = await db
+      .select({ sum: sql<string>`COALESCE(SUM(${travelBookings.estimatedCost}), 0)` })
+      .from(travelBookings)
+      .where(conditions.length > 0 ? and(...conditions) : undefined);
+
+    const actualCostResult = await db
+      .select({ sum: sql<string>`COALESCE(SUM(${travelBookings.actualCost}), 0)` })
+      .from(travelBookings)
+      .where(conditions.length > 0 ? and(...conditions) : undefined);
+
+    const byTypeResults = await db
+      .select({
+        type: travelBookings.bookingType,
+        count: sql<number>`count(*)`,
+        cost: sql<string>`COALESCE(SUM(${travelBookings.estimatedCost}), 0)`,
+      })
+      .from(travelBookings)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .groupBy(travelBookings.bookingType);
+
+    const byStatusResults = await db
+      .select({
+        status: travelBookings.status,
+        count: sql<number>`count(*)`,
+      })
+      .from(travelBookings)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .groupBy(travelBookings.status);
+
+    const today = new Date().toISOString().split("T")[0];
+    const itineraryConditions: any[] = [];
+    if (filters?.projectId) itineraryConditions.push(eq(travelItineraries.projectId, filters.projectId));
+    itineraryConditions.push(gte(travelItineraries.startDate, today));
+
+    const upcomingItinerariesResults = await db
+      .select()
+      .from(travelItineraries)
+      .where(and(...itineraryConditions))
+      .orderBy(asc(travelItineraries.startDate))
+      .limit(10);
+
+    const upcomingTrips = await Promise.all(
+      upcomingItinerariesResults.map((i) => this.buildTravelItineraryWithDetails(i))
+    );
+
+    return {
+      totalBookings: Number(totalResult[0]?.count) || 0,
+      pendingBookings: Number(pendingResult[0]?.count) || 0,
+      confirmedBookings: Number(confirmedResult[0]?.count) || 0,
+      totalEstimatedCost: estimatedCostResult[0]?.sum || "0",
+      totalActualCost: actualCostResult[0]?.sum || "0",
+      bookingsByType: byTypeResults.map((r) => ({
+        type: r.type,
+        count: Number(r.count) || 0,
+        cost: r.cost || "0",
+      })),
+      bookingsByStatus: byStatusResults.map((r) => ({
+        status: r.status,
+        count: Number(r.count) || 0,
+      })),
+      upcomingTrips,
+    };
+  }
+
+  async getCarpoolAnalytics(filters?: { projectId?: string }): Promise<CarpoolAnalytics> {
+    const conditions: any[] = [];
+    if (filters?.projectId) conditions.push(eq(carpoolGroups.projectId, filters.projectId));
+
+    const totalResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(carpoolGroups)
+      .where(conditions.length > 0 ? and(...conditions) : undefined);
+
+    const openResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(carpoolGroups)
+      .where(conditions.length > 0
+        ? and(...conditions, eq(carpoolGroups.status, "open"))
+        : eq(carpoolGroups.status, "open"));
+
+    const totalMembersResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(carpoolMembers);
+
+    const byStatusResults = await db
+      .select({
+        status: carpoolGroups.status,
+        count: sql<number>`count(*)`,
+      })
+      .from(carpoolGroups)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .groupBy(carpoolGroups.status);
+
+    const recentGroupsResults = await db
+      .select()
+      .from(carpoolGroups)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(carpoolGroups.createdAt))
+      .limit(10);
+
+    const recentGroups = await Promise.all(
+      recentGroupsResults.map((g) => this.buildCarpoolGroupWithDetails(g))
+    );
+
+    return {
+      totalGroups: Number(totalResult[0]?.count) || 0,
+      openGroups: Number(openResult[0]?.count) || 0,
+      totalMembers: Number(totalMembersResult[0]?.count) || 0,
+      groupsByStatus: byStatusResults.map((r) => ({
+        status: r.status,
+        count: Number(r.count) || 0,
+      })),
+      recentGroups,
+    };
   }
 }
 
