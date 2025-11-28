@@ -1495,6 +1495,33 @@ export async function registerRoutes(
       const user = req.user ? await storage.getUser(req.user.claims.sub) : null;
       const userRole = user?.role || null;
       
+      // Get leadership status for hospital staff
+      let isLeadership = false;
+      let hospitalId: string | null = null;
+      let assignedProjectIds: string[] = [];
+      
+      if (user && userRole === 'hospital_staff') {
+        const staffInfo = await storage.getHospitalStaffByUserId(user.id);
+        if (staffInfo) {
+          isLeadership = staffInfo.isLeadership;
+          hospitalId = staffInfo.hospitalId;
+          // Get projects for this hospital
+          const hospitalProjects = await storage.getProjectsByHospital(staffInfo.hospitalId);
+          assignedProjectIds = hospitalProjects.map((p: any) => p.id);
+        }
+      }
+      
+      // Get assigned projects for consultants
+      if (user && userRole === 'consultant') {
+        const consultant = await storage.getConsultantByUserId(user.id);
+        if (consultant) {
+          // Get schedule assignments for this consultant
+          const schedules = await storage.getSchedulesByConsultant(consultant.id);
+          const projectIds = schedules.map((s: any) => s.projectId).filter(Boolean);
+          assignedProjectIds = [...new Set(projectIds)] as string[];
+        }
+      }
+      
       const allRules = await storage.getAllAccessRules();
       const activeRules = allRules.filter(r => r.isActive);
       
@@ -1530,6 +1557,9 @@ export async function registerRoutes(
       
       res.json({
         role: userRole,
+        isLeadership,
+        hospitalId,
+        assignedProjectIds,
         restrictedPages,
         restrictedFeatures,
       });

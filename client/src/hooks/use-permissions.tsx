@@ -1,8 +1,12 @@
 import { createContext, useContext, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { determineRoleLevel, type UserRoleLevel } from "@/lib/permissions";
 
 interface PermissionsData {
   role: string | null;
+  isLeadership: boolean;
+  hospitalId: string | null;
+  assignedProjectIds: string[];
   restrictedPages: string[];
   restrictedFeatures: string[];
 }
@@ -11,9 +15,14 @@ interface PermissionsContextValue {
   permissions: PermissionsData | null;
   isLoading: boolean;
   error: Error | null;
+  roleLevel: UserRoleLevel;
+  isLeadership: boolean;
+  assignedProjectIds: string[];
+  hospitalId: string | null;
   hasPageAccess: (pageKey: string) => boolean;
   hasFeatureAccess: (featureKey: string) => boolean;
   canAccessRole: (requiredRoles: string[]) => boolean;
+  canAccessProject: (projectId: string) => boolean;
 }
 
 const PermissionsContext = createContext<PermissionsContextValue | null>(null);
@@ -24,6 +33,15 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     staleTime: 60000,
     refetchOnWindowFocus: true,
   });
+
+  const roleLevel = determineRoleLevel(
+    permissions?.role,
+    permissions?.isLeadership
+  );
+  
+  const isLeadership = permissions?.isLeadership || false;
+  const assignedProjectIds = permissions?.assignedProjectIds || [];
+  const hospitalId = permissions?.hospitalId || null;
 
   const hasPageAccess = (pageKey: string): boolean => {
     if (!permissions) return true;
@@ -39,6 +57,12 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     if (!permissions || !permissions.role) return false;
     return requiredRoles.includes(permissions.role);
   };
+  
+  const canAccessProject = (projectId: string): boolean => {
+    if (!permissions) return true;
+    if (permissions.role === 'admin') return true;
+    return assignedProjectIds.includes(projectId);
+  };
 
   return (
     <PermissionsContext.Provider
@@ -46,9 +70,14 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         permissions: permissions || null,
         isLoading,
         error: error as Error | null,
+        roleLevel,
+        isLeadership,
+        assignedProjectIds,
+        hospitalId,
         hasPageAccess,
         hasFeatureAccess,
         canAccessRole,
+        canAccessProject,
       }}
     >
       {children}
