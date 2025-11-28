@@ -55,6 +55,18 @@ import {
   insertTicketHistorySchema,
   insertDataRetentionPolicySchema,
   insertTicketCommentSchema,
+  insertPerDiemPolicySchema,
+  insertMileageRateSchema,
+  insertExpenseSchema,
+  insertInvoiceTemplateSchema,
+  insertInvoiceSchema,
+  insertInvoiceLineItemSchema,
+  insertPayRateSchema,
+  insertPayrollBatchSchema,
+  insertPayrollEntrySchema,
+  insertPaycheckStubSchema,
+  insertBudgetScenarioSchema,
+  insertScenarioMetricSchema,
 } from "@shared/schema";
 import {
   sendWelcomeEmail,
@@ -4360,17 +4372,6 @@ export async function registerRoutes(
           resourceName: `EOD Report - ${report.reportDate}`,
           description: 'Submitted end of day report',
         }, req);
-        
-        const admins = await storage.getAllAdminUsers?.() || [];
-        for (const admin of admins) {
-          await storage.createNotification({
-            userId: admin.id,
-            type: 'info',
-            title: 'EOD Report Submitted',
-            message: `A new EOD report for ${report.reportDate} is pending approval`,
-            link: `/eod-reports/${report.id}`,
-          });
-        }
       }
       
       res.json(report);
@@ -4787,6 +4788,1193 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error deleting data retention policy:", error);
       res.status(500).json({ message: "Failed to delete data retention policy" });
+    }
+  });
+
+  // ============================================
+  // PHASE 13: FINANCIAL MANAGEMENT API ROUTES
+  // ============================================
+
+  // Per Diem Policies Routes
+  app.get('/api/per-diem-policies', isAuthenticated, async (req, res) => {
+    try {
+      const policies = await storage.listPerDiemPolicies();
+      res.json(policies);
+    } catch (error) {
+      console.error("Error fetching per diem policies:", error);
+      res.status(500).json({ message: "Failed to fetch per diem policies" });
+    }
+  });
+
+  app.get('/api/per-diem-policies/:id', isAuthenticated, async (req, res) => {
+    try {
+      const policy = await storage.getPerDiemPolicy(req.params.id);
+      if (!policy) {
+        return res.status(404).json({ message: "Per diem policy not found" });
+      }
+      res.json(policy);
+    } catch (error) {
+      console.error("Error fetching per diem policy:", error);
+      res.status(500).json({ message: "Failed to fetch per diem policy" });
+    }
+  });
+
+  app.post('/api/per-diem-policies', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validated = insertPerDiemPolicySchema.parse(req.body);
+      const policy = await storage.createPerDiemPolicy(validated);
+      
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'per_diem_policy',
+        resourceId: policy.id,
+        resourceName: validated.name,
+        description: 'Created per diem policy',
+      }, req);
+      
+      res.status(201).json(policy);
+    } catch (error) {
+      console.error("Error creating per diem policy:", error);
+      res.status(400).json({ message: "Failed to create per diem policy" });
+    }
+  });
+
+  app.patch('/api/per-diem-policies/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const policy = await storage.updatePerDiemPolicy(req.params.id, req.body);
+      if (!policy) {
+        return res.status(404).json({ message: "Per diem policy not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'per_diem_policy',
+          resourceId: policy.id,
+          resourceName: policy.name,
+          description: 'Updated per diem policy',
+        }, req);
+      }
+      
+      res.json(policy);
+    } catch (error) {
+      console.error("Error updating per diem policy:", error);
+      res.status(500).json({ message: "Failed to update per diem policy" });
+    }
+  });
+
+  app.delete('/api/per-diem-policies/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      await storage.deletePerDiemPolicy(req.params.id);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'per_diem_policy',
+          resourceId: req.params.id,
+          resourceName: 'Per diem policy',
+          description: 'Deleted per diem policy',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting per diem policy:", error);
+      res.status(500).json({ message: "Failed to delete per diem policy" });
+    }
+  });
+
+  // Mileage Rates Routes
+  app.get('/api/mileage-rates', isAuthenticated, async (req, res) => {
+    try {
+      const rates = await storage.listMileageRates();
+      res.json(rates);
+    } catch (error) {
+      console.error("Error fetching mileage rates:", error);
+      res.status(500).json({ message: "Failed to fetch mileage rates" });
+    }
+  });
+
+  app.get('/api/mileage-rates/:id', isAuthenticated, async (req, res) => {
+    try {
+      const rate = await storage.getMileageRate(req.params.id);
+      if (!rate) {
+        return res.status(404).json({ message: "Mileage rate not found" });
+      }
+      res.json(rate);
+    } catch (error) {
+      console.error("Error fetching mileage rate:", error);
+      res.status(500).json({ message: "Failed to fetch mileage rate" });
+    }
+  });
+
+  app.post('/api/mileage-rates', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validated = insertMileageRateSchema.parse(req.body);
+      const rate = await storage.createMileageRate(validated);
+      
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'mileage_rate',
+        resourceId: rate.id,
+        resourceName: validated.name,
+        description: 'Created mileage rate',
+      }, req);
+      
+      res.status(201).json(rate);
+    } catch (error) {
+      console.error("Error creating mileage rate:", error);
+      res.status(400).json({ message: "Failed to create mileage rate" });
+    }
+  });
+
+  app.patch('/api/mileage-rates/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const rate = await storage.updateMileageRate(req.params.id, req.body);
+      if (!rate) {
+        return res.status(404).json({ message: "Mileage rate not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'mileage_rate',
+          resourceId: rate.id,
+          resourceName: rate.name,
+          description: 'Updated mileage rate',
+        }, req);
+      }
+      
+      res.json(rate);
+    } catch (error) {
+      console.error("Error updating mileage rate:", error);
+      res.status(500).json({ message: "Failed to update mileage rate" });
+    }
+  });
+
+  app.delete('/api/mileage-rates/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      await storage.deleteMileageRate(req.params.id);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'mileage_rate',
+          resourceId: req.params.id,
+          resourceName: 'Mileage rate',
+          description: 'Deleted mileage rate',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting mileage rate:", error);
+      res.status(500).json({ message: "Failed to delete mileage rate" });
+    }
+  });
+
+  // Expenses Routes
+  app.get('/api/expenses', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        consultantId: req.query.consultantId as string | undefined,
+        projectId: req.query.projectId as string | undefined,
+        status: req.query.status as string | undefined,
+        category: req.query.category as string | undefined,
+      };
+      const expenses = await storage.listExpenses(filters);
+      res.json(expenses);
+    } catch (error) {
+      console.error("Error fetching expenses:", error);
+      res.status(500).json({ message: "Failed to fetch expenses" });
+    }
+  });
+
+  app.get('/api/expenses/analytics', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const analytics = await storage.getExpenseAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching expense analytics:", error);
+      res.status(500).json({ message: "Failed to fetch expense analytics" });
+    }
+  });
+
+  app.get('/api/expenses/:id', isAuthenticated, async (req, res) => {
+    try {
+      const expense = await storage.getExpense(req.params.id);
+      if (!expense) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
+      res.json(expense);
+    } catch (error) {
+      console.error("Error fetching expense:", error);
+      res.status(500).json({ message: "Failed to fetch expense" });
+    }
+  });
+
+  app.post('/api/expenses', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validated = insertExpenseSchema.parse(req.body);
+      const expense = await storage.createExpense(validated);
+      
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'expense',
+        resourceId: expense.id,
+        resourceName: validated.description,
+        description: 'Created expense',
+      }, req);
+      
+      res.status(201).json(expense);
+    } catch (error) {
+      console.error("Error creating expense:", error);
+      res.status(400).json({ message: "Failed to create expense" });
+    }
+  });
+
+  app.patch('/api/expenses/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const expense = await storage.updateExpense(req.params.id, req.body);
+      if (!expense) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'expense',
+          resourceId: expense.id,
+          resourceName: expense.description,
+          description: 'Updated expense',
+        }, req);
+      }
+      
+      res.json(expense);
+    } catch (error) {
+      console.error("Error updating expense:", error);
+      res.status(500).json({ message: "Failed to update expense" });
+    }
+  });
+
+  app.post('/api/expenses/:id/submit', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const expense = await storage.submitExpense(req.params.id);
+      if (!expense) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
+      
+      await logActivity(userId, {
+        activityType: 'update',
+        resourceType: 'expense',
+        resourceId: expense.id,
+        resourceName: expense.description,
+        description: 'Submitted expense for approval',
+      }, req);
+      
+      res.json(expense);
+    } catch (error) {
+      console.error("Error submitting expense:", error);
+      res.status(500).json({ message: "Failed to submit expense" });
+    }
+  });
+
+  app.post('/api/expenses/:id/approve', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const expense = await storage.approveExpense(req.params.id, userId);
+      if (!expense) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
+      
+      await logActivity(userId, {
+        activityType: 'update',
+        resourceType: 'expense',
+        resourceId: expense.id,
+        resourceName: expense.description,
+        description: 'Approved expense',
+      }, req);
+      
+      res.json(expense);
+    } catch (error) {
+      console.error("Error approving expense:", error);
+      res.status(500).json({ message: "Failed to approve expense" });
+    }
+  });
+
+  app.post('/api/expenses/:id/reject', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { reason } = req.body;
+      const expense = await storage.rejectExpense(req.params.id, userId, reason);
+      if (!expense) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
+      
+      await logActivity(userId, {
+        activityType: 'update',
+        resourceType: 'expense',
+        resourceId: expense.id,
+        resourceName: expense.description,
+        description: 'Rejected expense',
+      }, req);
+      
+      res.json(expense);
+    } catch (error) {
+      console.error("Error rejecting expense:", error);
+      res.status(500).json({ message: "Failed to reject expense" });
+    }
+  });
+
+  app.delete('/api/expenses/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      await storage.deleteExpense(req.params.id);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'expense',
+          resourceId: req.params.id,
+          resourceName: 'Expense',
+          description: 'Deleted expense',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting expense:", error);
+      res.status(500).json({ message: "Failed to delete expense" });
+    }
+  });
+
+  // Invoice Templates Routes
+  app.get('/api/invoice-templates', isAuthenticated, async (req, res) => {
+    try {
+      const templates = await storage.listInvoiceTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching invoice templates:", error);
+      res.status(500).json({ message: "Failed to fetch invoice templates" });
+    }
+  });
+
+  app.get('/api/invoice-templates/:id', isAuthenticated, async (req, res) => {
+    try {
+      const template = await storage.getInvoiceTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ message: "Invoice template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error("Error fetching invoice template:", error);
+      res.status(500).json({ message: "Failed to fetch invoice template" });
+    }
+  });
+
+  app.post('/api/invoice-templates', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validated = insertInvoiceTemplateSchema.parse(req.body);
+      const template = await storage.createInvoiceTemplate(validated);
+      
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'invoice_template',
+        resourceId: template.id,
+        resourceName: validated.name,
+        description: 'Created invoice template',
+      }, req);
+      
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Error creating invoice template:", error);
+      res.status(400).json({ message: "Failed to create invoice template" });
+    }
+  });
+
+  app.patch('/api/invoice-templates/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const template = await storage.updateInvoiceTemplate(req.params.id, req.body);
+      if (!template) {
+        return res.status(404).json({ message: "Invoice template not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'invoice_template',
+          resourceId: template.id,
+          resourceName: template.name,
+          description: 'Updated invoice template',
+        }, req);
+      }
+      
+      res.json(template);
+    } catch (error) {
+      console.error("Error updating invoice template:", error);
+      res.status(500).json({ message: "Failed to update invoice template" });
+    }
+  });
+
+  app.delete('/api/invoice-templates/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      await storage.deleteInvoiceTemplate(req.params.id);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'invoice_template',
+          resourceId: req.params.id,
+          resourceName: 'Invoice template',
+          description: 'Deleted invoice template',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting invoice template:", error);
+      res.status(500).json({ message: "Failed to delete invoice template" });
+    }
+  });
+
+  // Invoices Routes
+  app.get('/api/invoices', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        projectId: req.query.projectId as string | undefined,
+        hospitalId: req.query.hospitalId as string | undefined,
+        status: req.query.status as string | undefined,
+      };
+      const invoices = await storage.listInvoices(filters);
+      res.json(invoices);
+    } catch (error) {
+      console.error("Error fetching invoices:", error);
+      res.status(500).json({ message: "Failed to fetch invoices" });
+    }
+  });
+
+  app.get('/api/invoices/:id', isAuthenticated, async (req, res) => {
+    try {
+      const invoice = await storage.getInvoice(req.params.id);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+      res.json(invoice);
+    } catch (error) {
+      console.error("Error fetching invoice:", error);
+      res.status(500).json({ message: "Failed to fetch invoice" });
+    }
+  });
+
+  app.post('/api/invoices', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validated = insertInvoiceSchema.parse({
+        ...req.body,
+        createdBy: userId,
+      });
+      const invoice = await storage.createInvoice(validated);
+      
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'invoice',
+        resourceId: invoice.id,
+        resourceName: invoice.invoiceNumber || 'New Invoice',
+        description: 'Created invoice',
+      }, req);
+      
+      res.status(201).json(invoice);
+    } catch (error) {
+      console.error("Error creating invoice:", error);
+      res.status(400).json({ message: "Failed to create invoice" });
+    }
+  });
+
+  app.patch('/api/invoices/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const invoice = await storage.updateInvoice(req.params.id, req.body);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'invoice',
+          resourceId: invoice.id,
+          resourceName: invoice.invoiceNumber || invoice.id,
+          description: 'Updated invoice',
+        }, req);
+      }
+      
+      res.json(invoice);
+    } catch (error) {
+      console.error("Error updating invoice:", error);
+      res.status(500).json({ message: "Failed to update invoice" });
+    }
+  });
+
+  app.delete('/api/invoices/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      await storage.deleteInvoice(req.params.id);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'invoice',
+          resourceId: req.params.id,
+          resourceName: 'Invoice',
+          description: 'Deleted invoice',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting invoice:", error);
+      res.status(500).json({ message: "Failed to delete invoice" });
+    }
+  });
+
+  app.post('/api/invoices/generate-from-timesheet', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { timesheetId, templateId } = req.body;
+      
+      if (!timesheetId) {
+        return res.status(400).json({ message: "timesheetId is required" });
+      }
+      
+      const invoice = await storage.generateInvoiceFromTimesheet(timesheetId, templateId);
+      if (!invoice) {
+        return res.status(404).json({ message: "Failed to generate invoice from timesheet" });
+      }
+      
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'invoice',
+        resourceId: invoice.id,
+        resourceName: invoice.invoiceNumber || 'Generated Invoice',
+        description: 'Generated invoice from timesheet',
+      }, req);
+      
+      res.status(201).json(invoice);
+    } catch (error) {
+      console.error("Error generating invoice from timesheet:", error);
+      res.status(500).json({ message: "Failed to generate invoice from timesheet" });
+    }
+  });
+
+  // Invoice Line Items Routes
+  app.get('/api/invoice-line-items', isAuthenticated, async (req, res) => {
+    try {
+      const invoiceId = req.query.invoiceId as string;
+      if (!invoiceId) {
+        return res.status(400).json({ message: "invoiceId is required" });
+      }
+      const lineItems = await storage.listInvoiceLineItems(invoiceId);
+      res.json(lineItems);
+    } catch (error) {
+      console.error("Error fetching invoice line items:", error);
+      res.status(500).json({ message: "Failed to fetch invoice line items" });
+    }
+  });
+
+  app.post('/api/invoice-line-items', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validated = insertInvoiceLineItemSchema.parse(req.body);
+      const lineItem = await storage.createInvoiceLineItem(validated);
+      
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'invoice_line_item',
+        resourceId: lineItem.id,
+        resourceName: validated.description,
+        description: 'Created invoice line item',
+      }, req);
+      
+      res.status(201).json(lineItem);
+    } catch (error) {
+      console.error("Error creating invoice line item:", error);
+      res.status(400).json({ message: "Failed to create invoice line item" });
+    }
+  });
+
+  app.patch('/api/invoice-line-items/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const lineItem = await storage.updateInvoiceLineItem(req.params.id, req.body);
+      if (!lineItem) {
+        return res.status(404).json({ message: "Invoice line item not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'invoice_line_item',
+          resourceId: lineItem.id,
+          resourceName: lineItem.description,
+          description: 'Updated invoice line item',
+        }, req);
+      }
+      
+      res.json(lineItem);
+    } catch (error) {
+      console.error("Error updating invoice line item:", error);
+      res.status(500).json({ message: "Failed to update invoice line item" });
+    }
+  });
+
+  app.delete('/api/invoice-line-items/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      await storage.deleteInvoiceLineItem(req.params.id);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'invoice_line_item',
+          resourceId: req.params.id,
+          resourceName: 'Invoice line item',
+          description: 'Deleted invoice line item',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting invoice line item:", error);
+      res.status(500).json({ message: "Failed to delete invoice line item" });
+    }
+  });
+
+  // Pay Rates Routes
+  app.get('/api/pay-rates', isAuthenticated, async (req, res) => {
+    try {
+      const consultantId = req.query.consultantId as string | undefined;
+      const payRates = await storage.listPayRates(consultantId);
+      res.json(payRates);
+    } catch (error) {
+      console.error("Error fetching pay rates:", error);
+      res.status(500).json({ message: "Failed to fetch pay rates" });
+    }
+  });
+
+  app.get('/api/pay-rates/current/:consultantId', isAuthenticated, async (req, res) => {
+    try {
+      const payRate = await storage.getCurrentPayRate(req.params.consultantId);
+      if (!payRate) {
+        return res.status(404).json({ message: "No current pay rate found for consultant" });
+      }
+      res.json(payRate);
+    } catch (error) {
+      console.error("Error fetching current pay rate:", error);
+      res.status(500).json({ message: "Failed to fetch current pay rate" });
+    }
+  });
+
+  app.get('/api/pay-rates/:id', isAuthenticated, async (req, res) => {
+    try {
+      const payRate = await storage.getPayRate(req.params.id);
+      if (!payRate) {
+        return res.status(404).json({ message: "Pay rate not found" });
+      }
+      res.json(payRate);
+    } catch (error) {
+      console.error("Error fetching pay rate:", error);
+      res.status(500).json({ message: "Failed to fetch pay rate" });
+    }
+  });
+
+  app.post('/api/pay-rates', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validated = insertPayRateSchema.parse({
+        ...req.body,
+        approvedBy: userId,
+      });
+      const payRate = await storage.createPayRate(validated);
+      
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'pay_rate',
+        resourceId: payRate.id,
+        resourceName: `Pay rate: $${validated.hourlyRate}/hr`,
+        description: 'Created pay rate',
+      }, req);
+      
+      res.status(201).json(payRate);
+    } catch (error) {
+      console.error("Error creating pay rate:", error);
+      res.status(400).json({ message: "Failed to create pay rate" });
+    }
+  });
+
+  app.patch('/api/pay-rates/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const payRate = await storage.updatePayRate(req.params.id, req.body);
+      if (!payRate) {
+        return res.status(404).json({ message: "Pay rate not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'pay_rate',
+          resourceId: payRate.id,
+          resourceName: `Pay rate: $${payRate.hourlyRate}/hr`,
+          description: 'Updated pay rate',
+        }, req);
+      }
+      
+      res.json(payRate);
+    } catch (error) {
+      console.error("Error updating pay rate:", error);
+      res.status(500).json({ message: "Failed to update pay rate" });
+    }
+  });
+
+  // Payroll Batches Routes
+  app.get('/api/payroll-batches', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        status: req.query.status as string | undefined,
+        periodStart: req.query.periodStart as string | undefined,
+        periodEnd: req.query.periodEnd as string | undefined,
+      };
+      const batches = await storage.listPayrollBatches(filters);
+      res.json(batches);
+    } catch (error) {
+      console.error("Error fetching payroll batches:", error);
+      res.status(500).json({ message: "Failed to fetch payroll batches" });
+    }
+  });
+
+  app.get('/api/payroll-batches/analytics', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const analytics = await storage.getPayrollAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching payroll analytics:", error);
+      res.status(500).json({ message: "Failed to fetch payroll analytics" });
+    }
+  });
+
+  app.get('/api/payroll-batches/:id', isAuthenticated, async (req, res) => {
+    try {
+      const batch = await storage.getPayrollBatch(req.params.id);
+      if (!batch) {
+        return res.status(404).json({ message: "Payroll batch not found" });
+      }
+      res.json(batch);
+    } catch (error) {
+      console.error("Error fetching payroll batch:", error);
+      res.status(500).json({ message: "Failed to fetch payroll batch" });
+    }
+  });
+
+  app.post('/api/payroll-batches', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validated = insertPayrollBatchSchema.parse({
+        ...req.body,
+        createdBy: userId,
+      });
+      const batch = await storage.createPayrollBatch(validated);
+      
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'payroll_batch',
+        resourceId: batch.id,
+        resourceName: validated.name,
+        description: 'Created payroll batch',
+      }, req);
+      
+      res.status(201).json(batch);
+    } catch (error) {
+      console.error("Error creating payroll batch:", error);
+      res.status(400).json({ message: "Failed to create payroll batch" });
+    }
+  });
+
+  app.patch('/api/payroll-batches/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const batch = await storage.updatePayrollBatch(req.params.id, req.body);
+      if (!batch) {
+        return res.status(404).json({ message: "Payroll batch not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'payroll_batch',
+          resourceId: batch.id,
+          resourceName: batch.name,
+          description: 'Updated payroll batch',
+        }, req);
+      }
+      
+      res.json(batch);
+    } catch (error) {
+      console.error("Error updating payroll batch:", error);
+      res.status(500).json({ message: "Failed to update payroll batch" });
+    }
+  });
+
+  app.post('/api/payroll-batches/:id/approve', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const batch = await storage.approvePayrollBatch(req.params.id, userId);
+      if (!batch) {
+        return res.status(404).json({ message: "Payroll batch not found" });
+      }
+      
+      await logActivity(userId, {
+        activityType: 'update',
+        resourceType: 'payroll_batch',
+        resourceId: batch.id,
+        resourceName: batch.name,
+        description: 'Approved payroll batch',
+      }, req);
+      
+      res.json(batch);
+    } catch (error) {
+      console.error("Error approving payroll batch:", error);
+      res.status(500).json({ message: "Failed to approve payroll batch" });
+    }
+  });
+
+  app.post('/api/payroll-batches/:id/process', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const batch = await storage.processPayrollBatch(req.params.id);
+      if (!batch) {
+        return res.status(404).json({ message: "Payroll batch not found" });
+      }
+      
+      await logActivity(userId, {
+        activityType: 'update',
+        resourceType: 'payroll_batch',
+        resourceId: batch.id,
+        resourceName: batch.name,
+        description: 'Processed payroll batch',
+      }, req);
+      
+      res.json(batch);
+    } catch (error) {
+      console.error("Error processing payroll batch:", error);
+      res.status(500).json({ message: "Failed to process payroll batch" });
+    }
+  });
+
+  // Payroll Entries Routes
+  app.get('/api/payroll-entries', isAuthenticated, async (req, res) => {
+    try {
+      const batchId = req.query.batchId as string;
+      if (!batchId) {
+        return res.status(400).json({ message: "batchId is required" });
+      }
+      const entries = await storage.listPayrollEntries(batchId);
+      res.json(entries);
+    } catch (error) {
+      console.error("Error fetching payroll entries:", error);
+      res.status(500).json({ message: "Failed to fetch payroll entries" });
+    }
+  });
+
+  app.post('/api/payroll-entries', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validated = insertPayrollEntrySchema.parse(req.body);
+      const entry = await storage.createPayrollEntry(validated);
+      
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'payroll_entry',
+        resourceId: entry.id,
+        resourceName: 'Payroll entry',
+        description: 'Created payroll entry',
+      }, req);
+      
+      res.status(201).json(entry);
+    } catch (error) {
+      console.error("Error creating payroll entry:", error);
+      res.status(400).json({ message: "Failed to create payroll entry" });
+    }
+  });
+
+  app.patch('/api/payroll-entries/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const entry = await storage.updatePayrollEntry(req.params.id, req.body);
+      if (!entry) {
+        return res.status(404).json({ message: "Payroll entry not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'payroll_entry',
+          resourceId: entry.id,
+          resourceName: 'Payroll entry',
+          description: 'Updated payroll entry',
+        }, req);
+      }
+      
+      res.json(entry);
+    } catch (error) {
+      console.error("Error updating payroll entry:", error);
+      res.status(500).json({ message: "Failed to update payroll entry" });
+    }
+  });
+
+  // Paycheck Stubs Routes
+  app.get('/api/paycheck-stubs', isAuthenticated, async (req, res) => {
+    try {
+      const consultantId = req.query.consultantId as string;
+      if (!consultantId) {
+        return res.status(400).json({ message: "consultantId is required" });
+      }
+      const stubs = await storage.listPaycheckStubs(consultantId);
+      res.json(stubs);
+    } catch (error) {
+      console.error("Error fetching paycheck stubs:", error);
+      res.status(500).json({ message: "Failed to fetch paycheck stubs" });
+    }
+  });
+
+  app.get('/api/paycheck-stubs/:id', isAuthenticated, async (req, res) => {
+    try {
+      const stub = await storage.getPaycheckStub(req.params.id);
+      if (!stub) {
+        return res.status(404).json({ message: "Paycheck stub not found" });
+      }
+      res.json(stub);
+    } catch (error) {
+      console.error("Error fetching paycheck stub:", error);
+      res.status(500).json({ message: "Failed to fetch paycheck stub" });
+    }
+  });
+
+  app.post('/api/paycheck-stubs', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validated = insertPaycheckStubSchema.parse(req.body);
+      const stub = await storage.createPaycheckStub(validated);
+      
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'paycheck_stub',
+        resourceId: stub.id,
+        resourceName: 'Paycheck stub',
+        description: 'Created paycheck stub',
+      }, req);
+      
+      res.status(201).json(stub);
+    } catch (error) {
+      console.error("Error creating paycheck stub:", error);
+      res.status(400).json({ message: "Failed to create paycheck stub" });
+    }
+  });
+
+  // Budget Scenarios Routes
+  app.get('/api/budget-scenarios', isAuthenticated, async (req, res) => {
+    try {
+      const projectId = req.query.projectId as string | undefined;
+      const scenarios = await storage.listBudgetScenarios(projectId);
+      res.json(scenarios);
+    } catch (error) {
+      console.error("Error fetching budget scenarios:", error);
+      res.status(500).json({ message: "Failed to fetch budget scenarios" });
+    }
+  });
+
+  app.get('/api/budget-scenarios/:id', isAuthenticated, async (req, res) => {
+    try {
+      const scenario = await storage.getBudgetScenario(req.params.id);
+      if (!scenario) {
+        return res.status(404).json({ message: "Budget scenario not found" });
+      }
+      res.json(scenario);
+    } catch (error) {
+      console.error("Error fetching budget scenario:", error);
+      res.status(500).json({ message: "Failed to fetch budget scenario" });
+    }
+  });
+
+  app.post('/api/budget-scenarios', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validated = insertBudgetScenarioSchema.parse({
+        ...req.body,
+        createdBy: userId,
+      });
+      const scenario = await storage.createBudgetScenario(validated);
+      
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'budget_scenario',
+        resourceId: scenario.id,
+        resourceName: validated.name,
+        description: 'Created budget scenario',
+      }, req);
+      
+      res.status(201).json(scenario);
+    } catch (error) {
+      console.error("Error creating budget scenario:", error);
+      res.status(400).json({ message: "Failed to create budget scenario" });
+    }
+  });
+
+  app.patch('/api/budget-scenarios/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const scenario = await storage.updateBudgetScenario(req.params.id, req.body);
+      if (!scenario) {
+        return res.status(404).json({ message: "Budget scenario not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'budget_scenario',
+          resourceId: scenario.id,
+          resourceName: scenario.name,
+          description: 'Updated budget scenario',
+        }, req);
+      }
+      
+      res.json(scenario);
+    } catch (error) {
+      console.error("Error updating budget scenario:", error);
+      res.status(500).json({ message: "Failed to update budget scenario" });
+    }
+  });
+
+  app.delete('/api/budget-scenarios/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      await storage.deleteBudgetScenario(req.params.id);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'budget_scenario',
+          resourceId: req.params.id,
+          resourceName: 'Budget scenario',
+          description: 'Deleted budget scenario',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting budget scenario:", error);
+      res.status(500).json({ message: "Failed to delete budget scenario" });
+    }
+  });
+
+  app.post('/api/budget-scenarios/:id/clone', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { name } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ message: "name is required for cloning" });
+      }
+      
+      const clonedScenario = await storage.cloneScenario(req.params.id, name);
+      if (!clonedScenario) {
+        return res.status(404).json({ message: "Budget scenario not found" });
+      }
+      
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'budget_scenario',
+        resourceId: clonedScenario.id,
+        resourceName: name,
+        description: 'Cloned budget scenario',
+      }, req);
+      
+      res.status(201).json(clonedScenario);
+    } catch (error) {
+      console.error("Error cloning budget scenario:", error);
+      res.status(500).json({ message: "Failed to clone budget scenario" });
+    }
+  });
+
+  // Scenario Metrics Routes
+  app.get('/api/scenario-metrics', isAuthenticated, async (req, res) => {
+    try {
+      const scenarioId = req.query.scenarioId as string;
+      if (!scenarioId) {
+        return res.status(400).json({ message: "scenarioId is required" });
+      }
+      const metrics = await storage.listScenarioMetrics(scenarioId);
+      res.json(metrics);
+    } catch (error) {
+      console.error("Error fetching scenario metrics:", error);
+      res.status(500).json({ message: "Failed to fetch scenario metrics" });
+    }
+  });
+
+  app.post('/api/scenario-metrics', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validated = insertScenarioMetricSchema.parse(req.body);
+      const metric = await storage.createScenarioMetric(validated);
+      
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'scenario_metric',
+        resourceId: metric.id,
+        resourceName: validated.metricName,
+        description: 'Created scenario metric',
+      }, req);
+      
+      res.status(201).json(metric);
+    } catch (error) {
+      console.error("Error creating scenario metric:", error);
+      res.status(400).json({ message: "Failed to create scenario metric" });
+    }
+  });
+
+  app.patch('/api/scenario-metrics/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const metric = await storage.updateScenarioMetric(req.params.id, req.body);
+      if (!metric) {
+        return res.status(404).json({ message: "Scenario metric not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'scenario_metric',
+          resourceId: metric.id,
+          resourceName: metric.metricName,
+          description: 'Updated scenario metric',
+        }, req);
+      }
+      
+      res.json(metric);
+    } catch (error) {
+      console.error("Error updating scenario metric:", error);
+      res.status(500).json({ message: "Failed to update scenario metric" });
     }
   });
 
