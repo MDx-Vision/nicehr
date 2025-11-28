@@ -75,6 +75,18 @@ import {
   insertCarpoolMemberSchema,
   insertShuttleScheduleSchema,
   insertTransportationContactSchema,
+  insertConsultantScorecardSchema,
+  insertPulseSurveySchema,
+  insertPulseResponseSchema,
+  insertNpsResponseSchema,
+  insertIncidentSchema,
+  insertCorrectiveActionSchema,
+  insertAchievementBadgeSchema,
+  insertConsultantBadgeSchema,
+  insertPointTransactionSchema,
+  insertReferralSchema,
+  insertComplianceCheckSchema,
+  insertComplianceAuditSchema,
 } from "@shared/schema";
 import {
   sendWelcomeEmail,
@@ -6744,6 +6756,1145 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching carpool analytics:", error);
       res.status(500).json({ message: "Failed to fetch carpool analytics" });
+    }
+  });
+
+  // =============================================
+  // Phase 15: Quality Assurance, Gamification, Compliance Routes
+  // =============================================
+
+  // Consultant Scorecards Routes
+  app.get('/api/consultant-scorecards', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        consultantId: req.query.consultantId as string | undefined,
+        projectId: req.query.projectId as string | undefined,
+        period: req.query.period as string | undefined,
+      };
+      const scorecards = await storage.listConsultantScorecards(filters);
+      res.json(scorecards);
+    } catch (error) {
+      console.error("Error fetching consultant scorecards:", error);
+      res.status(500).json({ message: "Failed to fetch consultant scorecards" });
+    }
+  });
+
+  app.get('/api/consultant-scorecards/:id', isAuthenticated, async (req, res) => {
+    try {
+      const scorecard = await storage.getConsultantScorecard(req.params.id);
+      if (!scorecard) {
+        return res.status(404).json({ message: "Consultant scorecard not found" });
+      }
+      res.json(scorecard);
+    } catch (error) {
+      console.error("Error fetching consultant scorecard:", error);
+      res.status(500).json({ message: "Failed to fetch consultant scorecard" });
+    }
+  });
+
+  app.post('/api/consultant-scorecards', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertConsultantScorecardSchema.parse(req.body);
+      const scorecard = await storage.createConsultantScorecard(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'create',
+          resourceType: 'consultant_scorecard',
+          resourceId: scorecard.id,
+          resourceName: `Scorecard for ${validated.period}`,
+          description: 'Created consultant scorecard',
+        }, req);
+      }
+      
+      res.status(201).json(scorecard);
+    } catch (error) {
+      console.error("Error creating consultant scorecard:", error);
+      res.status(400).json({ message: "Failed to create consultant scorecard" });
+    }
+  });
+
+  app.patch('/api/consultant-scorecards/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const scorecard = await storage.updateConsultantScorecard(req.params.id, req.body);
+      if (!scorecard) {
+        return res.status(404).json({ message: "Consultant scorecard not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'consultant_scorecard',
+          resourceId: scorecard.id,
+          resourceName: `Scorecard for ${scorecard.period}`,
+          description: 'Updated consultant scorecard',
+        }, req);
+      }
+      
+      res.json(scorecard);
+    } catch (error) {
+      console.error("Error updating consultant scorecard:", error);
+      res.status(500).json({ message: "Failed to update consultant scorecard" });
+    }
+  });
+
+  app.delete('/api/consultant-scorecards/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const scorecardId = req.params.id;
+      
+      const scorecard = await storage.getConsultantScorecard(scorecardId);
+      const scorecardName = scorecard ? `Scorecard for ${scorecard.period}` : scorecardId;
+      
+      await storage.deleteConsultantScorecard(scorecardId);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'consultant_scorecard',
+          resourceId: scorecardId,
+          resourceName: scorecardName,
+          description: 'Deleted consultant scorecard',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting consultant scorecard:", error);
+      res.status(500).json({ message: "Failed to delete consultant scorecard" });
+    }
+  });
+
+  // Pulse Surveys Routes
+  app.get('/api/pulse-surveys', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        projectId: req.query.projectId as string | undefined,
+        isActive: req.query.isActive === 'true' ? true : req.query.isActive === 'false' ? false : undefined,
+      };
+      const surveys = await storage.listPulseSurveys(filters);
+      res.json(surveys);
+    } catch (error) {
+      console.error("Error fetching pulse surveys:", error);
+      res.status(500).json({ message: "Failed to fetch pulse surveys" });
+    }
+  });
+
+  app.get('/api/pulse-surveys/active', isAuthenticated, async (req, res) => {
+    try {
+      const surveys = await storage.listActivePulseSurveys();
+      res.json(surveys);
+    } catch (error) {
+      console.error("Error fetching active pulse surveys:", error);
+      res.status(500).json({ message: "Failed to fetch active pulse surveys" });
+    }
+  });
+
+  app.get('/api/pulse-surveys/:id', isAuthenticated, async (req, res) => {
+    try {
+      const survey = await storage.getPulseSurvey(req.params.id);
+      if (!survey) {
+        return res.status(404).json({ message: "Pulse survey not found" });
+      }
+      res.json(survey);
+    } catch (error) {
+      console.error("Error fetching pulse survey:", error);
+      res.status(500).json({ message: "Failed to fetch pulse survey" });
+    }
+  });
+
+  app.post('/api/pulse-surveys', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertPulseSurveySchema.parse({
+        ...req.body,
+        createdById: req.body.createdById || userId,
+      });
+      const survey = await storage.createPulseSurvey(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'create',
+          resourceType: 'pulse_survey',
+          resourceId: survey.id,
+          resourceName: validated.title,
+          description: 'Created pulse survey',
+        }, req);
+      }
+      
+      res.status(201).json(survey);
+    } catch (error) {
+      console.error("Error creating pulse survey:", error);
+      res.status(400).json({ message: "Failed to create pulse survey" });
+    }
+  });
+
+  app.patch('/api/pulse-surveys/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const survey = await storage.updatePulseSurvey(req.params.id, req.body);
+      if (!survey) {
+        return res.status(404).json({ message: "Pulse survey not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'pulse_survey',
+          resourceId: survey.id,
+          resourceName: survey.title,
+          description: 'Updated pulse survey',
+        }, req);
+      }
+      
+      res.json(survey);
+    } catch (error) {
+      console.error("Error updating pulse survey:", error);
+      res.status(500).json({ message: "Failed to update pulse survey" });
+    }
+  });
+
+  app.delete('/api/pulse-surveys/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const surveyId = req.params.id;
+      
+      const survey = await storage.getPulseSurvey(surveyId);
+      const surveyName = survey?.title || surveyId;
+      
+      await storage.deletePulseSurvey(surveyId);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'pulse_survey',
+          resourceId: surveyId,
+          resourceName: surveyName,
+          description: 'Deleted pulse survey',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting pulse survey:", error);
+      res.status(500).json({ message: "Failed to delete pulse survey" });
+    }
+  });
+
+  // Pulse Responses Routes
+  app.get('/api/pulse-responses', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        surveyId: req.query.surveyId as string | undefined,
+        consultantId: req.query.consultantId as string | undefined,
+      };
+      const responses = await storage.listPulseResponses(filters);
+      res.json(responses);
+    } catch (error) {
+      console.error("Error fetching pulse responses:", error);
+      res.status(500).json({ message: "Failed to fetch pulse responses" });
+    }
+  });
+
+  app.get('/api/pulse-responses/:id', isAuthenticated, async (req, res) => {
+    try {
+      const response = await storage.getPulseResponse(req.params.id);
+      if (!response) {
+        return res.status(404).json({ message: "Pulse response not found" });
+      }
+      res.json(response);
+    } catch (error) {
+      console.error("Error fetching pulse response:", error);
+      res.status(500).json({ message: "Failed to fetch pulse response" });
+    }
+  });
+
+  app.post('/api/pulse-responses', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertPulseResponseSchema.parse(req.body);
+      const response = await storage.createPulseResponse(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'create',
+          resourceType: 'pulse_response',
+          resourceId: response.id,
+          resourceName: 'Pulse Survey Response',
+          description: 'Submitted pulse survey response',
+        }, req);
+      }
+      
+      res.status(201).json(response);
+    } catch (error) {
+      console.error("Error creating pulse response:", error);
+      res.status(400).json({ message: "Failed to create pulse response" });
+    }
+  });
+
+  // NPS Responses Routes
+  app.get('/api/nps-responses', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        category: req.query.category as string | undefined,
+        consultantId: req.query.consultantId as string | undefined,
+      };
+      const responses = await storage.listNpsResponses(filters);
+      res.json(responses);
+    } catch (error) {
+      console.error("Error fetching NPS responses:", error);
+      res.status(500).json({ message: "Failed to fetch NPS responses" });
+    }
+  });
+
+  app.post('/api/nps-responses', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertNpsResponseSchema.parse(req.body);
+      const response = await storage.createNpsResponse(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'create',
+          resourceType: 'nps_response',
+          resourceId: response.id,
+          resourceName: `NPS Response (${validated.category})`,
+          description: 'Submitted NPS response',
+        }, req);
+      }
+      
+      res.status(201).json(response);
+    } catch (error) {
+      console.error("Error creating NPS response:", error);
+      res.status(400).json({ message: "Failed to create NPS response" });
+    }
+  });
+
+  app.get('/api/nps-score', isAuthenticated, async (req, res) => {
+    try {
+      const category = req.query.category as string | undefined;
+      const score = await storage.getNpsScore(category);
+      res.json(score);
+    } catch (error) {
+      console.error("Error fetching NPS score:", error);
+      res.status(500).json({ message: "Failed to fetch NPS score" });
+    }
+  });
+
+  // Incidents Routes
+  app.get('/api/incidents', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        projectId: req.query.projectId as string | undefined,
+        hospitalId: req.query.hospitalId as string | undefined,
+        status: req.query.status as string | undefined,
+        severity: req.query.severity as string | undefined,
+      };
+      const incidents = await storage.listIncidents(filters);
+      res.json(incidents);
+    } catch (error) {
+      console.error("Error fetching incidents:", error);
+      res.status(500).json({ message: "Failed to fetch incidents" });
+    }
+  });
+
+  app.get('/api/incidents/:id', isAuthenticated, async (req, res) => {
+    try {
+      const incident = await storage.getIncident(req.params.id);
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+      res.json(incident);
+    } catch (error) {
+      console.error("Error fetching incident:", error);
+      res.status(500).json({ message: "Failed to fetch incident" });
+    }
+  });
+
+  app.post('/api/incidents', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertIncidentSchema.parse({
+        ...req.body,
+        reportedById: req.body.reportedById || userId,
+      });
+      const incident = await storage.createIncident(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'create',
+          resourceType: 'incident',
+          resourceId: incident.id,
+          resourceName: validated.title,
+          description: 'Reported an incident',
+        }, req);
+      }
+      
+      res.status(201).json(incident);
+    } catch (error) {
+      console.error("Error creating incident:", error);
+      res.status(400).json({ message: "Failed to create incident" });
+    }
+  });
+
+  app.patch('/api/incidents/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      const incident = await storage.getIncident(req.params.id);
+      
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+      
+      if (user?.role !== 'admin' && incident.assignedToId !== userId) {
+        return res.status(403).json({ message: "Access denied. You can only update incidents assigned to you." });
+      }
+      
+      const updatedIncident = await storage.updateIncident(req.params.id, req.body);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'incident',
+          resourceId: updatedIncident!.id,
+          resourceName: updatedIncident!.title,
+          description: 'Updated incident',
+        }, req);
+      }
+      
+      res.json(updatedIncident);
+    } catch (error) {
+      console.error("Error updating incident:", error);
+      res.status(500).json({ message: "Failed to update incident" });
+    }
+  });
+
+  app.delete('/api/incidents/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const incidentId = req.params.id;
+      
+      const incident = await storage.getIncident(incidentId);
+      const incidentName = incident?.title || incidentId;
+      
+      await storage.deleteIncident(incidentId);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'incident',
+          resourceId: incidentId,
+          resourceName: incidentName,
+          description: 'Deleted incident',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting incident:", error);
+      res.status(500).json({ message: "Failed to delete incident" });
+    }
+  });
+
+  // Corrective Actions Routes
+  app.get('/api/corrective-actions', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        incidentId: req.query.incidentId as string | undefined,
+        status: req.query.status as string | undefined,
+        assignedToId: req.query.assignedToId as string | undefined,
+      };
+      const actions = await storage.listCorrectiveActions(filters);
+      res.json(actions);
+    } catch (error) {
+      console.error("Error fetching corrective actions:", error);
+      res.status(500).json({ message: "Failed to fetch corrective actions" });
+    }
+  });
+
+  app.get('/api/corrective-actions/:id', isAuthenticated, async (req, res) => {
+    try {
+      const action = await storage.getCorrectiveAction(req.params.id);
+      if (!action) {
+        return res.status(404).json({ message: "Corrective action not found" });
+      }
+      res.json(action);
+    } catch (error) {
+      console.error("Error fetching corrective action:", error);
+      res.status(500).json({ message: "Failed to fetch corrective action" });
+    }
+  });
+
+  app.post('/api/corrective-actions', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertCorrectiveActionSchema.parse({
+        ...req.body,
+        createdById: req.body.createdById || userId,
+      });
+      const action = await storage.createCorrectiveAction(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'create',
+          resourceType: 'corrective_action',
+          resourceId: action.id,
+          resourceName: validated.title,
+          description: 'Created corrective action',
+        }, req);
+      }
+      
+      res.status(201).json(action);
+    } catch (error) {
+      console.error("Error creating corrective action:", error);
+      res.status(400).json({ message: "Failed to create corrective action" });
+    }
+  });
+
+  app.patch('/api/corrective-actions/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      const action = await storage.getCorrectiveAction(req.params.id);
+      
+      if (!action) {
+        return res.status(404).json({ message: "Corrective action not found" });
+      }
+      
+      if (user?.role !== 'admin' && action.assignedToId !== userId) {
+        return res.status(403).json({ message: "Access denied. You can only update corrective actions assigned to you." });
+      }
+      
+      const updatedAction = await storage.updateCorrectiveAction(req.params.id, req.body);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'corrective_action',
+          resourceId: updatedAction!.id,
+          resourceName: updatedAction!.title,
+          description: 'Updated corrective action',
+        }, req);
+      }
+      
+      res.json(updatedAction);
+    } catch (error) {
+      console.error("Error updating corrective action:", error);
+      res.status(500).json({ message: "Failed to update corrective action" });
+    }
+  });
+
+  app.delete('/api/corrective-actions/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const actionId = req.params.id;
+      
+      const action = await storage.getCorrectiveAction(actionId);
+      const actionName = action?.title || actionId;
+      
+      await storage.deleteCorrectiveAction(actionId);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'corrective_action',
+          resourceId: actionId,
+          resourceName: actionName,
+          description: 'Deleted corrective action',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting corrective action:", error);
+      res.status(500).json({ message: "Failed to delete corrective action" });
+    }
+  });
+
+  // Achievement Badges Routes
+  app.get('/api/achievement-badges', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        category: req.query.category as string | undefined,
+        isActive: req.query.isActive === 'true' ? true : req.query.isActive === 'false' ? false : undefined,
+      };
+      const badges = await storage.listAchievementBadges(filters);
+      res.json(badges);
+    } catch (error) {
+      console.error("Error fetching achievement badges:", error);
+      res.status(500).json({ message: "Failed to fetch achievement badges" });
+    }
+  });
+
+  app.get('/api/achievement-badges/:id', isAuthenticated, async (req, res) => {
+    try {
+      const badge = await storage.getAchievementBadge(req.params.id);
+      if (!badge) {
+        return res.status(404).json({ message: "Achievement badge not found" });
+      }
+      res.json(badge);
+    } catch (error) {
+      console.error("Error fetching achievement badge:", error);
+      res.status(500).json({ message: "Failed to fetch achievement badge" });
+    }
+  });
+
+  app.post('/api/achievement-badges', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertAchievementBadgeSchema.parse(req.body);
+      const badge = await storage.createAchievementBadge(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'create',
+          resourceType: 'achievement_badge',
+          resourceId: badge.id,
+          resourceName: validated.name,
+          description: 'Created achievement badge',
+        }, req);
+      }
+      
+      res.status(201).json(badge);
+    } catch (error) {
+      console.error("Error creating achievement badge:", error);
+      res.status(400).json({ message: "Failed to create achievement badge" });
+    }
+  });
+
+  app.patch('/api/achievement-badges/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const badge = await storage.updateAchievementBadge(req.params.id, req.body);
+      if (!badge) {
+        return res.status(404).json({ message: "Achievement badge not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'achievement_badge',
+          resourceId: badge.id,
+          resourceName: badge.name,
+          description: 'Updated achievement badge',
+        }, req);
+      }
+      
+      res.json(badge);
+    } catch (error) {
+      console.error("Error updating achievement badge:", error);
+      res.status(500).json({ message: "Failed to update achievement badge" });
+    }
+  });
+
+  app.delete('/api/achievement-badges/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const badgeId = req.params.id;
+      
+      const badge = await storage.getAchievementBadge(badgeId);
+      const badgeName = badge?.name || badgeId;
+      
+      await storage.deleteAchievementBadge(badgeId);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'achievement_badge',
+          resourceId: badgeId,
+          resourceName: badgeName,
+          description: 'Deleted achievement badge',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting achievement badge:", error);
+      res.status(500).json({ message: "Failed to delete achievement badge" });
+    }
+  });
+
+  // Consultant Badges Routes
+  app.get('/api/consultant-badges', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        consultantId: req.query.consultantId as string | undefined,
+        badgeId: req.query.badgeId as string | undefined,
+      };
+      const badges = await storage.listConsultantBadges(filters);
+      res.json(badges);
+    } catch (error) {
+      console.error("Error fetching consultant badges:", error);
+      res.status(500).json({ message: "Failed to fetch consultant badges" });
+    }
+  });
+
+  app.post('/api/consultant-badges', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertConsultantBadgeSchema.parse({
+        ...req.body,
+        awardedById: req.body.awardedById || userId,
+      });
+      const consultantBadge = await storage.awardBadgeToConsultant(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'create',
+          resourceType: 'consultant_badge',
+          resourceId: consultantBadge.id,
+          resourceName: 'Badge Award',
+          description: 'Awarded badge to consultant',
+        }, req);
+      }
+      
+      res.status(201).json(consultantBadge);
+    } catch (error) {
+      console.error("Error awarding badge to consultant:", error);
+      res.status(400).json({ message: "Failed to award badge to consultant" });
+    }
+  });
+
+  app.delete('/api/consultant-badges/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const badgeId = req.params.id;
+      
+      await storage.deleteConsultantBadge(badgeId);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'consultant_badge',
+          resourceId: badgeId,
+          resourceName: 'Badge Award',
+          description: 'Removed badge from consultant',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error removing badge from consultant:", error);
+      res.status(500).json({ message: "Failed to remove badge from consultant" });
+    }
+  });
+
+  // Point Transactions Routes
+  app.get('/api/point-transactions', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        consultantId: req.query.consultantId as string | undefined,
+        type: req.query.type as string | undefined,
+      };
+      const transactions = await storage.listPointTransactions(filters);
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error fetching point transactions:", error);
+      res.status(500).json({ message: "Failed to fetch point transactions" });
+    }
+  });
+
+  app.post('/api/point-transactions', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertPointTransactionSchema.parse({
+        ...req.body,
+        awardedById: req.body.awardedById || userId,
+      });
+      const transaction = await storage.createPointTransaction(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'create',
+          resourceType: 'point_transaction',
+          resourceId: transaction.id,
+          resourceName: `${validated.points} points (${validated.type})`,
+          description: 'Created point transaction',
+        }, req);
+      }
+      
+      res.status(201).json(transaction);
+    } catch (error) {
+      console.error("Error creating point transaction:", error);
+      res.status(400).json({ message: "Failed to create point transaction" });
+    }
+  });
+
+  app.get('/api/consultant-points/:consultantId', isAuthenticated, async (req, res) => {
+    try {
+      const balance = await storage.getConsultantPointBalance(req.params.consultantId);
+      res.json({ consultantId: req.params.consultantId, balance });
+    } catch (error) {
+      console.error("Error fetching consultant point balance:", error);
+      res.status(500).json({ message: "Failed to fetch consultant point balance" });
+    }
+  });
+
+  // Referrals Routes
+  app.get('/api/referrals', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        referrerId: req.query.referrerId as string | undefined,
+        status: req.query.status as string | undefined,
+      };
+      const referrals = await storage.listReferrals(filters);
+      res.json(referrals);
+    } catch (error) {
+      console.error("Error fetching referrals:", error);
+      res.status(500).json({ message: "Failed to fetch referrals" });
+    }
+  });
+
+  app.get('/api/referrals/:id', isAuthenticated, async (req, res) => {
+    try {
+      const referral = await storage.getReferral(req.params.id);
+      if (!referral) {
+        return res.status(404).json({ message: "Referral not found" });
+      }
+      res.json(referral);
+    } catch (error) {
+      console.error("Error fetching referral:", error);
+      res.status(500).json({ message: "Failed to fetch referral" });
+    }
+  });
+
+  app.post('/api/referrals', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertReferralSchema.parse(req.body);
+      const referral = await storage.createReferral(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'create',
+          resourceType: 'referral',
+          resourceId: referral.id,
+          resourceName: `Referral: ${validated.referredName}`,
+          description: 'Submitted a referral',
+        }, req);
+      }
+      
+      res.status(201).json(referral);
+    } catch (error) {
+      console.error("Error creating referral:", error);
+      res.status(400).json({ message: "Failed to create referral" });
+    }
+  });
+
+  app.patch('/api/referrals/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const referral = await storage.updateReferral(req.params.id, req.body);
+      if (!referral) {
+        return res.status(404).json({ message: "Referral not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'referral',
+          resourceId: referral.id,
+          resourceName: `Referral: ${referral.referredName}`,
+          description: 'Updated referral status',
+        }, req);
+      }
+      
+      res.json(referral);
+    } catch (error) {
+      console.error("Error updating referral:", error);
+      res.status(500).json({ message: "Failed to update referral" });
+    }
+  });
+
+  app.delete('/api/referrals/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const referralId = req.params.id;
+      
+      const referral = await storage.getReferral(referralId);
+      const referralName = referral ? `Referral: ${referral.referredName}` : referralId;
+      
+      await storage.deleteReferral(referralId);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'referral',
+          resourceId: referralId,
+          resourceName: referralName,
+          description: 'Deleted referral',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting referral:", error);
+      res.status(500).json({ message: "Failed to delete referral" });
+    }
+  });
+
+  // Compliance Checks Routes
+  app.get('/api/compliance-checks', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        consultantId: req.query.consultantId as string | undefined,
+        checkType: req.query.checkType as string | undefined,
+        status: req.query.status as string | undefined,
+      };
+      const checks = await storage.listComplianceChecks(filters);
+      res.json(checks);
+    } catch (error) {
+      console.error("Error fetching compliance checks:", error);
+      res.status(500).json({ message: "Failed to fetch compliance checks" });
+    }
+  });
+
+  app.get('/api/compliance-checks/expiring', isAuthenticated, async (req, res) => {
+    try {
+      const withinDays = parseInt(req.query.days as string) || 30;
+      const checks = await storage.listExpiringComplianceChecks(withinDays);
+      res.json(checks);
+    } catch (error) {
+      console.error("Error fetching expiring compliance checks:", error);
+      res.status(500).json({ message: "Failed to fetch expiring compliance checks" });
+    }
+  });
+
+  app.get('/api/compliance-checks/:id', isAuthenticated, async (req, res) => {
+    try {
+      const check = await storage.getComplianceCheck(req.params.id);
+      if (!check) {
+        return res.status(404).json({ message: "Compliance check not found" });
+      }
+      res.json(check);
+    } catch (error) {
+      console.error("Error fetching compliance check:", error);
+      res.status(500).json({ message: "Failed to fetch compliance check" });
+    }
+  });
+
+  app.post('/api/compliance-checks', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertComplianceCheckSchema.parse({
+        ...req.body,
+        checkedById: req.body.checkedById || userId,
+      });
+      const check = await storage.createComplianceCheck(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'create',
+          resourceType: 'compliance_check',
+          resourceId: check.id,
+          resourceName: validated.checkType,
+          description: 'Created compliance check',
+        }, req);
+      }
+      
+      res.status(201).json(check);
+    } catch (error) {
+      console.error("Error creating compliance check:", error);
+      res.status(400).json({ message: "Failed to create compliance check" });
+    }
+  });
+
+  app.patch('/api/compliance-checks/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const check = await storage.updateComplianceCheck(req.params.id, req.body);
+      if (!check) {
+        return res.status(404).json({ message: "Compliance check not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'compliance_check',
+          resourceId: check.id,
+          resourceName: check.checkType,
+          description: 'Updated compliance check',
+        }, req);
+      }
+      
+      res.json(check);
+    } catch (error) {
+      console.error("Error updating compliance check:", error);
+      res.status(500).json({ message: "Failed to update compliance check" });
+    }
+  });
+
+  app.delete('/api/compliance-checks/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const checkId = req.params.id;
+      
+      const check = await storage.getComplianceCheck(checkId);
+      const checkName = check?.checkType || checkId;
+      
+      await storage.deleteComplianceCheck(checkId);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'compliance_check',
+          resourceId: checkId,
+          resourceName: checkName,
+          description: 'Deleted compliance check',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting compliance check:", error);
+      res.status(500).json({ message: "Failed to delete compliance check" });
+    }
+  });
+
+  // Compliance Audits Routes
+  app.get('/api/compliance-audits', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        projectId: req.query.projectId as string | undefined,
+        hospitalId: req.query.hospitalId as string | undefined,
+        status: req.query.status as string | undefined,
+      };
+      const audits = await storage.listComplianceAudits(filters);
+      res.json(audits);
+    } catch (error) {
+      console.error("Error fetching compliance audits:", error);
+      res.status(500).json({ message: "Failed to fetch compliance audits" });
+    }
+  });
+
+  app.get('/api/compliance-audits/:id', isAuthenticated, async (req, res) => {
+    try {
+      const audit = await storage.getComplianceAudit(req.params.id);
+      if (!audit) {
+        return res.status(404).json({ message: "Compliance audit not found" });
+      }
+      res.json(audit);
+    } catch (error) {
+      console.error("Error fetching compliance audit:", error);
+      res.status(500).json({ message: "Failed to fetch compliance audit" });
+    }
+  });
+
+  app.post('/api/compliance-audits', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertComplianceAuditSchema.parse({
+        ...req.body,
+        auditorId: req.body.auditorId || userId,
+      });
+      const audit = await storage.createComplianceAudit(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'create',
+          resourceType: 'compliance_audit',
+          resourceId: audit.id,
+          resourceName: validated.auditType,
+          description: 'Created compliance audit',
+        }, req);
+      }
+      
+      res.status(201).json(audit);
+    } catch (error) {
+      console.error("Error creating compliance audit:", error);
+      res.status(400).json({ message: "Failed to create compliance audit" });
+    }
+  });
+
+  app.patch('/api/compliance-audits/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const audit = await storage.updateComplianceAudit(req.params.id, req.body);
+      if (!audit) {
+        return res.status(404).json({ message: "Compliance audit not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'compliance_audit',
+          resourceId: audit.id,
+          resourceName: audit.auditType,
+          description: 'Updated compliance audit',
+        }, req);
+      }
+      
+      res.json(audit);
+    } catch (error) {
+      console.error("Error updating compliance audit:", error);
+      res.status(500).json({ message: "Failed to update compliance audit" });
+    }
+  });
+
+  app.delete('/api/compliance-audits/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const auditId = req.params.id;
+      
+      const audit = await storage.getComplianceAudit(auditId);
+      const auditName = audit?.auditType || auditId;
+      
+      await storage.deleteComplianceAudit(auditId);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'compliance_audit',
+          resourceId: auditId,
+          resourceName: auditName,
+          description: 'Deleted compliance audit',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting compliance audit:", error);
+      res.status(500).json({ message: "Failed to delete compliance audit" });
+    }
+  });
+
+  // Phase 15 Analytics Routes
+  app.get('/api/analytics/quality', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        projectId: req.query.projectId as string | undefined,
+      };
+      const analytics = await storage.getQualityAnalytics(filters);
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching quality analytics:", error);
+      res.status(500).json({ message: "Failed to fetch quality analytics" });
+    }
+  });
+
+  app.get('/api/analytics/gamification', isAuthenticated, async (req, res) => {
+    try {
+      const analytics = await storage.getGamificationAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching gamification analytics:", error);
+      res.status(500).json({ message: "Failed to fetch gamification analytics" });
+    }
+  });
+
+  app.get('/api/analytics/compliance', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        consultantId: req.query.consultantId as string | undefined,
+      };
+      const analytics = await storage.getComplianceAnalytics(filters);
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching compliance analytics:", error);
+      res.status(500).json({ message: "Failed to fetch compliance analytics" });
     }
   });
 
