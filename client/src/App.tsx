@@ -66,6 +66,8 @@ import RoleManagement from "@/pages/RoleManagement";
 import SkillsQuestionnaire from "@/pages/SkillsQuestionnaire";
 import SkillsVerification from "@/pages/SkillsVerification";
 import PersonalInformation from "@/pages/PersonalInformation";
+import AccessDenied from "@/pages/AccessDenied";
+import StaffInvitations from "@/pages/StaffInvitations";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -224,9 +226,11 @@ function Router() {
       <Route path="/report-builder" component={() => <ProtectedRoute component={ReportBuilder} />} />
       <Route path="/executive-dashboard" component={() => <ProtectedRoute component={ExecutiveDashboard} />} />
       <Route path="/role-management" component={() => <ProtectedRoute component={RoleManagement} requiredRoles={["admin"]} />} />
+      <Route path="/staff-invitations" component={() => <ProtectedRoute component={StaffInvitations} requiredRoles={["admin"]} />} />
       <Route path="/skills-questionnaire" component={() => <ProtectedRoute component={SkillsQuestionnaire} />} />
       <Route path="/skills-verification" component={() => <ProtectedRoute component={SkillsVerification} requiredRoles={["admin"]} />} />
       <Route path="/personal-information" component={() => <ProtectedRoute component={PersonalInformation} />} />
+      <Route path="/access-denied" component={AccessDenied} />
       <Route component={NotFound} />
     </Switch>
   );

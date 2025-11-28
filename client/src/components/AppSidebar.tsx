@@ -58,6 +58,7 @@ import {
   FileBarChart,
   Gauge,
   KeyRound,
+  UserPlus,
   type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -269,6 +270,18 @@ export function AppSidebar() {
                     <Link href="/access-control">
                       <Shield className="w-4 h-4" />
                       <span>Access Control</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location === "/staff-invitations"}
+                    data-testid="nav-staff-invitations"
+                  >
+                    <Link href="/staff-invitations">
+                      <UserPlus className="w-4 h-4" />
+                      <span>Staff Invitations</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

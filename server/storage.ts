@@ -46,6 +46,9 @@ import {
   loginLabs,
   loginLabParticipants,
   knowledgeArticles,
+  invitations,
+  type Invitation,
+  type InsertInvitation,
   type User,
   type UpsertUser,
   type Consultant,
@@ -435,11 +438,26 @@ import { eq, and, gte, lte, ilike, or, desc, asc, sql, inArray, lt, gt } from "d
 export interface IStorage {
   // User operations (required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateUserRole(id: string, role: "admin" | "hospital_staff" | "consultant"): Promise<User | undefined>;
   updateUserProfilePhoto(id: string, photoUrl: string): Promise<User | undefined>;
   updateUserCoverPhoto(id: string, coverPhotoUrl: string): Promise<User | undefined>;
   updateUser(id: string, userData: Partial<{ firstName: string; lastName: string; linkedinUrl: string; websiteUrl: string }>): Promise<User | undefined>;
+  updateUserAccessStatus(id: string, status: "pending_invitation" | "active" | "suspended" | "revoked", invitationId?: string): Promise<User | undefined>;
+
+  // Invitation operations (invitation-only access control)
+  createInvitation(invitation: InsertInvitation): Promise<Invitation>;
+  getInvitation(id: string): Promise<Invitation | undefined>;
+  getInvitationByToken(token: string): Promise<Invitation | undefined>;
+  getInvitationByEmail(email: string): Promise<Invitation | undefined>;
+  getPendingInvitationByEmail(email: string): Promise<Invitation | undefined>;
+  getAllInvitations(): Promise<Invitation[]>;
+  getInvitationsByStatus(status: "pending" | "accepted" | "revoked" | "expired"): Promise<Invitation[]>;
+  acceptInvitation(id: string, userId: string): Promise<Invitation | undefined>;
+  revokeInvitation(id: string, revokedByUserId: string, reason?: string): Promise<Invitation | undefined>;
+  expireOldInvitations(): Promise<number>;
+  updateInvitationExpiration(id: string, expiresAt: Date): Promise<Invitation | undefined>;
 
   // Consultant operations
   getConsultant(id: string): Promise<Consultant | undefined>;
@@ -1510,6 +1528,158 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async updateUserAccessStatus(id: string, status: "pending_invitation" | "active" | "suspended" | "revoked", invitationId?: string): Promise<User | undefined> {
+    const updateData: any = { accessStatus: status, updatedAt: new Date() };
+    if (invitationId) {
+      updateData.invitationId = invitationId;
+    }
+    const [user] = await db
+      .update(users)
+      .set(updateData)
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  // Invitation operations (invitation-only access control)
+  async createInvitation(invitation: InsertInvitation): Promise<Invitation> {
+    const [newInvitation] = await db
+      .insert(invitations)
+      .values(invitation)
+      .returning();
+    return newInvitation;
+  }
+
+  async getInvitation(id: string): Promise<Invitation | undefined> {
+    const [invitation] = await db.select().from(invitations).where(eq(invitations.id, id));
+    return invitation;
+  }
+
+  async getInvitationByToken(token: string): Promise<Invitation | undefined> {
+    const [invitation] = await db.select().from(invitations).where(eq(invitations.token, token));
+    return invitation;
+  }
+
+  async getInvitationByEmail(email: string): Promise<Invitation | undefined> {
+    const [invitation] = await db.select().from(invitations)
+      .where(eq(invitations.email, email.toLowerCase()))
+      .orderBy(desc(invitations.createdAt));
+    return invitation;
+  }
+
+  async getPendingInvitationByEmail(email: string): Promise<Invitation | undefined> {
+    const now = new Date();
+    const [invitation] = await db.select().from(invitations)
+      .where(and(
+        eq(invitations.email, email.toLowerCase()),
+        eq(invitations.status, "pending"),
+        gt(invitations.expiresAt, now)
+      ))
+      .orderBy(desc(invitations.createdAt));
+    return invitation;
+  }
+
+  async getAllInvitations(): Promise<Invitation[]> {
+    return await db.select().from(invitations).orderBy(desc(invitations.createdAt));
+  }
+
+  async getInvitationsByStatus(status: "pending" | "accepted" | "revoked" | "expired"): Promise<Invitation[]> {
+    return await db.select().from(invitations)
+      .where(eq(invitations.status, status))
+      .orderBy(desc(invitations.createdAt));
+  }
+
+  async acceptInvitation(id: string, userId: string): Promise<Invitation | undefined> {
+    // Defense-in-depth: Guard check to prevent race conditions
+    // Verify invitation is still pending and not expired before accepting
+    const [existingInvitation] = await db.select().from(invitations)
+      .where(eq(invitations.id, id));
+    
+    if (!existingInvitation) {
+      return undefined;
+    }
+    
+    // Check if invitation status is still 'pending'
+    if (existingInvitation.status !== 'pending') {
+      return undefined;
+    }
+    
+    // Check if invitation has expired using timestamp comparison
+    const now = new Date();
+    const expiresAt = new Date(existingInvitation.expiresAt);
+    
+    if (expiresAt <= now) {
+      // Invitation has expired - mark it as expired instead of accepting
+      await db
+        .update(invitations)
+        .set({
+          status: "expired",
+          updatedAt: now,
+        })
+        .where(eq(invitations.id, id));
+      return undefined;
+    }
+    
+    // All checks passed - accept the invitation
+    const [invitation] = await db
+      .update(invitations)
+      .set({
+        status: "accepted",
+        acceptedAt: now,
+        acceptedByUserId: userId,
+        updatedAt: now,
+      })
+      .where(eq(invitations.id, id))
+      .returning();
+    return invitation;
+  }
+
+  async revokeInvitation(id: string, revokedByUserId: string, reason?: string): Promise<Invitation | undefined> {
+    const [invitation] = await db
+      .update(invitations)
+      .set({
+        status: "revoked",
+        revokedAt: new Date(),
+        revokedByUserId,
+        revokedReason: reason || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(invitations.id, id))
+      .returning();
+    return invitation;
+  }
+
+  async expireOldInvitations(): Promise<number> {
+    const now = new Date();
+    const result = await db
+      .update(invitations)
+      .set({ status: "expired", updatedAt: new Date() })
+      .where(and(
+        eq(invitations.status, "pending"),
+        lt(invitations.expiresAt, now)
+      ))
+      .returning();
+    return result.length;
+  }
+
+  async updateInvitationExpiration(id: string, expiresAt: Date): Promise<Invitation | undefined> {
+    const [invitation] = await db
+      .update(invitations)
+      .set({
+        expiresAt,
+        status: "pending",
+        updatedAt: new Date(),
+      })
+      .where(eq(invitations.id, id))
+      .returning();
+    return invitation;
   }
 
   // Consultant operations

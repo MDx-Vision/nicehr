@@ -8,6 +8,7 @@ import {
 } from "./objectStorage";
 import { ObjectPermission } from "./objectAcl";
 import { logActivity } from "./activityLogger";
+import { sendInvitationEmail } from "./emailService";
 import {
   insertHospitalSchema,
   insertHospitalUnitSchema,
@@ -1502,6 +1503,227 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching access audit logs:", error);
       res.status(500).json({ message: "Failed to fetch access audit logs" });
+    }
+  });
+
+  // ============================================
+  // Staff Invitations API (Invitation-only access)
+  // ============================================
+  
+  function generateSecureToken(): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let token = '';
+    for (let i = 0; i < 48; i++) {
+      token += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return token;
+  }
+
+  app.get('/api/admin/invitations', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const status = req.query.status as 'pending' | 'accepted' | 'revoked' | 'expired' | undefined;
+      let invitationsList;
+      if (status) {
+        invitationsList = await storage.getInvitationsByStatus(status);
+      } else {
+        invitationsList = await storage.getAllInvitations();
+      }
+      res.json(invitationsList);
+    } catch (error) {
+      console.error("Error fetching invitations:", error);
+      res.status(500).json({ message: "Failed to fetch invitations" });
+    }
+  });
+
+  app.get('/api/admin/invitations/:id', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const invitation = await storage.getInvitation(req.params.id);
+      if (!invitation) {
+        return res.status(404).json({ message: "Invitation not found" });
+      }
+      res.json(invitation);
+    } catch (error) {
+      console.error("Error fetching invitation:", error);
+      res.status(500).json({ message: "Failed to fetch invitation" });
+    }
+  });
+
+  app.post('/api/admin/invitations', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const { email, role, message, expiresInDays } = req.body;
+      const adminUserId = req.user?.claims?.sub;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+      
+      const normalizedEmail = email.toLowerCase().trim();
+      
+      // Validate email format using regex
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(normalizedEmail)) {
+        return res.status(400).json({ message: "Invalid email format" });
+      }
+      
+      // Validate role is one of the allowed values
+      const allowedRoles = ['consultant', 'hospital_staff', 'admin'];
+      const validatedRole = role || 'consultant';
+      if (!allowedRoles.includes(validatedRole)) {
+        return res.status(400).json({ 
+          message: `Invalid role. Must be one of: ${allowedRoles.join(', ')}` 
+        });
+      }
+      
+      // Auto-expire any existing expired invitations for this email
+      const existingInvitation = await storage.getInvitationByEmail(normalizedEmail);
+      if (existingInvitation && existingInvitation.status === 'expired') {
+        // Already expired, no action needed - we can create a new one
+      } else if (existingInvitation && existingInvitation.status === 'pending') {
+        // Check if it's actually past expiration date but not yet marked as expired
+        if (new Date(existingInvitation.expiresAt) < new Date()) {
+          // Mark as expired before proceeding
+          await storage.expireOldInvitations();
+        } else {
+          return res.status(400).json({ 
+            message: "An active invitation already exists for this email. Revoke it first to send a new one." 
+          });
+        }
+      }
+      
+      const existingPending = await storage.getPendingInvitationByEmail(normalizedEmail);
+      if (existingPending) {
+        return res.status(400).json({ 
+          message: "An active invitation already exists for this email. Revoke it first to send a new one." 
+        });
+      }
+      
+      const existingUser = await storage.getUserByEmail(normalizedEmail);
+      if (existingUser && existingUser.accessStatus === 'active') {
+        return res.status(400).json({ 
+          message: "This user already has active access to the platform." 
+        });
+      }
+      
+      const token = generateSecureToken();
+      const daysToExpire = expiresInDays || 7;
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + daysToExpire);
+      
+      const invitation = await storage.createInvitation({
+        email: normalizedEmail,
+        token,
+        role: validatedRole as 'consultant' | 'hospital_staff' | 'admin',
+        invitedByUserId: adminUserId,
+        message: message || null,
+        expiresAt,
+      });
+      
+      await sendInvitationEmail({
+        email: normalizedEmail,
+        inviterName: req.user?.claims?.first_name || 'Administrator',
+        role: validatedRole,
+        message,
+        expiresAt,
+      });
+      
+      res.status(201).json(invitation);
+    } catch (error) {
+      console.error("Error creating invitation:", error);
+      res.status(500).json({ message: "Failed to create invitation" });
+    }
+  });
+
+  app.post('/api/admin/invitations/:id/revoke', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const adminUserId = req.user?.claims?.sub;
+      const { reason } = req.body;
+      
+      const invitation = await storage.revokeInvitation(
+        req.params.id, 
+        adminUserId, 
+        reason || 'Revoked by administrator'
+      );
+      
+      if (!invitation) {
+        return res.status(404).json({ message: "Invitation not found" });
+      }
+      
+      if (invitation.acceptedByUserId) {
+        await storage.updateUserAccessStatus(invitation.acceptedByUserId, 'revoked');
+      }
+      
+      res.json(invitation);
+    } catch (error) {
+      console.error("Error revoking invitation:", error);
+      res.status(500).json({ message: "Failed to revoke invitation" });
+    }
+  });
+
+  app.post('/api/admin/invitations/:id/resend', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const invitation = await storage.getInvitation(req.params.id);
+      
+      if (!invitation) {
+        return res.status(404).json({ message: "Invitation not found" });
+      }
+      
+      // Check if invitation has been revoked
+      if (invitation.status === 'revoked') {
+        return res.status(400).json({ 
+          message: "Cannot resend a revoked invitation. Please create a new one." 
+        });
+      }
+      
+      // Check if invitation has been accepted
+      if (invitation.status === 'accepted') {
+        return res.status(400).json({ 
+          message: "Cannot resend an already accepted invitation." 
+        });
+      }
+      
+      // Check if invitation is expired and extend expiration if needed
+      const now = new Date();
+      let expiresAt = invitation.expiresAt;
+      let wasExpired = false;
+      
+      if (invitation.status === 'expired' || new Date(invitation.expiresAt) < now) {
+        // Extend expiration by 7 days from now
+        expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 7);
+        wasExpired = true;
+        
+        // Update the invitation expiration in storage
+        await storage.updateInvitationExpiration(req.params.id, expiresAt);
+      }
+      
+      await sendInvitationEmail({
+        email: invitation.email,
+        inviterName: req.user?.claims?.first_name || 'Administrator',
+        role: invitation.role,
+        message: invitation.message || undefined,
+        expiresAt,
+      });
+      
+      res.json({ 
+        success: true, 
+        message: wasExpired 
+          ? "Invitation resent and expiration extended successfully" 
+          : "Invitation resent successfully",
+        expiresAt: expiresAt.toISOString()
+      });
+    } catch (error) {
+      console.error("Error resending invitation:", error);
+      res.status(500).json({ message: "Failed to resend invitation" });
+    }
+  });
+
+  app.post('/api/admin/expire-invitations', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const count = await storage.expireOldInvitations();
+      res.json({ success: true, expiredCount: count });
+    } catch (error) {
+      console.error("Error expiring invitations:", error);
+      res.status(500).json({ message: "Failed to expire invitations" });
     }
   });
 

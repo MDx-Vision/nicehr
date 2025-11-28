@@ -54,7 +54,8 @@ export type EmailTemplateType =
   | 'document_expiring'
   | 'project_invitation'
   | 'account_deletion_requested'
-  | 'account_deletion_completed';
+  | 'account_deletion_completed'
+  | 'staff_invitation';
 
 // Template data interfaces
 export interface WelcomeEmailData {
@@ -90,6 +91,14 @@ export interface ProjectInvitationData {
 export interface AccountDeletionData {
   firstName: string;
   requestDate?: string;
+}
+
+export interface StaffInvitationData {
+  email: string;
+  inviterName: string;
+  role: string;
+  message?: string;
+  expiresAt: Date;
 }
 
 // Email templates with subject and body
@@ -415,6 +424,53 @@ const emailTemplates: Record<EmailTemplateType, { subject: string; getHtml: (dat
   </div>
 </body>
 </html>`
+  },
+  staff_invitation: {
+    subject: 'You\'ve Been Invited to Join NICEHR',
+    getHtml: (data: StaffInvitationData) => {
+      const roleDisplay = data.role === 'consultant' ? 'Healthcare Consultant' : 
+                         data.role === 'hospital_staff' ? 'Hospital Staff' : 
+                         data.role === 'admin' ? 'Administrator' : data.role;
+      const expiresFormatted = new Date(data.expiresAt).toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? 'https://' + process.env.REPLIT_DEV_DOMAIN 
+        : 'https://nicehr.replit.app';
+      
+      return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">You're Invited!</h1>
+    <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Join NICEHR Healthcare Platform</p>
+  </div>
+  <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e2e8f0; border-top: none;">
+    <p style="font-size: 16px;">Hello,</p>
+    <p style="font-size: 16px;"><strong>${data.inviterName}</strong> has invited you to join NICEHR as a <strong>${roleDisplay}</strong>.</p>
+    ${data.message ? `<div style="background: #e0f2fe; border-left: 4px solid #0891b2; padding: 15px; margin: 20px 0; border-radius: 0 6px 6px 0;"><p style="margin: 0; font-size: 14px; color: #0c4a6e;">"${data.message}"</p></div>` : ''}
+    <p style="font-size: 16px;">NICEHR is a comprehensive healthcare consultant management platform designed to streamline workforce operations across healthcare facilities.</p>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${baseUrl}/api/login" style="background: #0891b2; color: white; padding: 14px 35px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block; font-size: 16px;">Accept Invitation & Sign In</a>
+    </div>
+    <div style="background: #fef3c7; border-radius: 6px; padding: 15px; margin: 20px 0;">
+      <p style="margin: 0; font-size: 14px; color: #92400e;"><strong>Important:</strong> This invitation expires on <strong>${expiresFormatted}</strong>. Please sign in with the email address this invitation was sent to (${data.email}).</p>
+    </div>
+    <p style="font-size: 14px; color: #64748b;">If you didn't expect this invitation or have questions, please contact your organization's administrator.</p>
+    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+    <p style="font-size: 12px; color: #94a3b8; text-align: center;">NICEHR Group - Healthcare Consultant Management Platform</p>
+  </div>
+</body>
+</html>`;
+    }
   }
 };
 
@@ -499,6 +555,14 @@ export async function sendWelcomeEmail(user: { id: string; email: string | null;
             user.role === 'admin' ? 'Administrator' : user.role
     },
     user.id
+  );
+}
+
+export async function sendInvitationEmail(data: StaffInvitationData): Promise<{ success: boolean; error?: string }> {
+  return await sendEmail(
+    data.email,
+    'staff_invitation',
+    data
   );
 }
 

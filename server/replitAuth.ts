@@ -52,14 +52,125 @@ function updateUserSession(
   user.expires_at = user.claims?.exp;
 }
 
-async function upsertUser(claims: any) {
+interface InvitationCheckResult {
+  allowed: boolean;
+  reason?: string;
+  invitationId?: string;
+}
+
+async function checkInvitationAccess(email: string, userId: string): Promise<InvitationCheckResult> {
+  const existingUser = await storage.getUser(userId);
+  
+  if (existingUser) {
+    if (existingUser.accessStatus === 'active') {
+      return { allowed: true };
+    }
+    if (existingUser.accessStatus === 'suspended') {
+      return { allowed: false, reason: 'Your account has been suspended. Please contact an administrator.' };
+    }
+    if (existingUser.accessStatus === 'revoked') {
+      return { allowed: false, reason: 'Your access has been revoked. Please contact an administrator.' };
+    }
+  }
+  
+  // First, try to get a valid pending invitation (already checks status='pending' and expiresAt > now)
+  const pendingInvitation = await storage.getPendingInvitationByEmail(email);
+  
+  if (pendingInvitation) {
+    // Defense-in-depth: Double-check expiration before accepting to prevent race conditions
+    const now = new Date();
+    const expiresAt = new Date(pendingInvitation.expiresAt);
+    
+    if (expiresAt <= now) {
+      // Invitation expired between fetch and accept - mark it as expired
+      await storage.expireOldInvitations();
+      return { 
+        allowed: false, 
+        reason: 'Your invitation has expired. Please contact your administrator for a new invitation.' 
+      };
+    }
+    
+    // Accept the valid invitation (acceptInvitation also has guard checks for defense-in-depth)
+    const accepted = await storage.acceptInvitation(pendingInvitation.id, userId);
+    
+    if (!accepted) {
+      // Invitation became invalid between checks - likely expired or status changed
+      return { 
+        allowed: false, 
+        reason: 'Your invitation is no longer valid. Please contact your administrator for a new invitation.' 
+      };
+    }
+    
+    return { allowed: true, invitationId: pendingInvitation.id };
+  }
+  
+  // No valid pending invitation found - check if there's any invitation to provide specific error messages
+  const anyInvitation = await storage.getInvitationByEmail(email);
+  
+  if (anyInvitation) {
+    const now = new Date();
+    
+    // Check if invitation is expired (either by date or already marked as expired status)
+    if (anyInvitation.status === 'expired' || (anyInvitation.status === 'pending' && anyInvitation.expiresAt < now)) {
+      // Clean up expired invitations
+      await storage.expireOldInvitations();
+      return { 
+        allowed: false, 
+        reason: 'Your invitation has expired. Please contact your administrator for a new invitation.' 
+      };
+    }
+    
+    // Check if invitation was revoked
+    if (anyInvitation.status === 'revoked') {
+      return { 
+        allowed: false, 
+        reason: 'Your invitation has been revoked. Please contact your administrator.' 
+      };
+    }
+    
+    // Check if invitation was already accepted
+    if (anyInvitation.status === 'accepted') {
+      return { 
+        allowed: false, 
+        reason: 'This invitation has already been used. Please contact your administrator if you need access.' 
+      };
+    }
+  }
+  
+  // Check if user exists by email with active status
+  const existingByEmail = await storage.getUserByEmail(email);
+  if (existingByEmail && existingByEmail.accessStatus === 'active') {
+    return { allowed: true };
+  }
+  
+  return { 
+    allowed: false, 
+    reason: 'NICEHR is invitation-only. You need an invitation from an administrator to access this platform.' 
+  };
+}
+
+async function upsertUser(claims: any, invitationId?: string) {
   try {
+    const userId = claims["sub"];
+    const email = claims["email"];
+    
+    const existingUser = await storage.getUser(userId);
+    
+    let accessStatus: "pending_invitation" | "active" | "suspended" | "revoked" = "pending_invitation";
+    if (existingUser?.accessStatus === 'active') {
+      accessStatus = 'active';
+    } else if (invitationId) {
+      accessStatus = 'active';
+    }
+    
     await storage.upsertUser({
-      id: claims["sub"],
-      email: claims["email"],
+      id: userId,
+      email: email,
       firstName: claims["first_name"],
       lastName: claims["last_name"],
       profileImageUrl: claims["profile_image_url"],
+      accessStatus,
+      invitationId: invitationId || existingUser?.invitationId || null,
     });
   } catch (error) {
     console.error("Error upserting user:", error);
@@ -79,9 +190,29 @@ export async function setupAuth(app: Express) {
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
     verified: passport.AuthenticateCallback
   ) => {
-    const user = {};
+    const claims = tokens.claims();
+    if (!claims) {
+      return verified(new Error('No claims found in token'), undefined);
+    }
+    
+    const email = claims["email"] as string | undefined;
+    const userId = claims["sub"] as string | undefined;
+    
+    if (!email || !userId) {
+      return verified(new Error('Email or user ID not found in claims'), undefined);
+    }
+    
+    const accessCheck = await checkInvitationAccess(email, userId);
+    
+    if (!accessCheck.allowed) {
+      return verified(new Error(accessCheck.reason || 'Access denied'), undefined);
+    }
+    
+    const user: any = {};
     updateUserSession(user, tokens);
-    await upsertUser(tokens.claims());
+    user.invitationId = accessCheck.invitationId;
+    
+    await upsertUser(claims, accessCheck.invitationId);
     verified(null, user);
   };
 
@@ -121,7 +252,11 @@ export async function setupAuth(app: Express) {
       successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",
     }, async (err: any, user: any) => {
-      if (err || !user) {
+      if (err) {
+        const errorMessage = encodeURIComponent(err.message || 'Access denied');
+        return res.redirect(`/access-denied?reason=${errorMessage}`);
+      }
+      if (!user) {
         return res.redirect("/api/login");
       }
       req.login(user, async (loginErr) => {

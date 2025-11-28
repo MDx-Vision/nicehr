@@ -24,6 +24,8 @@ export const projectStatusEnum = pgEnum("project_status", ["draft", "active", "c
 export const scheduleStatusEnum = pgEnum("schedule_status", ["pending", "approved", "rejected"]);
 export const shiftTypeEnum = pgEnum("shift_type", ["day", "night", "swing"]);
 export const profileVisibilityEnum = pgEnum("profile_visibility", ["public", "members_only", "private"]);
+export const invitationStatusEnum = pgEnum("invitation_status", ["pending", "accepted", "revoked", "expired"]);
+export const accessStatusEnum = pgEnum("access_status", ["pending_invitation", "active", "suspended", "revoked"]);
 
 // Session storage table for Replit Auth
 export const sessions = pgTable(
@@ -35,6 +37,29 @@ export const sessions = pgTable(
   },
   (table) => [index("IDX_session_expire").on(table.expire)]
 );
+
+// Staff Invitations table - invitation-only access control
+export const invitations = pgTable("invitations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email").notNull(),
+  token: varchar("token").notNull().unique(),
+  status: invitationStatusEnum("status").default("pending").notNull(),
+  role: userRoleEnum("role").default("consultant").notNull(),
+  invitedByUserId: varchar("invited_by_user_id").notNull(),
+  message: text("message"),
+  expiresAt: timestamp("expires_at").notNull(),
+  acceptedAt: timestamp("accepted_at"),
+  acceptedByUserId: varchar("accepted_by_user_id"),
+  revokedAt: timestamp("revoked_at"),
+  revokedByUserId: varchar("revoked_by_user_id"),
+  revokedReason: text("revoked_reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_invitations_email").on(table.email),
+  index("idx_invitations_token").on(table.token),
+  index("idx_invitations_status").on(table.status),
+]);
 
 // Users table with role-based access
 export const users = pgTable("users", {
@@ -48,6 +73,8 @@ export const users = pgTable("users", {
   websiteUrl: varchar("website_url"),
   role: userRoleEnum("role").default("consultant").notNull(),
   isActive: boolean("is_active").default(true).notNull(),
+  accessStatus: accessStatusEnum("access_status").default("pending_invitation").notNull(),
+  invitationId: varchar("invitation_id"),
   profileVisibility: profileVisibilityEnum("profile_visibility").default("public").notNull(),
   emailNotifications: boolean("email_notifications").default(true).notNull(),
   showEmail: boolean("show_email").default(false).notNull(),
@@ -65,6 +92,28 @@ export const usersRelations = relations(users, ({ one }) => ({
   hospitalStaff: one(hospitalStaff, {
     fields: [users.id],
     references: [hospitalStaff.userId],
+  }),
+  invitation: one(invitations, {
+    fields: [users.invitationId],
+    references: [invitations.id],
+  }),
+}));
+
+export const invitationsRelations = relations(invitations, ({ one }) => ({
+  invitedBy: one(users, {
+    fields: [invitations.invitedByUserId],
+    references: [users.id],
+    relationName: "invitedBy",
+  }),
+  acceptedBy: one(users, {
+    fields: [invitations.acceptedByUserId],
+    references: [users.id],
+    relationName: "acceptedBy",
+  }),
+  revokedBy: one(users, {
+    fields: [invitations.revokedByUserId],
+    references: [users.id],
+    relationName: "revokedBy",
   }),
 }));
 
@@ -939,6 +988,12 @@ export const consultantCertificationsRelations = relations(consultantCertificati
 }));
 
 // Insert schemas
+export const insertInvitationSchema = createInsertSchema(invitations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
@@ -1047,6 +1102,9 @@ export const accountSettingsSchema = z.object({
 export type AccountSettings = z.infer<typeof accountSettingsSchema>;
 
 // Types
+export type Invitation = typeof invitations.$inferSelect;
+export type InsertInvitation = z.infer<typeof insertInvitationSchema>;
+
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
