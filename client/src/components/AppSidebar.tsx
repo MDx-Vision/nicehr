@@ -35,6 +35,7 @@ import {
   Clock,
   CalendarDays,
   ArrowLeftRight,
+  GraduationCap,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -48,6 +49,8 @@ const adminItems = [
   { title: "Project Phases", url: "/project-phases", icon: Layers },
   { title: "Command Center", url: "/command-center", icon: Radio },
   { title: "Onboarding", url: "/onboarding", icon: ClipboardCheck },
+  { title: "Training", url: "/training", icon: GraduationCap },
+  { title: "Assessments", url: "/assessments", icon: ClipboardCheck },
   { title: "Schedules", url: "/schedules", icon: Calendar },
   { title: "Timesheets", url: "/timesheets", icon: Clock },
   { title: "Availability", url: "/availability", icon: CalendarDays },
@@ -63,6 +66,8 @@ const consultantItems = [
   { title: "Analytics", url: "/analytics", icon: LineChart },
   { title: "My Profile", url: "/profile", icon: Users },
   { title: "My Onboarding", url: "/onboarding", icon: ClipboardCheck },
+  { title: "Training", url: "/training", icon: GraduationCap },
+  { title: "Assessments", url: "/assessments", icon: ClipboardCheck },
   { title: "Command Center", url: "/command-center", icon: Radio },
   { title: "My Schedule", url: "/my-schedule", icon: Calendar },
   { title: "Timesheets", url: "/timesheets", icon: Clock },
@@ -75,6 +80,8 @@ const hospitalStaffItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Analytics", url: "/analytics", icon: LineChart },
   { title: "Projects", url: "/projects", icon: FolderKanban },
+  { title: "Training", url: "/training", icon: GraduationCap },
+  { title: "Assessments", url: "/assessments", icon: ClipboardCheck },
   { title: "Command Center", url: "/command-center", icon: Radio },
   { title: "Schedules", url: "/schedules", icon: Calendar },
   { title: "Timesheets", url: "/timesheets", icon: Clock },
