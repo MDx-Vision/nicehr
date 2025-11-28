@@ -143,11 +143,14 @@ export default function PersonalInformation() {
     }));
   };
 
-  const handleSave = () => {
-    saveMutation.mutate(formData);
-  };
-
   const isComplete = !!(formData.emergencyContactName && formData.emergencyContactPhone);
+
+  const handleSave = () => {
+    saveMutation.mutate({
+      ...formData,
+      personalInfoCompleted: isComplete,
+    });
+  };
 
   if (isLoading) {
     return (
