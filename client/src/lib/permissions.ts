@@ -62,6 +62,7 @@ export const NAVIGATION_CONFIG: NavigationItem[] = [
   { title: "Chat", url: "/chat", icon: "MessageCircle", category: "communication", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
   { title: "Contracts", url: "/contracts", icon: "FileSignature", category: "communication", roles: ["admin", "hospital_leadership", "consultant"] },
   { title: "Identity Verification", url: "/identity-verification", icon: "UserCheck", category: "communication", roles: ["admin", "consultant"] },
+  { title: "Personal Information", url: "/personal-information", icon: "UserCog", category: "communication", roles: ["admin", "consultant"] },
   { title: "Documents", url: "/documents", icon: "FileText", category: "communication", roles: ["admin", "hospital_leadership"] },
   { title: "My Documents", url: "/my-documents", icon: "FileText", category: "communication", roles: ["consultant"] },
   { title: "Search", url: "/search", icon: "Search", category: "communication", roles: ["admin", "hospital_leadership"] },

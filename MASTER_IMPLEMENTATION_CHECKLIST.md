@@ -639,7 +639,19 @@ These were example features we wanted to replicate in our own system:
 - [x] Bulk verification actions
 - [x] Verification history audit trail
 
-### 18.7 Future Enhancements (Planned)
+### 18.7 Personal Information System ✅
+- [x] Database fields: preferredName, birthday, tshirtSize, dietaryRestrictions, allergies, languages, emergencyContact (name, phone, relation), personalInfoCompleted
+- [x] Personal Information page (/personal-information) with 4 sections
+- [x] Section 1: Basic Information (preferred name, birthday, t-shirt size)
+- [x] Section 2: Languages spoken (with common language dropdown + custom entry)
+- [x] Section 3: Dietary & Medical (restrictions, allergies)
+- [x] Section 4: Emergency Contact (required - name, phone, relationship)
+- [x] Personal Information summary on Profile page
+- [x] Completion status badge (Complete/Incomplete based on emergency contact)
+- [x] Navigation link in Communication category
+- [x] API endpoints: GET/PATCH /api/personal-info
+
+### 18.8 Future Enhancements (Planned)
 - [ ] Migrate existing consultant EMR/module data to skills structure
 - [ ] Skills-based matching algorithm for project assignments
 - [ ] Skills gap analysis reporting
@@ -723,7 +735,8 @@ These were example features we wanted to replicate in our own system:
 | Phase 16 (RBAC) | 36 | 36 | 0 | 0 |
 | Phase 17 (Digital Sig/Chat/Integrations) | 26 | 18 | 0 | 8 |
 | Phase 18 (Skills Questionnaire) | 45 | 40 | 0 | 5 |
-| **TOTAL** | **398** | **385** | **0** | **13** |
+| Phase 18.5 (Personal Information) | 10 | 10 | 0 | 0 |
+| **TOTAL** | **408** | **395** | **0** | **13** |
 
 **Overall Progress: 97% Complete**
 
@@ -759,7 +772,14 @@ These were example features we wanted to replicate in our own system:
 
 ## RECENT UPDATES
 
-**November 28, 2025 (Skills Questionnaire - Latest):**
+**November 28, 2025 (Personal Information - Latest):**
+- Implemented Phase 18.5: Personal Information System
+- Database fields: preferredName, birthday, tshirtSize, dietaryRestrictions, allergies, languages, emergencyContact
+- Personal Information page (/personal-information) with 4 sections
+- Personal Information summary on Profile page with completion status
+- Navigation link added to Communication category
+
+**November 28, 2025 (Skills Questionnaire):**
 - Implemented Phase 18: Skills Questionnaire System
 - Database schema for questionnaires, skills, EHR experience, certifications, and verifications
 - Multi-step wizard with 7 sections (EHR Systems, Clinical Modules, Revenue Cycle, Ancillary Systems, Technical Skills, Certifications, Work Preferences)

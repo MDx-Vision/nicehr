@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Camera, Save, Linkedin, Globe, Mail, CheckCircle, AlertCircle, ClipboardCheck, ExternalLink, Clock } from "lucide-react";
+import { Camera, Save, Linkedin, Globe, Mail, CheckCircle, AlertCircle, ClipboardCheck, ExternalLink, Clock, UserCog, Phone, Heart } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -76,6 +76,25 @@ export default function Profile() {
   const { data: skillCategories } = useQuery<SkillCategory[]>({
     queryKey: ["/api/skills/all"],
     enabled: !!questionnaire?.skills && questionnaire.skills.length > 0,
+  });
+
+  // Fetch personal information data
+  interface PersonalInfoData {
+    preferredName: string | null;
+    birthday: string | null;
+    tshirtSize: string | null;
+    dietaryRestrictions: string | null;
+    allergies: string | null;
+    languages: string[];
+    emergencyContactName: string | null;
+    emergencyContactPhone: string | null;
+    emergencyContactRelation: string | null;
+    personalInfoCompleted: boolean;
+  }
+  
+  const { data: personalInfo } = useQuery<PersonalInfoData>({
+    queryKey: ["/api/personal-info"],
+    enabled: !!user?.id,
   });
 
   const form = useForm<ProfileFormValues>({
@@ -673,6 +692,111 @@ export default function Profile() {
                 <p className="text-xs text-muted-foreground">
                   Last updated: {new Date(questionnaire.lastSavedAt).toLocaleDateString()}
                 </p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Personal Information Section */}
+      <Card data-testid="card-personal-information">
+        <CardHeader>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <UserCog className="h-5 w-5" />
+                Personal Information
+              </CardTitle>
+              <CardDescription>
+                Emergency contact, dietary restrictions, and preferences
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              {personalInfo?.personalInfoCompleted ? (
+                <Badge variant="default" data-testid="badge-personal-complete">
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                  Complete
+                </Badge>
+              ) : (
+                <Badge variant="outline" data-testid="badge-personal-incomplete">
+                  <AlertCircle className="w-3 h-3 mr-1" />
+                  Incomplete
+                </Badge>
+              )}
+              <Link href="/personal-information">
+                <Button variant="outline" size="sm" data-testid="button-edit-personal-info">
+                  {personalInfo?.personalInfoCompleted ? "Edit" : "Complete"} Info
+                  <ExternalLink className="w-4 h-4 ml-2" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!personalInfo?.emergencyContactName ? (
+            <div className="text-center py-8 border rounded-lg border-dashed">
+              <UserCog className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="font-medium mb-2">Complete Your Personal Information</h3>
+              <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
+                Add your emergency contact, dietary restrictions, t-shirt size, and other personal details for travel and event coordination.
+              </p>
+              <Link href="/personal-information">
+                <Button data-testid="button-start-personal-info">
+                  <UserCog className="w-4 h-4 mr-2" />
+                  Add Personal Info
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Emergency Contact */}
+              <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                <Phone className="h-5 w-5 text-primary mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-sm">Emergency Contact</h4>
+                  <p className="text-sm">{personalInfo.emergencyContactName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {personalInfo.emergencyContactPhone}
+                    {personalInfo.emergencyContactRelation && ` • ${personalInfo.emergencyContactRelation}`}
+                  </p>
+                </div>
+              </div>
+
+              {/* Quick Info Summary */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {personalInfo.preferredName && (
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Preferred Name:</span>
+                    <p className="font-medium">{personalInfo.preferredName}</p>
+                  </div>
+                )}
+                {personalInfo.tshirtSize && (
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">T-Shirt Size:</span>
+                    <p className="font-medium uppercase">{personalInfo.tshirtSize}</p>
+                  </div>
+                )}
+                {personalInfo.languages && personalInfo.languages.length > 0 && (
+                  <div className="text-sm col-span-2">
+                    <span className="text-muted-foreground">Languages:</span>
+                    <p className="font-medium">{personalInfo.languages.join(", ")}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Dietary/Allergies */}
+              {(personalInfo.dietaryRestrictions || personalInfo.allergies) && (
+                <div className="flex items-start gap-3 p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-900">
+                  <Heart className="h-5 w-5 text-orange-500 mt-0.5" />
+                  <div className="text-sm">
+                    {personalInfo.dietaryRestrictions && (
+                      <p><span className="font-medium">Dietary:</span> {personalInfo.dietaryRestrictions}</p>
+                    )}
+                    {personalInfo.allergies && (
+                      <p><span className="font-medium">Allergies:</span> {personalInfo.allergies}</p>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           )}

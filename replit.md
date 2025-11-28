@@ -131,6 +131,13 @@ NICEHR is a comprehensive healthcare consultant management platform designed for
 - [x] Skills data seeding at server startup (default categories and items)
 - [x] API endpoints for questionnaire CRUD, skills management, EHR experience
 
+#### Personal Information System (Phase 18.5)
+- [x] Database fields on consultants table: preferredName, birthday, tshirtSize, dietaryRestrictions, allergies, languages, emergencyContact fields
+- [x] Personal Information page (/personal-information) with sections for basic info, languages, dietary/medical, emergency contact
+- [x] Personal Information summary on Profile page with completion status
+- [x] Navigation integration in Communication category
+- [x] API endpoints: GET/PATCH /api/personal-info
+
 #### RBAC Permission Management
 - [x] Fixed Role Management UI to display all 15 roles correctly
 - [x] All roles (base, implementation, custom) now support permission editing
