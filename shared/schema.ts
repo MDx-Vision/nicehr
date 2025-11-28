@@ -68,6 +68,9 @@ export const usersRelations = relations(users, ({ one }) => ({
   }),
 }));
 
+// T-shirt size enum
+export const tshirtSizeEnum = pgEnum("tshirt_size", ["xs", "s", "m", "l", "xl", "2xl", "3xl", "4xl"]);
+
 // Consultants table
 export const consultants = pgTable("consultants", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -100,6 +103,17 @@ export const consultants = pgTable("consultants", {
   isAvailable: boolean("is_available").default(true).notNull(),
   backgroundCheckComplete: boolean("background_check_complete").default(false),
   drugScreenComplete: boolean("drug_screen_complete").default(false),
+  // Personal Information fields
+  preferredName: varchar("preferred_name"),
+  birthday: date("birthday"),
+  tshirtSize: tshirtSizeEnum("tshirt_size"),
+  dietaryRestrictions: text("dietary_restrictions"),
+  allergies: text("allergies"),
+  languages: text("languages").array(),
+  emergencyContactName: varchar("emergency_contact_name"),
+  emergencyContactPhone: varchar("emergency_contact_phone"),
+  emergencyContactRelation: varchar("emergency_contact_relation"),
+  personalInfoCompleted: boolean("personal_info_completed").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
