@@ -1489,6 +1489,205 @@ export async function registerRoutes(
     }
   });
 
+  // ============================================
+  // RBAC (Role-Based Access Control) API
+  // ============================================
+
+  // Seed base roles on first request if needed
+  let rbacSeeded = false;
+  const ensureRbacSeeded = async () => {
+    if (!rbacSeeded) {
+      try {
+        await storage.seedBaseRolesAndPermissions();
+        rbacSeeded = true;
+      } catch (error) {
+        console.error("Error seeding RBAC:", error);
+      }
+    }
+  };
+
+  // List all roles (admin only)
+  app.get('/api/admin/rbac/roles', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      await ensureRbacSeeded();
+      const roleType = req.query.roleType as 'base' | 'custom' | undefined;
+      const hospitalId = req.query.hospitalId as string | undefined;
+      const isActive = req.query.isActive === 'true' ? true : req.query.isActive === 'false' ? false : undefined;
+      const roles = await storage.listRoles({ roleType, hospitalId, isActive });
+      res.json(roles);
+    } catch (error) {
+      console.error("Error fetching roles:", error);
+      res.status(500).json({ message: "Failed to fetch roles" });
+    }
+  });
+
+  // Get single role with permissions
+  app.get('/api/admin/rbac/roles/:id', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      await ensureRbacSeeded();
+      const role = await storage.getRoleWithPermissions(req.params.id);
+      if (!role) {
+        return res.status(404).json({ message: "Role not found" });
+      }
+      res.json(role);
+    } catch (error) {
+      console.error("Error fetching role:", error);
+      res.status(500).json({ message: "Failed to fetch role" });
+    }
+  });
+
+  // Create custom role
+  app.post('/api/admin/rbac/roles', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      await ensureRbacSeeded();
+      const userId = req.user?.claims?.sub;
+      const roleData = {
+        ...req.body,
+        roleType: 'custom' as const,
+        createdBy: userId,
+      };
+      const role = await storage.createRole(roleData);
+      res.status(201).json(role);
+    } catch (error) {
+      console.error("Error creating role:", error);
+      res.status(500).json({ message: "Failed to create role" });
+    }
+  });
+
+  // Update role
+  app.patch('/api/admin/rbac/roles/:id', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const role = await storage.updateRole(req.params.id, req.body);
+      if (!role) {
+        return res.status(404).json({ message: "Role not found" });
+      }
+      res.json(role);
+    } catch (error) {
+      console.error("Error updating role:", error);
+      res.status(500).json({ message: "Failed to update role" });
+    }
+  });
+
+  // Delete role (custom roles only)
+  app.delete('/api/admin/rbac/roles/:id', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const role = await storage.getRole(req.params.id);
+      if (!role) {
+        return res.status(404).json({ message: "Role not found" });
+      }
+      if (role.roleType === 'base') {
+        return res.status(400).json({ message: "Cannot delete base roles" });
+      }
+      await storage.deleteRole(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting role:", error);
+      res.status(500).json({ message: "Failed to delete role" });
+    }
+  });
+
+  // List all permissions
+  app.get('/api/admin/rbac/permissions', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      await ensureRbacSeeded();
+      const domain = req.query.domain as string | undefined;
+      const isActive = req.query.isActive === 'true' ? true : req.query.isActive === 'false' ? false : undefined;
+      const permissions = await storage.listPermissions({ domain, isActive });
+      res.json(permissions);
+    } catch (error) {
+      console.error("Error fetching permissions:", error);
+      res.status(500).json({ message: "Failed to fetch permissions" });
+    }
+  });
+
+  // Set permissions for a role
+  app.put('/api/admin/rbac/roles/:id/permissions', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const { permissionIds } = req.body;
+      if (!Array.isArray(permissionIds)) {
+        return res.status(400).json({ message: "permissionIds must be an array" });
+      }
+      const rolePermissions = await storage.setRolePermissions(req.params.id, permissionIds);
+      res.json(rolePermissions);
+    } catch (error) {
+      console.error("Error setting role permissions:", error);
+      res.status(500).json({ message: "Failed to set role permissions" });
+    }
+  });
+
+  // List user role assignments
+  app.get('/api/admin/rbac/assignments', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const userId = req.query.userId as string;
+      if (!userId) {
+        return res.status(400).json({ message: "userId is required" });
+      }
+      const assignments = await storage.getUserRoleAssignmentsWithDetails(userId);
+      res.json(assignments);
+    } catch (error) {
+      console.error("Error fetching role assignments:", error);
+      res.status(500).json({ message: "Failed to fetch role assignments" });
+    }
+  });
+
+  // Assign role to user
+  app.post('/api/admin/rbac/assignments', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const assignedBy = req.user?.claims?.sub;
+      const assignment = await storage.assignRoleToUser({
+        ...req.body,
+        assignedBy,
+      });
+      res.status(201).json(assignment);
+    } catch (error) {
+      console.error("Error assigning role:", error);
+      res.status(500).json({ message: "Failed to assign role" });
+    }
+  });
+
+  // Remove role from user
+  app.delete('/api/admin/rbac/assignments', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const { userId, roleId, projectId } = req.body;
+      if (!userId || !roleId) {
+        return res.status(400).json({ message: "userId and roleId are required" });
+      }
+      await storage.removeRoleFromUser(userId, roleId, projectId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing role assignment:", error);
+      res.status(500).json({ message: "Failed to remove role assignment" });
+    }
+  });
+
+  // Get effective permissions for current user or specific user
+  app.get('/api/rbac/effective-permissions', isAuthenticated, async (req: any, res) => {
+    try {
+      await ensureRbacSeeded();
+      const userId = req.query.userId || req.user?.claims?.sub;
+      const projectId = req.query.projectId as string | undefined;
+      const permissions = await storage.getEffectivePermissions(userId, projectId);
+      res.json(permissions);
+    } catch (error) {
+      console.error("Error fetching effective permissions:", error);
+      res.status(500).json({ message: "Failed to fetch effective permissions" });
+    }
+  });
+
+  // Check if current user has a specific permission
+  app.get('/api/rbac/has-permission/:permissionName', isAuthenticated, async (req: any, res) => {
+    try {
+      await ensureRbacSeeded();
+      const userId = req.user?.claims?.sub;
+      const projectId = req.query.projectId as string | undefined;
+      const hasPermission = await storage.hasPermission(userId, req.params.permissionName, projectId);
+      res.json({ hasPermission });
+    } catch (error) {
+      console.error("Error checking permission:", error);
+      res.status(500).json({ message: "Failed to check permission" });
+    }
+  });
+
   // User permissions API (for frontend to check access)
   app.get('/api/permissions', optionalAuth, async (req: any, res) => {
     try {
