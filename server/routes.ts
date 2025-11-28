@@ -87,6 +87,19 @@ import {
   insertReferralSchema,
   insertComplianceCheckSchema,
   insertComplianceAuditSchema,
+  insertContractTemplateSchema,
+  insertContractSchema,
+  insertContractSignerSchema,
+  insertContractSignatureSchema,
+  insertContractAuditEventSchema,
+  insertChatChannelSchema,
+  insertChannelMemberSchema,
+  insertChatMessageSchema,
+  insertShiftChatSummarySchema,
+  insertIdentityVerificationSchema,
+  insertIdentityDocumentSchema,
+  insertVerificationEventSchema,
+  insertFraudFlagSchema,
 } from "@shared/schema";
 import {
   sendWelcomeEmail,
@@ -7912,6 +7925,736 @@ export async function registerRoutes(
       res.status(500).json({ message: "Failed to fetch AI analytics" });
     }
   });
+
+  // ============================================
+  // DIGITAL SIGNATURES & CONTRACTS
+  // ============================================
+
+  // Contract Templates
+  app.get('/api/contract-templates', isAuthenticated, async (req, res) => {
+    try {
+      const isActive = req.query.isActive !== undefined ? req.query.isActive === 'true' : undefined;
+      const templateType = req.query.templateType as string | undefined;
+      const templates = await storage.listContractTemplates({ isActive, templateType });
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching contract templates:", error);
+      res.status(500).json({ message: "Failed to fetch contract templates" });
+    }
+  });
+
+  app.get('/api/contract-templates/:id', isAuthenticated, async (req, res) => {
+    try {
+      const template = await storage.getContractTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ message: "Contract template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error("Error fetching contract template:", error);
+      res.status(500).json({ message: "Failed to fetch contract template" });
+    }
+  });
+
+  app.post('/api/contract-templates', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertContractTemplateSchema.parse({
+        ...req.body,
+        createdById: userId,
+      });
+      const template = await storage.createContractTemplate(validated);
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Error creating contract template:", error);
+      res.status(400).json({ message: "Failed to create contract template" });
+    }
+  });
+
+  app.patch('/api/contract-templates/:id', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const template = await storage.updateContractTemplate(req.params.id, req.body);
+      if (!template) {
+        return res.status(404).json({ message: "Contract template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error("Error updating contract template:", error);
+      res.status(500).json({ message: "Failed to update contract template" });
+    }
+  });
+
+  app.delete('/api/contract-templates/:id', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      await storage.deleteContractTemplate(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting contract template:", error);
+      res.status(500).json({ message: "Failed to delete contract template" });
+    }
+  });
+
+  // Contracts
+  app.get('/api/contracts', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        consultantId: req.query.consultantId as string | undefined,
+        projectId: req.query.projectId as string | undefined,
+        status: req.query.status as string | undefined,
+      };
+      const contracts = await storage.listContracts(filters);
+      res.json(contracts);
+    } catch (error) {
+      console.error("Error fetching contracts:", error);
+      res.status(500).json({ message: "Failed to fetch contracts" });
+    }
+  });
+
+  app.get('/api/contracts/:id', isAuthenticated, async (req, res) => {
+    try {
+      const contract = await storage.getContractWithDetails(req.params.id);
+      if (!contract) {
+        return res.status(404).json({ message: "Contract not found" });
+      }
+      res.json(contract);
+    } catch (error) {
+      console.error("Error fetching contract:", error);
+      res.status(500).json({ message: "Failed to fetch contract" });
+    }
+  });
+
+  app.post('/api/contracts', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertContractSchema.parse({
+        ...req.body,
+        createdById: userId,
+      });
+      const contract = await storage.createContract(validated);
+      
+      // Create audit event
+      await storage.createContractAuditEvent({
+        contractId: contract.id,
+        eventType: 'created',
+        userId,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'] || null,
+        details: { title: contract.title },
+      });
+      
+      res.status(201).json(contract);
+    } catch (error) {
+      console.error("Error creating contract:", error);
+      res.status(400).json({ message: "Failed to create contract" });
+    }
+  });
+
+  app.patch('/api/contracts/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const contract = await storage.updateContract(req.params.id, req.body);
+      if (!contract) {
+        return res.status(404).json({ message: "Contract not found" });
+      }
+      
+      await storage.createContractAuditEvent({
+        contractId: contract.id,
+        eventType: 'updated',
+        userId,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'] || null,
+        details: { changes: Object.keys(req.body) },
+      });
+      
+      res.json(contract);
+    } catch (error) {
+      console.error("Error updating contract:", error);
+      res.status(500).json({ message: "Failed to update contract" });
+    }
+  });
+
+  // Contract Signers
+  app.get('/api/contracts/:id/signers', isAuthenticated, async (req, res) => {
+    try {
+      const signers = await storage.getContractSigners(req.params.id);
+      res.json(signers);
+    } catch (error) {
+      console.error("Error fetching contract signers:", error);
+      res.status(500).json({ message: "Failed to fetch contract signers" });
+    }
+  });
+
+  app.post('/api/contracts/:id/signers', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const validated = insertContractSignerSchema.parse({
+        ...req.body,
+        contractId: req.params.id,
+      });
+      const signer = await storage.createContractSigner(validated);
+      res.status(201).json(signer);
+    } catch (error) {
+      console.error("Error adding contract signer:", error);
+      res.status(400).json({ message: "Failed to add contract signer" });
+    }
+  });
+
+  // Sign Contract
+  app.post('/api/contracts/:id/sign', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const contractId = req.params.id;
+      
+      // Find the user's signer record
+      const signers = await storage.getContractSigners(contractId);
+      const mySigner = signers.find(s => s.userId === userId);
+      
+      if (!mySigner) {
+        return res.status(403).json({ message: "You are not a signer on this contract" });
+      }
+      
+      if (mySigner.status === 'signed') {
+        return res.status(400).json({ message: "You have already signed this contract" });
+      }
+      
+      // Create signature
+      const signature = await storage.createContractSignature({
+        contractId,
+        signerId: mySigner.id,
+        signatureImageUrl: req.body.signatureImageUrl,
+        signatureData: req.body.signatureData,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'] || null,
+      });
+      
+      // Update signer status
+      await storage.updateContractSigner(mySigner.id, {
+        status: 'signed',
+        signedAt: new Date(),
+      });
+      
+      // Create audit event
+      await storage.createContractAuditEvent({
+        contractId,
+        eventType: 'signed',
+        userId,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'] || null,
+        details: { signerId: mySigner.id },
+      });
+      
+      // Check if all signers have signed
+      const updatedSigners = await storage.getContractSigners(contractId);
+      const allSigned = updatedSigners.every(s => s.status === 'signed');
+      
+      if (allSigned) {
+        await storage.updateContract(contractId, {
+          status: 'completed',
+          completedAt: new Date(),
+        });
+        
+        await storage.createContractAuditEvent({
+          contractId,
+          eventType: 'completed',
+          userId,
+          details: { allSignersCompleted: true },
+        });
+      } else {
+        await storage.updateContract(contractId, {
+          status: 'partially_signed',
+        });
+      }
+      
+      res.json(signature);
+    } catch (error) {
+      console.error("Error signing contract:", error);
+      res.status(500).json({ message: "Failed to sign contract" });
+    }
+  });
+
+  // Decline Contract
+  app.post('/api/contracts/:id/decline', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const contractId = req.params.id;
+      
+      const signers = await storage.getContractSigners(contractId);
+      const mySigner = signers.find(s => s.userId === userId);
+      
+      if (!mySigner) {
+        return res.status(403).json({ message: "You are not a signer on this contract" });
+      }
+      
+      await storage.updateContractSigner(mySigner.id, {
+        status: 'declined',
+        declinedAt: new Date(),
+        declineReason: req.body.reason,
+      });
+      
+      await storage.updateContract(contractId, {
+        status: 'cancelled',
+      });
+      
+      await storage.createContractAuditEvent({
+        contractId,
+        eventType: 'declined',
+        userId,
+        ipAddress: req.ip,
+        details: { reason: req.body.reason },
+      });
+      
+      res.json({ message: "Contract declined" });
+    } catch (error) {
+      console.error("Error declining contract:", error);
+      res.status(500).json({ message: "Failed to decline contract" });
+    }
+  });
+
+  // Contract Audit Trail
+  app.get('/api/contracts/:id/audit', isAuthenticated, async (req, res) => {
+    try {
+      const events = await storage.getContractAuditEvents(req.params.id);
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching contract audit events:", error);
+      res.status(500).json({ message: "Failed to fetch audit events" });
+    }
+  });
+
+  // ============================================
+  // REAL-TIME CHAT (REST endpoints - WebSocket separate)
+  // ============================================
+
+  // Chat Channels
+  app.get('/api/chat/channels', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const filters = {
+        projectId: req.query.projectId as string | undefined,
+        channelType: req.query.channelType as string | undefined,
+      };
+      const channels = await storage.listChatChannels(userId, filters);
+      res.json(channels);
+    } catch (error) {
+      console.error("Error fetching chat channels:", error);
+      res.status(500).json({ message: "Failed to fetch chat channels" });
+    }
+  });
+
+  app.get('/api/chat/channels/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const channel = await storage.getChatChannelWithDetails(req.params.id, userId);
+      if (!channel) {
+        return res.status(404).json({ message: "Channel not found" });
+      }
+      res.json(channel);
+    } catch (error) {
+      console.error("Error fetching chat channel:", error);
+      res.status(500).json({ message: "Failed to fetch chat channel" });
+    }
+  });
+
+  app.post('/api/chat/channels', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertChatChannelSchema.parse({
+        ...req.body,
+        createdById: userId,
+      });
+      const channel = await storage.createChatChannel(validated);
+      
+      // Add creator as admin member
+      await storage.addChannelMember({
+        channelId: channel.id,
+        userId,
+        role: 'admin',
+      });
+      
+      res.status(201).json(channel);
+    } catch (error) {
+      console.error("Error creating chat channel:", error);
+      res.status(400).json({ message: "Failed to create chat channel" });
+    }
+  });
+
+  app.patch('/api/chat/channels/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const isMember = await storage.isChannelMember(req.params.id, userId);
+      if (!isMember) {
+        return res.status(403).json({ message: "Not a channel member" });
+      }
+      const channel = await storage.updateChatChannel(req.params.id, req.body);
+      if (!channel) {
+        return res.status(404).json({ message: "Channel not found" });
+      }
+      res.json(channel);
+    } catch (error) {
+      console.error("Error updating chat channel:", error);
+      res.status(500).json({ message: "Failed to update chat channel" });
+    }
+  });
+
+  // Channel Members
+  app.get('/api/chat/channels/:id/members', isAuthenticated, async (req, res) => {
+    try {
+      const members = await storage.getChannelMembers(req.params.id);
+      res.json(members);
+    } catch (error) {
+      console.error("Error fetching channel members:", error);
+      res.status(500).json({ message: "Failed to fetch channel members" });
+    }
+  });
+
+  app.post('/api/chat/channels/:id/members', isAuthenticated, async (req, res) => {
+    try {
+      const validated = insertChannelMemberSchema.parse({
+        ...req.body,
+        channelId: req.params.id,
+      });
+      const member = await storage.addChannelMember(validated);
+      res.status(201).json(member);
+    } catch (error) {
+      console.error("Error adding channel member:", error);
+      res.status(400).json({ message: "Failed to add channel member" });
+    }
+  });
+
+  app.delete('/api/chat/channels/:id/members/:userId', isAuthenticated, async (req, res) => {
+    try {
+      await storage.removeChannelMember(req.params.id, req.params.userId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error removing channel member:", error);
+      res.status(500).json({ message: "Failed to remove channel member" });
+    }
+  });
+
+  // Chat Messages
+  app.get('/api/chat/channels/:id/messages', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const isMember = await storage.isChannelMember(req.params.id, userId);
+      if (!isMember) {
+        return res.status(403).json({ message: "Not a channel member" });
+      }
+      const messages = await storage.getChatMessages(req.params.id, {
+        limit: parseInt(req.query.limit) || 50,
+        before: req.query.before as string | undefined,
+      });
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching chat messages:", error);
+      res.status(500).json({ message: "Failed to fetch chat messages" });
+    }
+  });
+
+  app.post('/api/chat/channels/:id/messages', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const isMember = await storage.isChannelMember(req.params.id, userId);
+      if (!isMember) {
+        return res.status(403).json({ message: "Not a channel member" });
+      }
+      
+      const validated = insertChatMessageSchema.parse({
+        ...req.body,
+        channelId: req.params.id,
+        senderId: userId,
+      });
+      const message = await storage.createChatMessage(validated);
+      res.status(201).json(message);
+    } catch (error) {
+      console.error("Error creating chat message:", error);
+      res.status(400).json({ message: "Failed to send message" });
+    }
+  });
+
+  app.patch('/api/chat/messages/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const message = await storage.getChatMessage(req.params.id);
+      if (!message) {
+        return res.status(404).json({ message: "Message not found" });
+      }
+      if (message.senderId !== userId) {
+        return res.status(403).json({ message: "Cannot edit another user's message" });
+      }
+      const updated = await storage.updateChatMessage(req.params.id, {
+        content: req.body.content,
+      });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating chat message:", error);
+      res.status(500).json({ message: "Failed to update message" });
+    }
+  });
+
+  app.delete('/api/chat/messages/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const message = await storage.getChatMessage(req.params.id);
+      if (!message) {
+        return res.status(404).json({ message: "Message not found" });
+      }
+      if (message.senderId !== userId) {
+        return res.status(403).json({ message: "Cannot delete another user's message" });
+      }
+      await storage.deleteMessage(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting chat message:", error);
+      res.status(500).json({ message: "Failed to delete message" });
+    }
+  });
+
+  // Shift Summaries
+  app.get('/api/chat/channels/:id/summaries', isAuthenticated, async (req, res) => {
+    try {
+      const summaries = await storage.getShiftSummaries(req.params.id, {
+        shiftDate: req.query.shiftDate as string | undefined,
+      });
+      res.json(summaries);
+    } catch (error) {
+      console.error("Error fetching shift summaries:", error);
+      res.status(500).json({ message: "Failed to fetch shift summaries" });
+    }
+  });
+
+  app.post('/api/chat/channels/:id/summaries', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertShiftChatSummarySchema.parse({
+        ...req.body,
+        channelId: req.params.id,
+        createdById: userId,
+      });
+      const summary = await storage.createShiftSummary(validated);
+      res.status(201).json(summary);
+    } catch (error) {
+      console.error("Error creating shift summary:", error);
+      res.status(400).json({ message: "Failed to create shift summary" });
+    }
+  });
+
+  // ============================================
+  // IDENTITY VERIFICATION
+  // ============================================
+
+  // Get current user's verification status
+  app.get('/api/identity/me', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const verification = await storage.getUserVerification(userId);
+      res.json(verification || null);
+    } catch (error) {
+      console.error("Error fetching user verification:", error);
+      res.status(500).json({ message: "Failed to fetch verification status" });
+    }
+  });
+
+  // List all verifications (admin only)
+  app.get('/api/identity/verifications', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const filters = {
+        status: req.query.status as string | undefined,
+        consultantId: req.query.consultantId as string | undefined,
+      };
+      const verifications = await storage.listIdentityVerifications(filters);
+      res.json(verifications);
+    } catch (error) {
+      console.error("Error fetching identity verifications:", error);
+      res.status(500).json({ message: "Failed to fetch verifications" });
+    }
+  });
+
+  // Get verification by ID
+  app.get('/api/identity/verifications/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      const verification = await storage.getIdentityVerificationWithDetails(req.params.id);
+      
+      if (!verification) {
+        return res.status(404).json({ message: "Verification not found" });
+      }
+      
+      // Only allow access to own verification or admin access
+      if (verification.userId !== userId && user?.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      res.json(verification);
+    } catch (error) {
+      console.error("Error fetching verification:", error);
+      res.status(500).json({ message: "Failed to fetch verification" });
+    }
+  });
+
+  // Submit identity verification request
+  app.post('/api/identity/verifications', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      
+      // Check for existing pending verification
+      const existing = await storage.getUserVerification(userId);
+      if (existing && ['pending', 'in_review'].includes(existing.status)) {
+        return res.status(400).json({ message: "You already have a pending verification request" });
+      }
+      
+      // Find consultant ID if exists
+      const consultant = await storage.getConsultantByUserId(userId);
+      
+      const validated = insertIdentityVerificationSchema.parse({
+        ...req.body,
+        userId,
+        consultantId: consultant?.id,
+        status: 'pending',
+      });
+      
+      const verification = await storage.createIdentityVerification(validated);
+      
+      // Create audit event
+      await storage.createVerificationEvent({
+        verificationId: verification.id,
+        eventType: 'submitted',
+        performedById: userId,
+        ipAddress: req.ip,
+        details: { initialSubmission: true },
+      });
+      
+      res.status(201).json(verification);
+    } catch (error) {
+      console.error("Error creating identity verification:", error);
+      res.status(400).json({ message: "Failed to submit verification request" });
+    }
+  });
+
+  // Upload identity document
+  app.post('/api/identity/verifications/:id/documents', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const verification = await storage.getIdentityVerification(req.params.id);
+      
+      if (!verification) {
+        return res.status(404).json({ message: "Verification not found" });
+      }
+      
+      if (verification.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const validated = insertIdentityDocumentSchema.parse({
+        ...req.body,
+        verificationId: req.params.id,
+      });
+      
+      const document = await storage.createIdentityDocument(validated);
+      
+      await storage.createVerificationEvent({
+        verificationId: req.params.id,
+        eventType: 'document_uploaded',
+        performedById: userId,
+        details: { documentType: document.documentType },
+      });
+      
+      res.status(201).json(document);
+    } catch (error) {
+      console.error("Error uploading identity document:", error);
+      res.status(400).json({ message: "Failed to upload document" });
+    }
+  });
+
+  // Admin: Review verification
+  app.post('/api/identity/verifications/:id/review', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const { action, notes } = req.body; // action: 'approve' | 'reject' | 'request_resubmit'
+      
+      let updateData: any = {
+        reviewedById: userId,
+        reviewNotes: notes,
+      };
+      
+      if (action === 'approve') {
+        updateData.status = 'verified';
+        updateData.verifiedAt = new Date();
+        updateData.expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year
+      } else if (action === 'reject') {
+        updateData.status = 'rejected';
+        updateData.rejectedAt = new Date();
+        updateData.rejectionReason = notes;
+      } else if (action === 'request_resubmit') {
+        updateData.status = 'pending';
+      }
+      
+      const verification = await storage.updateIdentityVerification(req.params.id, updateData);
+      
+      if (!verification) {
+        return res.status(404).json({ message: "Verification not found" });
+      }
+      
+      await storage.createVerificationEvent({
+        verificationId: req.params.id,
+        eventType: action === 'approve' ? 'verified' : action === 'reject' ? 'rejected' : 'resubmit_requested',
+        performedById: userId,
+        details: { action, notes },
+      });
+      
+      res.json(verification);
+    } catch (error) {
+      console.error("Error reviewing verification:", error);
+      res.status(500).json({ message: "Failed to process review" });
+    }
+  });
+
+  // Fraud Flags
+  app.get('/api/identity/fraud-flags', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const filters = {
+        userId: req.query.userId as string | undefined,
+        isResolved: req.query.isResolved !== undefined ? req.query.isResolved === 'true' : undefined,
+      };
+      const flags = await storage.getFraudFlags(filters);
+      res.json(flags);
+    } catch (error) {
+      console.error("Error fetching fraud flags:", error);
+      res.status(500).json({ message: "Failed to fetch fraud flags" });
+    }
+  });
+
+  app.post('/api/identity/fraud-flags', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const validated = insertFraudFlagSchema.parse(req.body);
+      const flag = await storage.createFraudFlag(validated);
+      res.status(201).json(flag);
+    } catch (error) {
+      console.error("Error creating fraud flag:", error);
+      res.status(400).json({ message: "Failed to create fraud flag" });
+    }
+  });
+
+  app.patch('/api/identity/fraud-flags/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const flag = await storage.updateFraudFlag(req.params.id, {
+        ...req.body,
+        resolvedById: req.body.isResolved ? userId : undefined,
+        resolvedAt: req.body.isResolved ? new Date() : undefined,
+      });
+      if (!flag) {
+        return res.status(404).json({ message: "Fraud flag not found" });
+      }
+      res.json(flag);
+    } catch (error) {
+      console.error("Error updating fraud flag:", error);
+      res.status(500).json({ message: "Failed to update fraud flag" });
+    }
+  });
+
+  // Setup WebSocket server for real-time chat
+  const { setupWebSocket } = await import('./websocket');
+  setupWebSocket(httpServer);
 
   return httpServer;
 }
