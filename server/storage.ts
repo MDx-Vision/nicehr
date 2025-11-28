@@ -9487,9 +9487,12 @@ export class DatabaseStorage implements IStorage {
           name: roleDef.name,
           displayName: roleDef.displayName,
           description: roleDef.description,
-          roleType: 'base',
+          roleType: roleDef.roleType,
           isActive: true,
         });
+      } else if (role.roleType !== roleDef.roleType) {
+        await db.update(roles).set({ roleType: roleDef.roleType }).where(eq(roles.id, role.id));
+        role = { ...role, roleType: roleDef.roleType };
       }
 
       const permissionIds: string[] = [];

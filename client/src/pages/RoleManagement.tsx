@@ -971,9 +971,7 @@ export default function RoleManagement() {
               {selectedRole?.displayName} - Permissions
             </DialogTitle>
             <DialogDescription>
-              {selectedRole?.roleType === "base"
-                ? "View permissions for this base role"
-                : "Manage permissions for this custom role"}
+              Manage permissions for this role. Check or uncheck to grant or revoke access.
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto py-4 space-y-2">
@@ -987,16 +985,14 @@ export default function RoleManagement() {
                     <span className="font-medium">
                       {DOMAIN_LABELS[domain] || domain}
                     </span>
-                    {selectedRole?.roleType === "custom" && (
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          checked={allSelected}
-                          onCheckedChange={() => toggleDomainPermissions(domainPerms)}
-                          data-testid={`checkbox-domain-${domain}`}
-                        />
-                        <span className="text-xs text-muted-foreground">Select All</span>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={allSelected}
+                        onCheckedChange={() => toggleDomainPermissions(domainPerms)}
+                        data-testid={`checkbox-domain-${domain}`}
+                      />
+                      <span className="text-xs text-muted-foreground">Select All</span>
+                    </div>
                   </div>
                   <div className="p-3 space-y-2">
                     {domainPerms.map((perm) => (
@@ -1005,20 +1001,10 @@ export default function RoleManagement() {
                         className="flex items-start gap-3"
                         data-testid={`permission-checkbox-${perm.id}`}
                       >
-                        {selectedRole?.roleType === "custom" ? (
-                          <Checkbox
-                            checked={selectedPermissions.has(perm.id)}
-                            onCheckedChange={() => togglePermission(perm.id)}
-                          />
-                        ) : (
-                          <Check
-                            className={`w-4 h-4 mt-0.5 ${
-                              selectedRoleDetails?.permissions?.some(rp => rp.permissionId === perm.id)
-                                ? "text-primary"
-                                : "text-muted-foreground/30"
-                            }`}
-                          />
-                        )}
+                        <Checkbox
+                          checked={selectedPermissions.has(perm.id)}
+                          onCheckedChange={() => togglePermission(perm.id)}
+                        />
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium">
@@ -1050,17 +1036,15 @@ export default function RoleManagement() {
                 setSelectedPermissions(new Set());
               }}
             >
-              {selectedRole?.roleType === "base" ? "Close" : "Cancel"}
+  Cancel
             </Button>
-            {selectedRole?.roleType === "custom" && (
-              <Button
-                onClick={handleSavePermissions}
-                disabled={updatePermissionsMutation.isPending}
-                data-testid="button-save-permissions"
-              >
-                {updatePermissionsMutation.isPending ? "Saving..." : "Save Permissions"}
-              </Button>
-            )}
+            <Button
+              onClick={handleSavePermissions}
+              disabled={updatePermissionsMutation.isPending}
+              data-testid="button-save-permissions"
+            >
+              {updatePermissionsMutation.isPending ? "Saving..." : "Save Permissions"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

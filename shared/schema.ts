@@ -552,7 +552,7 @@ export const contentAccessAuditRelations = relations(contentAccessAudit, ({ one 
 // ==========================================
 
 // Role type enum - distinguishes base roles from custom roles
-export const roleTypeEnum = pgEnum("role_type", ["base", "custom"]);
+export const roleTypeEnum = pgEnum("role_type", ["base", "implementation", "custom"]);
 
 // Roles table - stores both predefined base roles and custom roles
 export const roles = pgTable("roles", {
