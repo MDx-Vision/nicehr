@@ -706,6 +706,224 @@ export const roiResponsesRelations = relations(roiResponses, ({ one }) => ({
   }),
 }));
 
+// ==========================================
+// SKILLS QUESTIONNAIRE SYSTEM
+// ==========================================
+
+export const skillCategoryEnum = pgEnum("skill_category", [
+  "ehr_systems",
+  "clinical_modules",
+  "revenue_cycle",
+  "ancillary_systems",
+  "technical_skills",
+  "soft_skills",
+  "certifications",
+  "work_preferences"
+]);
+
+export const proficiencyLevelEnum = pgEnum("proficiency_level", [
+  "none",
+  "beginner",
+  "intermediate",
+  "advanced",
+  "expert"
+]);
+
+export const questionnaireStatusEnum = pgEnum("questionnaire_status", [
+  "draft",
+  "submitted",
+  "verified"
+]);
+
+export const skillVerificationStatusEnum = pgEnum("skill_verification_status", [
+  "pending",
+  "verified",
+  "rejected"
+]);
+
+// Skill Categories - defines the categories of skills
+export const skillCategories = pgTable("skill_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull().unique(),
+  displayName: varchar("display_name").notNull(),
+  description: text("description"),
+  category: skillCategoryEnum("category").notNull(),
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Skill Items - individual skills within categories
+export const skillItems = pgTable("skill_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  categoryId: varchar("category_id").references(() => skillCategories.id).notNull(),
+  name: varchar("name").notNull(),
+  displayName: varchar("display_name").notNull(),
+  description: text("description"),
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Consultant Questionnaires - main questionnaire record
+export const consultantQuestionnaires = pgTable("consultant_questionnaires", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  consultantId: varchar("consultant_id").references(() => consultants.id).notNull().unique(),
+  status: questionnaireStatusEnum("status").default("draft").notNull(),
+  completedSections: text("completed_sections").array().default(sql`'{}'::text[]`),
+  lastSavedAt: timestamp("last_saved_at").defaultNow(),
+  submittedAt: timestamp("submitted_at"),
+  verifiedAt: timestamp("verified_at"),
+  verifiedBy: varchar("verified_by").references(() => users.id),
+  personalInfo: jsonb("personal_info"),
+  workPreferences: jsonb("work_preferences"),
+  additionalNotes: text("additional_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Consultant Skills - individual skill ratings
+export const consultantSkills = pgTable("consultant_skills", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  consultantId: varchar("consultant_id").references(() => consultants.id).notNull(),
+  skillItemId: varchar("skill_item_id").references(() => skillItems.id).notNull(),
+  proficiency: proficiencyLevelEnum("proficiency").default("none").notNull(),
+  yearsExperience: integer("years_experience").default(0),
+  isCertified: boolean("is_certified").default(false),
+  certificationName: varchar("certification_name"),
+  certificationExpiry: date("certification_expiry"),
+  notes: text("notes"),
+  verificationStatus: skillVerificationStatusEnum("verification_status").default("pending"),
+  verifiedBy: varchar("verified_by").references(() => users.id),
+  verifiedAt: timestamp("verified_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Skill Verifications - audit trail for skill verifications
+export const skillVerifications = pgTable("skill_verifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  consultantSkillId: varchar("consultant_skill_id").references(() => consultantSkills.id).notNull(),
+  verifiedBy: varchar("verified_by").references(() => users.id).notNull(),
+  previousStatus: skillVerificationStatusEnum("previous_status"),
+  newStatus: skillVerificationStatusEnum("new_status").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// EHR System Experience - specific to EHR systems
+export const consultantEhrExperience = pgTable("consultant_ehr_experience", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  consultantId: varchar("consultant_id").references(() => consultants.id).notNull(),
+  ehrSystem: varchar("ehr_system").notNull(),
+  yearsExperience: integer("years_experience").default(0),
+  proficiency: proficiencyLevelEnum("proficiency").default("none").notNull(),
+  isCertified: boolean("is_certified").default(false),
+  certifications: text("certifications").array().default(sql`'{}'::text[]`),
+  lastUsed: date("last_used"),
+  projectCount: integer("project_count").default(0),
+  verificationStatus: skillVerificationStatusEnum("verification_status").default("pending"),
+  verifiedBy: varchar("verified_by").references(() => users.id),
+  verifiedAt: timestamp("verified_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Consultant Certifications - detailed certification records
+export const consultantCertifications = pgTable("consultant_certifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  consultantId: varchar("consultant_id").references(() => consultants.id).notNull(),
+  certificationType: varchar("certification_type").notNull(),
+  certificationName: varchar("certification_name").notNull(),
+  issuingOrganization: varchar("issuing_organization"),
+  issueDate: date("issue_date"),
+  expiryDate: date("expiry_date"),
+  credentialId: varchar("credential_id"),
+  documentId: varchar("document_id").references(() => consultantDocuments.id),
+  verificationStatus: skillVerificationStatusEnum("verification_status").default("pending"),
+  verifiedBy: varchar("verified_by").references(() => users.id),
+  verifiedAt: timestamp("verified_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Skills Questionnaire Relations
+export const skillCategoriesRelations = relations(skillCategories, ({ many }) => ({
+  items: many(skillItems),
+}));
+
+export const skillItemsRelations = relations(skillItems, ({ one, many }) => ({
+  category: one(skillCategories, {
+    fields: [skillItems.categoryId],
+    references: [skillCategories.id],
+  }),
+  consultantSkills: many(consultantSkills),
+}));
+
+export const consultantQuestionnairesRelations = relations(consultantQuestionnaires, ({ one }) => ({
+  consultant: one(consultants, {
+    fields: [consultantQuestionnaires.consultantId],
+    references: [consultants.id],
+  }),
+  verifier: one(users, {
+    fields: [consultantQuestionnaires.verifiedBy],
+    references: [users.id],
+  }),
+}));
+
+export const consultantSkillsRelations = relations(consultantSkills, ({ one, many }) => ({
+  consultant: one(consultants, {
+    fields: [consultantSkills.consultantId],
+    references: [consultants.id],
+  }),
+  skillItem: one(skillItems, {
+    fields: [consultantSkills.skillItemId],
+    references: [skillItems.id],
+  }),
+  verifier: one(users, {
+    fields: [consultantSkills.verifiedBy],
+    references: [users.id],
+  }),
+  verifications: many(skillVerifications),
+}));
+
+export const skillVerificationsRelations = relations(skillVerifications, ({ one }) => ({
+  consultantSkill: one(consultantSkills, {
+    fields: [skillVerifications.consultantSkillId],
+    references: [consultantSkills.id],
+  }),
+  verifier: one(users, {
+    fields: [skillVerifications.verifiedBy],
+    references: [users.id],
+  }),
+}));
+
+export const consultantEhrExperienceRelations = relations(consultantEhrExperience, ({ one }) => ({
+  consultant: one(consultants, {
+    fields: [consultantEhrExperience.consultantId],
+    references: [consultants.id],
+  }),
+  verifier: one(users, {
+    fields: [consultantEhrExperience.verifiedBy],
+    references: [users.id],
+  }),
+}));
+
+export const consultantCertificationsRelations = relations(consultantCertifications, ({ one }) => ({
+  consultant: one(consultants, {
+    fields: [consultantCertifications.consultantId],
+    references: [consultants.id],
+  }),
+  document: one(consultantDocuments, {
+    fields: [consultantCertifications.documentId],
+    references: [consultantDocuments.id],
+  }),
+  verifier: one(users, {
+    fields: [consultantCertifications.verifiedBy],
+    references: [users.id],
+  }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -940,6 +1158,75 @@ export type EffectivePermissions = {
   permissions: string[];
   projectId?: string | null;
   hospitalId?: string | null;
+};
+
+// Skills Questionnaire Insert Schemas
+export const insertSkillCategorySchema = createInsertSchema(skillCategories).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSkillItemSchema = createInsertSchema(skillItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertConsultantQuestionnaireSchema = createInsertSchema(consultantQuestionnaires).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertConsultantSkillSchema = createInsertSchema(consultantSkills).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSkillVerificationSchema = createInsertSchema(skillVerifications).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertConsultantEhrExperienceSchema = createInsertSchema(consultantEhrExperience).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertConsultantCertificationSchema = createInsertSchema(consultantCertifications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Skills Questionnaire Types
+export type SkillCategory = typeof skillCategories.$inferSelect;
+export type InsertSkillCategory = z.infer<typeof insertSkillCategorySchema>;
+
+export type SkillItem = typeof skillItems.$inferSelect;
+export type InsertSkillItem = z.infer<typeof insertSkillItemSchema>;
+
+export type ConsultantQuestionnaire = typeof consultantQuestionnaires.$inferSelect;
+export type InsertConsultantQuestionnaire = z.infer<typeof insertConsultantQuestionnaireSchema>;
+
+export type ConsultantSkill = typeof consultantSkills.$inferSelect;
+export type InsertConsultantSkill = z.infer<typeof insertConsultantSkillSchema>;
+
+export type SkillVerification = typeof skillVerifications.$inferSelect;
+export type InsertSkillVerification = z.infer<typeof insertSkillVerificationSchema>;
+
+export type ConsultantEhrExperience = typeof consultantEhrExperience.$inferSelect;
+export type InsertConsultantEhrExperience = z.infer<typeof insertConsultantEhrExperienceSchema>;
+
+export type ConsultantCertification = typeof consultantCertifications.$inferSelect;
+export type InsertConsultantCertification = z.infer<typeof insertConsultantCertificationSchema>;
+
+// Questionnaire with full details
+export type QuestionnaireWithSkills = ConsultantQuestionnaire & {
+  skills: (ConsultantSkill & { skillItem: SkillItem })[];
+  ehrExperience: ConsultantEhrExperience[];
+  certifications: ConsultantCertification[];
 };
 
 // Activity type enum for user activity tracking

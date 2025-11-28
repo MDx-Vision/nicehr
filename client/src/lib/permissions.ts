@@ -43,6 +43,7 @@ export const NAVIGATION_CONFIG: NavigationItem[] = [
   
   { title: "Training", url: "/training", icon: "GraduationCap", category: "training", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"], requiredPermission: "training:view" },
   { title: "Assessments", url: "/assessments", icon: "ClipboardCheck", category: "training", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"], requiredPermission: "training:view" },
+  { title: "Skills Questionnaire", url: "/skills-questionnaire", icon: "ClipboardCheck", category: "training", roles: ["admin", "consultant"] },
   { title: "Login Labs", url: "/login-labs", icon: "Monitor", category: "training", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"], requiredPermission: "training:view" },
   
   { title: "Travel Preferences", url: "/travel-preferences", icon: "Plane", category: "travel", roles: ["admin", "consultant"], requiredPermission: "travel:view_own" },

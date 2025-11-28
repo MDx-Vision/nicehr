@@ -133,6 +133,14 @@ export async function registerRoutes(
     console.error("Error seeding RBAC:", error);
   }
 
+  // Seed skills questionnaire data at startup
+  try {
+    await storage.seedSkillsData();
+    console.log("Skills questionnaire data seeded successfully");
+  } catch (error) {
+    console.error("Error seeding skills data:", error);
+  }
+
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
@@ -9732,6 +9740,441 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error scheduling report:", error);
       res.status(500).json({ message: "Failed to schedule report" });
+    }
+  });
+
+  // ============================================
+  // SKILLS QUESTIONNAIRE Routes
+  // ============================================
+
+  // Skill Categories
+  app.get('/api/skill-categories', isAuthenticated, async (req, res) => {
+    try {
+      const category = req.query.category as string | undefined;
+      const isActive = req.query.isActive === 'true' ? true : req.query.isActive === 'false' ? false : undefined;
+      const categories = await storage.listSkillCategories({ category, isActive });
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching skill categories:", error);
+      res.status(500).json({ message: "Failed to fetch skill categories" });
+    }
+  });
+
+  app.get('/api/skill-categories/:id', isAuthenticated, async (req, res) => {
+    try {
+      const category = await storage.getSkillCategory(req.params.id);
+      if (!category) {
+        return res.status(404).json({ message: "Skill category not found" });
+      }
+      res.json(category);
+    } catch (error) {
+      console.error("Error fetching skill category:", error);
+      res.status(500).json({ message: "Failed to fetch skill category" });
+    }
+  });
+
+  // Skill Items
+  app.get('/api/skill-items', isAuthenticated, async (req, res) => {
+    try {
+      const categoryId = req.query.categoryId as string | undefined;
+      const isActive = req.query.isActive === 'true' ? true : req.query.isActive === 'false' ? false : undefined;
+      const items = await storage.listSkillItems({ categoryId, isActive });
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching skill items:", error);
+      res.status(500).json({ message: "Failed to fetch skill items" });
+    }
+  });
+
+  // Combined endpoint for categories with items
+  app.get('/api/skills/all', isAuthenticated, async (req, res) => {
+    try {
+      const categories = await storage.listSkillCategories({ isActive: true });
+      const items = await storage.listSkillItems({ isActive: true });
+      
+      const categoriesWithItems = categories.map(cat => ({
+        ...cat,
+        items: items.filter(item => item.categoryId === cat.id),
+      }));
+      
+      res.json(categoriesWithItems);
+    } catch (error) {
+      console.error("Error fetching skills data:", error);
+      res.status(500).json({ message: "Failed to fetch skills data" });
+    }
+  });
+
+  // Consultant Questionnaire
+  app.get('/api/questionnaire', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const consultant = await storage.getConsultantByUserId(userId);
+      
+      if (!consultant) {
+        return res.status(404).json({ message: "Consultant profile not found" });
+      }
+      
+      const questionnaire = await storage.getQuestionnaireWithSkills(consultant.id);
+      res.json(questionnaire || null);
+    } catch (error) {
+      console.error("Error fetching questionnaire:", error);
+      res.status(500).json({ message: "Failed to fetch questionnaire" });
+    }
+  });
+
+  app.post('/api/questionnaire', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const consultant = await storage.getOrCreateConsultantByUserId(userId);
+      
+      // Check if questionnaire already exists
+      const existing = await storage.getQuestionnaireByConsultantId(consultant.id);
+      if (existing) {
+        return res.status(400).json({ message: "Questionnaire already exists. Use PATCH to update." });
+      }
+      
+      const questionnaire = await storage.createConsultantQuestionnaire({
+        consultantId: consultant.id,
+        status: 'draft',
+        ...req.body,
+      });
+      
+      res.status(201).json(questionnaire);
+    } catch (error) {
+      console.error("Error creating questionnaire:", error);
+      res.status(500).json({ message: "Failed to create questionnaire" });
+    }
+  });
+
+  app.patch('/api/questionnaire', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const consultant = await storage.getConsultantByUserId(userId);
+      
+      if (!consultant) {
+        return res.status(404).json({ message: "Consultant profile not found" });
+      }
+      
+      let questionnaire = await storage.getQuestionnaireByConsultantId(consultant.id);
+      
+      if (!questionnaire) {
+        // Create new questionnaire if it doesn't exist
+        questionnaire = await storage.createConsultantQuestionnaire({
+          consultantId: consultant.id,
+          status: 'draft',
+        });
+      }
+      
+      const updated = await storage.updateConsultantQuestionnaire(questionnaire.id, req.body);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating questionnaire:", error);
+      res.status(500).json({ message: "Failed to update questionnaire" });
+    }
+  });
+
+  app.post('/api/questionnaire/submit', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const consultant = await storage.getConsultantByUserId(userId);
+      
+      if (!consultant) {
+        return res.status(404).json({ message: "Consultant profile not found" });
+      }
+      
+      const questionnaire = await storage.getQuestionnaireByConsultantId(consultant.id);
+      if (!questionnaire) {
+        return res.status(404).json({ message: "Questionnaire not found" });
+      }
+      
+      const updated = await storage.updateConsultantQuestionnaire(questionnaire.id, {
+        status: 'submitted',
+        submittedAt: new Date(),
+      });
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error submitting questionnaire:", error);
+      res.status(500).json({ message: "Failed to submit questionnaire" });
+    }
+  });
+
+  // Consultant Skills (upsert for autosave)
+  app.post('/api/questionnaire/skills', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const consultant = await storage.getConsultantByUserId(userId);
+      
+      if (!consultant) {
+        return res.status(404).json({ message: "Consultant profile not found" });
+      }
+      
+      const { skillItemId, proficiency, yearsExperience, isCertified, certificationName, certificationExpiry, notes } = req.body;
+      
+      const skill = await storage.upsertConsultantSkill({
+        consultantId: consultant.id,
+        skillItemId,
+        proficiency,
+        yearsExperience,
+        isCertified,
+        certificationName,
+        certificationExpiry,
+        notes,
+      });
+      
+      res.json(skill);
+    } catch (error) {
+      console.error("Error saving skill:", error);
+      res.status(500).json({ message: "Failed to save skill" });
+    }
+  });
+
+  app.post('/api/questionnaire/skills/bulk', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const consultant = await storage.getConsultantByUserId(userId);
+      
+      if (!consultant) {
+        return res.status(404).json({ message: "Consultant profile not found" });
+      }
+      
+      const { skills } = req.body;
+      if (!Array.isArray(skills)) {
+        return res.status(400).json({ message: "Skills must be an array" });
+      }
+      
+      const results = [];
+      for (const skillData of skills) {
+        const skill = await storage.upsertConsultantSkill({
+          consultantId: consultant.id,
+          skillItemId: skillData.skillItemId,
+          proficiency: skillData.proficiency,
+          yearsExperience: skillData.yearsExperience,
+          isCertified: skillData.isCertified,
+          certificationName: skillData.certificationName,
+          certificationExpiry: skillData.certificationExpiry,
+          notes: skillData.notes,
+        });
+        results.push(skill);
+      }
+      
+      res.json(results);
+    } catch (error) {
+      console.error("Error saving skills:", error);
+      res.status(500).json({ message: "Failed to save skills" });
+    }
+  });
+
+  // EHR Experience
+  app.get('/api/questionnaire/ehr-experience', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const consultant = await storage.getConsultantByUserId(userId);
+      
+      if (!consultant) {
+        return res.status(404).json({ message: "Consultant profile not found" });
+      }
+      
+      const experience = await storage.listConsultantEhrExperience(consultant.id);
+      res.json(experience);
+    } catch (error) {
+      console.error("Error fetching EHR experience:", error);
+      res.status(500).json({ message: "Failed to fetch EHR experience" });
+    }
+  });
+
+  app.post('/api/questionnaire/ehr-experience', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const consultant = await storage.getConsultantByUserId(userId);
+      
+      if (!consultant) {
+        return res.status(404).json({ message: "Consultant profile not found" });
+      }
+      
+      const { ehrSystem, yearsExperience, proficiency, isCertified, certifications, lastUsed, projectCount } = req.body;
+      
+      const experience = await storage.upsertConsultantEhrExperience(consultant.id, ehrSystem, {
+        yearsExperience,
+        proficiency,
+        isCertified,
+        certifications,
+        lastUsed,
+        projectCount,
+      });
+      
+      res.json(experience);
+    } catch (error) {
+      console.error("Error saving EHR experience:", error);
+      res.status(500).json({ message: "Failed to save EHR experience" });
+    }
+  });
+
+  app.delete('/api/questionnaire/ehr-experience/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.deleteConsultantEhrExperience(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting EHR experience:", error);
+      res.status(500).json({ message: "Failed to delete EHR experience" });
+    }
+  });
+
+  // Certifications
+  app.get('/api/questionnaire/certifications', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const consultant = await storage.getConsultantByUserId(userId);
+      
+      if (!consultant) {
+        return res.status(404).json({ message: "Consultant profile not found" });
+      }
+      
+      const certifications = await storage.listConsultantCertifications(consultant.id);
+      res.json(certifications);
+    } catch (error) {
+      console.error("Error fetching certifications:", error);
+      res.status(500).json({ message: "Failed to fetch certifications" });
+    }
+  });
+
+  app.post('/api/questionnaire/certifications', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const consultant = await storage.getConsultantByUserId(userId);
+      
+      if (!consultant) {
+        return res.status(404).json({ message: "Consultant profile not found" });
+      }
+      
+      const certification = await storage.createConsultantCertification({
+        consultantId: consultant.id,
+        ...req.body,
+      });
+      
+      res.status(201).json(certification);
+    } catch (error) {
+      console.error("Error creating certification:", error);
+      res.status(500).json({ message: "Failed to create certification" });
+    }
+  });
+
+  app.patch('/api/questionnaire/certifications/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const updated = await storage.updateConsultantCertification(req.params.id, req.body);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating certification:", error);
+      res.status(500).json({ message: "Failed to update certification" });
+    }
+  });
+
+  app.delete('/api/questionnaire/certifications/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.deleteConsultantCertification(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting certification:", error);
+      res.status(500).json({ message: "Failed to delete certification" });
+    }
+  });
+
+  // Admin: List all questionnaires
+  app.get('/api/admin/questionnaires', isAuthenticated, async (req: any, res) => {
+    try {
+      const status = req.query.status as string | undefined;
+      const questionnaires = await storage.listQuestionnaires({ status });
+      res.json(questionnaires);
+    } catch (error) {
+      console.error("Error fetching questionnaires:", error);
+      res.status(500).json({ message: "Failed to fetch questionnaires" });
+    }
+  });
+
+  // Admin: Verify skill
+  app.post('/api/admin/skills/:skillId/verify', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { status, notes } = req.body;
+      
+      const skill = await storage.getConsultantSkill(req.params.skillId);
+      if (!skill) {
+        return res.status(404).json({ message: "Skill not found" });
+      }
+      
+      // Create verification record
+      await storage.createSkillVerification({
+        consultantSkillId: skill.id,
+        verifiedBy: userId,
+        previousStatus: skill.verificationStatus,
+        newStatus: status,
+        notes,
+      });
+      
+      // Update skill verification status
+      const updated = await storage.updateConsultantSkill(skill.id, {
+        verificationStatus: status,
+        verifiedBy: userId,
+        verifiedAt: new Date(),
+      });
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error verifying skill:", error);
+      res.status(500).json({ message: "Failed to verify skill" });
+    }
+  });
+
+  // Admin: Verify EHR experience
+  app.post('/api/admin/ehr-experience/:id/verify', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { status } = req.body;
+      
+      const updated = await storage.updateConsultantEhrExperience(req.params.id, {
+        verificationStatus: status,
+        verifiedBy: userId,
+        verifiedAt: new Date(),
+      });
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error verifying EHR experience:", error);
+      res.status(500).json({ message: "Failed to verify EHR experience" });
+    }
+  });
+
+  // Admin: Verify questionnaire (mark entire questionnaire as verified)
+  app.post('/api/admin/questionnaires/:id/verify', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const questionnaire = await storage.getConsultantQuestionnaire(req.params.id);
+      if (!questionnaire) {
+        return res.status(404).json({ message: "Questionnaire not found" });
+      }
+      
+      const updated = await storage.updateConsultantQuestionnaire(req.params.id, {
+        status: 'verified',
+        verifiedAt: new Date(),
+        verifiedBy: userId,
+      });
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error verifying questionnaire:", error);
+      res.status(500).json({ message: "Failed to verify questionnaire" });
+    }
+  });
+
+  // Seed skills data endpoint (admin only)
+  app.post('/api/admin/seed-skills', isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.seedSkillsData();
+      res.json({ success: true, message: "Skills data seeded successfully" });
+    } catch (error) {
+      console.error("Error seeding skills data:", error);
+      res.status(500).json({ message: "Failed to seed skills data" });
     }
   });
 

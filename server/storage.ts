@@ -406,6 +406,28 @@ import {
   type KpiDefinitionWithDetails,
   type ReportAnalytics,
   type DashboardAnalytics,
+  skillCategories,
+  skillItems,
+  consultantQuestionnaires,
+  consultantSkills,
+  skillVerifications,
+  consultantEhrExperience,
+  consultantCertifications,
+  type SkillCategory,
+  type InsertSkillCategory,
+  type SkillItem,
+  type InsertSkillItem,
+  type ConsultantQuestionnaire,
+  type InsertConsultantQuestionnaire,
+  type ConsultantSkill,
+  type InsertConsultantSkill,
+  type SkillVerification,
+  type InsertSkillVerification,
+  type ConsultantEhrExperience,
+  type InsertConsultantEhrExperience,
+  type ConsultantCertification,
+  type InsertConsultantCertification,
+  type QuestionnaireWithSkills,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, ilike, or, desc, asc, sql, inArray, lt, gt } from "drizzle-orm";
@@ -1182,6 +1204,62 @@ export interface IStorage {
   // Analytics
   getReportAnalytics(): Promise<ReportAnalytics>;
   getDashboardAnalytics(): Promise<DashboardAnalytics>;
+
+  // ============================================
+  // SKILLS QUESTIONNAIRE
+  // ============================================
+
+  // Skill Categories
+  getSkillCategory(id: string): Promise<SkillCategory | undefined>;
+  listSkillCategories(filters?: { category?: string; isActive?: boolean }): Promise<SkillCategory[]>;
+  createSkillCategory(data: InsertSkillCategory): Promise<SkillCategory>;
+  updateSkillCategory(id: string, data: Partial<InsertSkillCategory>): Promise<SkillCategory | undefined>;
+  deleteSkillCategory(id: string): Promise<boolean>;
+
+  // Skill Items
+  getSkillItem(id: string): Promise<SkillItem | undefined>;
+  listSkillItems(filters?: { categoryId?: string; isActive?: boolean }): Promise<SkillItem[]>;
+  createSkillItem(data: InsertSkillItem): Promise<SkillItem>;
+  updateSkillItem(id: string, data: Partial<InsertSkillItem>): Promise<SkillItem | undefined>;
+  deleteSkillItem(id: string): Promise<boolean>;
+
+  // Consultant Questionnaires
+  getConsultantQuestionnaire(id: string): Promise<ConsultantQuestionnaire | undefined>;
+  getQuestionnaireByConsultantId(consultantId: string): Promise<ConsultantQuestionnaire | undefined>;
+  getQuestionnaireWithSkills(consultantId: string): Promise<QuestionnaireWithSkills | undefined>;
+  createConsultantQuestionnaire(data: InsertConsultantQuestionnaire): Promise<ConsultantQuestionnaire>;
+  updateConsultantQuestionnaire(id: string, data: Partial<InsertConsultantQuestionnaire>): Promise<ConsultantQuestionnaire | undefined>;
+  listQuestionnaires(filters?: { status?: string }): Promise<ConsultantQuestionnaire[]>;
+
+  // Consultant Skills
+  getConsultantSkill(id: string): Promise<ConsultantSkill | undefined>;
+  listConsultantSkills(consultantId: string): Promise<ConsultantSkill[]>;
+  createConsultantSkill(data: InsertConsultantSkill): Promise<ConsultantSkill>;
+  updateConsultantSkill(id: string, data: Partial<InsertConsultantSkill>): Promise<ConsultantSkill | undefined>;
+  deleteConsultantSkill(id: string): Promise<boolean>;
+  upsertConsultantSkill(data: InsertConsultantSkill): Promise<ConsultantSkill>;
+
+  // Skill Verifications
+  createSkillVerification(data: InsertSkillVerification): Promise<SkillVerification>;
+  listSkillVerifications(consultantSkillId: string): Promise<SkillVerification[]>;
+
+  // EHR Experience
+  getConsultantEhrExperience(id: string): Promise<ConsultantEhrExperience | undefined>;
+  listConsultantEhrExperience(consultantId: string): Promise<ConsultantEhrExperience[]>;
+  createConsultantEhrExperience(data: InsertConsultantEhrExperience): Promise<ConsultantEhrExperience>;
+  updateConsultantEhrExperience(id: string, data: Partial<InsertConsultantEhrExperience>): Promise<ConsultantEhrExperience | undefined>;
+  deleteConsultantEhrExperience(id: string): Promise<boolean>;
+  upsertConsultantEhrExperience(consultantId: string, ehrSystem: string, data: Partial<InsertConsultantEhrExperience>): Promise<ConsultantEhrExperience>;
+
+  // Consultant Certifications
+  getConsultantCertification(id: string): Promise<ConsultantCertification | undefined>;
+  listConsultantCertifications(consultantId: string): Promise<ConsultantCertification[]>;
+  createConsultantCertification(data: InsertConsultantCertification): Promise<ConsultantCertification>;
+  updateConsultantCertification(id: string, data: Partial<InsertConsultantCertification>): Promise<ConsultantCertification | undefined>;
+  deleteConsultantCertification(id: string): Promise<boolean>;
+
+  // Seed skill categories and items
+  seedSkillsData(): Promise<void>;
 
   // ============================================
   // RBAC (Role-Based Access Control)
@@ -9002,6 +9080,462 @@ export class DatabaseStorage implements IStorage {
         critical,
       },
     };
+  }
+
+  // ============================================
+  // SKILLS QUESTIONNAIRE Methods
+  // ============================================
+
+  // Skill Categories
+  async getSkillCategory(id: string): Promise<SkillCategory | undefined> {
+    const [category] = await db.select().from(skillCategories).where(eq(skillCategories.id, id));
+    return category;
+  }
+
+  async listSkillCategories(filters?: { category?: string; isActive?: boolean }): Promise<SkillCategory[]> {
+    const conditions: any[] = [];
+    if (filters?.category) conditions.push(eq(skillCategories.category, filters.category as any));
+    if (filters?.isActive !== undefined) conditions.push(eq(skillCategories.isActive, filters.isActive));
+
+    return conditions.length > 0
+      ? db.select().from(skillCategories).where(and(...conditions)).orderBy(asc(skillCategories.sortOrder))
+      : db.select().from(skillCategories).orderBy(asc(skillCategories.sortOrder));
+  }
+
+  async createSkillCategory(data: InsertSkillCategory): Promise<SkillCategory> {
+    const [category] = await db.insert(skillCategories).values(data).returning();
+    return category;
+  }
+
+  async updateSkillCategory(id: string, data: Partial<InsertSkillCategory>): Promise<SkillCategory | undefined> {
+    const [updated] = await db.update(skillCategories).set(data).where(eq(skillCategories.id, id)).returning();
+    return updated;
+  }
+
+  async deleteSkillCategory(id: string): Promise<boolean> {
+    await db.delete(skillItems).where(eq(skillItems.categoryId, id));
+    await db.delete(skillCategories).where(eq(skillCategories.id, id));
+    return true;
+  }
+
+  // Skill Items
+  async getSkillItem(id: string): Promise<SkillItem | undefined> {
+    const [item] = await db.select().from(skillItems).where(eq(skillItems.id, id));
+    return item;
+  }
+
+  async listSkillItems(filters?: { categoryId?: string; isActive?: boolean }): Promise<SkillItem[]> {
+    const conditions: any[] = [];
+    if (filters?.categoryId) conditions.push(eq(skillItems.categoryId, filters.categoryId));
+    if (filters?.isActive !== undefined) conditions.push(eq(skillItems.isActive, filters.isActive));
+
+    return conditions.length > 0
+      ? db.select().from(skillItems).where(and(...conditions)).orderBy(asc(skillItems.sortOrder))
+      : db.select().from(skillItems).orderBy(asc(skillItems.sortOrder));
+  }
+
+  async createSkillItem(data: InsertSkillItem): Promise<SkillItem> {
+    const [item] = await db.insert(skillItems).values(data).returning();
+    return item;
+  }
+
+  async updateSkillItem(id: string, data: Partial<InsertSkillItem>): Promise<SkillItem | undefined> {
+    const [updated] = await db.update(skillItems).set(data).where(eq(skillItems.id, id)).returning();
+    return updated;
+  }
+
+  async deleteSkillItem(id: string): Promise<boolean> {
+    await db.delete(consultantSkills).where(eq(consultantSkills.skillItemId, id));
+    await db.delete(skillItems).where(eq(skillItems.id, id));
+    return true;
+  }
+
+  // Consultant Questionnaires
+  async getConsultantQuestionnaire(id: string): Promise<ConsultantQuestionnaire | undefined> {
+    const [questionnaire] = await db.select().from(consultantQuestionnaires).where(eq(consultantQuestionnaires.id, id));
+    return questionnaire;
+  }
+
+  async getQuestionnaireByConsultantId(consultantId: string): Promise<ConsultantQuestionnaire | undefined> {
+    const [questionnaire] = await db.select().from(consultantQuestionnaires).where(eq(consultantQuestionnaires.consultantId, consultantId));
+    return questionnaire;
+  }
+
+  async getQuestionnaireWithSkills(consultantId: string): Promise<QuestionnaireWithSkills | undefined> {
+    const [questionnaire] = await db.select().from(consultantQuestionnaires).where(eq(consultantQuestionnaires.consultantId, consultantId));
+    if (!questionnaire) return undefined;
+
+    const skills = await db.select({
+      skill: consultantSkills,
+      skillItem: skillItems,
+    })
+      .from(consultantSkills)
+      .leftJoin(skillItems, eq(consultantSkills.skillItemId, skillItems.id))
+      .where(eq(consultantSkills.consultantId, consultantId));
+
+    const ehrExp = await db.select().from(consultantEhrExperience).where(eq(consultantEhrExperience.consultantId, consultantId));
+    const certs = await db.select().from(consultantCertifications).where(eq(consultantCertifications.consultantId, consultantId));
+
+    return {
+      ...questionnaire,
+      skills: skills.map(s => ({ ...s.skill, skillItem: s.skillItem! })),
+      ehrExperience: ehrExp,
+      certifications: certs,
+    };
+  }
+
+  async createConsultantQuestionnaire(data: InsertConsultantQuestionnaire): Promise<ConsultantQuestionnaire> {
+    const [questionnaire] = await db.insert(consultantQuestionnaires).values(data).returning();
+    return questionnaire;
+  }
+
+  async updateConsultantQuestionnaire(id: string, data: Partial<InsertConsultantQuestionnaire>): Promise<ConsultantQuestionnaire | undefined> {
+    const [updated] = await db.update(consultantQuestionnaires)
+      .set({ ...data, updatedAt: new Date(), lastSavedAt: new Date() })
+      .where(eq(consultantQuestionnaires.id, id))
+      .returning();
+    return updated;
+  }
+
+  async listQuestionnaires(filters?: { status?: string }): Promise<ConsultantQuestionnaire[]> {
+    if (filters?.status) {
+      return db.select().from(consultantQuestionnaires).where(eq(consultantQuestionnaires.status, filters.status as any));
+    }
+    return db.select().from(consultantQuestionnaires);
+  }
+
+  // Consultant Skills
+  async getConsultantSkill(id: string): Promise<ConsultantSkill | undefined> {
+    const [skill] = await db.select().from(consultantSkills).where(eq(consultantSkills.id, id));
+    return skill;
+  }
+
+  async listConsultantSkills(consultantId: string): Promise<ConsultantSkill[]> {
+    return db.select().from(consultantSkills).where(eq(consultantSkills.consultantId, consultantId));
+  }
+
+  async createConsultantSkill(data: InsertConsultantSkill): Promise<ConsultantSkill> {
+    const [skill] = await db.insert(consultantSkills).values(data).returning();
+    return skill;
+  }
+
+  async updateConsultantSkill(id: string, data: Partial<InsertConsultantSkill>): Promise<ConsultantSkill | undefined> {
+    const [updated] = await db.update(consultantSkills)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(consultantSkills.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteConsultantSkill(id: string): Promise<boolean> {
+    await db.delete(skillVerifications).where(eq(skillVerifications.consultantSkillId, id));
+    await db.delete(consultantSkills).where(eq(consultantSkills.id, id));
+    return true;
+  }
+
+  async upsertConsultantSkill(data: InsertConsultantSkill): Promise<ConsultantSkill> {
+    const existing = await db.select().from(consultantSkills)
+      .where(and(
+        eq(consultantSkills.consultantId, data.consultantId),
+        eq(consultantSkills.skillItemId, data.skillItemId)
+      ));
+    
+    if (existing.length > 0) {
+      const [updated] = await db.update(consultantSkills)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(consultantSkills.id, existing[0].id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(consultantSkills).values(data).returning();
+      return created;
+    }
+  }
+
+  // Skill Verifications
+  async createSkillVerification(data: InsertSkillVerification): Promise<SkillVerification> {
+    const [verification] = await db.insert(skillVerifications).values(data).returning();
+    return verification;
+  }
+
+  async listSkillVerifications(consultantSkillId: string): Promise<SkillVerification[]> {
+    return db.select().from(skillVerifications).where(eq(skillVerifications.consultantSkillId, consultantSkillId)).orderBy(desc(skillVerifications.createdAt));
+  }
+
+  // EHR Experience
+  async getConsultantEhrExperience(id: string): Promise<ConsultantEhrExperience | undefined> {
+    const [exp] = await db.select().from(consultantEhrExperience).where(eq(consultantEhrExperience.id, id));
+    return exp;
+  }
+
+  async listConsultantEhrExperience(consultantId: string): Promise<ConsultantEhrExperience[]> {
+    return db.select().from(consultantEhrExperience).where(eq(consultantEhrExperience.consultantId, consultantId));
+  }
+
+  async createConsultantEhrExperience(data: InsertConsultantEhrExperience): Promise<ConsultantEhrExperience> {
+    const [exp] = await db.insert(consultantEhrExperience).values(data).returning();
+    return exp;
+  }
+
+  async updateConsultantEhrExperience(id: string, data: Partial<InsertConsultantEhrExperience>): Promise<ConsultantEhrExperience | undefined> {
+    const [updated] = await db.update(consultantEhrExperience)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(consultantEhrExperience.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteConsultantEhrExperience(id: string): Promise<boolean> {
+    await db.delete(consultantEhrExperience).where(eq(consultantEhrExperience.id, id));
+    return true;
+  }
+
+  async upsertConsultantEhrExperience(consultantId: string, ehrSystem: string, data: Partial<InsertConsultantEhrExperience>): Promise<ConsultantEhrExperience> {
+    const existing = await db.select().from(consultantEhrExperience)
+      .where(and(
+        eq(consultantEhrExperience.consultantId, consultantId),
+        eq(consultantEhrExperience.ehrSystem, ehrSystem)
+      ));
+    
+    if (existing.length > 0) {
+      const [updated] = await db.update(consultantEhrExperience)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(consultantEhrExperience.id, existing[0].id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(consultantEhrExperience).values({
+        consultantId,
+        ehrSystem,
+        ...data,
+      } as InsertConsultantEhrExperience).returning();
+      return created;
+    }
+  }
+
+  // Consultant Certifications
+  async getConsultantCertification(id: string): Promise<ConsultantCertification | undefined> {
+    const [cert] = await db.select().from(consultantCertifications).where(eq(consultantCertifications.id, id));
+    return cert;
+  }
+
+  async listConsultantCertifications(consultantId: string): Promise<ConsultantCertification[]> {
+    return db.select().from(consultantCertifications).where(eq(consultantCertifications.consultantId, consultantId));
+  }
+
+  async createConsultantCertification(data: InsertConsultantCertification): Promise<ConsultantCertification> {
+    const [cert] = await db.insert(consultantCertifications).values(data).returning();
+    return cert;
+  }
+
+  async updateConsultantCertification(id: string, data: Partial<InsertConsultantCertification>): Promise<ConsultantCertification | undefined> {
+    const [updated] = await db.update(consultantCertifications)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(consultantCertifications.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteConsultantCertification(id: string): Promise<boolean> {
+    await db.delete(consultantCertifications).where(eq(consultantCertifications.id, id));
+    return true;
+  }
+
+  // Seed skill categories and items
+  async seedSkillsData(): Promise<void> {
+    // Check if already seeded
+    const existingCategories = await db.select().from(skillCategories).limit(1);
+    if (existingCategories.length > 0) return;
+
+    // EHR Systems
+    const ehrSystemsCategory = await this.createSkillCategory({
+      name: 'ehr_systems',
+      displayName: 'EHR Systems',
+      description: 'Electronic Health Record systems experience',
+      category: 'ehr_systems',
+      sortOrder: 1,
+    });
+
+    const ehrSystems = [
+      { name: 'epic', displayName: 'Epic' },
+      { name: 'cerner', displayName: 'Cerner/Oracle Health' },
+      { name: 'meditech', displayName: 'MEDITECH' },
+      { name: 'allscripts', displayName: 'Allscripts' },
+      { name: 'nextgen', displayName: 'NextGen' },
+      { name: 'athenahealth', displayName: 'athenahealth' },
+      { name: 'eclinicalworks', displayName: 'eClinicalWorks' },
+      { name: 'veradigm', displayName: 'Veradigm (Allscripts Practice Fusion)' },
+      { name: 'cpsi', displayName: 'CPSI/TruBridge' },
+      { name: 'medhost', displayName: 'MedHost' },
+    ];
+
+    for (let i = 0; i < ehrSystems.length; i++) {
+      await this.createSkillItem({
+        categoryId: ehrSystemsCategory.id,
+        name: ehrSystems[i].name,
+        displayName: ehrSystems[i].displayName,
+        sortOrder: i + 1,
+      });
+    }
+
+    // Clinical Modules
+    const clinicalModulesCategory = await this.createSkillCategory({
+      name: 'clinical_modules',
+      displayName: 'Clinical Modules',
+      description: 'Clinical application modules experience',
+      category: 'clinical_modules',
+      sortOrder: 2,
+    });
+
+    const clinicalModules = [
+      { name: 'inpatient_nursing', displayName: 'Inpatient Nursing' },
+      { name: 'outpatient_nursing', displayName: 'Outpatient/Ambulatory Nursing' },
+      { name: 'emergency_department', displayName: 'Emergency Department' },
+      { name: 'pharmacy', displayName: 'Pharmacy' },
+      { name: 'laboratory', displayName: 'Laboratory' },
+      { name: 'radiology', displayName: 'Radiology/Imaging' },
+      { name: 'surgical_services', displayName: 'Surgical Services/OR' },
+      { name: 'physician_documentation', displayName: 'Physician Documentation' },
+      { name: 'cpoe', displayName: 'Computerized Provider Order Entry (CPOE)' },
+      { name: 'clinical_decision_support', displayName: 'Clinical Decision Support' },
+      { name: 'health_information_exchange', displayName: 'Health Information Exchange (HIE)' },
+      { name: 'patient_portal', displayName: 'Patient Portal' },
+      { name: 'telehealth', displayName: 'Telehealth/Virtual Care' },
+      { name: 'behavioral_health', displayName: 'Behavioral Health' },
+      { name: 'oncology', displayName: 'Oncology' },
+      { name: 'cardiology', displayName: 'Cardiology' },
+      { name: 'obstetrics', displayName: 'Obstetrics/Labor & Delivery' },
+    ];
+
+    for (let i = 0; i < clinicalModules.length; i++) {
+      await this.createSkillItem({
+        categoryId: clinicalModulesCategory.id,
+        name: clinicalModules[i].name,
+        displayName: clinicalModules[i].displayName,
+        sortOrder: i + 1,
+      });
+    }
+
+    // Revenue Cycle
+    const revenueCycleCategory = await this.createSkillCategory({
+      name: 'revenue_cycle',
+      displayName: 'Revenue Cycle',
+      description: 'Revenue cycle management experience',
+      category: 'revenue_cycle',
+      sortOrder: 3,
+    });
+
+    const revenueCycleModules = [
+      { name: 'patient_registration', displayName: 'Patient Registration/ADT' },
+      { name: 'scheduling', displayName: 'Scheduling' },
+      { name: 'charge_capture', displayName: 'Charge Capture' },
+      { name: 'coding', displayName: 'Coding (ICD-10, CPT)' },
+      { name: 'billing', displayName: 'Billing' },
+      { name: 'claims_management', displayName: 'Claims Management' },
+      { name: 'denials_management', displayName: 'Denials Management' },
+      { name: 'collections', displayName: 'Collections' },
+      { name: 'contract_management', displayName: 'Contract Management' },
+    ];
+
+    for (let i = 0; i < revenueCycleModules.length; i++) {
+      await this.createSkillItem({
+        categoryId: revenueCycleCategory.id,
+        name: revenueCycleModules[i].name,
+        displayName: revenueCycleModules[i].displayName,
+        sortOrder: i + 1,
+      });
+    }
+
+    // Ancillary Systems
+    const ancillaryCategory = await this.createSkillCategory({
+      name: 'ancillary_systems',
+      displayName: 'Ancillary Systems',
+      description: 'Ancillary and departmental systems',
+      category: 'ancillary_systems',
+      sortOrder: 4,
+    });
+
+    const ancillarySystems = [
+      { name: 'pacs', displayName: 'PACS (Picture Archiving)' },
+      { name: 'lis', displayName: 'Laboratory Information System (LIS)' },
+      { name: 'ris', displayName: 'Radiology Information System (RIS)' },
+      { name: 'blood_bank', displayName: 'Blood Bank' },
+      { name: 'dietary', displayName: 'Dietary/Nutrition' },
+      { name: 'materials_management', displayName: 'Materials Management' },
+      { name: 'transport', displayName: 'Patient Transport' },
+      { name: 'bed_management', displayName: 'Bed Management' },
+    ];
+
+    for (let i = 0; i < ancillarySystems.length; i++) {
+      await this.createSkillItem({
+        categoryId: ancillaryCategory.id,
+        name: ancillarySystems[i].name,
+        displayName: ancillarySystems[i].displayName,
+        sortOrder: i + 1,
+      });
+    }
+
+    // Technical Skills
+    const technicalCategory = await this.createSkillCategory({
+      name: 'technical_skills',
+      displayName: 'Technical Skills',
+      description: 'Technical and implementation skills',
+      category: 'technical_skills',
+      sortOrder: 5,
+    });
+
+    const technicalSkills = [
+      { name: 'system_build', displayName: 'System Build/Configuration' },
+      { name: 'data_migration', displayName: 'Data Migration' },
+      { name: 'integration', displayName: 'Integration (HL7, FHIR)' },
+      { name: 'workflow_design', displayName: 'Workflow Design' },
+      { name: 'testing', displayName: 'Testing (Unit, Integration, UAT)' },
+      { name: 'training', displayName: 'End User Training' },
+      { name: 'go_live_support', displayName: 'Go-Live Support' },
+      { name: 'report_writing', displayName: 'Report Writing' },
+      { name: 'sql', displayName: 'SQL/Database Queries' },
+      { name: 'project_management', displayName: 'Project Management' },
+    ];
+
+    for (let i = 0; i < technicalSkills.length; i++) {
+      await this.createSkillItem({
+        categoryId: technicalCategory.id,
+        name: technicalSkills[i].name,
+        displayName: technicalSkills[i].displayName,
+        sortOrder: i + 1,
+      });
+    }
+
+    // Certifications category
+    const certificationsCategory = await this.createSkillCategory({
+      name: 'certifications',
+      displayName: 'Certifications',
+      description: 'Professional certifications',
+      category: 'certifications',
+      sortOrder: 6,
+    });
+
+    const certifications = [
+      { name: 'epic_certified', displayName: 'Epic Certified' },
+      { name: 'cerner_certified', displayName: 'Cerner/Oracle Certified' },
+      { name: 'pmp', displayName: 'PMP (Project Management Professional)' },
+      { name: 'six_sigma', displayName: 'Six Sigma' },
+      { name: 'itil', displayName: 'ITIL' },
+      { name: 'rhia', displayName: 'RHIA (Registered Health Information Administrator)' },
+      { name: 'rhit', displayName: 'RHIT (Registered Health Information Technician)' },
+      { name: 'cphims', displayName: 'CPHIMS (Certified Professional in Healthcare Information)' },
+    ];
+
+    for (let i = 0; i < certifications.length; i++) {
+      await this.createSkillItem({
+        categoryId: certificationsCategory.id,
+        name: certifications[i].name,
+        displayName: certifications[i].displayName,
+        sortOrder: i + 1,
+      });
+    }
+
+    console.log('Skills questionnaire data seeded successfully');
   }
 
   // ============================================
