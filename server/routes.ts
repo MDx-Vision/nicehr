@@ -100,6 +100,15 @@ import {
   insertIdentityDocumentSchema,
   insertVerificationEventSchema,
   insertFraudFlagSchema,
+  insertReportTemplateSchema,
+  insertSavedReportSchema,
+  insertScheduledReportSchema,
+  insertReportRunSchema,
+  insertExportLogSchema,
+  insertExecutiveDashboardSchema,
+  insertDashboardWidgetSchema,
+  insertKpiDefinitionSchema,
+  insertKpiSnapshotSchema,
 } from "@shared/schema";
 import {
   sendWelcomeEmail,
@@ -8649,6 +8658,834 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error updating fraud flag:", error);
       res.status(500).json({ message: "Failed to update fraud flag" });
+    }
+  });
+
+  // ============================================
+  // PHASE 17: REPORTING & BUSINESS INTELLIGENCE
+  // ============================================
+
+  // Report Templates routes (admin only)
+  app.get('/api/report-templates', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        category: req.query.category as string | undefined,
+        isActive: req.query.isActive !== undefined ? req.query.isActive === 'true' : undefined,
+      };
+      const templates = await storage.listReportTemplates(filters);
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching report templates:", error);
+      res.status(500).json({ message: "Failed to fetch report templates" });
+    }
+  });
+
+  app.post('/api/report-templates', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertReportTemplateSchema.parse({
+        ...req.body,
+        createdById: userId,
+      });
+      const template = await storage.createReportTemplate(validated);
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Error creating report template:", error);
+      res.status(400).json({ message: "Failed to create report template" });
+    }
+  });
+
+  app.get('/api/report-templates/:id', isAuthenticated, async (req, res) => {
+    try {
+      const template = await storage.getReportTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ message: "Report template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error("Error fetching report template:", error);
+      res.status(500).json({ message: "Failed to fetch report template" });
+    }
+  });
+
+  app.patch('/api/report-templates/:id', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const updateData = insertReportTemplateSchema.partial().parse(req.body);
+      const template = await storage.updateReportTemplate(req.params.id, updateData);
+      if (!template) {
+        return res.status(404).json({ message: "Report template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error("Error updating report template:", error);
+      res.status(500).json({ message: "Failed to update report template" });
+    }
+  });
+
+  app.delete('/api/report-templates/:id', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const deleted = await storage.deleteReportTemplate(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Report template not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting report template:", error);
+      res.status(500).json({ message: "Failed to delete report template" });
+    }
+  });
+
+  // Saved Reports routes
+  app.get('/api/saved-reports', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const filters = {
+        templateId: req.query.templateId as string | undefined,
+        isFavorite: req.query.isFavorite !== undefined ? req.query.isFavorite === 'true' : undefined,
+        isPublic: req.query.isPublic !== undefined ? req.query.isPublic === 'true' : undefined,
+      };
+      const reports = await storage.listSavedReports(userId, filters);
+      res.json(reports);
+    } catch (error) {
+      console.error("Error fetching saved reports:", error);
+      res.status(500).json({ message: "Failed to fetch saved reports" });
+    }
+  });
+
+  app.post('/api/saved-reports', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertSavedReportSchema.parse({
+        ...req.body,
+        userId,
+      });
+      const report = await storage.createSavedReport(validated);
+      res.status(201).json(report);
+    } catch (error) {
+      console.error("Error creating saved report:", error);
+      res.status(400).json({ message: "Failed to create saved report" });
+    }
+  });
+
+  app.get('/api/saved-reports/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      const report = await storage.getSavedReportWithDetails(req.params.id);
+      
+      if (!report) {
+        return res.status(404).json({ message: "Report not found" });
+      }
+      
+      // Check access: owner or public report or admin
+      if (report.userId !== userId && !report.isPublic && user?.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      res.json(report);
+    } catch (error) {
+      console.error("Error fetching saved report:", error);
+      res.status(500).json({ message: "Failed to fetch saved report" });
+    }
+  });
+
+  app.patch('/api/saved-reports/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      const existingReport = await storage.getSavedReport(req.params.id);
+      
+      if (!existingReport) {
+        return res.status(404).json({ message: "Report not found" });
+      }
+      
+      // Only owner or admin can update
+      if (existingReport.userId !== userId && user?.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const updateData = insertSavedReportSchema.partial().parse(req.body);
+      const report = await storage.updateSavedReport(req.params.id, updateData);
+      res.json(report);
+    } catch (error) {
+      console.error("Error updating saved report:", error);
+      res.status(500).json({ message: "Failed to update saved report" });
+    }
+  });
+
+  app.delete('/api/saved-reports/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      const existingReport = await storage.getSavedReport(req.params.id);
+      
+      if (!existingReport) {
+        return res.status(404).json({ message: "Report not found" });
+      }
+      
+      // Only owner or admin can delete
+      if (existingReport.userId !== userId && user?.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      await storage.deleteSavedReport(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting saved report:", error);
+      res.status(500).json({ message: "Failed to delete saved report" });
+    }
+  });
+
+  // Scheduled Reports routes
+  app.get('/api/scheduled-reports', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const filters = {
+        isActive: req.query.isActive !== undefined ? req.query.isActive === 'true' : undefined,
+      };
+      const schedules = await storage.listScheduledReports(userId, filters);
+      res.json(schedules);
+    } catch (error) {
+      console.error("Error fetching scheduled reports:", error);
+      res.status(500).json({ message: "Failed to fetch scheduled reports" });
+    }
+  });
+
+  app.post('/api/scheduled-reports', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertScheduledReportSchema.parse({
+        ...req.body,
+        userId,
+      });
+      const schedule = await storage.createScheduledReport(validated);
+      res.status(201).json(schedule);
+    } catch (error) {
+      console.error("Error creating scheduled report:", error);
+      res.status(400).json({ message: "Failed to create scheduled report" });
+    }
+  });
+
+  app.get('/api/scheduled-reports/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      const schedule = await storage.getScheduledReport(req.params.id);
+      
+      if (!schedule) {
+        return res.status(404).json({ message: "Scheduled report not found" });
+      }
+      
+      // Only owner or admin can view
+      if (schedule.userId !== userId && user?.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      res.json(schedule);
+    } catch (error) {
+      console.error("Error fetching scheduled report:", error);
+      res.status(500).json({ message: "Failed to fetch scheduled report" });
+    }
+  });
+
+  app.patch('/api/scheduled-reports/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      const existingSchedule = await storage.getScheduledReport(req.params.id);
+      
+      if (!existingSchedule) {
+        return res.status(404).json({ message: "Scheduled report not found" });
+      }
+      
+      // Only owner or admin can update
+      if (existingSchedule.userId !== userId && user?.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const updateData = insertScheduledReportSchema.partial().parse(req.body);
+      const schedule = await storage.updateScheduledReport(req.params.id, updateData);
+      res.json(schedule);
+    } catch (error) {
+      console.error("Error updating scheduled report:", error);
+      res.status(500).json({ message: "Failed to update scheduled report" });
+    }
+  });
+
+  app.delete('/api/scheduled-reports/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      const existingSchedule = await storage.getScheduledReport(req.params.id);
+      
+      if (!existingSchedule) {
+        return res.status(404).json({ message: "Scheduled report not found" });
+      }
+      
+      // Only owner or admin can delete
+      if (existingSchedule.userId !== userId && user?.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      await storage.deleteScheduledReport(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting scheduled report:", error);
+      res.status(500).json({ message: "Failed to delete scheduled report" });
+    }
+  });
+
+  // Report Runs routes
+  app.get('/api/report-runs', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      
+      const filters: { userId?: string; savedReportId?: string; scheduledReportId?: string; status?: string } = {
+        savedReportId: req.query.savedReportId as string | undefined,
+        scheduledReportId: req.query.scheduledReportId as string | undefined,
+        status: req.query.status as string | undefined,
+      };
+      
+      // Non-admins can only see their own runs
+      if (user?.role !== 'admin') {
+        filters.userId = userId;
+      } else if (req.query.userId) {
+        filters.userId = req.query.userId as string;
+      }
+      
+      const runs = await storage.listReportRuns(filters);
+      res.json(runs);
+    } catch (error) {
+      console.error("Error fetching report runs:", error);
+      res.status(500).json({ message: "Failed to fetch report runs" });
+    }
+  });
+
+  app.post('/api/report-runs', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertReportRunSchema.parse({
+        ...req.body,
+        userId,
+      });
+      const run = await storage.createReportRun(validated);
+      res.status(201).json(run);
+    } catch (error) {
+      console.error("Error creating report run:", error);
+      res.status(400).json({ message: "Failed to create report run" });
+    }
+  });
+
+  app.get('/api/report-runs/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      const run = await storage.getReportRun(req.params.id);
+      
+      if (!run) {
+        return res.status(404).json({ message: "Report run not found" });
+      }
+      
+      // Only the person who triggered it or admin can view
+      if (run.userId !== userId && user?.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      res.json(run);
+    } catch (error) {
+      console.error("Error fetching report run:", error);
+      res.status(500).json({ message: "Failed to fetch report run" });
+    }
+  });
+
+  app.patch('/api/report-runs/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      const existingRun = await storage.getReportRun(req.params.id);
+      
+      if (!existingRun) {
+        return res.status(404).json({ message: "Report run not found" });
+      }
+      
+      // Only the person who triggered it or admin can update
+      if (existingRun.userId !== userId && user?.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const updateData = insertReportRunSchema.partial().parse(req.body);
+      const run = await storage.updateReportRun(req.params.id, updateData);
+      res.json(run);
+    } catch (error) {
+      console.error("Error updating report run:", error);
+      res.status(500).json({ message: "Failed to update report run" });
+    }
+  });
+
+  // Export Logs routes
+  app.get('/api/export-logs', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const filters = {
+        exportType: req.query.exportType as string | undefined,
+        format: req.query.format as string | undefined,
+      };
+      const logs = await storage.listExportLogs(userId, filters);
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching export logs:", error);
+      res.status(500).json({ message: "Failed to fetch export logs" });
+    }
+  });
+
+  app.post('/api/export-logs', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertExportLogSchema.parse({
+        ...req.body,
+        userId,
+      });
+      const log = await storage.createExportLog(validated);
+      res.status(201).json(log);
+    } catch (error) {
+      console.error("Error creating export log:", error);
+      res.status(400).json({ message: "Failed to create export log" });
+    }
+  });
+
+  // Executive Dashboards routes
+  app.get('/api/executive-dashboards', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const filters = {
+        isPublic: req.query.isPublic !== undefined ? req.query.isPublic === 'true' : undefined,
+      };
+      const dashboards = await storage.listExecutiveDashboards(userId, filters);
+      res.json(dashboards);
+    } catch (error) {
+      console.error("Error fetching executive dashboards:", error);
+      res.status(500).json({ message: "Failed to fetch executive dashboards" });
+    }
+  });
+
+  app.post('/api/executive-dashboards', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertExecutiveDashboardSchema.parse({
+        ...req.body,
+        userId,
+      });
+      const dashboard = await storage.createExecutiveDashboard(validated);
+      res.status(201).json(dashboard);
+    } catch (error) {
+      console.error("Error creating executive dashboard:", error);
+      res.status(400).json({ message: "Failed to create executive dashboard" });
+    }
+  });
+
+  app.get('/api/executive-dashboards/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      const dashboard = await storage.getExecutiveDashboardWithDetails(req.params.id);
+      
+      if (!dashboard) {
+        return res.status(404).json({ message: "Dashboard not found" });
+      }
+      
+      // Check access: owner or public dashboard or admin
+      if (dashboard.userId !== userId && !dashboard.isPublic && user?.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      res.json(dashboard);
+    } catch (error) {
+      console.error("Error fetching executive dashboard:", error);
+      res.status(500).json({ message: "Failed to fetch executive dashboard" });
+    }
+  });
+
+  app.patch('/api/executive-dashboards/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      const existingDashboard = await storage.getExecutiveDashboard(req.params.id);
+      
+      if (!existingDashboard) {
+        return res.status(404).json({ message: "Dashboard not found" });
+      }
+      
+      // Only owner or admin can update
+      if (existingDashboard.userId !== userId && user?.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const updateData = insertExecutiveDashboardSchema.partial().parse(req.body);
+      const dashboard = await storage.updateExecutiveDashboard(req.params.id, updateData);
+      res.json(dashboard);
+    } catch (error) {
+      console.error("Error updating executive dashboard:", error);
+      res.status(500).json({ message: "Failed to update executive dashboard" });
+    }
+  });
+
+  app.delete('/api/executive-dashboards/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      const existingDashboard = await storage.getExecutiveDashboard(req.params.id);
+      
+      if (!existingDashboard) {
+        return res.status(404).json({ message: "Dashboard not found" });
+      }
+      
+      // Only owner or admin can delete
+      if (existingDashboard.userId !== userId && user?.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      await storage.deleteExecutiveDashboard(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting executive dashboard:", error);
+      res.status(500).json({ message: "Failed to delete executive dashboard" });
+    }
+  });
+
+  // Dashboard Widgets routes
+  app.get('/api/dashboards/:dashboardId/widgets', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      const dashboard = await storage.getExecutiveDashboard(req.params.dashboardId);
+      
+      if (!dashboard) {
+        return res.status(404).json({ message: "Dashboard not found" });
+      }
+      
+      // Check access: owner or public dashboard or admin
+      if (dashboard.userId !== userId && !dashboard.isPublic && user?.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const widgets = await storage.listDashboardWidgets(req.params.dashboardId);
+      res.json(widgets);
+    } catch (error) {
+      console.error("Error fetching dashboard widgets:", error);
+      res.status(500).json({ message: "Failed to fetch dashboard widgets" });
+    }
+  });
+
+  app.post('/api/dashboards/:dashboardId/widgets', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      const dashboard = await storage.getExecutiveDashboard(req.params.dashboardId);
+      
+      if (!dashboard) {
+        return res.status(404).json({ message: "Dashboard not found" });
+      }
+      
+      // Only owner or admin can add widgets
+      if (dashboard.userId !== userId && user?.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const validated = insertDashboardWidgetSchema.parse({
+        ...req.body,
+        dashboardId: req.params.dashboardId,
+      });
+      const widget = await storage.createDashboardWidget(validated);
+      res.status(201).json(widget);
+    } catch (error) {
+      console.error("Error creating dashboard widget:", error);
+      res.status(400).json({ message: "Failed to create dashboard widget" });
+    }
+  });
+
+  app.patch('/api/widgets/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      const widget = await storage.getDashboardWidget(req.params.id);
+      
+      if (!widget) {
+        return res.status(404).json({ message: "Widget not found" });
+      }
+      
+      const dashboard = await storage.getExecutiveDashboard(widget.dashboardId);
+      
+      // Only owner or admin can update widget
+      if (dashboard?.userId !== userId && user?.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const updateData = insertDashboardWidgetSchema.partial().parse(req.body);
+      const updatedWidget = await storage.updateDashboardWidget(req.params.id, updateData);
+      res.json(updatedWidget);
+    } catch (error) {
+      console.error("Error updating widget:", error);
+      res.status(500).json({ message: "Failed to update widget" });
+    }
+  });
+
+  app.delete('/api/widgets/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      const widget = await storage.getDashboardWidget(req.params.id);
+      
+      if (!widget) {
+        return res.status(404).json({ message: "Widget not found" });
+      }
+      
+      const dashboard = await storage.getExecutiveDashboard(widget.dashboardId);
+      
+      // Only owner or admin can delete widget
+      if (dashboard?.userId !== userId && user?.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      await storage.deleteDashboardWidget(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting widget:", error);
+      res.status(500).json({ message: "Failed to delete widget" });
+    }
+  });
+
+  // KPI Definitions routes (admin only)
+  app.get('/api/kpi-definitions', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        category: req.query.category as string | undefined,
+        isActive: req.query.isActive !== undefined ? req.query.isActive === 'true' : undefined,
+      };
+      const kpis = await storage.listKpiDefinitions(filters);
+      res.json(kpis);
+    } catch (error) {
+      console.error("Error fetching KPI definitions:", error);
+      res.status(500).json({ message: "Failed to fetch KPI definitions" });
+    }
+  });
+
+  app.post('/api/kpi-definitions', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertKpiDefinitionSchema.parse({
+        ...req.body,
+        createdById: userId,
+      });
+      const kpi = await storage.createKpiDefinition(validated);
+      res.status(201).json(kpi);
+    } catch (error) {
+      console.error("Error creating KPI definition:", error);
+      res.status(400).json({ message: "Failed to create KPI definition" });
+    }
+  });
+
+  app.get('/api/kpi-definitions/:id', isAuthenticated, async (req, res) => {
+    try {
+      const kpi = await storage.getKpiDefinition(req.params.id);
+      if (!kpi) {
+        return res.status(404).json({ message: "KPI definition not found" });
+      }
+      res.json(kpi);
+    } catch (error) {
+      console.error("Error fetching KPI definition:", error);
+      res.status(500).json({ message: "Failed to fetch KPI definition" });
+    }
+  });
+
+  app.patch('/api/kpi-definitions/:id', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const updateData = insertKpiDefinitionSchema.partial().parse(req.body);
+      const kpi = await storage.updateKpiDefinition(req.params.id, updateData);
+      if (!kpi) {
+        return res.status(404).json({ message: "KPI definition not found" });
+      }
+      res.json(kpi);
+    } catch (error) {
+      console.error("Error updating KPI definition:", error);
+      res.status(500).json({ message: "Failed to update KPI definition" });
+    }
+  });
+
+  app.delete('/api/kpi-definitions/:id', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const deleted = await storage.deleteKpiDefinition(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "KPI definition not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting KPI definition:", error);
+      res.status(500).json({ message: "Failed to delete KPI definition" });
+    }
+  });
+
+  // KPI Snapshots routes
+  app.get('/api/kpis/:kpiId/snapshots', isAuthenticated, async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+      const snapshots = await storage.listKpiSnapshots(req.params.kpiId, { limit });
+      res.json(snapshots);
+    } catch (error) {
+      console.error("Error fetching KPI snapshots:", error);
+      res.status(500).json({ message: "Failed to fetch KPI snapshots" });
+    }
+  });
+
+  app.post('/api/kpis/:kpiId/snapshots', isAuthenticated, async (req: any, res) => {
+    try {
+      const kpi = await storage.getKpiDefinition(req.params.kpiId);
+      if (!kpi) {
+        return res.status(404).json({ message: "KPI definition not found" });
+      }
+      
+      const validated = insertKpiSnapshotSchema.parse({
+        ...req.body,
+        kpiId: req.params.kpiId,
+      });
+      const snapshot = await storage.createKpiSnapshot(validated);
+      res.status(201).json(snapshot);
+    } catch (error) {
+      console.error("Error creating KPI snapshot:", error);
+      res.status(400).json({ message: "Failed to create KPI snapshot" });
+    }
+  });
+
+  // Reporting Analytics routes
+  app.get('/api/analytics/reports', isAuthenticated, async (req, res) => {
+    try {
+      const analytics = await storage.getReportAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching report analytics:", error);
+      res.status(500).json({ message: "Failed to fetch report analytics" });
+    }
+  });
+
+  app.get('/api/analytics/dashboards', isAuthenticated, async (req, res) => {
+    try {
+      const analytics = await storage.getDashboardAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching dashboard analytics:", error);
+      res.status(500).json({ message: "Failed to fetch dashboard analytics" });
+    }
+  });
+
+  // Report Preview/Execute endpoint
+  app.post('/api/reports/preview', isAuthenticated, async (req: any, res) => {
+    try {
+      const { dataSource, selectedFields, filters, groupBy, sortBy, limit = 50 } = req.body;
+      
+      if (!dataSource || !selectedFields || selectedFields.length === 0) {
+        return res.status(400).json({ message: "Data source and at least one field are required" });
+      }
+
+      let data: any[] = [];
+      
+      switch (dataSource) {
+        case 'consultants': {
+          const consultants = await storage.getAllConsultants();
+          data = consultants.map((c: any) => ({
+            id: c.id,
+            firstName: c.firstName,
+            lastName: c.lastName,
+            email: c.email,
+            location: c.location,
+            yearsExperience: c.yearsExperience,
+            isAvailable: c.isAvailable,
+            averageRating: c.averageRating,
+            completedProjects: c.completedProjects,
+            shiftPreference: c.shiftPreference,
+            createdAt: c.createdAt,
+          }));
+          break;
+        }
+        case 'hospitals': {
+          const hospitals = await storage.getAllHospitals();
+          data = hospitals.map((h: any) => ({
+            id: h.id,
+            name: h.name,
+            type: h.type,
+            location: h.location,
+            contactName: h.contactName,
+            contactEmail: h.contactEmail,
+            status: h.status,
+            isActive: h.isActive,
+            createdAt: h.createdAt,
+          }));
+          break;
+        }
+        case 'projects': {
+          const projects = await storage.getAllProjects();
+          data = projects.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            hospitalName: p.hospitalName,
+            ehrSystem: p.ehrSystem,
+            status: p.status,
+            currentPhase: p.currentPhase,
+            startDate: p.startDate,
+            endDate: p.endDate,
+            budget: p.budget,
+            createdAt: p.createdAt,
+          }));
+          break;
+        }
+        default:
+          return res.status(400).json({ message: "Invalid data source" });
+      }
+
+      const filteredData = data.map(row => {
+        const filteredRow: Record<string, any> = {};
+        selectedFields.forEach((field: string) => {
+          if (field in row) {
+            filteredRow[field] = row[field];
+          }
+        });
+        return filteredRow;
+      });
+
+      const limitedData = filteredData.slice(0, Math.min(limit, 100));
+
+      res.json({
+        data: limitedData,
+        totalCount: data.length,
+        fields: selectedFields,
+      });
+    } catch (error) {
+      console.error("Error generating report preview:", error);
+      res.status(500).json({ message: "Failed to generate report preview" });
+    }
+  });
+
+  // Scheduled Report creation for Report Builder
+  app.post('/api/reports/schedule', isAuthenticated, async (req: any, res) => {
+    try {
+      const { reportId, schedule, recipients, format } = req.body;
+      
+      if (!reportId || !schedule) {
+        return res.status(400).json({ message: "Report ID and schedule are required" });
+      }
+
+      const scheduledReport = await storage.createScheduledReport({
+        reportId,
+        schedule,
+        recipients: recipients || [],
+        format: format || 'pdf',
+        isActive: true,
+        createdBy: req.user.claims.sub,
+      });
+
+      res.status(201).json(scheduledReport);
+    } catch (error) {
+      console.error("Error scheduling report:", error);
+      res.status(500).json({ message: "Failed to schedule report" });
     }
   });
 

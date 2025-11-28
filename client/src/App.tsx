@@ -57,6 +57,8 @@ import ComplianceCenter from "@/pages/ComplianceCenter";
 import Contracts from "@/pages/Contracts";
 import Chat from "@/pages/Chat";
 import IdentityVerification from "@/pages/IdentityVerification";
+import ReportBuilder from "@/pages/ReportBuilder";
+import ExecutiveDashboard from "@/pages/ExecutiveDashboard";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -210,6 +212,8 @@ function Router() {
       <Route path="/contracts" component={() => <ProtectedRoute component={Contracts} />} />
       <Route path="/chat" component={() => <ProtectedRoute component={Chat} />} />
       <Route path="/identity-verification" component={() => <ProtectedRoute component={IdentityVerification} />} />
+      <Route path="/report-builder" component={() => <ProtectedRoute component={ReportBuilder} />} />
+      <Route path="/executive-dashboard" component={() => <ProtectedRoute component={ExecutiveDashboard} />} />
       <Route component={NotFound} />
     </Switch>
   );

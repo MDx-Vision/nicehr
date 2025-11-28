@@ -30,6 +30,12 @@ export async function logActivity(
   req?: Request
 ): Promise<void> {
   try {
+    const user = await storage.getUser(userId);
+    if (!user) {
+      console.warn(`Activity logging skipped: User ${userId} not found in database`);
+      return;
+    }
+    
     await storage.logUserActivity({
       userId,
       activityType: params.activityType,

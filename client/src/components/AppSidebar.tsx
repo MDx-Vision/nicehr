@@ -54,6 +54,8 @@ import {
   FileSignature,
   MessageCircle,
   UserCheck,
+  FileBarChart,
+  Gauge,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -61,6 +63,8 @@ import { usePermissions } from "@/hooks/use-permissions";
 const adminItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Analytics", url: "/analytics", icon: LineChart },
+  { title: "Executive Dashboard", url: "/executive-dashboard", icon: Gauge },
+  { title: "Report Builder", url: "/report-builder", icon: FileBarChart },
   { title: "Hospitals", url: "/hospitals", icon: Building2 },
   { title: "Consultants", url: "/consultants", icon: Users },
   { title: "Projects", url: "/projects", icon: FolderKanban },
@@ -99,6 +103,8 @@ const adminItems = [
 const consultantItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Analytics", url: "/analytics", icon: LineChart },
+  { title: "Executive Dashboard", url: "/executive-dashboard", icon: Gauge },
+  { title: "Report Builder", url: "/report-builder", icon: FileBarChart },
   { title: "My Profile", url: "/profile", icon: Users },
   { title: "My Onboarding", url: "/onboarding", icon: ClipboardCheck },
   { title: "Training", url: "/training", icon: GraduationCap },
