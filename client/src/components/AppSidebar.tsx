@@ -41,6 +41,10 @@ import {
   Ticket,
   FileCheck,
   AlertTriangle,
+  DollarSign,
+  Receipt,
+  Banknote,
+  TrendingUp,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -65,6 +69,9 @@ const adminItems = [
   { title: "Timesheets", url: "/timesheets", icon: Clock },
   { title: "Availability", url: "/availability", icon: CalendarDays },
   { title: "Shift Swaps", url: "/shift-swaps", icon: ArrowLeftRight },
+  { title: "Expenses", url: "/expenses", icon: DollarSign },
+  { title: "Invoices", url: "/invoices", icon: Receipt },
+  { title: "Payroll", url: "/payroll", icon: Banknote },
   { title: "Budget Calculator", url: "/budget", icon: Calculator },
   { title: "ROI Dashboard", url: "/roi", icon: BarChart3 },
   { title: "Documents", url: "/documents", icon: FileText },
@@ -87,6 +94,8 @@ const consultantItems = [
   { title: "Timesheets", url: "/timesheets", icon: Clock },
   { title: "Availability", url: "/availability", icon: CalendarDays },
   { title: "Shift Swaps", url: "/shift-swaps", icon: ArrowLeftRight },
+  { title: "Expenses", url: "/expenses", icon: DollarSign },
+  { title: "Payroll", url: "/payroll", icon: Banknote },
   { title: "Documents", url: "/my-documents", icon: FileText },
 ];
 
@@ -103,6 +112,7 @@ const hospitalStaffItems = [
   { title: "Schedules", url: "/schedules", icon: Calendar },
   { title: "Timesheets", url: "/timesheets", icon: Clock },
   { title: "Shift Swaps", url: "/shift-swaps", icon: ArrowLeftRight },
+  { title: "Invoices", url: "/invoices", icon: Receipt },
   { title: "Consultants", url: "/consultants", icon: Users },
   { title: "ROI Survey", url: "/roi-survey", icon: BarChart3 },
 ];
@@ -227,6 +237,18 @@ export function AppSidebar() {
                     <Link href="/activity-log">
                       <Activity className="w-4 h-4" />
                       <span>Activity Log</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location === "/budget-modeling"}
+                    data-testid="nav-budget-modeling"
+                  >
+                    <Link href="/budget-modeling">
+                      <TrendingUp className="w-4 h-4" />
+                      <span>Budget Modeling</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

@@ -44,6 +44,10 @@ import KnowledgeBase from "@/pages/KnowledgeBase";
 import SupportTickets from "@/pages/SupportTickets";
 import EodReports from "@/pages/EodReports";
 import EscalationManagement from "@/pages/EscalationManagement";
+import Expenses from "@/pages/Expenses";
+import Invoices from "@/pages/Invoices";
+import Payroll from "@/pages/Payroll";
+import BudgetModeling from "@/pages/BudgetModeling";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -184,6 +188,10 @@ function Router() {
       <Route path="/support-tickets" component={() => <ProtectedRoute component={SupportTickets} />} />
       <Route path="/eod-reports" component={() => <ProtectedRoute component={EodReports} />} />
       <Route path="/escalation-management" component={() => <ProtectedRoute component={EscalationManagement} requiredRoles={["admin"]} />} />
+      <Route path="/expenses" component={() => <ProtectedRoute component={Expenses} />} />
+      <Route path="/invoices" component={() => <ProtectedRoute component={Invoices} />} />
+      <Route path="/payroll" component={() => <ProtectedRoute component={Payroll} />} />
+      <Route path="/budget-modeling" component={() => <ProtectedRoute component={BudgetModeling} requiredRoles={["admin"]} />} />
       <Route component={NotFound} />
     </Switch>
   );
