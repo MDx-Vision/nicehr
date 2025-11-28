@@ -48,6 +48,9 @@ import {
   Plane,
   Luggage,
   Bus,
+  Target,
+  Award,
+  ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -80,6 +83,9 @@ const adminItems = [
   { title: "Payroll", url: "/payroll", icon: Banknote },
   { title: "Budget Calculator", url: "/budget", icon: Calculator },
   { title: "ROI Dashboard", url: "/roi", icon: BarChart3 },
+  { title: "Quality Assurance", url: "/quality-assurance", icon: Target },
+  { title: "Gamification", url: "/gamification", icon: Award },
+  { title: "Compliance Center", url: "/compliance-center", icon: ShieldCheck },
   { title: "Documents", url: "/documents", icon: FileText },
   { title: "Search", url: "/search", icon: Search },
 ];
@@ -105,6 +111,8 @@ const consultantItems = [
   { title: "Transportation", url: "/transportation", icon: Bus },
   { title: "Expenses", url: "/expenses", icon: DollarSign },
   { title: "Payroll", url: "/payroll", icon: Banknote },
+  { title: "Quality Assurance", url: "/quality-assurance", icon: Target },
+  { title: "Gamification", url: "/gamification", icon: Award },
   { title: "Documents", url: "/my-documents", icon: FileText },
 ];
 
@@ -123,6 +131,7 @@ const hospitalStaffItems = [
   { title: "Shift Swaps", url: "/shift-swaps", icon: ArrowLeftRight },
   { title: "Transportation", url: "/transportation", icon: Bus },
   { title: "Invoices", url: "/invoices", icon: Receipt },
+  { title: "Quality Assurance", url: "/quality-assurance", icon: Target },
   { title: "Consultants", url: "/consultants", icon: Users },
   { title: "ROI Survey", url: "/roi-survey", icon: BarChart3 },
 ];

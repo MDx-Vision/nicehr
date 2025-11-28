@@ -4559,3 +4559,53 @@ export interface ComplianceAnalytics {
   }>;
   upcomingExpirations: ComplianceCheckWithDetails[];
 }
+
+// ============================================
+// AI INSIGHTS TYPES
+// ============================================
+
+export interface AIInsight {
+  id: string;
+  type: 'recommendation' | 'warning' | 'prediction' | 'trend';
+  category: 'performance' | 'compliance' | 'staffing' | 'risk' | 'opportunity';
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  title: string;
+  description: string;
+  actionItems?: string[];
+  metric?: {
+    name: string;
+    currentValue: number;
+    predictedValue?: number;
+    trend: 'up' | 'down' | 'stable';
+  };
+  confidence: number; // 0-100
+  generatedAt: string;
+}
+
+export interface AIAnalytics {
+  overallHealthScore: number;
+  insights: AIInsight[];
+  consultantRecommendations: Array<{
+    consultantId: string;
+    consultantName: string;
+    matchScore: number;
+    reason: string;
+  }>;
+  attritionRisks: Array<{
+    consultantId: string;
+    consultantName: string;
+    riskLevel: 'low' | 'medium' | 'high';
+    factors: string[];
+  }>;
+  demandForecast: Array<{
+    period: string;
+    projectedDemand: number;
+    currentCapacity: number;
+    gap: number;
+  }>;
+  performanceTrends: Array<{
+    metric: string;
+    values: Array<{ period: string; value: number }>;
+    trend: 'improving' | 'declining' | 'stable';
+  }>;
+}

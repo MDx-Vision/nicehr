@@ -7898,5 +7898,20 @@ export async function registerRoutes(
     }
   });
 
+  // ============================================
+  // AI ANALYTICS ROUTES
+  // ============================================
+
+  // Get AI-powered insights and recommendations
+  app.get('/api/analytics/ai', isAuthenticated, async (req, res) => {
+    try {
+      const analytics = await storage.getAIAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching AI analytics:", error);
+      res.status(500).json({ message: "Failed to fetch AI analytics" });
+    }
+  });
+
   return httpServer;
 }
