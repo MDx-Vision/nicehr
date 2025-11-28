@@ -1793,6 +1793,32 @@ export async function registerRoutes(
     }
   });
 
+  // Development-only: Get all available roles for dev mode switcher
+  app.get('/api/dev/roles', isAuthenticated, async (req: any, res) => {
+    try {
+      // Only allow in development
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(403).json({ message: "Not available in production" });
+      }
+      
+      await ensureRbacSeeded();
+      
+      // Get all roles from the database
+      const allRoles = await storage.listRoles();
+      
+      res.json(allRoles.map(r => ({
+        id: r.id,
+        name: r.name,
+        displayName: r.displayName,
+        description: r.description,
+        roleType: r.roleType,
+      })));
+    } catch (error) {
+      console.error("Error fetching dev roles:", error);
+      res.status(500).json({ message: "Failed to fetch dev roles" });
+    }
+  });
+
   // Development-only: Get permissions for a simulated role (for testing different views)
   app.get('/api/dev/permissions/:role', isAuthenticated, async (req: any, res) => {
     try {
@@ -1802,20 +1828,32 @@ export async function registerRoutes(
       }
       
       const simulatedRole = req.params.role as string;
-      const validRoles = ['admin', 'consultant', 'hospital_staff'];
       
-      if (!validRoles.includes(simulatedRole)) {
+      await ensureRbacSeeded();
+      
+      // Verify role exists in the database
+      const roleData = await storage.getRoleByName(simulatedRole);
+      if (!roleData) {
         return res.status(400).json({ message: "Invalid role" });
       }
       
-      // Build simulated permissions based on role
+      // Determine role level based on role type and name
       let roleLevel: 'admin' | 'hospital_leadership' | 'hospital_staff' | 'consultant' = 'consultant';
       let isLeadership = false;
       
       if (simulatedRole === 'admin') {
         roleLevel = 'admin';
-      } else if (simulatedRole === 'hospital_staff') {
+      } else if (simulatedRole === 'hospital_leadership') {
+        roleLevel = 'hospital_leadership';
+        isLeadership = true;
+      } else if (simulatedRole === 'hospital_staff' || simulatedRole === 'super_user') {
         roleLevel = 'hospital_staff';
+      } else if (['implementation_project_manager', 'go_live_coordinator', 'training_lead', 
+                  'command_center_manager', 'quality_assurance_lead', 'support_desk_lead',
+                  'stabilization_lead', 'transition_coordinator', 'optimization_analyst'].includes(simulatedRole)) {
+        // Implementation leadership roles get elevated permissions
+        roleLevel = 'consultant';
+        isLeadership = true;
       } else {
         roleLevel = 'consultant';
       }
@@ -1872,11 +1910,6 @@ export async function registerRoutes(
       }
       
       const simulatedRole = req.params.role as string;
-      const validRoles = ['admin', 'consultant', 'hospital_staff'];
-      
-      if (!validRoles.includes(simulatedRole)) {
-        return res.status(400).json({ message: "Invalid role" });
-      }
       
       await ensureRbacSeeded();
       

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -7,18 +8,41 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { Bug, User, Shield, Building2, X } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Bug, User, Shield, Building2, X, Users, Wrench, GraduationCap, Headphones, CheckCircle, Sparkles, ArrowRightLeft } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 
 const DEV_ROLE_KEY = "nicehr_dev_role_override";
 
-const ROLES = [
-  { value: "admin", label: "Admin", icon: Shield, description: "Full system access" },
-  { value: "consultant", label: "Consultant", icon: User, description: "Consultant view" },
-  { value: "hospital_staff", label: "Hospital Staff", icon: Building2, description: "Hospital staff view" },
-] as const;
+interface DevRole {
+  id: string;
+  name: string;
+  displayName: string;
+  description: string;
+  roleType: 'base' | 'implementation' | 'custom';
+}
+
+const ROLE_ICONS: Record<string, typeof Shield> = {
+  admin: Shield,
+  hospital_leadership: Building2,
+  hospital_staff: Building2,
+  consultant: User,
+  implementation_project_manager: Users,
+  go_live_coordinator: Sparkles,
+  training_lead: GraduationCap,
+  command_center_manager: Headphones,
+  application_analyst: Wrench,
+  support_desk_lead: Headphones,
+  quality_assurance_lead: CheckCircle,
+  at_the_elbow_support: User,
+  super_user: User,
+  optimization_analyst: Wrench,
+  stabilization_lead: CheckCircle,
+  transition_coordinator: ArrowRightLeft,
+};
 
 export function getDevRoleOverride(): string | null {
   if (typeof window === "undefined") return null;
@@ -29,6 +53,12 @@ export function DevRoleSwitcher() {
   const [overrideRole, setOverrideRole] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
+  const { data: roles = [] } = useQuery<DevRole[]>({
+    queryKey: ['/api/dev/roles'],
+    staleTime: 300000,
+    enabled: isOpen,
+  });
+
   useEffect(() => {
     setOverrideRole(getDevRoleOverride());
   }, []);
@@ -37,7 +67,6 @@ export function DevRoleSwitcher() {
     localStorage.setItem(DEV_ROLE_KEY, role);
     setOverrideRole(role);
     setIsOpen(false);
-    // Invalidate all auth and permissions queries
     queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     queryClient.invalidateQueries({ predicate: (query) => {
       const key = query.queryKey[0]?.toString() ?? '';
@@ -52,7 +81,6 @@ export function DevRoleSwitcher() {
     localStorage.removeItem(DEV_ROLE_KEY);
     setOverrideRole(null);
     setIsOpen(false);
-    // Invalidate all auth and permissions queries
     queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     queryClient.invalidateQueries({ predicate: (query) => {
       const key = query.queryKey[0]?.toString() ?? '';
@@ -63,7 +91,15 @@ export function DevRoleSwitcher() {
     window.location.reload();
   };
 
-  const activeRole = ROLES.find(r => r.value === overrideRole);
+  const activeRole = roles.find(r => r.name === overrideRole);
+  
+  const baseRoles = roles.filter(r => r.roleType === 'base');
+  const implementationRoles = roles.filter(r => r.roleType === 'implementation');
+  const customRoles = roles.filter(r => r.roleType === 'custom');
+
+  const getIcon = (roleName: string) => {
+    return ROLE_ICONS[roleName] || User;
+  };
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
@@ -77,40 +113,115 @@ export function DevRoleSwitcher() {
           <Bug className="h-4 w-4" />
           {overrideRole ? (
             <>
-              Testing: {activeRole?.label}
+              Testing: {activeRole?.displayName || overrideRole}
             </>
           ) : (
             "Dev Mode"
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-72">
         <DropdownMenuLabel className="flex items-center gap-2">
           <Bug className="h-4 w-4" />
           Test Different Roles
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {ROLES.map((role) => {
-          const Icon = role.icon;
-          const isActive = overrideRole === role.value;
-          return (
-            <DropdownMenuItem
-              key={role.value}
-              onClick={() => handleSelectRole(role.value)}
-              className="cursor-pointer"
-              data-testid={`menu-item-role-${role.value}`}
-            >
-              <Icon className="h-4 w-4 mr-2" />
-              <div className="flex-1">
-                <div className="font-medium">{role.label}</div>
-                <div className="text-xs text-muted-foreground">{role.description}</div>
-              </div>
-              {isActive && (
-                <Badge variant="secondary" className="ml-2">Active</Badge>
-              )}
-            </DropdownMenuItem>
-          );
-        })}
+        
+        <ScrollArea className="h-[400px]">
+          {baseRoles.length > 0 && (
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="text-xs text-muted-foreground font-normal px-2 py-1">
+                Base Roles
+              </DropdownMenuLabel>
+              {baseRoles.map((role) => {
+                const Icon = getIcon(role.name);
+                const isActive = overrideRole === role.name;
+                return (
+                  <DropdownMenuItem
+                    key={role.name}
+                    onClick={() => handleSelectRole(role.name)}
+                    className="cursor-pointer"
+                    data-testid={`menu-item-role-${role.name}`}
+                  >
+                    <Icon className="h-4 w-4 mr-2 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate">{role.displayName}</div>
+                      <div className="text-xs text-muted-foreground truncate">{role.description}</div>
+                    </div>
+                    {isActive && (
+                      <Badge variant="secondary" className="ml-2 flex-shrink-0">Active</Badge>
+                    )}
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuGroup>
+          )}
+          
+          {implementationRoles.length > 0 && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <DropdownMenuLabel className="text-xs text-muted-foreground font-normal px-2 py-1">
+                  Implementation Roles
+                </DropdownMenuLabel>
+                {implementationRoles.map((role) => {
+                  const Icon = getIcon(role.name);
+                  const isActive = overrideRole === role.name;
+                  return (
+                    <DropdownMenuItem
+                      key={role.name}
+                      onClick={() => handleSelectRole(role.name)}
+                      className="cursor-pointer"
+                      data-testid={`menu-item-role-${role.name}`}
+                    >
+                      <Icon className="h-4 w-4 mr-2 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{role.displayName}</div>
+                        <div className="text-xs text-muted-foreground truncate">{role.description}</div>
+                      </div>
+                      {isActive && (
+                        <Badge variant="secondary" className="ml-2 flex-shrink-0">Active</Badge>
+                      )}
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuGroup>
+            </>
+          )}
+          
+          {customRoles.length > 0 && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <DropdownMenuLabel className="text-xs text-muted-foreground font-normal px-2 py-1">
+                  Custom Roles
+                </DropdownMenuLabel>
+                {customRoles.map((role) => {
+                  const Icon = getIcon(role.name);
+                  const isActive = overrideRole === role.name;
+                  return (
+                    <DropdownMenuItem
+                      key={role.name}
+                      onClick={() => handleSelectRole(role.name)}
+                      className="cursor-pointer"
+                      data-testid={`menu-item-role-${role.name}`}
+                    >
+                      <Icon className="h-4 w-4 mr-2 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{role.displayName}</div>
+                        <div className="text-xs text-muted-foreground truncate">{role.description}</div>
+                      </div>
+                      {isActive && (
+                        <Badge variant="secondary" className="ml-2 flex-shrink-0">Active</Badge>
+                      )}
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuGroup>
+            </>
+          )}
+        </ScrollArea>
+        
         {overrideRole && (
           <>
             <DropdownMenuSeparator />
