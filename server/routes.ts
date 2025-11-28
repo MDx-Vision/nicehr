@@ -10218,6 +10218,86 @@ export async function registerRoutes(
     }
   });
 
+  // ==========================================
+  // Personal Information API Endpoints
+  // ==========================================
+
+  // Get consultant's personal information
+  app.get('/api/personal-info', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const consultant = await storage.getConsultantByUserId(userId);
+      
+      if (!consultant) {
+        return res.status(404).json({ message: "Consultant profile not found" });
+      }
+      
+      // Return only personal info fields
+      const personalInfo = {
+        preferredName: consultant.preferredName,
+        birthday: consultant.birthday,
+        tshirtSize: consultant.tshirtSize,
+        dietaryRestrictions: consultant.dietaryRestrictions,
+        allergies: consultant.allergies,
+        languages: consultant.languages || [],
+        emergencyContactName: consultant.emergencyContactName,
+        emergencyContactPhone: consultant.emergencyContactPhone,
+        emergencyContactRelation: consultant.emergencyContactRelation,
+        personalInfoCompleted: consultant.personalInfoCompleted,
+      };
+      
+      res.json(personalInfo);
+    } catch (error) {
+      console.error("Error fetching personal info:", error);
+      res.status(500).json({ message: "Failed to fetch personal information" });
+    }
+  });
+
+  // Update consultant's personal information
+  app.patch('/api/personal-info', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const consultant = await storage.getConsultantByUserId(userId);
+      
+      if (!consultant) {
+        return res.status(404).json({ message: "Consultant profile not found" });
+      }
+      
+      const {
+        preferredName,
+        birthday,
+        tshirtSize,
+        dietaryRestrictions,
+        allergies,
+        languages,
+        emergencyContactName,
+        emergencyContactPhone,
+        emergencyContactRelation,
+      } = req.body;
+      
+      // Determine if personal info is complete (at least emergency contact filled)
+      const personalInfoCompleted = !!(emergencyContactName && emergencyContactPhone);
+      
+      const updated = await storage.updateConsultant(consultant.id, {
+        preferredName,
+        birthday,
+        tshirtSize,
+        dietaryRestrictions,
+        allergies,
+        languages,
+        emergencyContactName,
+        emergencyContactPhone,
+        emergencyContactRelation,
+        personalInfoCompleted,
+      });
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating personal info:", error);
+      res.status(500).json({ message: "Failed to update personal information" });
+    }
+  });
+
   // Setup WebSocket server for real-time chat
   const { setupWebSocket } = await import('./websocket');
   setupWebSocket(httpServer);
