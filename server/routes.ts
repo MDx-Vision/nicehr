@@ -10167,6 +10167,46 @@ export async function registerRoutes(
     }
   });
 
+  // Admin: Verify or reject questionnaire
+  app.post('/api/admin/questionnaires/verify', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const { questionnaireId, action, notes } = req.body;
+      
+      if (!questionnaireId || !action) {
+        return res.status(400).json({ message: "questionnaireId and action are required" });
+      }
+      
+      if (action !== 'verify' && action !== 'reject') {
+        return res.status(400).json({ message: "action must be 'verify' or 'reject'" });
+      }
+      
+      const questionnaire = await storage.getConsultantQuestionnaire(questionnaireId);
+      if (!questionnaire) {
+        return res.status(404).json({ message: "Questionnaire not found" });
+      }
+      
+      const newStatus = action === 'verify' ? 'verified' : 'rejected';
+      
+      const updated = await storage.updateConsultantQuestionnaire(questionnaireId, {
+        status: newStatus,
+        verifiedAt: new Date(),
+        verifiedBy: userId,
+      });
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error processing questionnaire verification:", error);
+      res.status(500).json({ message: "Failed to process verification" });
+    }
+  });
+
   // Seed skills data endpoint (admin only)
   app.post('/api/admin/seed-skills', isAuthenticated, async (req: any, res) => {
     try {

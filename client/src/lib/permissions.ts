@@ -67,6 +67,7 @@ export const NAVIGATION_CONFIG: NavigationItem[] = [
   { title: "Search", url: "/search", icon: "Search", category: "communication", roles: ["admin", "hospital_leadership"] },
   
   { title: "Role Management", url: "/role-management", icon: "KeyRound", category: "admin", roles: ["admin"], requiredPermission: "rbac:manage" },
+  { title: "Skills Verification", url: "/skills-verification", icon: "ClipboardCheck", category: "admin", roles: ["admin"] },
 ];
 
 export const CATEGORY_LABELS: Record<string, string> = {

@@ -63,6 +63,7 @@ import ReportBuilder from "@/pages/ReportBuilder";
 import ExecutiveDashboard from "@/pages/ExecutiveDashboard";
 import RoleManagement from "@/pages/RoleManagement";
 import SkillsQuestionnaire from "@/pages/SkillsQuestionnaire";
+import SkillsVerification from "@/pages/SkillsVerification";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -221,6 +222,7 @@ function Router() {
       <Route path="/executive-dashboard" component={() => <ProtectedRoute component={ExecutiveDashboard} />} />
       <Route path="/role-management" component={() => <ProtectedRoute component={RoleManagement} requiredRoles={["admin"]} />} />
       <Route path="/skills-questionnaire" component={() => <ProtectedRoute component={SkillsQuestionnaire} />} />
+      <Route path="/skills-verification" component={() => <ProtectedRoute component={SkillsVerification} requiredRoles={["admin"]} />} />
       <Route component={NotFound} />
     </Switch>
   );

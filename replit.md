@@ -120,6 +120,17 @@ NICEHR is a comprehensive healthcare consultant management platform designed for
 
 ### RECENTLY COMPLETED (November 28, 2025)
 
+#### Skills Questionnaire System (Phase 18)
+- [x] Database schema: consultant_questionnaires, skill_categories, skill_items, consultant_skills, consultant_ehr_experience, consultant_certifications, skill_verifications tables
+- [x] Multi-step wizard page with 7 sections: EHR Systems, Clinical Modules, Revenue Cycle, Ancillary Systems, Technical Skills, Certifications, Work Preferences
+- [x] Progress indicator showing completion percentage
+- [x] Autosave functionality with draft status
+- [x] Skills tab on consultant Profile page showing questionnaire summary
+- [x] Admin Skills Verification page with queue management
+- [x] Verification workflow: Pending → Verified/Rejected
+- [x] Skills data seeding at server startup (default categories and items)
+- [x] API endpoints for questionnaire CRUD, skills management, EHR experience
+
 #### RBAC Permission Management
 - [x] Fixed Role Management UI to display all 15 roles correctly
 - [x] All roles (base, implementation, custom) now support permission editing

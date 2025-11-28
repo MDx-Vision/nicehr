@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -17,11 +18,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Camera, Save, Linkedin, Globe, Mail, CheckCircle, AlertCircle } from "lucide-react";
+import { Camera, Save, Linkedin, Globe, Mail, CheckCircle, AlertCircle, ClipboardCheck, ExternalLink, Clock } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { Link } from "wouter";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import type { Consultant, User } from "@shared/schema";
 
@@ -47,6 +49,33 @@ export default function Profile() {
     queryKey: ["/api/consultants/user", user?.id],
     enabled: !!user?.id,
     retry: 1,
+  });
+
+  // Fetch skills questionnaire data
+  interface QuestionnaireData {
+    id?: string;
+    status: string;
+    skills?: Array<{ skillItemId: string; proficiency: string; yearsExperience?: number }>;
+    ehrExperience?: Array<{ ehrSystem: string; proficiency: string; yearsExperience: number }>;
+    lastSavedAt?: string;
+  }
+  
+  const { data: questionnaire } = useQuery<QuestionnaireData | null>({
+    queryKey: ["/api/questionnaire"],
+    enabled: !!user?.id,
+  });
+
+  // Fetch skill categories for skill names
+  interface SkillCategory {
+    id: string;
+    name: string;
+    displayName: string;
+    items: Array<{ id: string; displayName: string }>;
+  }
+  
+  const { data: skillCategories } = useQuery<SkillCategory[]>({
+    queryKey: ["/api/skills/all"],
+    enabled: !!questionnaire?.skills && questionnaire.skills.length > 0,
   });
 
   const form = useForm<ProfileFormValues>({
@@ -503,6 +532,152 @@ export default function Profile() {
           </CardContent>
         </Card>
       )}
+
+      {/* Skills Questionnaire Section */}
+      <Card data-testid="card-skills-questionnaire">
+        <CardHeader>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <ClipboardCheck className="h-5 w-5" />
+                Skills Questionnaire
+              </CardTitle>
+              <CardDescription>
+                Your professional skills and expertise profile
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              {questionnaire?.status === "verified" && (
+                <Badge variant="default" data-testid="badge-skills-verified">
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                  Verified
+                </Badge>
+              )}
+              {questionnaire?.status === "submitted" && (
+                <Badge variant="secondary" data-testid="badge-skills-pending">
+                  <Clock className="w-3 h-3 mr-1" />
+                  Pending Review
+                </Badge>
+              )}
+              {(!questionnaire || questionnaire?.status === "draft") && (
+                <Badge variant="outline" data-testid="badge-skills-draft">
+                  <AlertCircle className="w-3 h-3 mr-1" />
+                  Incomplete
+                </Badge>
+              )}
+              <Link href="/skills-questionnaire">
+                <Button variant="outline" size="sm" data-testid="button-edit-skills">
+                  {questionnaire?.id ? "Edit" : "Complete"} Questionnaire
+                  <ExternalLink className="w-4 h-4 ml-2" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!questionnaire?.id ? (
+            <div className="text-center py-8 border rounded-lg border-dashed">
+              <ClipboardCheck className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="font-medium mb-2">Complete Your Skills Profile</h3>
+              <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
+                Fill out the skills questionnaire to help us match you with the best projects based on your EHR expertise, clinical modules, certifications, and work preferences.
+              </p>
+              <Link href="/skills-questionnaire">
+                <Button data-testid="button-start-questionnaire">
+                  <ClipboardCheck className="w-4 h-4 mr-2" />
+                  Start Questionnaire
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Progress indicator */}
+              {questionnaire.status === "draft" && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Questionnaire Progress</span>
+                    <span className="font-medium">
+                      {Math.round(((questionnaire.skills?.length || 0) / 50) * 100)}%
+                    </span>
+                  </div>
+                  <Progress 
+                    value={Math.min(100, Math.round(((questionnaire.skills?.length || 0) / 50) * 100))} 
+                    className="h-2" 
+                    data-testid="progress-skills"
+                  />
+                </div>
+              )}
+
+              {/* EHR Experience */}
+              {questionnaire.ehrExperience && questionnaire.ehrExperience.length > 0 && (
+                <div>
+                  <h4 className="font-medium mb-3">EHR Systems Experience</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {questionnaire.ehrExperience.map((exp, idx) => (
+                      <Badge 
+                        key={idx} 
+                        variant="secondary" 
+                        className="flex items-center gap-1"
+                        data-testid={`badge-ehr-exp-${idx}`}
+                      >
+                        {exp.ehrSystem}
+                        <span className="text-xs opacity-70">({exp.yearsExperience}y)</span>
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Skills Summary */}
+              {questionnaire.skills && questionnaire.skills.length > 0 && skillCategories && (
+                <div>
+                  <h4 className="font-medium mb-3">Top Skills</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {questionnaire.skills
+                      .filter(s => s.proficiency && s.proficiency !== "none")
+                      .slice(0, 10)
+                      .map((skill, idx) => {
+                        const skillName = skillCategories
+                          .flatMap(c => c.items)
+                          .find(i => i.id === skill.skillItemId)?.displayName || skill.skillItemId;
+                        
+                        const proficiencyColors: Record<string, string> = {
+                          beginner: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+                          intermediate: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300",
+                          advanced: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
+                          expert: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
+                        };
+                        
+                        return (
+                          <Badge 
+                            key={idx} 
+                            variant="outline"
+                            className={proficiencyColors[skill.proficiency] || ""}
+                            data-testid={`badge-skill-${idx}`}
+                          >
+                            {skillName}
+                          </Badge>
+                        );
+                      })}
+                    {questionnaire.skills.filter(s => s.proficiency && s.proficiency !== "none").length > 10 && (
+                      <Badge variant="outline" className="text-muted-foreground">
+                        +{questionnaire.skills.filter(s => s.proficiency && s.proficiency !== "none").length - 10} more
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Last Updated */}
+              {questionnaire.lastSavedAt && (
+                <p className="text-xs text-muted-foreground">
+                  Last updated: {new Date(questionnaire.lastSavedAt).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

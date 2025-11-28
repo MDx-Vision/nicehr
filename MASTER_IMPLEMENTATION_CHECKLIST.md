@@ -573,6 +573,81 @@ These were example features we wanted to replicate in our own system:
 
 ---
 
+## PHASE 18: SKILLS QUESTIONNAIRE SYSTEM ✅
+
+### 18.1 Database Schema ✅
+- [x] consultant_questionnaires table (status, completedAt, verifiedAt, verifiedBy)
+- [x] skill_categories table (name, description, sortOrder)
+- [x] skill_items table (categoryId, name, description, itemType)
+- [x] consultant_skills table (questionnaireId, skillItemId, proficiencyLevel, yearsExperience, verificationStatus)
+- [x] consultant_ehr_experience table (questionnaireId, ehrSystem, yearsExperience, lastUsedDate, certification, verificationStatus)
+- [x] consultant_certifications table (questionnaireId, certificationName, issuingOrganization, issueDate, expiryDate, certificationNumber)
+- [x] skill_verifications table (consultantSkillId, verifiedBy, previousStatus, newStatus, notes)
+
+### 18.2 Skills Data Seeding ✅
+- [x] Auto-seed skill categories at server startup
+- [x] Auto-seed skill items for all categories
+- [x] Categories: EHR Systems, Clinical Modules, Revenue Cycle, Ancillary Systems, Technical Skills, Certifications
+- [x] EHR systems: Epic, Cerner, Meditech, CPSI, Allscripts, athenahealth, eClinicalWorks
+- [x] Clinical modules: Inpatient, Ambulatory, ED, OR, OB, Oncology, Cardiology, etc.
+- [x] Revenue cycle: Registration, Scheduling, Claims, Coding, Billing, Collections
+- [x] Technical skills: Data conversion, Interface development, Report writing, Training
+
+### 18.3 Backend API ✅
+- [x] GET /api/questionnaire - Get consultant's questionnaire
+- [x] POST /api/questionnaire - Create/update questionnaire
+- [x] GET /api/skill-categories - Get all categories with items
+- [x] GET /api/questionnaire/skills - Get consultant's skills
+- [x] POST /api/questionnaire/skills - Save skills
+- [x] GET /api/questionnaire/ehr-experience - Get EHR experience
+- [x] POST /api/questionnaire/ehr-experience - Save EHR experience
+- [x] GET /api/questionnaire/certifications - Get certifications
+- [x] POST /api/questionnaire/certifications - Add certification
+- [x] PATCH /api/questionnaire/certifications/:id - Update certification
+- [x] DELETE /api/questionnaire/certifications/:id - Delete certification
+- [x] GET /api/admin/questionnaires - List all questionnaires (admin)
+- [x] POST /api/admin/questionnaires/verify - Verify/reject questionnaire
+- [x] POST /api/admin/skills/:skillId/verify - Verify individual skill
+- [x] POST /api/admin/ehr-experience/:id/verify - Verify EHR experience
+
+### 18.4 Multi-Step Questionnaire Wizard ✅
+- [x] /skills-questionnaire route with 7 sections
+- [x] Progress indicator showing completion percentage
+- [x] Section 1: EHR Systems (Epic, Cerner, etc.) with years of experience
+- [x] Section 2: Clinical Modules proficiency selection
+- [x] Section 3: Revenue Cycle skills
+- [x] Section 4: Ancillary Systems experience
+- [x] Section 5: Technical Skills
+- [x] Section 6: Certifications with dates
+- [x] Section 7: Work Preferences (availability, travel, etc.)
+- [x] Autosave functionality (draft status)
+- [x] Final submission to pending_verification status
+
+### 18.5 Profile Skills Tab ✅
+- [x] Skills section on Profile page
+- [x] Questionnaire status display (Not Started/Draft/Pending/Verified)
+- [x] Completion percentage progress bar
+- [x] Skills summary (EHR systems, top modules, certifications)
+- [x] Link to questionnaire for editing
+
+### 18.6 Admin Skills Verification ✅
+- [x] /skills-verification admin page
+- [x] Verification queue with pending questionnaires
+- [x] Filter by status (pending/verified/rejected)
+- [x] Consultant details view in verification modal
+- [x] Verify/Reject actions
+- [x] Bulk verification actions
+- [x] Verification history audit trail
+
+### 18.7 Future Enhancements (Planned)
+- [ ] Migrate existing consultant EMR/module data to skills structure
+- [ ] Skills-based matching algorithm for project assignments
+- [ ] Skills gap analysis reporting
+- [ ] Certification expiration alerts
+- [ ] Skills search in consultant directory
+
+---
+
 ## CONSULTANT DOCUMENT REQUIREMENTS
 
 ### Required Documents Status
@@ -647,9 +722,10 @@ These were example features we wanted to replicate in our own system:
 | Phase 15 (Advanced) | 25 | 25 | 0 | 0 |
 | Phase 16 (RBAC) | 36 | 36 | 0 | 0 |
 | Phase 17 (Digital Sig/Chat/Integrations) | 26 | 18 | 0 | 8 |
-| **TOTAL** | **353** | **345** | **0** | **8** |
+| Phase 18 (Skills Questionnaire) | 45 | 40 | 0 | 5 |
+| **TOTAL** | **398** | **385** | **0** | **13** |
 
-**Overall Progress: 98% Complete**
+**Overall Progress: 97% Complete**
 
 ---
 
@@ -683,7 +759,16 @@ These were example features we wanted to replicate in our own system:
 
 ## RECENT UPDATES
 
-**November 28, 2025 (Latest):**
+**November 28, 2025 (Skills Questionnaire - Latest):**
+- Implemented Phase 18: Skills Questionnaire System
+- Database schema for questionnaires, skills, EHR experience, certifications, and verifications
+- Multi-step wizard with 7 sections (EHR Systems, Clinical Modules, Revenue Cycle, Ancillary Systems, Technical Skills, Certifications, Work Preferences)
+- Autosave functionality with draft status
+- Skills section added to consultant Profile page
+- Admin Skills Verification page with verify/reject workflow
+- Skills data auto-seeded at server startup
+
+**November 28, 2025 (RBAC):**
 - Fixed Role Management UI - all 15 roles now display with correct permissions
 - Added permission editing for ALL role types (base, implementation, custom)
 - Save Permissions button now available for every role
