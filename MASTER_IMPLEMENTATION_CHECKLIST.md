@@ -470,6 +470,10 @@
 - [x] Role Management admin UI with permission matrix
 - [x] Custom role creation capability
 - [x] Project context filtering for consultants
+- [x] Permission editing for ALL role types (base, implementation, custom)
+- [x] RBAC seeding at server startup (auto-create roles & permissions)
+- [x] Legacy admin bypass in permission middleware
+- [x] roleType enum includes 'implementation' for specialized roles
 
 ### 16.0.1 Base Roles (4 roles) ✅
 - [x] Administrator - Full system access (all 44 permissions)
@@ -641,9 +645,9 @@ These were example features we wanted to replicate in our own system:
 | Phase 13 (Financial) | 25 | 25 | 0 | 0 |
 | Phase 14 (Travel) | 18 | 18 | 0 | 0 |
 | Phase 15 (Advanced) | 25 | 25 | 0 | 0 |
-| Phase 16 (RBAC) | 32 | 32 | 0 | 0 |
+| Phase 16 (RBAC) | 36 | 36 | 0 | 0 |
 | Phase 17 (Digital Sig/Chat/Integrations) | 26 | 18 | 0 | 8 |
-| **TOTAL** | **349** | **341** | **0** | **8** |
+| **TOTAL** | **353** | **345** | **0** | **8** |
 
 **Overall Progress: 98% Complete**
 
@@ -679,7 +683,16 @@ These were example features we wanted to replicate in our own system:
 
 ## RECENT UPDATES
 
-**November 28, 2025:**
+**November 28, 2025 (Latest):**
+- Fixed Role Management UI - all 15 roles now display with correct permissions
+- Added permission editing for ALL role types (base, implementation, custom)
+- Save Permissions button now available for every role
+- Added 'implementation' roleType to database enum for specialized roles
+- Implemented legacy admin bypass (role='admin' grants full access)
+- RBAC seeding now runs at server startup before routes registered
+- Permission checkboxes with "Select All" per domain working correctly
+
+**November 28, 2025 (Earlier):**
 - Added 11 implementation-specific roles to RBAC (Go-Live Coordinator, Training Lead, etc.)
 - Added 5 phase-specific roles (At-the-Elbow Support, Super User, Optimization Analyst, etc.)
 - Total of 15 roles now available (4 base + 11 implementation)

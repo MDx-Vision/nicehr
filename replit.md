@@ -118,11 +118,16 @@ NICEHR is a comprehensive healthcare consultant management platform designed for
 
 ---
 
-### IN PROGRESS
+### RECENTLY COMPLETED (November 28, 2025)
 
-#### RBAC Enhancements
-- [ ] Display implementation roles in Role Management UI with visual distinction
-- [ ] Role assignment UI improvements for multi-role users
+#### RBAC Permission Management
+- [x] Fixed Role Management UI to display all 15 roles correctly
+- [x] All roles (base, implementation, custom) now support permission editing
+- [x] Save Permissions button for all role types
+- [x] Permission checkboxes with "Select All" per domain
+- [x] Legacy admin bypass for bootstrapping (role='admin' grants full access)
+- [x] RBAC seeding at server startup (roles & permissions auto-created)
+- [x] Added 'implementation' roleType to database schema
 
 ---
 
@@ -239,6 +244,14 @@ NICEHR is a comprehensive healthcare consultant management platform designed for
 - Extended project context filtering to Timesheets, Support Tickets, Expenses, EOD Reports
 - Applied permission middleware to 17+ API endpoints
 - Created Role Management UI with permission matrix
+
+### November 28, 2025 - RBAC Fixes
+- Fixed Role Management UI to display all 15 roles with correct permissions
+- All roles (base, implementation, custom) now support permission editing via checkboxes
+- Added 'implementation' roleType to database enum
+- Implemented legacy admin bypass in permission middleware
+- RBAC seeding now runs at server startup (before routes registered)
+- Each role correctly shows assigned permissions in permission dialog
 
 ---
 
