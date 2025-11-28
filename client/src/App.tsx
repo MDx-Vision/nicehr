@@ -51,6 +51,9 @@ import BudgetModeling from "@/pages/BudgetModeling";
 import TravelPreferences from "@/pages/TravelPreferences";
 import TravelBookings from "@/pages/TravelBookings";
 import Transportation from "@/pages/Transportation";
+import QualityAssurance from "@/pages/QualityAssurance";
+import Gamification from "@/pages/Gamification";
+import ComplianceCenter from "@/pages/ComplianceCenter";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -198,6 +201,9 @@ function Router() {
       <Route path="/travel-preferences" component={() => <ProtectedRoute component={TravelPreferences} />} />
       <Route path="/travel-bookings" component={() => <ProtectedRoute component={TravelBookings} />} />
       <Route path="/transportation" component={() => <ProtectedRoute component={Transportation} />} />
+      <Route path="/quality-assurance" component={() => <ProtectedRoute component={QualityAssurance} />} />
+      <Route path="/gamification" component={() => <ProtectedRoute component={Gamification} />} />
+      <Route path="/compliance-center" component={() => <ProtectedRoute component={ComplianceCenter} />} />
       <Route component={NotFound} />
     </Switch>
   );
