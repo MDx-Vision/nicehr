@@ -245,6 +245,12 @@ export const requirePermission = (...permissionNames: string[]): RequestHandler 
     const projectId = req.params.projectId || req.query.projectId as string | undefined;
 
     try {
+      // Check for legacy admin user - grant full access
+      const dbUser = await storage.getUser(userId);
+      if (dbUser?.role === 'admin') {
+        return next();
+      }
+
       for (const permissionName of permissionNames) {
         const hasPermission = await storage.hasPermission(userId, permissionName, projectId);
         if (!hasPermission) {
@@ -273,6 +279,12 @@ export const requireAnyPermission = (...permissionNames: string[]): RequestHandl
     const projectId = req.params.projectId || req.query.projectId as string | undefined;
 
     try {
+      // Check for legacy admin user - grant full access
+      const dbUser = await storage.getUser(userId);
+      if (dbUser?.role === 'admin') {
+        return next();
+      }
+
       for (const permissionName of permissionNames) {
         const hasPermission = await storage.hasPermission(userId, permissionName, projectId);
         if (hasPermission) {

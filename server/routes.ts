@@ -125,6 +125,14 @@ export async function registerRoutes(
   // Setup Replit Auth
   await setupAuth(app);
 
+  // Seed RBAC roles and permissions at startup
+  try {
+    await storage.seedBaseRolesAndPermissions();
+    console.log("RBAC roles and permissions seeded successfully");
+  } catch (error) {
+    console.error("Error seeding RBAC:", error);
+  }
+
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
