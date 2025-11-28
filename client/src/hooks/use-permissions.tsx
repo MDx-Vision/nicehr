@@ -52,13 +52,13 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     : '/api/rbac/effective-permissions';
 
   const { data: permissions, isLoading, error } = useQuery<PermissionsData>({
-    queryKey: [permissionsEndpoint, devRoleOverride],
+    queryKey: [permissionsEndpoint],
     staleTime: 60000,
     refetchOnWindowFocus: true,
   });
 
   const { data: effectivePermissionsData = [] } = useQuery<EffectivePermission[]>({
-    queryKey: [effectivePermissionsEndpoint, devRoleOverride],
+    queryKey: [effectivePermissionsEndpoint],
     staleTime: 60000,
     refetchOnWindowFocus: true,
   });

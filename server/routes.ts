@@ -1921,10 +1921,14 @@ export async function registerRoutes(
         return res.json([]);
       }
       
-      // Get permissions assigned to this role
-      const rolePermissions = await storage.getRolePermissions(roleData.id);
+      // Get role with full permission details
+      const roleWithPermissions = await storage.getRoleWithPermissions(roleData.id);
       
-      res.json(rolePermissions.map((rp: any) => ({
+      if (!roleWithPermissions) {
+        return res.json([]);
+      }
+      
+      res.json(roleWithPermissions.permissions.map((rp: any) => ({
         permissionId: rp.permissionId,
         permissionName: rp.permission?.name || '',
         domain: rp.permission?.domain || '',
