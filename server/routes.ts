@@ -41,6 +41,15 @@ import {
   insertTimesheetEntrySchema,
   insertAvailabilityBlockSchema,
   insertShiftSwapRequestSchema,
+  insertCourseSchema,
+  insertCourseModuleSchema,
+  insertCourseEnrollmentSchema,
+  insertAssessmentSchema,
+  insertAssessmentQuestionSchema,
+  insertAssessmentAttemptSchema,
+  insertLoginLabSchema,
+  insertLoginLabParticipantSchema,
+  insertKnowledgeArticleSchema,
 } from "@shared/schema";
 import {
   sendWelcomeEmail,
@@ -3075,7 +3084,7 @@ export async function registerRoutes(
         resourceType: 'availability',
         resourceId: block.id,
         resourceName: `Availability block`,
-        description: `Set availability: ${block.blockType}`,
+        description: `Set availability: ${block.type}`,
       }, req);
       
       res.status(201).json(block);
@@ -3300,6 +3309,955 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching pending shift swap requests:", error);
       res.status(500).json({ message: "Failed to fetch pending shift swap requests" });
+    }
+  });
+
+  // ============================================
+  // PHASE 11: TRAINING & COMPETENCY ROUTES
+  // ============================================
+
+  // Course Routes
+  app.post('/api/courses', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertCourseSchema.parse({
+        ...req.body,
+        createdBy: userId,
+      });
+      const course = await storage.createCourse(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'create',
+          resourceType: 'course',
+          resourceId: course.id,
+          resourceName: validated.title,
+          description: 'Created new training course',
+        }, req);
+      }
+      
+      res.status(201).json(course);
+    } catch (error) {
+      console.error("Error creating course:", error);
+      res.status(400).json({ message: "Failed to create course" });
+    }
+  });
+
+  app.get('/api/courses', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        status: req.query.status as string,
+        level: req.query.level as string,
+        courseType: req.query.courseType as string,
+        moduleId: req.query.moduleId as string,
+      };
+      const courses = await storage.getCourses(filters);
+      res.json(courses);
+    } catch (error) {
+      console.error("Error fetching courses:", error);
+      res.status(500).json({ message: "Failed to fetch courses" });
+    }
+  });
+
+  app.get('/api/courses/:id', isAuthenticated, async (req, res) => {
+    try {
+      const course = await storage.getCourseById(req.params.id);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      res.json(course);
+    } catch (error) {
+      console.error("Error fetching course:", error);
+      res.status(500).json({ message: "Failed to fetch course" });
+    }
+  });
+
+  app.patch('/api/courses/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const course = await storage.updateCourse(req.params.id, req.body);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'course',
+          resourceId: course.id,
+          resourceName: course.title,
+          description: 'Updated training course',
+        }, req);
+      }
+      
+      res.json(course);
+    } catch (error) {
+      console.error("Error updating course:", error);
+      res.status(500).json({ message: "Failed to update course" });
+    }
+  });
+
+  app.delete('/api/courses/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const courseId = req.params.id;
+      
+      const course = await storage.getCourseById(courseId);
+      const courseName = course?.title || courseId;
+      
+      await storage.deleteCourse(courseId);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'course',
+          resourceId: courseId,
+          resourceName: courseName,
+          description: 'Deleted training course',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting course:", error);
+      res.status(500).json({ message: "Failed to delete course" });
+    }
+  });
+
+  // Course Module Routes
+  app.post('/api/courses/:courseId/modules', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertCourseModuleSchema.parse({
+        ...req.body,
+        courseId: req.params.courseId,
+      });
+      const courseModule = await storage.createCourseModule(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'create',
+          resourceType: 'course_module',
+          resourceId: courseModule.id,
+          resourceName: validated.title,
+          description: 'Added module to course',
+        }, req);
+      }
+      
+      res.status(201).json(courseModule);
+    } catch (error) {
+      console.error("Error creating course module:", error);
+      res.status(400).json({ message: "Failed to create course module" });
+    }
+  });
+
+  app.get('/api/courses/:courseId/modules', isAuthenticated, async (req, res) => {
+    try {
+      const modules = await storage.getCourseModules(req.params.courseId);
+      res.json(modules);
+    } catch (error) {
+      console.error("Error fetching course modules:", error);
+      res.status(500).json({ message: "Failed to fetch course modules" });
+    }
+  });
+
+  app.patch('/api/course-modules/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const courseModule = await storage.updateCourseModule(req.params.id, req.body);
+      if (!courseModule) {
+        return res.status(404).json({ message: "Course module not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'course_module',
+          resourceId: courseModule.id,
+          resourceName: courseModule.title,
+          description: 'Updated course module',
+        }, req);
+      }
+      
+      res.json(courseModule);
+    } catch (error) {
+      console.error("Error updating course module:", error);
+      res.status(500).json({ message: "Failed to update course module" });
+    }
+  });
+
+  app.delete('/api/course-modules/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      await storage.deleteCourseModule(req.params.id);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'course_module',
+          resourceId: req.params.id,
+          resourceName: 'Course module',
+          description: 'Deleted course module',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting course module:", error);
+      res.status(500).json({ message: "Failed to delete course module" });
+    }
+  });
+
+  // Enrollment Routes
+  app.post('/api/courses/:courseId/enroll', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validated = insertCourseEnrollmentSchema.parse({
+        courseId: req.params.courseId,
+        userId: userId,
+        status: 'enrolled',
+      });
+      const enrollment = await storage.enrollInCourse(validated);
+      
+      const course = await storage.getCourseById(req.params.courseId);
+      
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'enrollment',
+        resourceId: enrollment.id,
+        resourceName: course?.title || req.params.courseId,
+        description: 'Enrolled in course',
+      }, req);
+      
+      await storage.createNotification({
+        userId: userId,
+        type: 'info',
+        title: 'Course Enrollment',
+        message: `You have been enrolled in ${course?.title || 'a course'}`,
+        link: `/courses/${req.params.courseId}`,
+      });
+      
+      res.status(201).json(enrollment);
+    } catch (error) {
+      console.error("Error enrolling in course:", error);
+      res.status(400).json({ message: "Failed to enroll in course" });
+    }
+  });
+
+  app.get('/api/my-enrollments', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const enrollments = await storage.getEnrollmentsByUser(userId);
+      res.json(enrollments);
+    } catch (error) {
+      console.error("Error fetching enrollments:", error);
+      res.status(500).json({ message: "Failed to fetch enrollments" });
+    }
+  });
+
+  app.get('/api/courses/:courseId/enrollments', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const enrollments = await storage.getEnrollmentsByCourse(req.params.courseId);
+      res.json(enrollments);
+    } catch (error) {
+      console.error("Error fetching course enrollments:", error);
+      res.status(500).json({ message: "Failed to fetch course enrollments" });
+    }
+  });
+
+  app.patch('/api/enrollments/:id/progress', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { progressPercent, status, ceCreditsEarned, certificateUrl } = req.body;
+      
+      const updateData: any = {};
+      if (progressPercent !== undefined) updateData.progressPercent = progressPercent;
+      if (status !== undefined) updateData.status = status;
+      if (ceCreditsEarned !== undefined) updateData.ceCreditsEarned = ceCreditsEarned;
+      if (certificateUrl !== undefined) updateData.certificateUrl = certificateUrl;
+      if (status === 'completed') updateData.completedAt = new Date();
+      if (status === 'in_progress' && !updateData.startedAt) updateData.startedAt = new Date();
+      
+      const enrollment = await storage.updateEnrollmentProgress(req.params.id, updateData);
+      if (!enrollment) {
+        return res.status(404).json({ message: "Enrollment not found" });
+      }
+      
+      await logActivity(userId, {
+        activityType: 'update',
+        resourceType: 'enrollment',
+        resourceId: enrollment.id,
+        resourceName: 'Course progress',
+        description: `Updated course progress to ${progressPercent || 0}%`,
+      }, req);
+      
+      if (status === 'completed') {
+        await storage.createNotification({
+          userId: userId,
+          type: 'success',
+          title: 'Course Completed',
+          message: 'Congratulations! You have completed the course',
+          link: `/my-enrollments`,
+        });
+      }
+      
+      res.json(enrollment);
+    } catch (error) {
+      console.error("Error updating enrollment progress:", error);
+      res.status(500).json({ message: "Failed to update enrollment progress" });
+    }
+  });
+
+  app.post('/api/enrollments/:id/drop', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const enrollment = await storage.dropFromCourse(req.params.id);
+      if (!enrollment) {
+        return res.status(404).json({ message: "Enrollment not found" });
+      }
+      
+      await logActivity(userId, {
+        activityType: 'update',
+        resourceType: 'enrollment',
+        resourceId: enrollment.id,
+        resourceName: 'Course enrollment',
+        description: 'Dropped from course',
+      }, req);
+      
+      res.json(enrollment);
+    } catch (error) {
+      console.error("Error dropping from course:", error);
+      res.status(500).json({ message: "Failed to drop from course" });
+    }
+  });
+
+  // Assessment Routes
+  app.post('/api/assessments', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertAssessmentSchema.parse(req.body);
+      const assessment = await storage.createAssessment(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'create',
+          resourceType: 'assessment',
+          resourceId: assessment.id,
+          resourceName: validated.title,
+          description: 'Created new assessment',
+        }, req);
+      }
+      
+      res.status(201).json(assessment);
+    } catch (error) {
+      console.error("Error creating assessment:", error);
+      res.status(400).json({ message: "Failed to create assessment" });
+    }
+  });
+
+  app.get('/api/assessments/:id', isAuthenticated, async (req, res) => {
+    try {
+      const assessment = await storage.getAssessmentById(req.params.id);
+      if (!assessment) {
+        return res.status(404).json({ message: "Assessment not found" });
+      }
+      res.json(assessment);
+    } catch (error) {
+      console.error("Error fetching assessment:", error);
+      res.status(500).json({ message: "Failed to fetch assessment" });
+    }
+  });
+
+  app.get('/api/courses/:courseId/assessments', isAuthenticated, async (req, res) => {
+    try {
+      const assessments = await storage.getAssessmentsByCourse(req.params.courseId);
+      res.json(assessments);
+    } catch (error) {
+      console.error("Error fetching course assessments:", error);
+      res.status(500).json({ message: "Failed to fetch course assessments" });
+    }
+  });
+
+  app.patch('/api/assessments/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const assessment = await storage.updateAssessment(req.params.id, req.body);
+      if (!assessment) {
+        return res.status(404).json({ message: "Assessment not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'assessment',
+          resourceId: assessment.id,
+          resourceName: assessment.title,
+          description: 'Updated assessment',
+        }, req);
+      }
+      
+      res.json(assessment);
+    } catch (error) {
+      console.error("Error updating assessment:", error);
+      res.status(500).json({ message: "Failed to update assessment" });
+    }
+  });
+
+  app.delete('/api/assessments/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const assessmentId = req.params.id;
+      
+      const assessment = await storage.getAssessmentById(assessmentId);
+      const assessmentName = assessment?.title || assessmentId;
+      
+      await storage.deleteAssessment(assessmentId);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'assessment',
+          resourceId: assessmentId,
+          resourceName: assessmentName,
+          description: 'Deleted assessment',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting assessment:", error);
+      res.status(500).json({ message: "Failed to delete assessment" });
+    }
+  });
+
+  // Assessment Question Routes
+  app.post('/api/assessments/:assessmentId/questions', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertAssessmentQuestionSchema.parse({
+        ...req.body,
+        assessmentId: req.params.assessmentId,
+      });
+      const question = await storage.createAssessmentQuestion(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'create',
+          resourceType: 'assessment_question',
+          resourceId: question.id,
+          resourceName: 'Assessment question',
+          description: 'Added question to assessment',
+        }, req);
+      }
+      
+      res.status(201).json(question);
+    } catch (error) {
+      console.error("Error creating assessment question:", error);
+      res.status(400).json({ message: "Failed to create assessment question" });
+    }
+  });
+
+  app.get('/api/assessments/:assessmentId/questions', isAuthenticated, async (req, res) => {
+    try {
+      const questions = await storage.getAssessmentQuestions(req.params.assessmentId);
+      res.json(questions);
+    } catch (error) {
+      console.error("Error fetching assessment questions:", error);
+      res.status(500).json({ message: "Failed to fetch assessment questions" });
+    }
+  });
+
+  app.patch('/api/assessment-questions/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const question = await storage.updateAssessmentQuestion(req.params.id, req.body);
+      if (!question) {
+        return res.status(404).json({ message: "Assessment question not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'assessment_question',
+          resourceId: question.id,
+          resourceName: 'Assessment question',
+          description: 'Updated assessment question',
+        }, req);
+      }
+      
+      res.json(question);
+    } catch (error) {
+      console.error("Error updating assessment question:", error);
+      res.status(500).json({ message: "Failed to update assessment question" });
+    }
+  });
+
+  app.delete('/api/assessment-questions/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      await storage.deleteAssessmentQuestion(req.params.id);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'assessment_question',
+          resourceId: req.params.id,
+          resourceName: 'Assessment question',
+          description: 'Deleted assessment question',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting assessment question:", error);
+      res.status(500).json({ message: "Failed to delete assessment question" });
+    }
+  });
+
+  // Assessment Attempt Routes
+  app.post('/api/assessments/:assessmentId/attempts', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const assessmentId = req.params.assessmentId;
+      
+      const assessment = await storage.getAssessmentById(assessmentId);
+      if (!assessment) {
+        return res.status(404).json({ message: "Assessment not found" });
+      }
+      
+      const attemptCount = await storage.getAttemptCount(userId, assessmentId);
+      if (assessment.maxAttempts && attemptCount >= assessment.maxAttempts) {
+        return res.status(400).json({ message: "Maximum attempts reached" });
+      }
+      
+      const validated = insertAssessmentAttemptSchema.parse({
+        assessmentId: assessmentId,
+        userId: userId,
+        attemptNumber: attemptCount + 1,
+      });
+      const attempt = await storage.startAssessmentAttempt(validated);
+      
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'assessment_attempt',
+        resourceId: attempt.id,
+        resourceName: assessment.title,
+        description: `Started assessment attempt ${attemptCount + 1}`,
+      }, req);
+      
+      res.status(201).json(attempt);
+    } catch (error) {
+      console.error("Error starting assessment attempt:", error);
+      res.status(400).json({ message: "Failed to start assessment attempt" });
+    }
+  });
+
+  app.post('/api/assessment-attempts/:id/submit', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { answers, score, passed } = req.body;
+      
+      const attempt = await storage.submitAssessmentAttempt(req.params.id, answers, score, passed);
+      if (!attempt) {
+        return res.status(404).json({ message: "Assessment attempt not found" });
+      }
+      
+      await logActivity(userId, {
+        activityType: 'update',
+        resourceType: 'assessment_attempt',
+        resourceId: attempt.id,
+        resourceName: 'Assessment attempt',
+        description: `Submitted assessment - Score: ${score}%, Passed: ${passed}`,
+      }, req);
+      
+      if (passed) {
+        await storage.createNotification({
+          userId: userId,
+          type: 'success',
+          title: 'Assessment Passed',
+          message: `Congratulations! You passed with a score of ${score}%`,
+          link: `/my-attempts`,
+        });
+      } else {
+        await storage.createNotification({
+          userId: userId,
+          type: 'warning',
+          title: 'Assessment Not Passed',
+          message: `Your score was ${score}%. Please review and try again.`,
+          link: `/my-attempts`,
+        });
+      }
+      
+      res.json(attempt);
+    } catch (error) {
+      console.error("Error submitting assessment attempt:", error);
+      res.status(500).json({ message: "Failed to submit assessment attempt" });
+    }
+  });
+
+  app.get('/api/my-attempts', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const attempts = await storage.getAttemptsByUser(userId);
+      res.json(attempts);
+    } catch (error) {
+      console.error("Error fetching attempts:", error);
+      res.status(500).json({ message: "Failed to fetch attempts" });
+    }
+  });
+
+  app.get('/api/assessments/:assessmentId/attempts', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const attempts = await storage.getAttemptsByAssessment(req.params.assessmentId);
+      res.json(attempts);
+    } catch (error) {
+      console.error("Error fetching assessment attempts:", error);
+      res.status(500).json({ message: "Failed to fetch assessment attempts" });
+    }
+  });
+
+  // Login Lab Routes
+  app.post('/api/login-labs', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'admin' && user?.role !== 'hospital_staff') {
+        return res.status(403).json({ message: "Forbidden: Only admins and hospital staff can create login labs" });
+      }
+      
+      const validated = insertLoginLabSchema.parse({
+        ...req.body,
+        facilitatorId: req.body.facilitatorId || userId,
+      });
+      const loginLab = await storage.createLoginLab(validated);
+      
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'login_lab',
+        resourceId: loginLab.id,
+        resourceName: validated.title,
+        description: 'Created login lab session',
+      }, req);
+      
+      res.status(201).json(loginLab);
+    } catch (error) {
+      console.error("Error creating login lab:", error);
+      res.status(400).json({ message: "Failed to create login lab" });
+    }
+  });
+
+  app.get('/api/login-labs', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        projectId: req.query.projectId as string,
+        hospitalId: req.query.hospitalId as string,
+        status: req.query.status as string,
+      };
+      const loginLabs = await storage.getLoginLabs(filters);
+      res.json(loginLabs);
+    } catch (error) {
+      console.error("Error fetching login labs:", error);
+      res.status(500).json({ message: "Failed to fetch login labs" });
+    }
+  });
+
+  app.get('/api/login-labs/:id', isAuthenticated, async (req, res) => {
+    try {
+      const loginLab = await storage.getLoginLabById(req.params.id);
+      if (!loginLab) {
+        return res.status(404).json({ message: "Login lab not found" });
+      }
+      res.json(loginLab);
+    } catch (error) {
+      console.error("Error fetching login lab:", error);
+      res.status(500).json({ message: "Failed to fetch login lab" });
+    }
+  });
+
+  app.patch('/api/login-labs/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'admin' && user?.role !== 'hospital_staff') {
+        return res.status(403).json({ message: "Forbidden: Only admins and hospital staff can update login labs" });
+      }
+      
+      const loginLab = await storage.updateLoginLab(req.params.id, req.body);
+      if (!loginLab) {
+        return res.status(404).json({ message: "Login lab not found" });
+      }
+      
+      await logActivity(userId, {
+        activityType: 'update',
+        resourceType: 'login_lab',
+        resourceId: loginLab.id,
+        resourceName: loginLab.title,
+        description: 'Updated login lab session',
+      }, req);
+      
+      res.json(loginLab);
+    } catch (error) {
+      console.error("Error updating login lab:", error);
+      res.status(500).json({ message: "Failed to update login lab" });
+    }
+  });
+
+  app.delete('/api/login-labs/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const labId = req.params.id;
+      
+      const loginLab = await storage.getLoginLabById(labId);
+      const labName = loginLab?.title || labId;
+      
+      await storage.deleteLoginLab(labId);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'login_lab',
+          resourceId: labId,
+          resourceName: labName,
+          description: 'Deleted login lab session',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting login lab:", error);
+      res.status(500).json({ message: "Failed to delete login lab" });
+    }
+  });
+
+  // Login Lab Participant Routes
+  app.post('/api/login-labs/:labId/participants', isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUserId = req.user?.claims?.sub;
+      const validated = insertLoginLabParticipantSchema.parse({
+        ...req.body,
+        loginLabId: req.params.labId,
+      });
+      const participant = await storage.addParticipantToLab(validated);
+      
+      const loginLab = await storage.getLoginLabById(req.params.labId);
+      
+      await logActivity(currentUserId, {
+        activityType: 'create',
+        resourceType: 'login_lab_participant',
+        resourceId: participant.id,
+        resourceName: loginLab?.title || 'Login lab',
+        description: 'Added participant to login lab',
+      }, req);
+      
+      await storage.createNotification({
+        userId: validated.userId,
+        type: 'info',
+        title: 'Login Lab Registration',
+        message: `You have been registered for ${loginLab?.title || 'a login lab session'}`,
+        link: `/login-labs/${req.params.labId}`,
+      });
+      
+      res.status(201).json(participant);
+    } catch (error) {
+      console.error("Error adding participant to login lab:", error);
+      res.status(400).json({ message: "Failed to add participant to login lab" });
+    }
+  });
+
+  app.get('/api/login-labs/:labId/participants', isAuthenticated, async (req, res) => {
+    try {
+      const participants = await storage.getLabParticipants(req.params.labId);
+      res.json(participants);
+    } catch (error) {
+      console.error("Error fetching login lab participants:", error);
+      res.status(500).json({ message: "Failed to fetch login lab participants" });
+    }
+  });
+
+  app.post('/api/login-lab-participants/:id/validate', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const participant = await storage.validateParticipantAccess(req.params.id);
+      if (!participant) {
+        return res.status(404).json({ message: "Participant not found" });
+      }
+      
+      await logActivity(userId, {
+        activityType: 'update',
+        resourceType: 'login_lab_participant',
+        resourceId: participant.id,
+        resourceName: 'Lab participant',
+        description: 'Validated participant access',
+      }, req);
+      
+      await storage.createNotification({
+        userId: participant.userId,
+        type: 'success',
+        title: 'Access Validated',
+        message: 'Your login lab access has been validated',
+        link: `/login-labs/${participant.loginLabId}`,
+      });
+      
+      res.json(participant);
+    } catch (error) {
+      console.error("Error validating participant access:", error);
+      res.status(500).json({ message: "Failed to validate participant access" });
+    }
+  });
+
+  app.post('/api/login-lab-participants/:id/complete', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const { customizationNotes } = req.body;
+      const participant = await storage.completeParticipantLab(req.params.id, customizationNotes);
+      if (!participant) {
+        return res.status(404).json({ message: "Participant not found" });
+      }
+      
+      await logActivity(userId, {
+        activityType: 'update',
+        resourceType: 'login_lab_participant',
+        resourceId: participant.id,
+        resourceName: 'Lab participant',
+        description: 'Marked participant as completed',
+      }, req);
+      
+      await storage.createNotification({
+        userId: participant.userId,
+        type: 'success',
+        title: 'Login Lab Completed',
+        message: 'You have completed the login lab session',
+        link: `/login-labs/${participant.loginLabId}`,
+      });
+      
+      res.json(participant);
+    } catch (error) {
+      console.error("Error completing participant lab:", error);
+      res.status(500).json({ message: "Failed to complete participant lab" });
+    }
+  });
+
+  // Knowledge Base Routes
+  app.post('/api/knowledge-articles', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertKnowledgeArticleSchema.parse({
+        ...req.body,
+        authorId: userId,
+      });
+      const article = await storage.createKnowledgeArticle(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'create',
+          resourceType: 'knowledge_article',
+          resourceId: article.id,
+          resourceName: validated.title,
+          description: 'Created knowledge base article',
+        }, req);
+      }
+      
+      res.status(201).json(article);
+    } catch (error) {
+      console.error("Error creating knowledge article:", error);
+      res.status(400).json({ message: "Failed to create knowledge article" });
+    }
+  });
+
+  app.get('/api/knowledge-articles', isAuthenticated, async (req, res) => {
+    try {
+      const query = req.query.query as string || '';
+      const filters = {
+        category: req.query.category as string,
+        moduleId: req.query.moduleId as string,
+        status: req.query.status as string,
+      };
+      const articles = await storage.searchArticles(query, filters);
+      res.json(articles);
+    } catch (error) {
+      console.error("Error fetching knowledge articles:", error);
+      res.status(500).json({ message: "Failed to fetch knowledge articles" });
+    }
+  });
+
+  app.get('/api/knowledge-articles/:id', isAuthenticated, async (req, res) => {
+    try {
+      const article = await storage.getArticleById(req.params.id);
+      if (!article) {
+        return res.status(404).json({ message: "Article not found" });
+      }
+      
+      await storage.incrementArticleViews(req.params.id);
+      
+      res.json(article);
+    } catch (error) {
+      console.error("Error fetching knowledge article:", error);
+      res.status(500).json({ message: "Failed to fetch knowledge article" });
+    }
+  });
+
+  app.patch('/api/knowledge-articles/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const article = await storage.updateArticle(req.params.id, req.body);
+      if (!article) {
+        return res.status(404).json({ message: "Article not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'knowledge_article',
+          resourceId: article.id,
+          resourceName: article.title,
+          description: 'Updated knowledge base article',
+        }, req);
+      }
+      
+      res.json(article);
+    } catch (error) {
+      console.error("Error updating knowledge article:", error);
+      res.status(500).json({ message: "Failed to update knowledge article" });
+    }
+  });
+
+  app.delete('/api/knowledge-articles/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const articleId = req.params.id;
+      
+      const article = await storage.getArticleById(articleId);
+      const articleName = article?.title || articleId;
+      
+      await storage.deleteArticle(articleId);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'knowledge_article',
+          resourceId: articleId,
+          resourceName: articleName,
+          description: 'Deleted knowledge base article',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting knowledge article:", error);
+      res.status(500).json({ message: "Failed to delete knowledge article" });
+    }
+  });
+
+  // Training Analytics Route
+  app.get('/api/training/analytics', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const analytics = await storage.getTrainingAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching training analytics:", error);
+      res.status(500).json({ message: "Failed to fetch training analytics" });
     }
   });
 
