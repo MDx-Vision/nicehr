@@ -39,6 +39,8 @@ import Availability from "@/pages/Availability";
 import ShiftSwaps from "@/pages/ShiftSwaps";
 import Training from "@/pages/Training";
 import Assessments from "@/pages/Assessments";
+import LoginLabs from "@/pages/LoginLabs";
+import KnowledgeBase from "@/pages/KnowledgeBase";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -174,6 +176,8 @@ function Router() {
       <Route path="/shift-swaps" component={() => <ProtectedRoute component={ShiftSwaps} />} />
       <Route path="/training" component={() => <ProtectedRoute component={Training} />} />
       <Route path="/assessments" component={() => <ProtectedRoute component={Assessments} />} />
+      <Route path="/login-labs" component={() => <ProtectedRoute component={LoginLabs} />} />
+      <Route path="/knowledge-base" component={() => <ProtectedRoute component={KnowledgeBase} />} />
       <Route component={NotFound} />
     </Switch>
   );
