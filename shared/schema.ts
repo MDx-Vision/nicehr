@@ -4219,6 +4219,385 @@ export type ComplianceAudit = typeof complianceAudits.$inferSelect;
 export type InsertComplianceAudit = z.infer<typeof insertComplianceAuditSchema>;
 
 // ============================================
+// DIGITAL SIGNATURES & CONTRACTS
+// ============================================
+
+// Contract status enum
+export const contractStatusEnum = pgEnum("contract_status", ["draft", "pending_signature", "partially_signed", "completed", "expired", "cancelled"]);
+
+// Signer role enum
+export const signerRoleEnum = pgEnum("signer_role", ["consultant", "admin", "hospital_staff", "witness"]);
+
+// Contract Templates
+export const contractTemplates = pgTable("contract_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  templateType: varchar("template_type").notNull(), // ica, nda, task_order, baa, general
+  content: text("content").notNull(), // HTML/Markdown template with placeholders
+  placeholders: jsonb("placeholders"), // Array of { key, label, type, required }
+  requiredSigners: jsonb("required_signers"), // Array of { role, order }
+  isActive: boolean("is_active").default(true).notNull(),
+  version: integer("version").default(1).notNull(),
+  createdById: varchar("created_by_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Contracts (generated from templates)
+export const contracts = pgTable("contracts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contractNumber: varchar("contract_number").unique(),
+  templateId: varchar("template_id").references(() => contractTemplates.id),
+  title: varchar("title").notNull(),
+  content: text("content").notNull(), // Rendered content with data filled in
+  consultantId: varchar("consultant_id").references(() => consultants.id),
+  projectId: varchar("project_id").references(() => projects.id),
+  hospitalId: varchar("hospital_id").references(() => hospitals.id),
+  status: contractStatusEnum("status").default("draft").notNull(),
+  effectiveDate: date("effective_date"),
+  expirationDate: date("expiration_date"),
+  metadata: jsonb("metadata"), // Additional data used to fill template
+  createdById: varchar("created_by_id").references(() => users.id),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Contract Signers (who needs to sign)
+export const contractSigners = pgTable("contract_signers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contractId: varchar("contract_id").references(() => contracts.id).notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  role: signerRoleEnum("role").notNull(),
+  signingOrder: integer("signing_order").default(1).notNull(),
+  status: varchar("status").default("pending").notNull(), // pending, signed, declined
+  signedAt: timestamp("signed_at"),
+  declinedAt: timestamp("declined_at"),
+  declineReason: text("decline_reason"),
+  reminderSentAt: timestamp("reminder_sent_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Contract Signatures (actual signature data)
+export const contractSignatures = pgTable("contract_signatures", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contractId: varchar("contract_id").references(() => contracts.id).notNull(),
+  signerId: varchar("signer_id").references(() => contractSigners.id).notNull(),
+  signatureImageUrl: varchar("signature_image_url"), // Stored in object storage
+  signatureData: text("signature_data"), // Base64 or SVG data as backup
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  signedAt: timestamp("signed_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Contract Audit Events
+export const contractAuditEvents = pgTable("contract_audit_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contractId: varchar("contract_id").references(() => contracts.id).notNull(),
+  eventType: varchar("event_type").notNull(), // created, viewed, sent, signed, declined, completed, expired
+  userId: varchar("user_id").references(() => users.id),
+  details: jsonb("details"),
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations for contract tables
+export const contractTemplatesRelations = relations(contractTemplates, ({ one, many }) => ({
+  createdBy: one(users, { fields: [contractTemplates.createdById], references: [users.id] }),
+  contracts: many(contracts),
+}));
+
+export const contractsRelations = relations(contracts, ({ one, many }) => ({
+  template: one(contractTemplates, { fields: [contracts.templateId], references: [contractTemplates.id] }),
+  consultant: one(consultants, { fields: [contracts.consultantId], references: [consultants.id] }),
+  project: one(projects, { fields: [contracts.projectId], references: [projects.id] }),
+  hospital: one(hospitals, { fields: [contracts.hospitalId], references: [hospitals.id] }),
+  createdBy: one(users, { fields: [contracts.createdById], references: [users.id] }),
+  signers: many(contractSigners),
+  signatures: many(contractSignatures),
+  auditEvents: many(contractAuditEvents),
+}));
+
+export const contractSignersRelations = relations(contractSigners, ({ one, many }) => ({
+  contract: one(contracts, { fields: [contractSigners.contractId], references: [contracts.id] }),
+  user: one(users, { fields: [contractSigners.userId], references: [users.id] }),
+  signatures: many(contractSignatures),
+}));
+
+export const contractSignaturesRelations = relations(contractSignatures, ({ one }) => ({
+  contract: one(contracts, { fields: [contractSignatures.contractId], references: [contracts.id] }),
+  signer: one(contractSigners, { fields: [contractSignatures.signerId], references: [contractSigners.id] }),
+}));
+
+export const contractAuditEventsRelations = relations(contractAuditEvents, ({ one }) => ({
+  contract: one(contracts, { fields: [contractAuditEvents.contractId], references: [contracts.id] }),
+  user: one(users, { fields: [contractAuditEvents.userId], references: [users.id] }),
+}));
+
+// Insert schemas
+export const insertContractTemplateSchema = createInsertSchema(contractTemplates).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertContractSchema = createInsertSchema(contracts).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertContractSignerSchema = createInsertSchema(contractSigners).omit({ id: true, createdAt: true });
+export const insertContractSignatureSchema = createInsertSchema(contractSignatures).omit({ id: true, createdAt: true });
+export const insertContractAuditEventSchema = createInsertSchema(contractAuditEvents).omit({ id: true, createdAt: true });
+
+// Types
+export type ContractTemplate = typeof contractTemplates.$inferSelect;
+export type InsertContractTemplate = z.infer<typeof insertContractTemplateSchema>;
+export type Contract = typeof contracts.$inferSelect;
+export type InsertContract = z.infer<typeof insertContractSchema>;
+export type ContractSigner = typeof contractSigners.$inferSelect;
+export type InsertContractSigner = z.infer<typeof insertContractSignerSchema>;
+export type ContractSignature = typeof contractSignatures.$inferSelect;
+export type InsertContractSignature = z.infer<typeof insertContractSignatureSchema>;
+export type ContractAuditEvent = typeof contractAuditEvents.$inferSelect;
+export type InsertContractAuditEvent = z.infer<typeof insertContractAuditEventSchema>;
+
+// ============================================
+// REAL-TIME CHAT
+// ============================================
+
+// Chat Channels
+export const chatChannels = pgTable("chat_channels", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  channelType: varchar("channel_type").notNull(), // project, unit, module, direct, announcement
+  projectId: varchar("project_id").references(() => projects.id),
+  unitId: varchar("unit_id").references(() => hospitalUnits.id),
+  isPrivate: boolean("is_private").default(false).notNull(),
+  quietHoursEnabled: boolean("quiet_hours_enabled").default(true).notNull(),
+  quietHoursStart: time("quiet_hours_start").default("19:00:00"),
+  quietHoursEnd: time("quiet_hours_end").default("07:00:00"),
+  isArchived: boolean("is_archived").default(false).notNull(),
+  createdById: varchar("created_by_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Channel Members
+export const channelMembers = pgTable("channel_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  channelId: varchar("channel_id").references(() => chatChannels.id).notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  role: varchar("role").default("member").notNull(), // admin, moderator, member
+  isMuted: boolean("is_muted").default(false).notNull(),
+  lastReadAt: timestamp("last_read_at"),
+  joinedAt: timestamp("joined_at").defaultNow(),
+});
+
+// Chat Messages
+export const chatMessages = pgTable("chat_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  channelId: varchar("channel_id").references(() => chatChannels.id).notNull(),
+  senderId: varchar("sender_id").references(() => users.id).notNull(),
+  content: text("content").notNull(),
+  messageType: varchar("message_type").default("text").notNull(), // text, system, file, summary
+  replyToId: varchar("reply_to_id"),
+  attachmentUrl: varchar("attachment_url"),
+  attachmentType: varchar("attachment_type"),
+  isEdited: boolean("is_edited").default(false).notNull(),
+  isPinned: boolean("is_pinned").default(false).notNull(),
+  isDeleted: boolean("is_deleted").default(false).notNull(),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Chat Message Reads (for tracking who read what)
+export const chatMessageReads = pgTable("chat_message_reads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  messageId: varchar("message_id").references(() => chatMessages.id).notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  readAt: timestamp("read_at").defaultNow().notNull(),
+});
+
+// Shift Chat Summaries
+export const shiftChatSummaries = pgTable("shift_chat_summaries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  channelId: varchar("channel_id").references(() => chatChannels.id).notNull(),
+  shiftDate: date("shift_date").notNull(),
+  shiftType: shiftTypeEnum("shift_type").notNull(),
+  summary: text("summary").notNull(),
+  keyPoints: jsonb("key_points"), // Array of important bullet points
+  issuesMentioned: jsonb("issues_mentioned"),
+  createdById: varchar("created_by_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations
+export const chatChannelsRelations = relations(chatChannels, ({ one, many }) => ({
+  project: one(projects, { fields: [chatChannels.projectId], references: [projects.id] }),
+  unit: one(hospitalUnits, { fields: [chatChannels.unitId], references: [hospitalUnits.id] }),
+  createdBy: one(users, { fields: [chatChannels.createdById], references: [users.id] }),
+  members: many(channelMembers),
+  messages: many(chatMessages),
+  summaries: many(shiftChatSummaries),
+}));
+
+export const channelMembersRelations = relations(channelMembers, ({ one }) => ({
+  channel: one(chatChannels, { fields: [channelMembers.channelId], references: [chatChannels.id] }),
+  user: one(users, { fields: [channelMembers.userId], references: [users.id] }),
+}));
+
+export const chatMessagesRelations = relations(chatMessages, ({ one, many }) => ({
+  channel: one(chatChannels, { fields: [chatMessages.channelId], references: [chatChannels.id] }),
+  sender: one(users, { fields: [chatMessages.senderId], references: [users.id] }),
+  reads: many(chatMessageReads),
+}));
+
+export const chatMessageReadsRelations = relations(chatMessageReads, ({ one }) => ({
+  message: one(chatMessages, { fields: [chatMessageReads.messageId], references: [chatMessages.id] }),
+  user: one(users, { fields: [chatMessageReads.userId], references: [users.id] }),
+}));
+
+export const shiftChatSummariesRelations = relations(shiftChatSummaries, ({ one }) => ({
+  channel: one(chatChannels, { fields: [shiftChatSummaries.channelId], references: [chatChannels.id] }),
+  createdBy: one(users, { fields: [shiftChatSummaries.createdById], references: [users.id] }),
+}));
+
+// Insert schemas
+export const insertChatChannelSchema = createInsertSchema(chatChannels).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertChannelMemberSchema = createInsertSchema(channelMembers).omit({ id: true, joinedAt: true });
+export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertChatMessageReadSchema = createInsertSchema(chatMessageReads).omit({ id: true, readAt: true });
+export const insertShiftChatSummarySchema = createInsertSchema(shiftChatSummaries).omit({ id: true, createdAt: true });
+
+// Types
+export type ChatChannel = typeof chatChannels.$inferSelect;
+export type InsertChatChannel = z.infer<typeof insertChatChannelSchema>;
+export type ChannelMember = typeof channelMembers.$inferSelect;
+export type InsertChannelMember = z.infer<typeof insertChannelMemberSchema>;
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
+export type ChatMessageRead = typeof chatMessageReads.$inferSelect;
+export type InsertChatMessageRead = z.infer<typeof insertChatMessageReadSchema>;
+export type ShiftChatSummary = typeof shiftChatSummaries.$inferSelect;
+export type InsertShiftChatSummary = z.infer<typeof insertShiftChatSummarySchema>;
+
+// ============================================
+// IDENTITY VERIFICATION
+// ============================================
+
+// Verification status enum
+export const verificationStatusEnum = pgEnum("verification_status", ["pending", "in_review", "verified", "rejected", "expired"]);
+
+// Document type for ID verification
+export const idDocumentTypeEnum = pgEnum("id_document_type", ["drivers_license", "passport", "state_id", "military_id", "other"]);
+
+// Identity Verifications
+export const identityVerifications = pgTable("identity_verifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  consultantId: varchar("consultant_id").references(() => consultants.id),
+  status: verificationStatusEnum("status").default("pending").notNull(),
+  verificationType: varchar("verification_type").default("manual").notNull(), // manual, automated, id_me
+  legalFirstName: varchar("legal_first_name"),
+  legalLastName: varchar("legal_last_name"),
+  dateOfBirth: date("date_of_birth"),
+  ssn4: varchar("ssn_last_4"), // Last 4 digits only, encrypted
+  addressVerified: boolean("address_verified").default(false),
+  identityScore: integer("identity_score"), // 0-100 confidence score
+  reviewedById: varchar("reviewed_by_id").references(() => users.id),
+  reviewNotes: text("review_notes"),
+  verifiedAt: timestamp("verified_at"),
+  expiresAt: timestamp("expires_at"),
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Identity Documents
+export const identityDocuments = pgTable("identity_documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  verificationId: varchar("verification_id").references(() => identityVerifications.id).notNull(),
+  documentType: idDocumentTypeEnum("document_type").notNull(),
+  documentNumber: varchar("document_number"), // Encrypted
+  issuingState: varchar("issuing_state"),
+  issuingCountry: varchar("issuing_country"),
+  issueDate: date("issue_date"),
+  expirationDate: date("expiration_date"),
+  frontImageUrl: varchar("front_image_url"),
+  backImageUrl: varchar("back_image_url"),
+  selfieImageUrl: varchar("selfie_image_url"),
+  isValid: boolean("is_valid"),
+  validationNotes: text("validation_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Verification Events (audit trail)
+export const verificationEvents = pgTable("verification_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  verificationId: varchar("verification_id").references(() => identityVerifications.id).notNull(),
+  eventType: varchar("event_type").notNull(), // submitted, document_uploaded, reviewed, verified, rejected, expired, resubmitted
+  performedById: varchar("performed_by_id").references(() => users.id),
+  details: jsonb("details"),
+  ipAddress: varchar("ip_address"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Fraud Flags
+export const fraudFlags = pgTable("fraud_flags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  verificationId: varchar("verification_id").references(() => identityVerifications.id),
+  flagType: varchar("flag_type").notNull(), // duplicate_account, suspicious_document, address_mismatch, velocity_check, device_fingerprint
+  severity: varchar("severity").default("medium").notNull(), // low, medium, high, critical
+  description: text("description"),
+  evidence: jsonb("evidence"),
+  isResolved: boolean("is_resolved").default(false).notNull(),
+  resolvedById: varchar("resolved_by_id").references(() => users.id),
+  resolvedAt: timestamp("resolved_at"),
+  resolutionNotes: text("resolution_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations
+export const identityVerificationsRelations = relations(identityVerifications, ({ one, many }) => ({
+  user: one(users, { fields: [identityVerifications.userId], references: [users.id] }),
+  consultant: one(consultants, { fields: [identityVerifications.consultantId], references: [consultants.id] }),
+  reviewedBy: one(users, { fields: [identityVerifications.reviewedById], references: [users.id] }),
+  documents: many(identityDocuments),
+  events: many(verificationEvents),
+  fraudFlags: many(fraudFlags),
+}));
+
+export const identityDocumentsRelations = relations(identityDocuments, ({ one }) => ({
+  verification: one(identityVerifications, { fields: [identityDocuments.verificationId], references: [identityVerifications.id] }),
+}));
+
+export const verificationEventsRelations = relations(verificationEvents, ({ one }) => ({
+  verification: one(identityVerifications, { fields: [verificationEvents.verificationId], references: [identityVerifications.id] }),
+  performedBy: one(users, { fields: [verificationEvents.performedById], references: [users.id] }),
+}));
+
+export const fraudFlagsRelations = relations(fraudFlags, ({ one }) => ({
+  user: one(users, { fields: [fraudFlags.userId], references: [users.id] }),
+  verification: one(identityVerifications, { fields: [fraudFlags.verificationId], references: [identityVerifications.id] }),
+  resolvedBy: one(users, { fields: [fraudFlags.resolvedById], references: [users.id] }),
+}));
+
+// Insert schemas
+export const insertIdentityVerificationSchema = createInsertSchema(identityVerifications).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertIdentityDocumentSchema = createInsertSchema(identityDocuments).omit({ id: true, createdAt: true });
+export const insertVerificationEventSchema = createInsertSchema(verificationEvents).omit({ id: true, createdAt: true });
+export const insertFraudFlagSchema = createInsertSchema(fraudFlags).omit({ id: true, createdAt: true });
+
+// Types
+export type IdentityVerification = typeof identityVerifications.$inferSelect;
+export type InsertIdentityVerification = z.infer<typeof insertIdentityVerificationSchema>;
+export type IdentityDocument = typeof identityDocuments.$inferSelect;
+export type InsertIdentityDocument = z.infer<typeof insertIdentityDocumentSchema>;
+export type VerificationEvent = typeof verificationEvents.$inferSelect;
+export type InsertVerificationEvent = z.infer<typeof insertVerificationEventSchema>;
+export type FraudFlag = typeof fraudFlags.$inferSelect;
+export type InsertFraudFlag = z.infer<typeof insertFraudFlagSchema>;
+
+// ============================================
 // PHASE 14 EXTENDED TYPES
 // ============================================
 
@@ -4608,4 +4987,105 @@ export interface AIAnalytics {
     values: Array<{ period: string; value: number }>;
     trend: 'improving' | 'declining' | 'stable';
   }>;
+}
+
+// ============================================
+// PHASE 16 EXTENDED TYPES
+// ============================================
+
+export interface ContractWithDetails extends Contract {
+  template: ContractTemplate | null;
+  consultant: {
+    id: string;
+    user: {
+      firstName: string | null;
+      lastName: string | null;
+    };
+  } | null;
+  project: {
+    id: string;
+    name: string;
+  } | null;
+  hospital: {
+    id: string;
+    name: string;
+  } | null;
+  createdBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+  signers: ContractSignerWithDetails[];
+}
+
+export interface ContractSignerWithDetails extends ContractSigner {
+  user: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+  };
+  signatures: ContractSignature[];
+}
+
+export interface ChatChannelWithDetails extends ChatChannel {
+  project: {
+    id: string;
+    name: string;
+  } | null;
+  unit: {
+    id: string;
+    name: string;
+  } | null;
+  createdBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+  memberCount: number;
+  unreadCount: number;
+  lastMessage: ChatMessageWithSender | null;
+}
+
+export interface ChatMessageWithSender extends ChatMessage {
+  sender: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    profileImageUrl: string | null;
+  };
+}
+
+export interface IdentityVerificationWithDetails extends IdentityVerification {
+  user: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+  };
+  consultant: {
+    id: string;
+  } | null;
+  reviewedBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+  documents: IdentityDocument[];
+  events: VerificationEvent[];
+  fraudFlags: FraudFlag[];
+}
+
+export interface FraudFlagWithDetails extends FraudFlag {
+  user: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+  };
+  resolvedBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
 }
