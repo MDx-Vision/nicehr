@@ -1,9 +1,10 @@
 import { createContext, useContext, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { determineRoleLevel, type UserRoleLevel } from "@/lib/permissions";
+import { type UserRoleLevel } from "@/lib/permissions";
 
 interface PermissionsData {
   role: string | null;
+  roleLevel: UserRoleLevel;
   isLeadership: boolean;
   hospitalId: string | null;
   assignedProjectIds: string[];
@@ -34,10 +35,8 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     refetchOnWindowFocus: true,
   });
 
-  const roleLevel = determineRoleLevel(
-    permissions?.role,
-    permissions?.isLeadership
-  );
+  // Use roleLevel from API, default to consultant
+  const roleLevel: UserRoleLevel = permissions?.roleLevel || 'consultant';
   
   const isLeadership = permissions?.isLeadership || false;
   const assignedProjectIds = permissions?.assignedProjectIds || [];

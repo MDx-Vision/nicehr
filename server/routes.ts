@@ -1495,30 +1495,53 @@ export async function registerRoutes(
       const user = req.user ? await storage.getUser(req.user.claims.sub) : null;
       const userRole = user?.role || null;
       
-      // Get leadership status for hospital staff
+      // Get leadership status and hospital context
       let isLeadership = false;
       let hospitalId: string | null = null;
       let assignedProjectIds: string[] = [];
+      let effectiveRole = userRole;
+      let roleLevel: 'admin' | 'hospital_leadership' | 'hospital_staff' | 'consultant' = 'consultant';
       
-      if (user && userRole === 'hospital_staff') {
+      // Determine role level
+      if (userRole === 'admin') {
+        roleLevel = 'admin';
+      }
+      
+      // Check if user is hospital staff (may override consultant default role)
+      if (user) {
         const staffInfo = await storage.getHospitalStaffByUserId(user.id);
         if (staffInfo) {
+          effectiveRole = 'hospital_staff';
           isLeadership = staffInfo.isLeadership;
           hospitalId = staffInfo.hospitalId;
+          roleLevel = isLeadership ? 'hospital_leadership' : 'hospital_staff';
           // Get projects for this hospital
           const hospitalProjects = await storage.getProjectsByHospital(staffInfo.hospitalId);
           assignedProjectIds = hospitalProjects.map((p: any) => p.id);
         }
       }
       
-      // Get assigned projects for consultants
-      if (user && userRole === 'consultant') {
+      // Get assigned projects for consultants (if not hospital staff)
+      if (user && effectiveRole === 'consultant' && roleLevel === 'consultant') {
         const consultant = await storage.getConsultantByUserId(user.id);
         if (consultant) {
-          // Get schedule assignments for this consultant
-          const schedules = await storage.getSchedulesByConsultant(consultant.id);
-          const projectIds = schedules.map((s: any) => s.projectId).filter(Boolean);
-          assignedProjectIds = [...new Set(projectIds)] as string[];
+          // Get consultant's assigned projects via schedule assignments
+          const assignments = await storage.getConsultantSchedules(consultant.id);
+          const scheduleIds = assignments.map((a: any) => a.scheduleId).filter(Boolean);
+          
+          // Fetch project IDs from schedules (use getSchedule for each unique schedule)
+          const projectIdSet = new Set<string>();
+          for (const scheduleId of scheduleIds) {
+            try {
+              const schedule = await storage.getSchedule(scheduleId);
+              if (schedule?.projectId) {
+                projectIdSet.add(schedule.projectId);
+              }
+            } catch (e) {
+              // Schedule may not exist, skip
+            }
+          }
+          assignedProjectIds = Array.from(projectIdSet);
         }
       }
       
@@ -1556,7 +1579,8 @@ export async function registerRoutes(
       }
       
       res.json({
-        role: userRole,
+        role: effectiveRole,
+        roleLevel,
         isLeadership,
         hospitalId,
         assignedProjectIds,
