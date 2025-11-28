@@ -67,6 +67,14 @@ import {
   insertPaycheckStubSchema,
   insertBudgetScenarioSchema,
   insertScenarioMetricSchema,
+  insertTravelPreferenceSchema,
+  insertTravelBookingSchema,
+  insertTravelItinerarySchema,
+  insertItineraryBookingSchema,
+  insertCarpoolGroupSchema,
+  insertCarpoolMemberSchema,
+  insertShuttleScheduleSchema,
+  insertTransportationContactSchema,
 } from "@shared/schema";
 import {
   sendWelcomeEmail,
@@ -5975,6 +5983,767 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error updating scenario metric:", error);
       res.status(500).json({ message: "Failed to update scenario metric" });
+    }
+  });
+
+  // =============================================
+  // Phase 14: Travel Management Routes
+  // =============================================
+
+  // Travel Preferences Routes
+  app.get('/api/travel-preferences/:consultantId', isAuthenticated, async (req, res) => {
+    try {
+      const preferences = await storage.getTravelPreferences(req.params.consultantId);
+      if (!preferences) {
+        return res.status(404).json({ message: "Travel preferences not found" });
+      }
+      res.json(preferences);
+    } catch (error) {
+      console.error("Error fetching travel preferences:", error);
+      res.status(500).json({ message: "Failed to fetch travel preferences" });
+    }
+  });
+
+  app.put('/api/travel-preferences', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertTravelPreferenceSchema.parse(req.body);
+      const preferences = await storage.upsertTravelPreferences(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'travel_preferences',
+          resourceId: preferences.id,
+          resourceName: 'Travel Preferences',
+          description: 'Updated travel preferences',
+        }, req);
+      }
+      
+      res.json(preferences);
+    } catch (error) {
+      console.error("Error upserting travel preferences:", error);
+      res.status(400).json({ message: "Failed to upsert travel preferences" });
+    }
+  });
+
+  app.patch('/api/travel-preferences/:consultantId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const preferences = await storage.updateTravelPreferences(req.params.consultantId, req.body);
+      if (!preferences) {
+        return res.status(404).json({ message: "Travel preferences not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'travel_preferences',
+          resourceId: preferences.id,
+          resourceName: 'Travel Preferences',
+          description: 'Updated travel preferences',
+        }, req);
+      }
+      
+      res.json(preferences);
+    } catch (error) {
+      console.error("Error updating travel preferences:", error);
+      res.status(500).json({ message: "Failed to update travel preferences" });
+    }
+  });
+
+  // Travel Bookings Routes
+  app.get('/api/travel-bookings', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        consultantId: req.query.consultantId as string | undefined,
+        projectId: req.query.projectId as string | undefined,
+        bookingType: req.query.bookingType as string | undefined,
+        status: req.query.status as string | undefined,
+      };
+      const bookings = await storage.listTravelBookings(filters);
+      res.json(bookings);
+    } catch (error) {
+      console.error("Error fetching travel bookings:", error);
+      res.status(500).json({ message: "Failed to fetch travel bookings" });
+    }
+  });
+
+  app.get('/api/travel-bookings/:id', isAuthenticated, async (req, res) => {
+    try {
+      const booking = await storage.getTravelBooking(req.params.id);
+      if (!booking) {
+        return res.status(404).json({ message: "Travel booking not found" });
+      }
+      res.json(booking);
+    } catch (error) {
+      console.error("Error fetching travel booking:", error);
+      res.status(500).json({ message: "Failed to fetch travel booking" });
+    }
+  });
+
+  app.post('/api/travel-bookings', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertTravelBookingSchema.parse({
+        ...req.body,
+        bookedById: req.body.bookedById || userId,
+      });
+      const booking = await storage.createTravelBooking(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'create',
+          resourceType: 'travel_booking',
+          resourceId: booking.id,
+          resourceName: `${validated.bookingType} booking`,
+          description: 'Created travel booking',
+        }, req);
+      }
+      
+      res.status(201).json(booking);
+    } catch (error) {
+      console.error("Error creating travel booking:", error);
+      res.status(400).json({ message: "Failed to create travel booking" });
+    }
+  });
+
+  app.patch('/api/travel-bookings/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const booking = await storage.updateTravelBooking(req.params.id, req.body);
+      if (!booking) {
+        return res.status(404).json({ message: "Travel booking not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'travel_booking',
+          resourceId: booking.id,
+          resourceName: `${booking.bookingType} booking`,
+          description: 'Updated travel booking',
+        }, req);
+      }
+      
+      res.json(booking);
+    } catch (error) {
+      console.error("Error updating travel booking:", error);
+      res.status(500).json({ message: "Failed to update travel booking" });
+    }
+  });
+
+  app.delete('/api/travel-bookings/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const bookingId = req.params.id;
+      
+      const booking = await storage.getTravelBooking(bookingId);
+      const bookingName = booking ? `${booking.bookingType} booking` : bookingId;
+      
+      await storage.deleteTravelBooking(bookingId);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'travel_booking',
+          resourceId: bookingId,
+          resourceName: bookingName,
+          description: 'Deleted travel booking',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting travel booking:", error);
+      res.status(500).json({ message: "Failed to delete travel booking" });
+    }
+  });
+
+  // Travel Itineraries Routes
+  app.get('/api/travel-itineraries', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        consultantId: req.query.consultantId as string | undefined,
+        projectId: req.query.projectId as string | undefined,
+        status: req.query.status as string | undefined,
+      };
+      const itineraries = await storage.listTravelItineraries(filters);
+      res.json(itineraries);
+    } catch (error) {
+      console.error("Error fetching travel itineraries:", error);
+      res.status(500).json({ message: "Failed to fetch travel itineraries" });
+    }
+  });
+
+  app.get('/api/travel-itineraries/:id', isAuthenticated, async (req, res) => {
+    try {
+      const itinerary = await storage.getTravelItinerary(req.params.id);
+      if (!itinerary) {
+        return res.status(404).json({ message: "Travel itinerary not found" });
+      }
+      res.json(itinerary);
+    } catch (error) {
+      console.error("Error fetching travel itinerary:", error);
+      res.status(500).json({ message: "Failed to fetch travel itinerary" });
+    }
+  });
+
+  app.post('/api/travel-itineraries', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertTravelItinerarySchema.parse({
+        ...req.body,
+        createdById: req.body.createdById || userId,
+      });
+      const itinerary = await storage.createTravelItinerary(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'create',
+          resourceType: 'travel_itinerary',
+          resourceId: itinerary.id,
+          resourceName: validated.tripName || 'Travel Itinerary',
+          description: 'Created travel itinerary',
+        }, req);
+      }
+      
+      res.status(201).json(itinerary);
+    } catch (error) {
+      console.error("Error creating travel itinerary:", error);
+      res.status(400).json({ message: "Failed to create travel itinerary" });
+    }
+  });
+
+  app.patch('/api/travel-itineraries/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const itinerary = await storage.updateTravelItinerary(req.params.id, req.body);
+      if (!itinerary) {
+        return res.status(404).json({ message: "Travel itinerary not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'travel_itinerary',
+          resourceId: itinerary.id,
+          resourceName: itinerary.tripName || 'Travel Itinerary',
+          description: 'Updated travel itinerary',
+        }, req);
+      }
+      
+      res.json(itinerary);
+    } catch (error) {
+      console.error("Error updating travel itinerary:", error);
+      res.status(500).json({ message: "Failed to update travel itinerary" });
+    }
+  });
+
+  app.delete('/api/travel-itineraries/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const itineraryId = req.params.id;
+      
+      const itinerary = await storage.getTravelItinerary(itineraryId);
+      const itineraryName = itinerary?.tripName || itineraryId;
+      
+      await storage.deleteTravelItinerary(itineraryId);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'travel_itinerary',
+          resourceId: itineraryId,
+          resourceName: itineraryName,
+          description: 'Deleted travel itinerary',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting travel itinerary:", error);
+      res.status(500).json({ message: "Failed to delete travel itinerary" });
+    }
+  });
+
+  app.post('/api/travel-itineraries/:id/bookings', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertItineraryBookingSchema.parse({
+        itineraryId: req.params.id,
+        bookingId: req.body.bookingId,
+        sequenceOrder: req.body.sequenceOrder,
+      });
+      const itineraryBooking = await storage.addBookingToItinerary(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'create',
+          resourceType: 'itinerary_booking',
+          resourceId: itineraryBooking.id,
+          resourceName: 'Itinerary Booking',
+          description: 'Added booking to itinerary',
+        }, req);
+      }
+      
+      res.status(201).json(itineraryBooking);
+    } catch (error) {
+      console.error("Error adding booking to itinerary:", error);
+      res.status(400).json({ message: "Failed to add booking to itinerary" });
+    }
+  });
+
+  app.delete('/api/travel-itineraries/:itineraryId/bookings/:bookingId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const { itineraryId, bookingId } = req.params;
+      
+      await storage.removeBookingFromItinerary(itineraryId, bookingId);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'itinerary_booking',
+          resourceId: `${itineraryId}-${bookingId}`,
+          resourceName: 'Itinerary Booking',
+          description: 'Removed booking from itinerary',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error removing booking from itinerary:", error);
+      res.status(500).json({ message: "Failed to remove booking from itinerary" });
+    }
+  });
+
+  // Carpool Groups Routes
+  app.get('/api/carpool-groups', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        projectId: req.query.projectId as string | undefined,
+        status: req.query.status as string | undefined,
+        driverId: req.query.driverId as string | undefined,
+      };
+      const groups = await storage.listCarpoolGroups(filters);
+      res.json(groups);
+    } catch (error) {
+      console.error("Error fetching carpool groups:", error);
+      res.status(500).json({ message: "Failed to fetch carpool groups" });
+    }
+  });
+
+  app.get('/api/carpool-groups/available/:projectId/:date', isAuthenticated, async (req, res) => {
+    try {
+      const { projectId, date } = req.params;
+      const carpools = await storage.getAvailableCarpools(projectId, date);
+      res.json(carpools);
+    } catch (error) {
+      console.error("Error fetching available carpools:", error);
+      res.status(500).json({ message: "Failed to fetch available carpools" });
+    }
+  });
+
+  app.get('/api/carpool-groups/:id', isAuthenticated, async (req, res) => {
+    try {
+      const group = await storage.getCarpoolGroup(req.params.id);
+      if (!group) {
+        return res.status(404).json({ message: "Carpool group not found" });
+      }
+      res.json(group);
+    } catch (error) {
+      console.error("Error fetching carpool group:", error);
+      res.status(500).json({ message: "Failed to fetch carpool group" });
+    }
+  });
+
+  app.post('/api/carpool-groups', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertCarpoolGroupSchema.parse(req.body);
+      const group = await storage.createCarpoolGroup(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'create',
+          resourceType: 'carpool_group',
+          resourceId: group.id,
+          resourceName: 'Carpool Group',
+          description: 'Created carpool group',
+        }, req);
+      }
+      
+      res.status(201).json(group);
+    } catch (error) {
+      console.error("Error creating carpool group:", error);
+      res.status(400).json({ message: "Failed to create carpool group" });
+    }
+  });
+
+  app.patch('/api/carpool-groups/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const group = await storage.updateCarpoolGroup(req.params.id, req.body);
+      if (!group) {
+        return res.status(404).json({ message: "Carpool group not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'carpool_group',
+          resourceId: group.id,
+          resourceName: 'Carpool Group',
+          description: 'Updated carpool group',
+        }, req);
+      }
+      
+      res.json(group);
+    } catch (error) {
+      console.error("Error updating carpool group:", error);
+      res.status(500).json({ message: "Failed to update carpool group" });
+    }
+  });
+
+  app.delete('/api/carpool-groups/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const groupId = req.params.id;
+      
+      await storage.deleteCarpoolGroup(groupId);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'carpool_group',
+          resourceId: groupId,
+          resourceName: 'Carpool Group',
+          description: 'Deleted carpool group',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting carpool group:", error);
+      res.status(500).json({ message: "Failed to delete carpool group" });
+    }
+  });
+
+  // Carpool Members Routes
+  app.get('/api/carpool-members/:carpoolId', isAuthenticated, async (req, res) => {
+    try {
+      const members = await storage.listCarpoolMembers(req.params.carpoolId);
+      res.json(members);
+    } catch (error) {
+      console.error("Error fetching carpool members:", error);
+      res.status(500).json({ message: "Failed to fetch carpool members" });
+    }
+  });
+
+  app.post('/api/carpool-members', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertCarpoolMemberSchema.parse(req.body);
+      const member = await storage.addCarpoolMember(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'create',
+          resourceType: 'carpool_member',
+          resourceId: member.id,
+          resourceName: 'Carpool Member',
+          description: 'Added member to carpool',
+        }, req);
+      }
+      
+      res.status(201).json(member);
+    } catch (error) {
+      console.error("Error adding carpool member:", error);
+      res.status(400).json({ message: "Failed to add carpool member" });
+    }
+  });
+
+  app.patch('/api/carpool-members/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const member = await storage.updateCarpoolMember(req.params.id, req.body);
+      if (!member) {
+        return res.status(404).json({ message: "Carpool member not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'carpool_member',
+          resourceId: member.id,
+          resourceName: 'Carpool Member',
+          description: 'Updated carpool member status',
+        }, req);
+      }
+      
+      res.json(member);
+    } catch (error) {
+      console.error("Error updating carpool member:", error);
+      res.status(500).json({ message: "Failed to update carpool member" });
+    }
+  });
+
+  app.delete('/api/carpool-members/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const memberId = req.params.id;
+      
+      await storage.removeCarpoolMember(memberId);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'carpool_member',
+          resourceId: memberId,
+          resourceName: 'Carpool Member',
+          description: 'Removed member from carpool',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error removing carpool member:", error);
+      res.status(500).json({ message: "Failed to remove carpool member" });
+    }
+  });
+
+  // Shuttle Schedules Routes
+  app.get('/api/shuttle-schedules', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        projectId: req.query.projectId as string | undefined,
+        isActive: req.query.isActive === 'true' ? true : req.query.isActive === 'false' ? false : undefined,
+      };
+      const schedules = await storage.listShuttleSchedules(filters);
+      res.json(schedules);
+    } catch (error) {
+      console.error("Error fetching shuttle schedules:", error);
+      res.status(500).json({ message: "Failed to fetch shuttle schedules" });
+    }
+  });
+
+  app.get('/api/shuttle-schedules/:id', isAuthenticated, async (req, res) => {
+    try {
+      const schedule = await storage.getShuttleSchedule(req.params.id);
+      if (!schedule) {
+        return res.status(404).json({ message: "Shuttle schedule not found" });
+      }
+      res.json(schedule);
+    } catch (error) {
+      console.error("Error fetching shuttle schedule:", error);
+      res.status(500).json({ message: "Failed to fetch shuttle schedule" });
+    }
+  });
+
+  app.post('/api/shuttle-schedules', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertShuttleScheduleSchema.parse(req.body);
+      const schedule = await storage.createShuttleSchedule(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'create',
+          resourceType: 'shuttle_schedule',
+          resourceId: schedule.id,
+          resourceName: validated.shuttleName || 'Shuttle Schedule',
+          description: 'Created shuttle schedule',
+        }, req);
+      }
+      
+      res.status(201).json(schedule);
+    } catch (error) {
+      console.error("Error creating shuttle schedule:", error);
+      res.status(400).json({ message: "Failed to create shuttle schedule" });
+    }
+  });
+
+  app.patch('/api/shuttle-schedules/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const schedule = await storage.updateShuttleSchedule(req.params.id, req.body);
+      if (!schedule) {
+        return res.status(404).json({ message: "Shuttle schedule not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'shuttle_schedule',
+          resourceId: schedule.id,
+          resourceName: schedule.shuttleName || 'Shuttle Schedule',
+          description: 'Updated shuttle schedule',
+        }, req);
+      }
+      
+      res.json(schedule);
+    } catch (error) {
+      console.error("Error updating shuttle schedule:", error);
+      res.status(500).json({ message: "Failed to update shuttle schedule" });
+    }
+  });
+
+  app.delete('/api/shuttle-schedules/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const scheduleId = req.params.id;
+      
+      const schedule = await storage.getShuttleSchedule(scheduleId);
+      const scheduleName = schedule?.shuttleName || scheduleId;
+      
+      await storage.deleteShuttleSchedule(scheduleId);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'shuttle_schedule',
+          resourceId: scheduleId,
+          resourceName: scheduleName,
+          description: 'Deleted shuttle schedule',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting shuttle schedule:", error);
+      res.status(500).json({ message: "Failed to delete shuttle schedule" });
+    }
+  });
+
+  // Transportation Contacts Routes
+  app.get('/api/transportation-contacts', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        projectId: req.query.projectId as string | undefined,
+        role: req.query.role as string | undefined,
+        isActive: req.query.isActive === 'true' ? true : req.query.isActive === 'false' ? false : undefined,
+      };
+      const contacts = await storage.listTransportationContacts(filters);
+      res.json(contacts);
+    } catch (error) {
+      console.error("Error fetching transportation contacts:", error);
+      res.status(500).json({ message: "Failed to fetch transportation contacts" });
+    }
+  });
+
+  app.get('/api/transportation-contacts/:id', isAuthenticated, async (req, res) => {
+    try {
+      const contact = await storage.getTransportationContact(req.params.id);
+      if (!contact) {
+        return res.status(404).json({ message: "Transportation contact not found" });
+      }
+      res.json(contact);
+    } catch (error) {
+      console.error("Error fetching transportation contact:", error);
+      res.status(500).json({ message: "Failed to fetch transportation contact" });
+    }
+  });
+
+  app.post('/api/transportation-contacts', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const validated = insertTransportationContactSchema.parse(req.body);
+      const contact = await storage.createTransportationContact(validated);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'create',
+          resourceType: 'transportation_contact',
+          resourceId: contact.id,
+          resourceName: validated.name,
+          description: 'Created transportation contact',
+        }, req);
+      }
+      
+      res.status(201).json(contact);
+    } catch (error) {
+      console.error("Error creating transportation contact:", error);
+      res.status(400).json({ message: "Failed to create transportation contact" });
+    }
+  });
+
+  app.patch('/api/transportation-contacts/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const contact = await storage.updateTransportationContact(req.params.id, req.body);
+      if (!contact) {
+        return res.status(404).json({ message: "Transportation contact not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'transportation_contact',
+          resourceId: contact.id,
+          resourceName: contact.name,
+          description: 'Updated transportation contact',
+        }, req);
+      }
+      
+      res.json(contact);
+    } catch (error) {
+      console.error("Error updating transportation contact:", error);
+      res.status(500).json({ message: "Failed to update transportation contact" });
+    }
+  });
+
+  app.delete('/api/transportation-contacts/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const contactId = req.params.id;
+      
+      const contact = await storage.getTransportationContact(contactId);
+      const contactName = contact?.name || contactId;
+      
+      await storage.deleteTransportationContact(contactId);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'transportation_contact',
+          resourceId: contactId,
+          resourceName: contactName,
+          description: 'Deleted transportation contact',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting transportation contact:", error);
+      res.status(500).json({ message: "Failed to delete transportation contact" });
+    }
+  });
+
+  // Travel Analytics Routes
+  app.get('/api/travel-analytics', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        projectId: req.query.projectId as string | undefined,
+      };
+      const analytics = await storage.getTravelAnalytics(filters);
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching travel analytics:", error);
+      res.status(500).json({ message: "Failed to fetch travel analytics" });
+    }
+  });
+
+  app.get('/api/carpool-analytics', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        projectId: req.query.projectId as string | undefined,
+      };
+      const analytics = await storage.getCarpoolAnalytics(filters);
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching carpool analytics:", error);
+      res.status(500).json({ message: "Failed to fetch carpool analytics" });
     }
   });
 
