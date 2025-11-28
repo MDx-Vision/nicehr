@@ -54,6 +54,9 @@ import Transportation from "@/pages/Transportation";
 import QualityAssurance from "@/pages/QualityAssurance";
 import Gamification from "@/pages/Gamification";
 import ComplianceCenter from "@/pages/ComplianceCenter";
+import Contracts from "@/pages/Contracts";
+import Chat from "@/pages/Chat";
+import IdentityVerification from "@/pages/IdentityVerification";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -204,6 +207,9 @@ function Router() {
       <Route path="/quality-assurance" component={() => <ProtectedRoute component={QualityAssurance} />} />
       <Route path="/gamification" component={() => <ProtectedRoute component={Gamification} />} />
       <Route path="/compliance-center" component={() => <ProtectedRoute component={ComplianceCenter} />} />
+      <Route path="/contracts" component={() => <ProtectedRoute component={Contracts} />} />
+      <Route path="/chat" component={() => <ProtectedRoute component={Chat} />} />
+      <Route path="/identity-verification" component={() => <ProtectedRoute component={IdentityVerification} />} />
       <Route component={NotFound} />
     </Switch>
   );

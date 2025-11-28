@@ -51,6 +51,9 @@ import {
   Target,
   Award,
   ShieldCheck,
+  FileSignature,
+  MessageCircle,
+  UserCheck,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -86,6 +89,9 @@ const adminItems = [
   { title: "Quality Assurance", url: "/quality-assurance", icon: Target },
   { title: "Gamification", url: "/gamification", icon: Award },
   { title: "Compliance Center", url: "/compliance-center", icon: ShieldCheck },
+  { title: "Contracts", url: "/contracts", icon: FileSignature },
+  { title: "Chat", url: "/chat", icon: MessageCircle },
+  { title: "Identity Verification", url: "/identity-verification", icon: UserCheck },
   { title: "Documents", url: "/documents", icon: FileText },
   { title: "Search", url: "/search", icon: Search },
 ];
@@ -113,6 +119,9 @@ const consultantItems = [
   { title: "Payroll", url: "/payroll", icon: Banknote },
   { title: "Quality Assurance", url: "/quality-assurance", icon: Target },
   { title: "Gamification", url: "/gamification", icon: Award },
+  { title: "Contracts", url: "/contracts", icon: FileSignature },
+  { title: "Chat", url: "/chat", icon: MessageCircle },
+  { title: "Identity Verification", url: "/identity-verification", icon: UserCheck },
   { title: "Documents", url: "/my-documents", icon: FileText },
 ];
 
@@ -132,6 +141,7 @@ const hospitalStaffItems = [
   { title: "Transportation", url: "/transportation", icon: Bus },
   { title: "Invoices", url: "/invoices", icon: Receipt },
   { title: "Quality Assurance", url: "/quality-assurance", icon: Target },
+  { title: "Chat", url: "/chat", icon: MessageCircle },
   { title: "Consultants", url: "/consultants", icon: Users },
   { title: "ROI Survey", url: "/roi-survey", icon: BarChart3 },
 ];
