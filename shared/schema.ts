@@ -547,6 +547,154 @@ export const contentAccessAuditRelations = relations(contentAccessAudit, ({ one 
   }),
 }));
 
+// ==========================================
+// RBAC (Role-Based Access Control) Tables
+// ==========================================
+
+// Role type enum - distinguishes base roles from custom roles
+export const roleTypeEnum = pgEnum("role_type", ["base", "custom"]);
+
+// Roles table - stores both predefined base roles and custom roles
+export const roles = pgTable("roles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull().unique(),
+  displayName: varchar("display_name").notNull(),
+  description: text("description"),
+  roleType: roleTypeEnum("role_type").default("custom").notNull(),
+  baseRoleId: varchar("base_role_id").references((): any => roles.id),
+  hospitalId: varchar("hospital_id").references(() => hospitals.id),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_roles_type").on(table.roleType),
+  index("idx_roles_hospital").on(table.hospitalId),
+]);
+
+// Permission domains - groups of related permissions
+export const permissionDomainEnum = pgEnum("permission_domain", [
+  "dashboard",
+  "projects",
+  "consultants", 
+  "hospitals",
+  "timesheets",
+  "support_tickets",
+  "eod_reports",
+  "training",
+  "travel",
+  "financials",
+  "quality",
+  "compliance",
+  "reports",
+  "admin",
+  "rbac"
+]);
+
+// Permissions table - defines all available permissions
+export const permissions = pgTable("permissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  domain: permissionDomainEnum("domain").notNull(),
+  action: varchar("action").notNull(),
+  name: varchar("name").notNull().unique(),
+  displayName: varchar("display_name").notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_permissions_domain").on(table.domain),
+  index("idx_permissions_name").on(table.name),
+]);
+
+// Role permissions junction table
+export const rolePermissions = pgTable("role_permissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  roleId: varchar("role_id").references(() => roles.id, { onDelete: "cascade" }).notNull(),
+  permissionId: varchar("permission_id").references(() => permissions.id, { onDelete: "cascade" }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_role_permissions_role").on(table.roleId),
+  index("idx_role_permissions_permission").on(table.permissionId),
+]);
+
+// User role assignments - assigns roles to users with optional project scope
+export const userRoleAssignments = pgTable("user_role_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  roleId: varchar("role_id").references(() => roles.id, { onDelete: "cascade" }).notNull(),
+  projectId: varchar("project_id").references(() => projects.id, { onDelete: "cascade" }),
+  hospitalId: varchar("hospital_id").references(() => hospitals.id, { onDelete: "cascade" }),
+  isActive: boolean("is_active").default(true).notNull(),
+  assignedBy: varchar("assigned_by").references(() => users.id),
+  assignedAt: timestamp("assigned_at").defaultNow(),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_user_roles_user").on(table.userId),
+  index("idx_user_roles_role").on(table.roleId),
+  index("idx_user_roles_project").on(table.projectId),
+  index("idx_user_roles_hospital").on(table.hospitalId),
+]);
+
+// RBAC Relations
+export const rolesRelations = relations(roles, ({ one, many }) => ({
+  baseRole: one(roles, {
+    fields: [roles.baseRoleId],
+    references: [roles.id],
+    relationName: "role_inheritance",
+  }),
+  childRoles: many(roles, { relationName: "role_inheritance" }),
+  hospital: one(hospitals, {
+    fields: [roles.hospitalId],
+    references: [hospitals.id],
+  }),
+  createdByUser: one(users, {
+    fields: [roles.createdBy],
+    references: [users.id],
+  }),
+  permissions: many(rolePermissions),
+  assignments: many(userRoleAssignments),
+}));
+
+export const permissionsRelations = relations(permissions, ({ many }) => ({
+  roles: many(rolePermissions),
+}));
+
+export const rolePermissionsRelations = relations(rolePermissions, ({ one }) => ({
+  role: one(roles, {
+    fields: [rolePermissions.roleId],
+    references: [roles.id],
+  }),
+  permission: one(permissions, {
+    fields: [rolePermissions.permissionId],
+    references: [permissions.id],
+  }),
+}));
+
+export const userRoleAssignmentsRelations = relations(userRoleAssignments, ({ one }) => ({
+  user: one(users, {
+    fields: [userRoleAssignments.userId],
+    references: [users.id],
+  }),
+  role: one(roles, {
+    fields: [userRoleAssignments.roleId],
+    references: [roles.id],
+  }),
+  project: one(projects, {
+    fields: [userRoleAssignments.projectId],
+    references: [projects.id],
+  }),
+  hospital: one(hospitals, {
+    fields: [userRoleAssignments.hospitalId],
+    references: [hospitals.id],
+  }),
+  assignedByUser: one(users, {
+    fields: [userRoleAssignments.assignedBy],
+    references: [users.id],
+  }),
+}));
+
 export const roiResponsesRelations = relations(roiResponses, ({ one }) => ({
   survey: one(roiSurveys, {
     fields: [roiResponses.surveyId],
@@ -742,6 +890,57 @@ export const insertContentAccessAuditSchema = createInsertSchema(contentAccessAu
   id: true,
   createdAt: true,
 });
+
+// RBAC Insert Schemas
+export const insertRoleSchema = createInsertSchema(roles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPermissionSchema = createInsertSchema(permissions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRolePermissionSchema = createInsertSchema(rolePermissions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUserRoleAssignmentSchema = createInsertSchema(userRoleAssignments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  assignedAt: true,
+});
+
+// RBAC Types
+export type Role = typeof roles.$inferSelect;
+export type InsertRole = z.infer<typeof insertRoleSchema>;
+
+export type Permission = typeof permissions.$inferSelect;
+export type InsertPermission = z.infer<typeof insertPermissionSchema>;
+
+export type RolePermission = typeof rolePermissions.$inferSelect;
+export type InsertRolePermission = z.infer<typeof insertRolePermissionSchema>;
+
+export type UserRoleAssignment = typeof userRoleAssignments.$inferSelect;
+export type InsertUserRoleAssignment = z.infer<typeof insertUserRoleAssignmentSchema>;
+
+// Helper type for role with permissions
+export type RoleWithPermissions = Role & {
+  permissions: (RolePermission & { permission: Permission })[];
+};
+
+// Helper type for user's effective permissions
+export type EffectivePermissions = {
+  roleId: string;
+  roleName: string;
+  permissions: string[];
+  projectId?: string | null;
+  hospitalId?: string | null;
+};
 
 // Activity type enum for user activity tracking
 export const activityTypeEnum = pgEnum("activity_type", [
