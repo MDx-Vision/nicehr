@@ -258,6 +258,55 @@ import {
   type InsertTransportationContact,
   type TravelAnalytics,
   type CarpoolAnalytics,
+  consultantScorecards,
+  pulseSurveys,
+  pulseResponses,
+  npsResponses,
+  incidents,
+  correctiveActions,
+  achievementBadges,
+  consultantBadges,
+  pointTransactions,
+  referrals,
+  complianceChecks,
+  complianceAudits,
+  type ConsultantScorecard,
+  type InsertConsultantScorecard,
+  type ConsultantScorecardWithDetails,
+  type PulseSurvey,
+  type InsertPulseSurvey,
+  type PulseSurveyWithDetails,
+  type PulseResponse,
+  type InsertPulseResponse,
+  type PulseResponseWithDetails,
+  type NpsResponse,
+  type InsertNpsResponse,
+  type Incident,
+  type InsertIncident,
+  type IncidentWithDetails,
+  type CorrectiveAction,
+  type InsertCorrectiveAction,
+  type CorrectiveActionWithDetails,
+  type AchievementBadge,
+  type InsertAchievementBadge,
+  type ConsultantBadge,
+  type InsertConsultantBadge,
+  type ConsultantBadgeWithDetails,
+  type PointTransaction,
+  type InsertPointTransaction,
+  type PointTransactionWithDetails,
+  type Referral,
+  type InsertReferral,
+  type ReferralWithDetails,
+  type ComplianceCheck,
+  type InsertComplianceCheck,
+  type ComplianceCheckWithDetails,
+  type ComplianceAudit,
+  type InsertComplianceAudit,
+  type ComplianceAuditWithDetails,
+  type QualityAnalytics,
+  type GamificationAnalytics,
+  type ComplianceAnalytics,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, ilike, or, desc, asc, sql } from "drizzle-orm";
@@ -777,6 +826,100 @@ export interface IStorage {
   // Travel Analytics
   getTravelAnalytics(filters?: { projectId?: string }): Promise<TravelAnalytics>;
   getCarpoolAnalytics(filters?: { projectId?: string }): Promise<CarpoolAnalytics>;
+
+  // ========================================
+  // PHASE 15: Quality Assurance, Gamification, Compliance
+  // ========================================
+
+  // Consultant Scorecard operations
+  getConsultantScorecard(id: string): Promise<ConsultantScorecardWithDetails | undefined>;
+  listConsultantScorecards(filters?: { consultantId?: string; projectId?: string; period?: string }): Promise<ConsultantScorecardWithDetails[]>;
+  createConsultantScorecard(scorecard: InsertConsultantScorecard): Promise<ConsultantScorecard>;
+  updateConsultantScorecard(id: string, data: Partial<InsertConsultantScorecard>): Promise<ConsultantScorecard | undefined>;
+  deleteConsultantScorecard(id: string): Promise<boolean>;
+
+  // Pulse Survey operations
+  getPulseSurvey(id: string): Promise<PulseSurveyWithDetails | undefined>;
+  listPulseSurveys(filters?: { projectId?: string; isActive?: boolean }): Promise<PulseSurveyWithDetails[]>;
+  listActivePulseSurveys(): Promise<PulseSurveyWithDetails[]>;
+  createPulseSurvey(survey: InsertPulseSurvey): Promise<PulseSurvey>;
+  updatePulseSurvey(id: string, data: Partial<InsertPulseSurvey>): Promise<PulseSurvey | undefined>;
+  deletePulseSurvey(id: string): Promise<boolean>;
+
+  // Pulse Response operations
+  getPulseResponse(id: string): Promise<PulseResponseWithDetails | undefined>;
+  listPulseResponses(filters?: { surveyId?: string; consultantId?: string }): Promise<PulseResponseWithDetails[]>;
+  createPulseResponse(response: InsertPulseResponse): Promise<PulseResponse>;
+  updatePulseResponse(id: string, data: Partial<InsertPulseResponse>): Promise<PulseResponse | undefined>;
+  deletePulseResponse(id: string): Promise<boolean>;
+
+  // NPS Response operations
+  getNpsResponse(id: string): Promise<NpsResponse | undefined>;
+  listNpsResponses(filters?: { category?: string; consultantId?: string }): Promise<NpsResponse[]>;
+  createNpsResponse(response: InsertNpsResponse): Promise<NpsResponse>;
+  updateNpsResponse(id: string, data: Partial<InsertNpsResponse>): Promise<NpsResponse | undefined>;
+  deleteNpsResponse(id: string): Promise<boolean>;
+  getNpsScore(category?: string): Promise<{ score: number; promoters: number; passives: number; detractors: number; total: number }>;
+
+  // Incident operations
+  getIncident(id: string): Promise<IncidentWithDetails | undefined>;
+  listIncidents(filters?: { projectId?: string; hospitalId?: string; status?: string; severity?: string }): Promise<IncidentWithDetails[]>;
+  createIncident(incident: InsertIncident): Promise<Incident>;
+  updateIncident(id: string, data: Partial<InsertIncident>): Promise<Incident | undefined>;
+  deleteIncident(id: string): Promise<boolean>;
+
+  // Corrective Action operations
+  getCorrectiveAction(id: string): Promise<CorrectiveActionWithDetails | undefined>;
+  listCorrectiveActions(filters?: { incidentId?: string; status?: string; assignedToId?: string }): Promise<CorrectiveActionWithDetails[]>;
+  createCorrectiveAction(action: InsertCorrectiveAction): Promise<CorrectiveAction>;
+  updateCorrectiveAction(id: string, data: Partial<InsertCorrectiveAction>): Promise<CorrectiveAction | undefined>;
+  deleteCorrectiveAction(id: string): Promise<boolean>;
+
+  // Achievement Badge operations (admin only)
+  getAchievementBadge(id: string): Promise<AchievementBadge | undefined>;
+  listAchievementBadges(filters?: { category?: string; isActive?: boolean }): Promise<AchievementBadge[]>;
+  createAchievementBadge(badge: InsertAchievementBadge): Promise<AchievementBadge>;
+  updateAchievementBadge(id: string, data: Partial<InsertAchievementBadge>): Promise<AchievementBadge | undefined>;
+  deleteAchievementBadge(id: string): Promise<boolean>;
+
+  // Consultant Badge operations
+  getConsultantBadge(id: string): Promise<ConsultantBadgeWithDetails | undefined>;
+  listConsultantBadges(filters?: { consultantId?: string; badgeId?: string }): Promise<ConsultantBadgeWithDetails[]>;
+  awardBadgeToConsultant(data: InsertConsultantBadge): Promise<ConsultantBadge>;
+  deleteConsultantBadge(id: string): Promise<boolean>;
+
+  // Point Transaction operations
+  getPointTransaction(id: string): Promise<PointTransactionWithDetails | undefined>;
+  listPointTransactions(filters?: { consultantId?: string; type?: string }): Promise<PointTransactionWithDetails[]>;
+  createPointTransaction(transaction: InsertPointTransaction): Promise<PointTransaction>;
+  getConsultantPointBalance(consultantId: string): Promise<number>;
+
+  // Referral operations
+  getReferral(id: string): Promise<ReferralWithDetails | undefined>;
+  listReferrals(filters?: { referrerId?: string; status?: string }): Promise<ReferralWithDetails[]>;
+  createReferral(referral: InsertReferral): Promise<Referral>;
+  updateReferral(id: string, data: Partial<InsertReferral>): Promise<Referral | undefined>;
+  deleteReferral(id: string): Promise<boolean>;
+
+  // Compliance Check operations
+  getComplianceCheck(id: string): Promise<ComplianceCheckWithDetails | undefined>;
+  listComplianceChecks(filters?: { consultantId?: string; checkType?: string; status?: string }): Promise<ComplianceCheckWithDetails[]>;
+  listExpiringComplianceChecks(withinDays: number): Promise<ComplianceCheckWithDetails[]>;
+  createComplianceCheck(check: InsertComplianceCheck): Promise<ComplianceCheck>;
+  updateComplianceCheck(id: string, data: Partial<InsertComplianceCheck>): Promise<ComplianceCheck | undefined>;
+  deleteComplianceCheck(id: string): Promise<boolean>;
+
+  // Compliance Audit operations
+  getComplianceAudit(id: string): Promise<ComplianceAuditWithDetails | undefined>;
+  listComplianceAudits(filters?: { projectId?: string; hospitalId?: string; status?: string }): Promise<ComplianceAuditWithDetails[]>;
+  createComplianceAudit(audit: InsertComplianceAudit): Promise<ComplianceAudit>;
+  updateComplianceAudit(id: string, data: Partial<InsertComplianceAudit>): Promise<ComplianceAudit | undefined>;
+  deleteComplianceAudit(id: string): Promise<boolean>;
+
+  // Phase 15 Analytics
+  getQualityAnalytics(filters?: { projectId?: string }): Promise<QualityAnalytics>;
+  getGamificationAnalytics(): Promise<GamificationAnalytics>;
+  getComplianceAnalytics(filters?: { consultantId?: string }): Promise<ComplianceAnalytics>;
 }
 
 export interface ConsultantSearchFilters {
@@ -6416,6 +6559,914 @@ export class DatabaseStorage implements IStorage {
         count: Number(r.count) || 0,
       })),
       recentGroups,
+    };
+  }
+
+  // ========================================
+  // PHASE 15: Quality Assurance, Gamification, Compliance
+  // ========================================
+
+  // Consultant Scorecard Operations
+  async getConsultantScorecard(id: string): Promise<ConsultantScorecardWithDetails | undefined> {
+    const results = await db.select().from(consultantScorecards).where(eq(consultantScorecards.id, id));
+    if (!results[0]) return undefined;
+    return this.buildConsultantScorecardWithDetails(results[0]);
+  }
+
+  async listConsultantScorecards(filters?: { consultantId?: string; projectId?: string; period?: string }): Promise<ConsultantScorecardWithDetails[]> {
+    const conditions: any[] = [];
+    if (filters?.consultantId) conditions.push(eq(consultantScorecards.consultantId, filters.consultantId));
+    if (filters?.projectId) conditions.push(eq(consultantScorecards.projectId, filters.projectId));
+    if (filters?.period) conditions.push(eq(consultantScorecards.period, filters.period));
+
+    const results = conditions.length > 0
+      ? await db.select().from(consultantScorecards).where(and(...conditions)).orderBy(desc(consultantScorecards.createdAt))
+      : await db.select().from(consultantScorecards).orderBy(desc(consultantScorecards.createdAt));
+
+    return Promise.all(results.map((s) => this.buildConsultantScorecardWithDetails(s)));
+  }
+
+  async createConsultantScorecard(scorecard: InsertConsultantScorecard): Promise<ConsultantScorecard> {
+    const results = await db.insert(consultantScorecards).values(scorecard).returning();
+    return results[0];
+  }
+
+  async updateConsultantScorecard(id: string, data: Partial<InsertConsultantScorecard>): Promise<ConsultantScorecard | undefined> {
+    const results = await db
+      .update(consultantScorecards)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(consultantScorecards.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteConsultantScorecard(id: string): Promise<boolean> {
+    await db.delete(consultantScorecards).where(eq(consultantScorecards.id, id));
+    return true;
+  }
+
+  private async buildConsultantScorecardWithDetails(scorecard: ConsultantScorecard): Promise<ConsultantScorecardWithDetails> {
+    const consultant = await this.getConsultant(scorecard.consultantId);
+    const consultantUser = consultant ? await this.getUser(consultant.userId) : null;
+    const project = scorecard.projectId ? await this.getProject(scorecard.projectId) : null;
+    const reviewedBy = scorecard.reviewedById ? await this.getUser(scorecard.reviewedById) : null;
+
+    return {
+      ...scorecard,
+      consultant: {
+        id: consultant?.id || "",
+        user: {
+          firstName: consultantUser?.firstName || null,
+          lastName: consultantUser?.lastName || null,
+          profileImageUrl: consultantUser?.profileImageUrl || null,
+        },
+      },
+      project: project ? { id: project.id, name: project.name } : null,
+      reviewedBy: reviewedBy ? {
+        id: reviewedBy.id,
+        firstName: reviewedBy.firstName,
+        lastName: reviewedBy.lastName,
+      } : null,
+    };
+  }
+
+  // Pulse Survey Operations
+  async getPulseSurvey(id: string): Promise<PulseSurveyWithDetails | undefined> {
+    const results = await db.select().from(pulseSurveys).where(eq(pulseSurveys.id, id));
+    if (!results[0]) return undefined;
+    return this.buildPulseSurveyWithDetails(results[0]);
+  }
+
+  async listPulseSurveys(filters?: { projectId?: string; isActive?: boolean }): Promise<PulseSurveyWithDetails[]> {
+    const conditions: any[] = [];
+    if (filters?.projectId) conditions.push(eq(pulseSurveys.projectId, filters.projectId));
+    if (filters?.isActive !== undefined) conditions.push(eq(pulseSurveys.isActive, filters.isActive));
+
+    const results = conditions.length > 0
+      ? await db.select().from(pulseSurveys).where(and(...conditions)).orderBy(desc(pulseSurveys.createdAt))
+      : await db.select().from(pulseSurveys).orderBy(desc(pulseSurveys.createdAt));
+
+    return Promise.all(results.map((s) => this.buildPulseSurveyWithDetails(s)));
+  }
+
+  async listActivePulseSurveys(): Promise<PulseSurveyWithDetails[]> {
+    const today = new Date().toISOString().split("T")[0];
+    const results = await db
+      .select()
+      .from(pulseSurveys)
+      .where(and(
+        eq(pulseSurveys.isActive, true),
+        lte(pulseSurveys.startDate, today),
+        gte(pulseSurveys.endDate, today)
+      ))
+      .orderBy(desc(pulseSurveys.createdAt));
+
+    return Promise.all(results.map((s) => this.buildPulseSurveyWithDetails(s)));
+  }
+
+  async createPulseSurvey(survey: InsertPulseSurvey): Promise<PulseSurvey> {
+    const results = await db.insert(pulseSurveys).values(survey).returning();
+    return results[0];
+  }
+
+  async updatePulseSurvey(id: string, data: Partial<InsertPulseSurvey>): Promise<PulseSurvey | undefined> {
+    const results = await db
+      .update(pulseSurveys)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(pulseSurveys.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deletePulseSurvey(id: string): Promise<boolean> {
+    await db.delete(pulseSurveys).where(eq(pulseSurveys.id, id));
+    return true;
+  }
+
+  private async buildPulseSurveyWithDetails(survey: PulseSurvey): Promise<PulseSurveyWithDetails> {
+    const project = survey.projectId ? await this.getProject(survey.projectId) : null;
+    const createdBy = survey.createdById ? await this.getUser(survey.createdById) : null;
+
+    const responseCountResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(pulseResponses)
+      .where(eq(pulseResponses.surveyId, survey.id));
+
+    return {
+      ...survey,
+      project: project ? { id: project.id, name: project.name } : null,
+      createdBy: createdBy ? {
+        id: createdBy.id,
+        firstName: createdBy.firstName,
+        lastName: createdBy.lastName,
+      } : null,
+      responseCount: Number(responseCountResult[0]?.count) || 0,
+    };
+  }
+
+  // Pulse Response Operations
+  async getPulseResponse(id: string): Promise<PulseResponseWithDetails | undefined> {
+    const results = await db.select().from(pulseResponses).where(eq(pulseResponses.id, id));
+    if (!results[0]) return undefined;
+    return this.buildPulseResponseWithDetails(results[0]);
+  }
+
+  async listPulseResponses(filters?: { surveyId?: string; consultantId?: string }): Promise<PulseResponseWithDetails[]> {
+    const conditions: any[] = [];
+    if (filters?.surveyId) conditions.push(eq(pulseResponses.surveyId, filters.surveyId));
+    if (filters?.consultantId) conditions.push(eq(pulseResponses.consultantId, filters.consultantId));
+
+    const results = conditions.length > 0
+      ? await db.select().from(pulseResponses).where(and(...conditions)).orderBy(desc(pulseResponses.submittedAt))
+      : await db.select().from(pulseResponses).orderBy(desc(pulseResponses.submittedAt));
+
+    return Promise.all(results.map((r) => this.buildPulseResponseWithDetails(r)));
+  }
+
+  async createPulseResponse(response: InsertPulseResponse): Promise<PulseResponse> {
+    const results = await db.insert(pulseResponses).values(response).returning();
+    return results[0];
+  }
+
+  async updatePulseResponse(id: string, data: Partial<InsertPulseResponse>): Promise<PulseResponse | undefined> {
+    const results = await db
+      .update(pulseResponses)
+      .set(data)
+      .where(eq(pulseResponses.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deletePulseResponse(id: string): Promise<boolean> {
+    await db.delete(pulseResponses).where(eq(pulseResponses.id, id));
+    return true;
+  }
+
+  private async buildPulseResponseWithDetails(response: PulseResponse): Promise<PulseResponseWithDetails> {
+    const survey = await db.select().from(pulseSurveys).where(eq(pulseSurveys.id, response.surveyId));
+    const consultant = await this.getConsultant(response.consultantId);
+    const consultantUser = consultant ? await this.getUser(consultant.userId) : null;
+
+    return {
+      ...response,
+      survey: {
+        id: survey[0]?.id || "",
+        title: survey[0]?.title || "",
+      },
+      consultant: {
+        id: consultant?.id || "",
+        user: {
+          firstName: consultantUser?.firstName || null,
+          lastName: consultantUser?.lastName || null,
+        },
+      },
+    };
+  }
+
+  // NPS Response Operations
+  async getNpsResponse(id: string): Promise<NpsResponse | undefined> {
+    const results = await db.select().from(npsResponses).where(eq(npsResponses.id, id));
+    return results[0];
+  }
+
+  async listNpsResponses(filters?: { category?: string; consultantId?: string }): Promise<NpsResponse[]> {
+    const conditions: any[] = [];
+    if (filters?.category) conditions.push(eq(npsResponses.category, filters.category as any));
+    if (filters?.consultantId) conditions.push(eq(npsResponses.consultantId, filters.consultantId));
+
+    return conditions.length > 0
+      ? await db.select().from(npsResponses).where(and(...conditions)).orderBy(desc(npsResponses.submittedAt))
+      : await db.select().from(npsResponses).orderBy(desc(npsResponses.submittedAt));
+  }
+
+  async createNpsResponse(response: InsertNpsResponse): Promise<NpsResponse> {
+    const results = await db.insert(npsResponses).values(response).returning();
+    return results[0];
+  }
+
+  async updateNpsResponse(id: string, data: Partial<InsertNpsResponse>): Promise<NpsResponse | undefined> {
+    const results = await db
+      .update(npsResponses)
+      .set(data)
+      .where(eq(npsResponses.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteNpsResponse(id: string): Promise<boolean> {
+    await db.delete(npsResponses).where(eq(npsResponses.id, id));
+    return true;
+  }
+
+  async getNpsScore(category?: string): Promise<{ score: number; promoters: number; passives: number; detractors: number; total: number }> {
+    const conditions: any[] = [];
+    if (category) conditions.push(eq(npsResponses.category, category as any));
+
+    const results = conditions.length > 0
+      ? await db.select().from(npsResponses).where(and(...conditions))
+      : await db.select().from(npsResponses);
+
+    const total = results.length;
+    if (total === 0) {
+      return { score: 0, promoters: 0, passives: 0, detractors: 0, total: 0 };
+    }
+
+    let promoters = 0;
+    let passives = 0;
+    let detractors = 0;
+
+    for (const r of results) {
+      if (r.score >= 9) promoters++;
+      else if (r.score >= 7) passives++;
+      else detractors++;
+    }
+
+    const score = Math.round(((promoters - detractors) / total) * 100);
+    return { score, promoters, passives, detractors, total };
+  }
+
+  // Incident Operations
+  async getIncident(id: string): Promise<IncidentWithDetails | undefined> {
+    const results = await db.select().from(incidents).where(eq(incidents.id, id));
+    if (!results[0]) return undefined;
+    return this.buildIncidentWithDetails(results[0]);
+  }
+
+  async listIncidents(filters?: { projectId?: string; hospitalId?: string; status?: string; severity?: string }): Promise<IncidentWithDetails[]> {
+    const conditions: any[] = [];
+    if (filters?.projectId) conditions.push(eq(incidents.projectId, filters.projectId));
+    if (filters?.hospitalId) conditions.push(eq(incidents.hospitalId, filters.hospitalId));
+    if (filters?.status) conditions.push(eq(incidents.status, filters.status as any));
+    if (filters?.severity) conditions.push(eq(incidents.severity, filters.severity as any));
+
+    const results = conditions.length > 0
+      ? await db.select().from(incidents).where(and(...conditions)).orderBy(desc(incidents.createdAt))
+      : await db.select().from(incidents).orderBy(desc(incidents.createdAt));
+
+    return Promise.all(results.map((i) => this.buildIncidentWithDetails(i)));
+  }
+
+  async createIncident(incident: InsertIncident): Promise<Incident> {
+    const results = await db.insert(incidents).values(incident).returning();
+    return results[0];
+  }
+
+  async updateIncident(id: string, data: Partial<InsertIncident>): Promise<Incident | undefined> {
+    const results = await db
+      .update(incidents)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(incidents.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteIncident(id: string): Promise<boolean> {
+    await db.delete(incidents).where(eq(incidents.id, id));
+    return true;
+  }
+
+  private async buildIncidentWithDetails(incident: Incident): Promise<IncidentWithDetails> {
+    const project = incident.projectId ? await this.getProject(incident.projectId) : null;
+    const hospital = incident.hospitalId ? await this.getHospital(incident.hospitalId) : null;
+    const consultant = incident.consultantId ? await this.getConsultant(incident.consultantId) : null;
+    const consultantUser = consultant ? await this.getUser(consultant.userId) : null;
+    const reportedBy = await this.getUser(incident.reportedById);
+    const assignedTo = incident.assignedToId ? await this.getUser(incident.assignedToId) : null;
+
+    const incidentCorrectiveActions = await db
+      .select()
+      .from(correctiveActions)
+      .where(eq(correctiveActions.incidentId, incident.id));
+
+    return {
+      ...incident,
+      project: project ? { id: project.id, name: project.name } : null,
+      hospital: hospital ? { id: hospital.id, name: hospital.name } : null,
+      consultant: consultant ? {
+        id: consultant.id,
+        user: {
+          firstName: consultantUser?.firstName || null,
+          lastName: consultantUser?.lastName || null,
+        },
+      } : null,
+      reportedBy: {
+        id: reportedBy?.id || "",
+        firstName: reportedBy?.firstName || null,
+        lastName: reportedBy?.lastName || null,
+      },
+      assignedTo: assignedTo ? {
+        id: assignedTo.id,
+        firstName: assignedTo.firstName,
+        lastName: assignedTo.lastName,
+      } : null,
+      correctiveActions: incidentCorrectiveActions,
+    };
+  }
+
+  // Corrective Action Operations
+  async getCorrectiveAction(id: string): Promise<CorrectiveActionWithDetails | undefined> {
+    const results = await db.select().from(correctiveActions).where(eq(correctiveActions.id, id));
+    if (!results[0]) return undefined;
+    return this.buildCorrectiveActionWithDetails(results[0]);
+  }
+
+  async listCorrectiveActions(filters?: { incidentId?: string; status?: string; assignedToId?: string }): Promise<CorrectiveActionWithDetails[]> {
+    const conditions: any[] = [];
+    if (filters?.incidentId) conditions.push(eq(correctiveActions.incidentId, filters.incidentId));
+    if (filters?.status) conditions.push(eq(correctiveActions.status, filters.status as any));
+    if (filters?.assignedToId) conditions.push(eq(correctiveActions.assignedToId, filters.assignedToId));
+
+    const results = conditions.length > 0
+      ? await db.select().from(correctiveActions).where(and(...conditions)).orderBy(desc(correctiveActions.createdAt))
+      : await db.select().from(correctiveActions).orderBy(desc(correctiveActions.createdAt));
+
+    return Promise.all(results.map((a) => this.buildCorrectiveActionWithDetails(a)));
+  }
+
+  async createCorrectiveAction(action: InsertCorrectiveAction): Promise<CorrectiveAction> {
+    const results = await db.insert(correctiveActions).values(action).returning();
+    return results[0];
+  }
+
+  async updateCorrectiveAction(id: string, data: Partial<InsertCorrectiveAction>): Promise<CorrectiveAction | undefined> {
+    const results = await db
+      .update(correctiveActions)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(correctiveActions.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteCorrectiveAction(id: string): Promise<boolean> {
+    await db.delete(correctiveActions).where(eq(correctiveActions.id, id));
+    return true;
+  }
+
+  private async buildCorrectiveActionWithDetails(action: CorrectiveAction): Promise<CorrectiveActionWithDetails> {
+    const incident = await db.select().from(incidents).where(eq(incidents.id, action.incidentId));
+    const assignedTo = action.assignedToId ? await this.getUser(action.assignedToId) : null;
+    const verifiedBy = action.verifiedById ? await this.getUser(action.verifiedById) : null;
+
+    return {
+      ...action,
+      incident: {
+        id: incident[0]?.id || "",
+        title: incident[0]?.title || "",
+      },
+      assignedTo: assignedTo ? {
+        id: assignedTo.id,
+        firstName: assignedTo.firstName,
+        lastName: assignedTo.lastName,
+      } : null,
+      verifiedBy: verifiedBy ? {
+        id: verifiedBy.id,
+        firstName: verifiedBy.firstName,
+        lastName: verifiedBy.lastName,
+      } : null,
+    };
+  }
+
+  // Achievement Badge Operations (admin only)
+  async getAchievementBadge(id: string): Promise<AchievementBadge | undefined> {
+    const results = await db.select().from(achievementBadges).where(eq(achievementBadges.id, id));
+    return results[0];
+  }
+
+  async listAchievementBadges(filters?: { category?: string; isActive?: boolean }): Promise<AchievementBadge[]> {
+    const conditions: any[] = [];
+    if (filters?.category) conditions.push(eq(achievementBadges.category, filters.category as any));
+    if (filters?.isActive !== undefined) conditions.push(eq(achievementBadges.isActive, filters.isActive));
+
+    return conditions.length > 0
+      ? await db.select().from(achievementBadges).where(and(...conditions)).orderBy(asc(achievementBadges.name))
+      : await db.select().from(achievementBadges).orderBy(asc(achievementBadges.name));
+  }
+
+  async createAchievementBadge(badge: InsertAchievementBadge): Promise<AchievementBadge> {
+    const results = await db.insert(achievementBadges).values(badge).returning();
+    return results[0];
+  }
+
+  async updateAchievementBadge(id: string, data: Partial<InsertAchievementBadge>): Promise<AchievementBadge | undefined> {
+    const results = await db
+      .update(achievementBadges)
+      .set(data)
+      .where(eq(achievementBadges.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteAchievementBadge(id: string): Promise<boolean> {
+    await db.delete(achievementBadges).where(eq(achievementBadges.id, id));
+    return true;
+  }
+
+  // Consultant Badge Operations
+  async getConsultantBadge(id: string): Promise<ConsultantBadgeWithDetails | undefined> {
+    const results = await db.select().from(consultantBadges).where(eq(consultantBadges.id, id));
+    if (!results[0]) return undefined;
+    return this.buildConsultantBadgeWithDetails(results[0]);
+  }
+
+  async listConsultantBadges(filters?: { consultantId?: string; badgeId?: string }): Promise<ConsultantBadgeWithDetails[]> {
+    const conditions: any[] = [];
+    if (filters?.consultantId) conditions.push(eq(consultantBadges.consultantId, filters.consultantId));
+    if (filters?.badgeId) conditions.push(eq(consultantBadges.badgeId, filters.badgeId));
+
+    const results = conditions.length > 0
+      ? await db.select().from(consultantBadges).where(and(...conditions)).orderBy(desc(consultantBadges.earnedAt))
+      : await db.select().from(consultantBadges).orderBy(desc(consultantBadges.earnedAt));
+
+    return Promise.all(results.map((b) => this.buildConsultantBadgeWithDetails(b)));
+  }
+
+  async awardBadgeToConsultant(data: InsertConsultantBadge): Promise<ConsultantBadge> {
+    const results = await db.insert(consultantBadges).values(data).returning();
+    return results[0];
+  }
+
+  async deleteConsultantBadge(id: string): Promise<boolean> {
+    await db.delete(consultantBadges).where(eq(consultantBadges.id, id));
+    return true;
+  }
+
+  private async buildConsultantBadgeWithDetails(cb: ConsultantBadge): Promise<ConsultantBadgeWithDetails> {
+    const badge = await this.getAchievementBadge(cb.badgeId);
+    const consultant = await this.getConsultant(cb.consultantId);
+    const consultantUser = consultant ? await this.getUser(consultant.userId) : null;
+    const awardedBy = cb.awardedById ? await this.getUser(cb.awardedById) : null;
+
+    return {
+      ...cb,
+      badge: badge!,
+      consultant: {
+        id: consultant?.id || "",
+        user: {
+          firstName: consultantUser?.firstName || null,
+          lastName: consultantUser?.lastName || null,
+        },
+      },
+      awardedBy: awardedBy ? {
+        id: awardedBy.id,
+        firstName: awardedBy.firstName,
+        lastName: awardedBy.lastName,
+      } : null,
+    };
+  }
+
+  // Point Transaction Operations
+  async getPointTransaction(id: string): Promise<PointTransactionWithDetails | undefined> {
+    const results = await db.select().from(pointTransactions).where(eq(pointTransactions.id, id));
+    if (!results[0]) return undefined;
+    return this.buildPointTransactionWithDetails(results[0]);
+  }
+
+  async listPointTransactions(filters?: { consultantId?: string; type?: string }): Promise<PointTransactionWithDetails[]> {
+    const conditions: any[] = [];
+    if (filters?.consultantId) conditions.push(eq(pointTransactions.consultantId, filters.consultantId));
+    if (filters?.type) conditions.push(eq(pointTransactions.type, filters.type as any));
+
+    const results = conditions.length > 0
+      ? await db.select().from(pointTransactions).where(and(...conditions)).orderBy(desc(pointTransactions.createdAt))
+      : await db.select().from(pointTransactions).orderBy(desc(pointTransactions.createdAt));
+
+    return Promise.all(results.map((t) => this.buildPointTransactionWithDetails(t)));
+  }
+
+  async createPointTransaction(transaction: InsertPointTransaction): Promise<PointTransaction> {
+    const results = await db.insert(pointTransactions).values(transaction).returning();
+    return results[0];
+  }
+
+  async getConsultantPointBalance(consultantId: string): Promise<number> {
+    const result = await db
+      .select()
+      .from(pointTransactions)
+      .where(eq(pointTransactions.consultantId, consultantId))
+      .orderBy(desc(pointTransactions.createdAt))
+      .limit(1);
+
+    return result[0]?.balance || 0;
+  }
+
+  private async buildPointTransactionWithDetails(transaction: PointTransaction): Promise<PointTransactionWithDetails> {
+    const consultant = await this.getConsultant(transaction.consultantId);
+    const consultantUser = consultant ? await this.getUser(consultant.userId) : null;
+    const createdBy = transaction.createdById ? await this.getUser(transaction.createdById) : null;
+
+    return {
+      ...transaction,
+      consultant: {
+        id: consultant?.id || "",
+        user: {
+          firstName: consultantUser?.firstName || null,
+          lastName: consultantUser?.lastName || null,
+        },
+      },
+      createdBy: createdBy ? {
+        id: createdBy.id,
+        firstName: createdBy.firstName,
+        lastName: createdBy.lastName,
+      } : null,
+    };
+  }
+
+  // Referral Operations
+  async getReferral(id: string): Promise<ReferralWithDetails | undefined> {
+    const results = await db.select().from(referrals).where(eq(referrals.id, id));
+    if (!results[0]) return undefined;
+    return this.buildReferralWithDetails(results[0]);
+  }
+
+  async listReferrals(filters?: { referrerId?: string; status?: string }): Promise<ReferralWithDetails[]> {
+    const conditions: any[] = [];
+    if (filters?.referrerId) conditions.push(eq(referrals.referrerId, filters.referrerId));
+    if (filters?.status) conditions.push(eq(referrals.status, filters.status as any));
+
+    const results = conditions.length > 0
+      ? await db.select().from(referrals).where(and(...conditions)).orderBy(desc(referrals.createdAt))
+      : await db.select().from(referrals).orderBy(desc(referrals.createdAt));
+
+    return Promise.all(results.map((r) => this.buildReferralWithDetails(r)));
+  }
+
+  async createReferral(referral: InsertReferral): Promise<Referral> {
+    const results = await db.insert(referrals).values(referral).returning();
+    return results[0];
+  }
+
+  async updateReferral(id: string, data: Partial<InsertReferral>): Promise<Referral | undefined> {
+    const results = await db
+      .update(referrals)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(referrals.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteReferral(id: string): Promise<boolean> {
+    await db.delete(referrals).where(eq(referrals.id, id));
+    return true;
+  }
+
+  private async buildReferralWithDetails(referral: Referral): Promise<ReferralWithDetails> {
+    const referrer = await this.getConsultant(referral.referrerId);
+    const referrerUser = referrer ? await this.getUser(referrer.userId) : null;
+    const hiredAsConsultant = referral.hiredAsConsultantId ? await this.getConsultant(referral.hiredAsConsultantId) : null;
+    const hiredAsUser = hiredAsConsultant ? await this.getUser(hiredAsConsultant.userId) : null;
+
+    return {
+      ...referral,
+      referrer: {
+        id: referrer?.id || "",
+        user: {
+          firstName: referrerUser?.firstName || null,
+          lastName: referrerUser?.lastName || null,
+        },
+      },
+      hiredAsConsultant: hiredAsConsultant ? {
+        id: hiredAsConsultant.id,
+        user: {
+          firstName: hiredAsUser?.firstName || null,
+          lastName: hiredAsUser?.lastName || null,
+        },
+      } : null,
+    };
+  }
+
+  // Compliance Check Operations
+  async getComplianceCheck(id: string): Promise<ComplianceCheckWithDetails | undefined> {
+    const results = await db.select().from(complianceChecks).where(eq(complianceChecks.id, id));
+    if (!results[0]) return undefined;
+    return this.buildComplianceCheckWithDetails(results[0]);
+  }
+
+  async listComplianceChecks(filters?: { consultantId?: string; checkType?: string; status?: string }): Promise<ComplianceCheckWithDetails[]> {
+    const conditions: any[] = [];
+    if (filters?.consultantId) conditions.push(eq(complianceChecks.consultantId, filters.consultantId));
+    if (filters?.checkType) conditions.push(eq(complianceChecks.checkType, filters.checkType as any));
+    if (filters?.status) conditions.push(eq(complianceChecks.status, filters.status as any));
+
+    const results = conditions.length > 0
+      ? await db.select().from(complianceChecks).where(and(...conditions)).orderBy(desc(complianceChecks.checkDate))
+      : await db.select().from(complianceChecks).orderBy(desc(complianceChecks.checkDate));
+
+    return Promise.all(results.map((c) => this.buildComplianceCheckWithDetails(c)));
+  }
+
+  async listExpiringComplianceChecks(withinDays: number): Promise<ComplianceCheckWithDetails[]> {
+    const today = new Date();
+    const futureDate = new Date(today.getTime() + withinDays * 24 * 60 * 60 * 1000);
+    const todayStr = today.toISOString().split("T")[0];
+    const futureDateStr = futureDate.toISOString().split("T")[0];
+
+    const results = await db
+      .select()
+      .from(complianceChecks)
+      .where(and(
+        gte(complianceChecks.expirationDate, todayStr),
+        lte(complianceChecks.expirationDate, futureDateStr)
+      ))
+      .orderBy(asc(complianceChecks.expirationDate));
+
+    return Promise.all(results.map((c) => this.buildComplianceCheckWithDetails(c)));
+  }
+
+  async createComplianceCheck(check: InsertComplianceCheck): Promise<ComplianceCheck> {
+    const results = await db.insert(complianceChecks).values(check).returning();
+    return results[0];
+  }
+
+  async updateComplianceCheck(id: string, data: Partial<InsertComplianceCheck>): Promise<ComplianceCheck | undefined> {
+    const results = await db
+      .update(complianceChecks)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(complianceChecks.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteComplianceCheck(id: string): Promise<boolean> {
+    await db.delete(complianceChecks).where(eq(complianceChecks.id, id));
+    return true;
+  }
+
+  private async buildComplianceCheckWithDetails(check: ComplianceCheck): Promise<ComplianceCheckWithDetails> {
+    const consultant = await this.getConsultant(check.consultantId);
+    const consultantUser = consultant ? await this.getUser(consultant.userId) : null;
+    const checkedBy = check.checkedById ? await this.getUser(check.checkedById) : null;
+
+    return {
+      ...check,
+      consultant: {
+        id: consultant?.id || "",
+        user: {
+          firstName: consultantUser?.firstName || null,
+          lastName: consultantUser?.lastName || null,
+        },
+      },
+      checkedBy: checkedBy ? {
+        id: checkedBy.id,
+        firstName: checkedBy.firstName,
+        lastName: checkedBy.lastName,
+      } : null,
+    };
+  }
+
+  // Compliance Audit Operations
+  async getComplianceAudit(id: string): Promise<ComplianceAuditWithDetails | undefined> {
+    const results = await db.select().from(complianceAudits).where(eq(complianceAudits.id, id));
+    if (!results[0]) return undefined;
+    return this.buildComplianceAuditWithDetails(results[0]);
+  }
+
+  async listComplianceAudits(filters?: { projectId?: string; hospitalId?: string; status?: string }): Promise<ComplianceAuditWithDetails[]> {
+    const conditions: any[] = [];
+    if (filters?.projectId) conditions.push(eq(complianceAudits.projectId, filters.projectId));
+    if (filters?.hospitalId) conditions.push(eq(complianceAudits.hospitalId, filters.hospitalId));
+    if (filters?.status) conditions.push(eq(complianceAudits.status, filters.status));
+
+    const results = conditions.length > 0
+      ? await db.select().from(complianceAudits).where(and(...conditions)).orderBy(desc(complianceAudits.auditDate))
+      : await db.select().from(complianceAudits).orderBy(desc(complianceAudits.auditDate));
+
+    return Promise.all(results.map((a) => this.buildComplianceAuditWithDetails(a)));
+  }
+
+  async createComplianceAudit(audit: InsertComplianceAudit): Promise<ComplianceAudit> {
+    const results = await db.insert(complianceAudits).values(audit).returning();
+    return results[0];
+  }
+
+  async updateComplianceAudit(id: string, data: Partial<InsertComplianceAudit>): Promise<ComplianceAudit | undefined> {
+    const results = await db
+      .update(complianceAudits)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(complianceAudits.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteComplianceAudit(id: string): Promise<boolean> {
+    await db.delete(complianceAudits).where(eq(complianceAudits.id, id));
+    return true;
+  }
+
+  private async buildComplianceAuditWithDetails(audit: ComplianceAudit): Promise<ComplianceAuditWithDetails> {
+    const project = audit.projectId ? await this.getProject(audit.projectId) : null;
+    const hospital = audit.hospitalId ? await this.getHospital(audit.hospitalId) : null;
+    const auditor = audit.auditorId ? await this.getUser(audit.auditorId) : null;
+
+    return {
+      ...audit,
+      project: project ? { id: project.id, name: project.name } : null,
+      hospital: hospital ? { id: hospital.id, name: hospital.name } : null,
+      auditor: auditor ? {
+        id: auditor.id,
+        firstName: auditor.firstName,
+        lastName: auditor.lastName,
+      } : null,
+    };
+  }
+
+  // Phase 15 Analytics
+  async getQualityAnalytics(filters?: { projectId?: string }): Promise<QualityAnalytics> {
+    const scorecardConditions: any[] = [];
+    if (filters?.projectId) scorecardConditions.push(eq(consultantScorecards.projectId, filters.projectId));
+
+    const scorecardsResults = scorecardConditions.length > 0
+      ? await db.select().from(consultantScorecards).where(and(...scorecardConditions))
+      : await db.select().from(consultantScorecards);
+
+    let totalOverall = 0;
+    let totalQuality = 0;
+    let totalPunctuality = 0;
+    let totalCommunication = 0;
+    let totalTechnical = 0;
+    let activeScorecards = 0;
+
+    for (const sc of scorecardsResults) {
+      if (sc.overallScore) totalOverall += parseFloat(sc.overallScore);
+      if (sc.qualityScore) totalQuality += parseFloat(sc.qualityScore);
+      if (sc.punctualityScore) totalPunctuality += parseFloat(sc.punctualityScore);
+      if (sc.communicationScore) totalCommunication += parseFloat(sc.communicationScore);
+      if (sc.technicalScore) totalTechnical += parseFloat(sc.technicalScore);
+      if (sc.status === "active") activeScorecards++;
+    }
+
+    const count = scorecardsResults.length || 1;
+
+    const npsData = await this.getNpsScore();
+
+    return {
+      avgOverallScore: Math.round((totalOverall / count) * 100) / 100,
+      avgQualityScore: Math.round((totalQuality / count) * 100) / 100,
+      avgPunctualityScore: Math.round((totalPunctuality / count) * 100) / 100,
+      avgCommunicationScore: Math.round((totalCommunication / count) * 100) / 100,
+      avgTechnicalScore: Math.round((totalTechnical / count) * 100) / 100,
+      totalScorecards: scorecardsResults.length,
+      activeScorecards,
+      npsScore: npsData.score,
+      totalNpsResponses: npsData.total,
+      promoters: npsData.promoters,
+      passives: npsData.passives,
+      detractors: npsData.detractors,
+    };
+  }
+
+  async getGamificationAnalytics(): Promise<GamificationAnalytics> {
+    const badgeCountResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(achievementBadges);
+
+    const awardedBadgeCountResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(consultantBadges);
+
+    const earnedPointsResult = await db
+      .select({ sum: sql<number>`COALESCE(SUM(CASE WHEN ${pointTransactions.type} = 'earned' THEN ${pointTransactions.points} ELSE 0 END), 0)` })
+      .from(pointTransactions);
+
+    const redeemedPointsResult = await db
+      .select({ sum: sql<number>`COALESCE(SUM(CASE WHEN ${pointTransactions.type} = 'redeemed' THEN ${pointTransactions.points} ELSE 0 END), 0)` })
+      .from(pointTransactions);
+
+    const referralCountResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(referrals);
+
+    const hiredReferralCountResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(referrals)
+      .where(eq(referrals.status, "hired"));
+
+    const topEarnersResults = await db
+      .select({
+        consultantId: pointTransactions.consultantId,
+        totalPoints: sql<number>`COALESCE(SUM(CASE WHEN ${pointTransactions.type} = 'earned' THEN ${pointTransactions.points} ELSE 0 END), 0)`,
+      })
+      .from(pointTransactions)
+      .groupBy(pointTransactions.consultantId)
+      .orderBy(desc(sql`COALESCE(SUM(CASE WHEN ${pointTransactions.type} = 'earned' THEN ${pointTransactions.points} ELSE 0 END), 0)`))
+      .limit(10);
+
+    const topEarners: Array<{ consultantId: string; consultantName: string; totalPoints: number }> = [];
+    for (const te of topEarnersResults) {
+      const consultant = await this.getConsultant(te.consultantId);
+      const user = consultant ? await this.getUser(consultant.userId) : null;
+      topEarners.push({
+        consultantId: te.consultantId,
+        consultantName: user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : "Unknown",
+        totalPoints: Number(te.totalPoints) || 0,
+      });
+    }
+
+    return {
+      totalBadges: Number(badgeCountResult[0]?.count) || 0,
+      totalBadgesAwarded: Number(awardedBadgeCountResult[0]?.count) || 0,
+      totalPointsEarned: Number(earnedPointsResult[0]?.sum) || 0,
+      totalPointsRedeemed: Number(redeemedPointsResult[0]?.sum) || 0,
+      totalReferrals: Number(referralCountResult[0]?.count) || 0,
+      hiredReferrals: Number(hiredReferralCountResult[0]?.count) || 0,
+      topEarners,
+    };
+  }
+
+  async getComplianceAnalytics(filters?: { consultantId?: string }): Promise<ComplianceAnalytics> {
+    const conditions: any[] = [];
+    if (filters?.consultantId) conditions.push(eq(complianceChecks.consultantId, filters.consultantId));
+
+    const allChecks = conditions.length > 0
+      ? await db.select().from(complianceChecks).where(and(...conditions))
+      : await db.select().from(complianceChecks);
+
+    let passedChecks = 0;
+    let failedChecks = 0;
+    let expiredChecks = 0;
+    let pendingChecks = 0;
+    const today = new Date().toISOString().split("T")[0];
+
+    const typeStats: Record<string, { total: number; passed: number; failed: number }> = {};
+
+    for (const check of allChecks) {
+      if (!typeStats[check.checkType]) {
+        typeStats[check.checkType] = { total: 0, passed: 0, failed: 0 };
+      }
+      typeStats[check.checkType].total++;
+
+      if (check.status === "passed") {
+        passedChecks++;
+        typeStats[check.checkType].passed++;
+      } else if (check.status === "failed") {
+        failedChecks++;
+        typeStats[check.checkType].failed++;
+      } else if (check.status === "expired" || (check.expirationDate && check.expirationDate < today)) {
+        expiredChecks++;
+      } else if (check.status === "pending") {
+        pendingChecks++;
+      }
+    }
+
+    const complianceRate = allChecks.length > 0
+      ? Math.round((passedChecks / allChecks.length) * 100)
+      : 0;
+
+    const upcomingExpirations = await this.listExpiringComplianceChecks(30);
+
+    return {
+      totalChecks: allChecks.length,
+      passedChecks,
+      failedChecks,
+      expiredChecks,
+      pendingChecks,
+      complianceRate,
+      checksByType: Object.entries(typeStats).map(([type, stats]) => ({
+        type,
+        total: stats.total,
+        passed: stats.passed,
+        failed: stats.failed,
+      })),
+      upcomingExpirations,
     };
   }
 }
