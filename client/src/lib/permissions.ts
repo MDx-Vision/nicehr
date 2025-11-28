@@ -63,6 +63,8 @@ export const NAVIGATION_CONFIG: NavigationItem[] = [
   { title: "Documents", url: "/documents", icon: "FileText", category: "communication", roles: ["admin", "hospital_leadership"] },
   { title: "My Documents", url: "/my-documents", icon: "FileText", category: "communication", roles: ["consultant"] },
   { title: "Search", url: "/search", icon: "Search", category: "communication", roles: ["admin", "hospital_leadership"] },
+  
+  { title: "Role Management", url: "/role-management", icon: "KeyRound", category: "admin", roles: ["admin"] },
 ];
 
 export const CATEGORY_LABELS: Record<string, string> = {
