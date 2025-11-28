@@ -1,11 +1,13 @@
 import { WebSocketServer, WebSocket } from 'ws';
-import type { Server } from 'http';
+import type { Server, IncomingMessage } from 'http';
 import { storage } from './storage';
+import { sessionStore } from './replitAuth';
+import cookie from 'cookie';
+import cookieSignature from 'cookie-signature';
 
 interface ChatMessage {
-  type: 'message' | 'join' | 'leave' | 'typing' | 'read' | 'auth';
+  type: 'message' | 'join' | 'leave' | 'typing' | 'read';
   channelId?: string;
-  userId?: string;
   content?: string;
   messageId?: string;
 }
@@ -18,10 +20,75 @@ interface AuthenticatedWebSocket extends WebSocket {
 
 const clients = new Map<string, Set<AuthenticatedWebSocket>>();
 
-export function setupWebSocket(server: Server) {
-  const wss = new WebSocketServer({ server, path: '/ws' });
+async function getUserIdFromSession(req: IncomingMessage): Promise<string | null> {
+  return new Promise((resolve) => {
+    try {
+      const cookies = cookie.parse(req.headers.cookie || '');
+      const sessionCookie = cookies['connect.sid'];
+      
+      if (!sessionCookie) {
+        resolve(null);
+        return;
+      }
 
-  // Heartbeat to detect stale connections
+      const secret = process.env.SESSION_SECRET;
+      if (!secret) {
+        console.error('SESSION_SECRET not configured');
+        resolve(null);
+        return;
+      }
+
+      if (!sessionCookie.startsWith('s:')) {
+        resolve(null);
+        return;
+      }
+
+      const signedValue = sessionCookie.slice(2);
+      const sessionId = cookieSignature.unsign(signedValue, secret);
+      
+      if (sessionId === false) {
+        console.error('Invalid session signature');
+        resolve(null);
+        return;
+      }
+
+      sessionStore.get(sessionId, (err, sessionData: any) => {
+        if (err) {
+          console.error('Session lookup error:', err);
+          resolve(null);
+          return;
+        }
+        
+        if (!sessionData) {
+          resolve(null);
+          return;
+        }
+
+        const userId = sessionData?.passport?.user?.claims?.sub;
+        resolve(userId || null);
+      });
+    } catch (error) {
+      console.error('Session validation error:', error);
+      resolve(null);
+    }
+  });
+}
+
+export function setupWebSocket(server: Server) {
+  const wss = new WebSocketServer({ 
+    server, 
+    path: '/ws',
+    verifyClient: async (info, callback) => {
+      const userId = await getUserIdFromSession(info.req);
+      if (!userId) {
+        callback(false, 401, 'Unauthorized');
+        return;
+      }
+      (info.req as any).userId = userId;
+      callback(true);
+    }
+  });
+
   const interval = setInterval(() => {
     wss.clients.forEach((ws) => {
       const client = ws as AuthenticatedWebSocket;
@@ -43,10 +110,16 @@ export function setupWebSocket(server: Server) {
     clearInterval(interval);
   });
 
-  wss.on('connection', (ws: WebSocket) => {
+  wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
     const client = ws as AuthenticatedWebSocket;
     client.channels = new Set();
     client.isAlive = true;
+    client.userId = (req as any).userId;
+
+    client.send(JSON.stringify({ 
+      type: 'authenticated', 
+      userId: client.userId 
+    }));
 
     client.on('pong', () => {
       client.isAlive = true;
@@ -54,14 +127,7 @@ export function setupWebSocket(server: Server) {
 
     client.on('message', async (data: Buffer) => {
       try {
-        const message = JSON.parse(data.toString()) as ChatMessage & { token?: string };
-
-        // Handle authentication
-        if (message.type === 'auth' && message.userId) {
-          client.userId = message.userId;
-          client.send(JSON.stringify({ type: 'authenticated', userId: message.userId }));
-          return;
-        }
+        const message = JSON.parse(data.toString()) as ChatMessage;
 
         if (!client.userId) {
           client.send(JSON.stringify({ type: 'error', message: 'Not authenticated' }));
@@ -71,7 +137,6 @@ export function setupWebSocket(server: Server) {
         switch (message.type) {
           case 'join':
             if (message.channelId) {
-              // Verify user is a member of the channel
               const isMember = await storage.isChannelMember(message.channelId, client.userId);
               if (!isMember) {
                 client.send(JSON.stringify({ type: 'error', message: 'Not a channel member' }));
@@ -84,7 +149,6 @@ export function setupWebSocket(server: Server) {
               }
               clients.get(message.channelId)!.add(client);
 
-              // Notify others
               broadcastToChannel(message.channelId, {
                 type: 'user_joined',
                 channelId: message.channelId,
@@ -111,7 +175,6 @@ export function setupWebSocket(server: Server) {
 
           case 'message':
             if (message.channelId && message.content) {
-              // Check quiet hours
               const channel = await storage.getChatChannel(message.channelId);
               if (channel?.quietHoursEnabled) {
                 const now = new Date();
@@ -131,7 +194,6 @@ export function setupWebSocket(server: Server) {
                 }
               }
 
-              // Save message to database
               const savedMessage = await storage.createChatMessage({
                 channelId: message.channelId,
                 senderId: client.userId,
@@ -139,10 +201,8 @@ export function setupWebSocket(server: Server) {
                 messageType: 'text',
               });
 
-              // Get sender info
               const sender = await storage.getUser(client.userId);
 
-              // Broadcast to all channel members
               broadcastToChannel(message.channelId, {
                 type: 'new_message',
                 channelId: message.channelId,
@@ -176,7 +236,6 @@ export function setupWebSocket(server: Server) {
                 userId: client.userId,
               });
               
-              // Update last read timestamp for member
               const members = await storage.getChannelMembers(message.channelId);
               const member = members.find(m => m.userId === client.userId);
               if (member) {

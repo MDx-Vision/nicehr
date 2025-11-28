@@ -80,9 +80,7 @@ function useWebSocket(userId: string | undefined) {
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
-      setIsConnected(true);
       reconnectAttempts.current = 0;
-      ws.send(JSON.stringify({ type: "auth", userId }));
     };
 
     ws.onclose = () => {
@@ -149,6 +147,9 @@ function useWebSocket(userId: string | undefined) {
       const data = JSON.parse(event.data) as WebSocketMessage;
 
       switch (data.type) {
+        case "authenticated":
+          setIsConnected(true);
+          break;
         case "new_message":
           if (data.message) {
             handlers.onNewMessage?.(data.message);
