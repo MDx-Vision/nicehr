@@ -93,6 +93,20 @@ import {
   type Notification,
   type InsertNotification,
   type PlatformAnalytics,
+  roles,
+  permissions,
+  rolePermissions,
+  userRoleAssignments,
+  type Role,
+  type InsertRole,
+  type Permission,
+  type InsertPermission,
+  type RolePermission,
+  type InsertRolePermission,
+  type UserRoleAssignment,
+  type InsertUserRoleAssignment,
+  type RoleWithPermissions,
+  type EffectivePermissions,
   type HospitalAnalytics,
   type ConsultantAnalytics,
   type TrainingStatus,
@@ -1168,6 +1182,44 @@ export interface IStorage {
   // Analytics
   getReportAnalytics(): Promise<ReportAnalytics>;
   getDashboardAnalytics(): Promise<DashboardAnalytics>;
+
+  // ============================================
+  // RBAC (Role-Based Access Control)
+  // ============================================
+  
+  // Role operations
+  getRole(id: string): Promise<Role | undefined>;
+  getRoleByName(name: string): Promise<Role | undefined>;
+  listRoles(filters?: { roleType?: 'base' | 'custom'; hospitalId?: string; isActive?: boolean }): Promise<Role[]>;
+  createRole(role: InsertRole): Promise<Role>;
+  updateRole(id: string, role: Partial<InsertRole>): Promise<Role | undefined>;
+  deleteRole(id: string): Promise<boolean>;
+  
+  // Permission operations
+  getPermission(id: string): Promise<Permission | undefined>;
+  getPermissionByName(name: string): Promise<Permission | undefined>;
+  listPermissions(filters?: { domain?: string; isActive?: boolean }): Promise<Permission[]>;
+  createPermission(permission: InsertPermission): Promise<Permission>;
+  
+  // Role-Permission operations
+  getRolePermissions(roleId: string): Promise<RolePermission[]>;
+  getRoleWithPermissions(roleId: string): Promise<RoleWithPermissions | undefined>;
+  addPermissionToRole(roleId: string, permissionId: string): Promise<RolePermission>;
+  removePermissionFromRole(roleId: string, permissionId: string): Promise<boolean>;
+  setRolePermissions(roleId: string, permissionIds: string[]): Promise<RolePermission[]>;
+  
+  // User Role Assignment operations
+  getUserRoleAssignments(userId: string): Promise<UserRoleAssignment[]>;
+  getUserRoleAssignmentsWithDetails(userId: string): Promise<(UserRoleAssignment & { role: Role })[]>;
+  assignRoleToUser(assignment: InsertUserRoleAssignment): Promise<UserRoleAssignment>;
+  removeRoleFromUser(userId: string, roleId: string, projectId?: string): Promise<boolean>;
+  
+  // Effective Permissions (computed)
+  getEffectivePermissions(userId: string, projectId?: string): Promise<EffectivePermissions[]>;
+  hasPermission(userId: string, permissionName: string, projectId?: string): Promise<boolean>;
+  
+  // Seeding
+  seedBaseRolesAndPermissions(): Promise<void>;
 }
 
 export interface ConsultantSearchFilters {
@@ -8950,6 +9002,356 @@ export class DatabaseStorage implements IStorage {
         critical,
       },
     };
+  }
+
+  // ============================================
+  // RBAC (Role-Based Access Control) Methods
+  // ============================================
+
+  // Role operations
+  async getRole(id: string): Promise<Role | undefined> {
+    const [role] = await db.select().from(roles).where(eq(roles.id, id));
+    return role;
+  }
+
+  async getRoleByName(name: string): Promise<Role | undefined> {
+    const [role] = await db.select().from(roles).where(eq(roles.name, name));
+    return role;
+  }
+
+  async listRoles(filters?: { roleType?: 'base' | 'custom'; hospitalId?: string; isActive?: boolean }): Promise<Role[]> {
+    const conditions: any[] = [];
+    if (filters?.roleType) conditions.push(eq(roles.roleType, filters.roleType));
+    if (filters?.hospitalId) conditions.push(eq(roles.hospitalId, filters.hospitalId));
+    if (filters?.isActive !== undefined) conditions.push(eq(roles.isActive, filters.isActive));
+
+    return conditions.length > 0
+      ? db.select().from(roles).where(and(...conditions)).orderBy(asc(roles.name))
+      : db.select().from(roles).orderBy(asc(roles.name));
+  }
+
+  async createRole(role: InsertRole): Promise<Role> {
+    const [created] = await db.insert(roles).values(role).returning();
+    return created;
+  }
+
+  async updateRole(id: string, role: Partial<InsertRole>): Promise<Role | undefined> {
+    const [updated] = await db.update(roles).set({ ...role, updatedAt: new Date() }).where(eq(roles.id, id)).returning();
+    return updated;
+  }
+
+  async deleteRole(id: string): Promise<boolean> {
+    await db.delete(rolePermissions).where(eq(rolePermissions.roleId, id));
+    await db.delete(userRoleAssignments).where(eq(userRoleAssignments.roleId, id));
+    await db.delete(roles).where(eq(roles.id, id));
+    return true;
+  }
+
+  // Permission operations
+  async getPermission(id: string): Promise<Permission | undefined> {
+    const [permission] = await db.select().from(permissions).where(eq(permissions.id, id));
+    return permission;
+  }
+
+  async getPermissionByName(name: string): Promise<Permission | undefined> {
+    const [permission] = await db.select().from(permissions).where(eq(permissions.name, name));
+    return permission;
+  }
+
+  async listPermissions(filters?: { domain?: string; isActive?: boolean }): Promise<Permission[]> {
+    const conditions: any[] = [];
+    if (filters?.domain) conditions.push(eq(permissions.domain, filters.domain as any));
+    if (filters?.isActive !== undefined) conditions.push(eq(permissions.isActive, filters.isActive));
+
+    return conditions.length > 0
+      ? db.select().from(permissions).where(and(...conditions)).orderBy(asc(permissions.domain), asc(permissions.action))
+      : db.select().from(permissions).orderBy(asc(permissions.domain), asc(permissions.action));
+  }
+
+  async createPermission(permission: InsertPermission): Promise<Permission> {
+    const [created] = await db.insert(permissions).values(permission).returning();
+    return created;
+  }
+
+  // Role-Permission operations
+  async getRolePermissions(roleId: string): Promise<RolePermission[]> {
+    return db.select().from(rolePermissions).where(eq(rolePermissions.roleId, roleId));
+  }
+
+  async getRoleWithPermissions(roleId: string): Promise<RoleWithPermissions | undefined> {
+    const role = await this.getRole(roleId);
+    if (!role) return undefined;
+
+    const rolePerms = await db.select().from(rolePermissions).where(eq(rolePermissions.roleId, roleId));
+    const permissionsWithDetails: (RolePermission & { permission: Permission })[] = [];
+
+    for (const rp of rolePerms) {
+      const permission = await this.getPermission(rp.permissionId);
+      if (permission) {
+        permissionsWithDetails.push({ ...rp, permission });
+      }
+    }
+
+    return { ...role, permissions: permissionsWithDetails };
+  }
+
+  async addPermissionToRole(roleId: string, permissionId: string): Promise<RolePermission> {
+    const existing = await db.select().from(rolePermissions)
+      .where(and(eq(rolePermissions.roleId, roleId), eq(rolePermissions.permissionId, permissionId)));
+    
+    if (existing.length > 0) return existing[0];
+
+    const [created] = await db.insert(rolePermissions).values({ roleId, permissionId }).returning();
+    return created;
+  }
+
+  async removePermissionFromRole(roleId: string, permissionId: string): Promise<boolean> {
+    await db.delete(rolePermissions)
+      .where(and(eq(rolePermissions.roleId, roleId), eq(rolePermissions.permissionId, permissionId)));
+    return true;
+  }
+
+  async setRolePermissions(roleId: string, permissionIds: string[]): Promise<RolePermission[]> {
+    await db.delete(rolePermissions).where(eq(rolePermissions.roleId, roleId));
+
+    if (permissionIds.length === 0) return [];
+
+    const values = permissionIds.map(permissionId => ({ roleId, permissionId }));
+    const created = await db.insert(rolePermissions).values(values).returning();
+    return created;
+  }
+
+  // User Role Assignment operations
+  async getUserRoleAssignments(userId: string): Promise<UserRoleAssignment[]> {
+    return db.select().from(userRoleAssignments)
+      .where(and(eq(userRoleAssignments.userId, userId), eq(userRoleAssignments.isActive, true)));
+  }
+
+  async getUserRoleAssignmentsWithDetails(userId: string): Promise<(UserRoleAssignment & { role: Role })[]> {
+    const assignments = await this.getUserRoleAssignments(userId);
+    const results: (UserRoleAssignment & { role: Role })[] = [];
+
+    for (const assignment of assignments) {
+      const role = await this.getRole(assignment.roleId);
+      if (role) {
+        results.push({ ...assignment, role });
+      }
+    }
+
+    return results;
+  }
+
+  async assignRoleToUser(assignment: InsertUserRoleAssignment): Promise<UserRoleAssignment> {
+    const conditions: any[] = [
+      eq(userRoleAssignments.userId, assignment.userId),
+      eq(userRoleAssignments.roleId, assignment.roleId),
+      eq(userRoleAssignments.isActive, true),
+    ];
+    
+    if (assignment.projectId) {
+      conditions.push(eq(userRoleAssignments.projectId, assignment.projectId));
+    } else {
+      conditions.push(sql`${userRoleAssignments.projectId} IS NULL`);
+    }
+
+    const existing = await db.select().from(userRoleAssignments).where(and(...conditions));
+    if (existing.length > 0) return existing[0];
+
+    const [created] = await db.insert(userRoleAssignments).values(assignment).returning();
+    return created;
+  }
+
+  async removeRoleFromUser(userId: string, roleId: string, projectId?: string): Promise<boolean> {
+    const conditions: any[] = [
+      eq(userRoleAssignments.userId, userId),
+      eq(userRoleAssignments.roleId, roleId),
+    ];
+
+    if (projectId) {
+      conditions.push(eq(userRoleAssignments.projectId, projectId));
+    }
+
+    await db.update(userRoleAssignments)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(and(...conditions));
+    return true;
+  }
+
+  // Effective Permissions (computed)
+  async getEffectivePermissions(userId: string, projectId?: string): Promise<EffectivePermissions[]> {
+    const assignments = await this.getUserRoleAssignments(userId);
+    const results: EffectivePermissions[] = [];
+
+    for (const assignment of assignments) {
+      if (projectId && assignment.projectId && assignment.projectId !== projectId) {
+        continue;
+      }
+
+      const role = await this.getRole(assignment.roleId);
+      if (!role || !role.isActive) continue;
+
+      const rolePerms = await this.getRolePermissions(assignment.roleId);
+      const permissionNames: string[] = [];
+
+      for (const rp of rolePerms) {
+        const permission = await this.getPermission(rp.permissionId);
+        if (permission && permission.isActive) {
+          permissionNames.push(permission.name);
+        }
+      }
+
+      results.push({
+        roleId: role.id,
+        roleName: role.name,
+        permissions: permissionNames,
+        projectId: assignment.projectId,
+        hospitalId: assignment.hospitalId,
+      });
+    }
+
+    return results;
+  }
+
+  async hasPermission(userId: string, permissionName: string, projectId?: string): Promise<boolean> {
+    const effectivePermissions = await this.getEffectivePermissions(userId, projectId);
+    
+    for (const ep of effectivePermissions) {
+      if (ep.permissions.includes(permissionName)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // Seeding base roles and permissions
+  async seedBaseRolesAndPermissions(): Promise<void> {
+    const permissionDefinitions: Array<{ domain: string; action: string; name: string; displayName: string; description: string }> = [
+      { domain: 'dashboard', action: 'view', name: 'dashboard:view', displayName: 'View Dashboard', description: 'Access to view the dashboard' },
+      { domain: 'dashboard', action: 'admin', name: 'dashboard:admin', displayName: 'Admin Dashboard', description: 'Full admin access to dashboard' },
+      { domain: 'projects', action: 'view', name: 'projects:view', displayName: 'View Projects', description: 'View project information' },
+      { domain: 'projects', action: 'create', name: 'projects:create', displayName: 'Create Projects', description: 'Create new projects' },
+      { domain: 'projects', action: 'edit', name: 'projects:edit', displayName: 'Edit Projects', description: 'Edit project details' },
+      { domain: 'projects', action: 'delete', name: 'projects:delete', displayName: 'Delete Projects', description: 'Delete projects' },
+      { domain: 'consultants', action: 'view', name: 'consultants:view', displayName: 'View Consultants', description: 'View consultant profiles' },
+      { domain: 'consultants', action: 'create', name: 'consultants:create', displayName: 'Create Consultants', description: 'Create new consultant profiles' },
+      { domain: 'consultants', action: 'edit', name: 'consultants:edit', displayName: 'Edit Consultants', description: 'Edit consultant profiles' },
+      { domain: 'consultants', action: 'manage', name: 'consultants:manage', displayName: 'Manage Consultants', description: 'Full management of consultants' },
+      { domain: 'hospitals', action: 'view', name: 'hospitals:view', displayName: 'View Hospitals', description: 'View hospital information' },
+      { domain: 'hospitals', action: 'create', name: 'hospitals:create', displayName: 'Create Hospitals', description: 'Create new hospitals' },
+      { domain: 'hospitals', action: 'edit', name: 'hospitals:edit', displayName: 'Edit Hospitals', description: 'Edit hospital details' },
+      { domain: 'hospitals', action: 'delete', name: 'hospitals:delete', displayName: 'Delete Hospitals', description: 'Delete hospitals' },
+      { domain: 'timesheets', action: 'view_own', name: 'timesheets:view_own', displayName: 'View Own Timesheets', description: 'View own timesheet entries' },
+      { domain: 'timesheets', action: 'view_all', name: 'timesheets:view_all', displayName: 'View All Timesheets', description: 'View all timesheet entries' },
+      { domain: 'timesheets', action: 'edit_own', name: 'timesheets:edit_own', displayName: 'Edit Own Timesheets', description: 'Edit own timesheet entries' },
+      { domain: 'timesheets', action: 'approve', name: 'timesheets:approve', displayName: 'Approve Timesheets', description: 'Approve timesheet submissions' },
+      { domain: 'support_tickets', action: 'view_own', name: 'support_tickets:view_own', displayName: 'View Own Support Tickets', description: 'View own support tickets' },
+      { domain: 'support_tickets', action: 'view_all', name: 'support_tickets:view_all', displayName: 'View All Support Tickets', description: 'View all support tickets' },
+      { domain: 'support_tickets', action: 'create', name: 'support_tickets:create', displayName: 'Create Support Tickets', description: 'Create new support tickets' },
+      { domain: 'support_tickets', action: 'manage', name: 'support_tickets:manage', displayName: 'Manage Support Tickets', description: 'Full management of support tickets' },
+      { domain: 'eod_reports', action: 'view_own', name: 'eod_reports:view_own', displayName: 'View Own EOD Reports', description: 'View own end-of-day reports' },
+      { domain: 'eod_reports', action: 'view_all', name: 'eod_reports:view_all', displayName: 'View All EOD Reports', description: 'View all end-of-day reports' },
+      { domain: 'eod_reports', action: 'create', name: 'eod_reports:create', displayName: 'Create EOD Reports', description: 'Create end-of-day reports' },
+      { domain: 'training', action: 'view', name: 'training:view', displayName: 'View Training', description: 'Access training materials' },
+      { domain: 'training', action: 'manage', name: 'training:manage', displayName: 'Manage Training', description: 'Manage training content' },
+      { domain: 'travel', action: 'view_own', name: 'travel:view_own', displayName: 'View Own Travel', description: 'View own travel bookings' },
+      { domain: 'travel', action: 'view_all', name: 'travel:view_all', displayName: 'View All Travel', description: 'View all travel bookings' },
+      { domain: 'travel', action: 'manage', name: 'travel:manage', displayName: 'Manage Travel', description: 'Manage travel arrangements' },
+      { domain: 'financials', action: 'view', name: 'financials:view', displayName: 'View Financials', description: 'View financial data' },
+      { domain: 'financials', action: 'manage', name: 'financials:manage', displayName: 'Manage Financials', description: 'Manage financial data' },
+      { domain: 'quality', action: 'view', name: 'quality:view', displayName: 'View Quality', description: 'View quality metrics' },
+      { domain: 'quality', action: 'manage', name: 'quality:manage', displayName: 'Manage Quality', description: 'Manage quality processes' },
+      { domain: 'compliance', action: 'view', name: 'compliance:view', displayName: 'View Compliance', description: 'View compliance data' },
+      { domain: 'compliance', action: 'manage', name: 'compliance:manage', displayName: 'Manage Compliance', description: 'Manage compliance processes' },
+      { domain: 'reports', action: 'view', name: 'reports:view', displayName: 'View Reports', description: 'View generated reports' },
+      { domain: 'reports', action: 'create', name: 'reports:create', displayName: 'Create Reports', description: 'Create new reports' },
+      { domain: 'reports', action: 'manage', name: 'reports:manage', displayName: 'Manage Reports', description: 'Manage report templates' },
+      { domain: 'admin', action: 'view', name: 'admin:view', displayName: 'View Admin', description: 'View admin panel' },
+      { domain: 'admin', action: 'manage', name: 'admin:manage', displayName: 'Manage Admin', description: 'Full admin management' },
+      { domain: 'rbac', action: 'view', name: 'rbac:view', displayName: 'View RBAC', description: 'View roles and permissions' },
+      { domain: 'rbac', action: 'manage', name: 'rbac:manage', displayName: 'Manage RBAC', description: 'Manage roles and permissions' },
+    ];
+
+    const createdPermissions: Map<string, Permission> = new Map();
+    for (const permDef of permissionDefinitions) {
+      const existing = await this.getPermissionByName(permDef.name);
+      if (existing) {
+        createdPermissions.set(permDef.name, existing);
+      } else {
+        const created = await this.createPermission({
+          domain: permDef.domain as any,
+          action: permDef.action,
+          name: permDef.name,
+          displayName: permDef.displayName,
+          description: permDef.description,
+          isActive: true,
+        });
+        createdPermissions.set(permDef.name, created);
+      }
+    }
+
+    const roleDefinitions: Array<{ name: string; displayName: string; description: string; permissions: string[] }> = [
+      {
+        name: 'admin',
+        displayName: 'Administrator',
+        description: 'Full access to all system features',
+        permissions: permissionDefinitions.map(p => p.name),
+      },
+      {
+        name: 'hospital_leadership',
+        displayName: 'Hospital Leadership',
+        description: 'Hospital-wide view access to reports and financials',
+        permissions: [
+          'dashboard:view', 'projects:view', 'consultants:view', 'hospitals:view',
+          'timesheets:view_all', 'support_tickets:view_all', 'eod_reports:view_all',
+          'training:view', 'travel:view_all', 'financials:view', 'quality:view',
+          'compliance:view', 'reports:view', 'reports:create',
+        ],
+      },
+      {
+        name: 'hospital_staff',
+        displayName: 'Hospital Staff',
+        description: 'Operational data access for hospital staff',
+        permissions: [
+          'dashboard:view', 'projects:view', 'timesheets:view_all', 'timesheets:approve',
+          'support_tickets:view_all', 'support_tickets:manage', 'eod_reports:view_all',
+          'training:view',
+        ],
+      },
+      {
+        name: 'consultant',
+        displayName: 'Consultant',
+        description: 'Access to assigned projects and own data',
+        permissions: [
+          'dashboard:view', 'projects:view', 'timesheets:view_own', 'timesheets:edit_own',
+          'support_tickets:view_own', 'support_tickets:create', 'eod_reports:view_own',
+          'eod_reports:create', 'training:view', 'travel:view_own',
+        ],
+      },
+    ];
+
+    for (const roleDef of roleDefinitions) {
+      let role = await this.getRoleByName(roleDef.name);
+      if (!role) {
+        role = await this.createRole({
+          name: roleDef.name,
+          displayName: roleDef.displayName,
+          description: roleDef.description,
+          roleType: 'base',
+          isActive: true,
+        });
+      }
+
+      const permissionIds: string[] = [];
+      for (const permName of roleDef.permissions) {
+        const perm = createdPermissions.get(permName);
+        if (perm) {
+          permissionIds.push(perm.id);
+        }
+      }
+
+      await this.setRolePermissions(role.id, permissionIds);
+    }
   }
 }
 
