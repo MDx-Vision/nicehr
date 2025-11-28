@@ -3756,6 +3756,469 @@ export type TransportationContact = typeof transportationContacts.$inferSelect;
 export type InsertTransportationContact = z.infer<typeof insertTransportationContactSchema>;
 
 // ============================================
+// PHASE 15: ADVANCED FEATURES
+// ============================================
+
+// ============================================
+// QUALITY ASSURANCE - ENUMS
+// ============================================
+
+export const scorecardStatusEnum = pgEnum("scorecard_status", ["draft", "active", "archived"]);
+export const surveyTypeEnum = pgEnum("survey_type", ["pulse", "nps", "feedback", "exit"]);
+export const incidentSeverityEnum = pgEnum("incident_severity", ["low", "medium", "high", "critical"]);
+export const incidentStatusEnum = pgEnum("incident_status", ["reported", "investigating", "resolved", "closed"]);
+export const correctiveActionStatusEnum = pgEnum("corrective_action_status", ["pending", "in_progress", "completed", "verified"]);
+export const badgeCategoryEnum = pgEnum("badge_category", ["performance", "training", "engagement", "milestone", "special"]);
+export const pointTransactionTypeEnum = pgEnum("point_transaction_type", ["earned", "redeemed", "bonus", "adjustment"]);
+export const referralStatusEnum = pgEnum("referral_status", ["pending", "contacted", "interviewing", "hired", "declined"]);
+export const complianceCheckTypeEnum = pgEnum("compliance_check_type", ["hipaa", "oig", "sam", "insurance", "credential", "background"]);
+export const complianceCheckStatusEnum = pgEnum("compliance_check_status", ["pending", "passed", "failed", "expired", "waived"]);
+
+// ============================================
+// CONSULTANT SCORECARDS TABLE
+// ============================================
+
+export const consultantScorecards = pgTable("consultant_scorecards", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  consultantId: varchar("consultant_id").references(() => consultants.id).notNull(),
+  projectId: varchar("project_id").references(() => projects.id),
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  overallScore: decimal("overall_score", { precision: 5, scale: 2 }),
+  qualityScore: decimal("quality_score", { precision: 5, scale: 2 }),
+  punctualityScore: decimal("punctuality_score", { precision: 5, scale: 2 }),
+  communicationScore: decimal("communication_score", { precision: 5, scale: 2 }),
+  technicalScore: decimal("technical_score", { precision: 5, scale: 2 }),
+  teamworkScore: decimal("teamwork_score", { precision: 5, scale: 2 }),
+  ticketsResolved: integer("tickets_resolved").default(0),
+  avgResponseTime: integer("avg_response_time"), // in minutes
+  trainingsCompleted: integer("trainings_completed").default(0),
+  attendanceRate: decimal("attendance_rate", { precision: 5, scale: 2 }),
+  status: scorecardStatusEnum("status").default("draft").notNull(),
+  notes: text("notes"),
+  reviewedById: varchar("reviewed_by_id").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const consultantScorecardsRelations = relations(consultantScorecards, ({ one }) => ({
+  consultant: one(consultants, {
+    fields: [consultantScorecards.consultantId],
+    references: [consultants.id],
+  }),
+  project: one(projects, {
+    fields: [consultantScorecards.projectId],
+    references: [projects.id],
+  }),
+  reviewedBy: one(users, {
+    fields: [consultantScorecards.reviewedById],
+    references: [users.id],
+  }),
+}));
+
+export const insertConsultantScorecardSchema = createInsertSchema(consultantScorecards).omit({ id: true, createdAt: true, updatedAt: true });
+export type ConsultantScorecard = typeof consultantScorecards.$inferSelect;
+export type InsertConsultantScorecard = z.infer<typeof insertConsultantScorecardSchema>;
+
+// ============================================
+// PULSE SURVEYS TABLE
+// ============================================
+
+export const pulseSurveys = pgTable("pulse_surveys", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  surveyType: surveyTypeEnum("survey_type").default("pulse").notNull(),
+  questions: jsonb("questions").notNull(), // Array of { id, question, type, options? }
+  projectId: varchar("project_id").references(() => projects.id),
+  isActive: boolean("is_active").default(true).notNull(),
+  startDate: date("start_date"),
+  endDate: date("end_date"),
+  frequency: varchar("frequency"), // daily, weekly, monthly
+  createdById: varchar("created_by_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const pulseSurveysRelations = relations(pulseSurveys, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [pulseSurveys.projectId],
+    references: [projects.id],
+  }),
+  createdBy: one(users, {
+    fields: [pulseSurveys.createdById],
+    references: [users.id],
+  }),
+  responses: many(pulseResponses),
+}));
+
+export const insertPulseSurveySchema = createInsertSchema(pulseSurveys).omit({ id: true, createdAt: true, updatedAt: true });
+export type PulseSurvey = typeof pulseSurveys.$inferSelect;
+export type InsertPulseSurvey = z.infer<typeof insertPulseSurveySchema>;
+
+// ============================================
+// PULSE RESPONSES TABLE
+// ============================================
+
+export const pulseResponses = pgTable("pulse_responses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  surveyId: varchar("survey_id").references(() => pulseSurveys.id).notNull(),
+  consultantId: varchar("consultant_id").references(() => consultants.id).notNull(),
+  responses: jsonb("responses").notNull(), // { questionId: answer }
+  mood: integer("mood"), // 1-5 scale
+  sentiment: varchar("sentiment"), // positive, neutral, negative
+  submittedAt: timestamp("submitted_at").defaultNow(),
+});
+
+export const pulseResponsesRelations = relations(pulseResponses, ({ one }) => ({
+  survey: one(pulseSurveys, {
+    fields: [pulseResponses.surveyId],
+    references: [pulseSurveys.id],
+  }),
+  consultant: one(consultants, {
+    fields: [pulseResponses.consultantId],
+    references: [consultants.id],
+  }),
+}));
+
+export const insertPulseResponseSchema = createInsertSchema(pulseResponses).omit({ id: true, submittedAt: true });
+export type PulseResponse = typeof pulseResponses.$inferSelect;
+export type InsertPulseResponse = z.infer<typeof insertPulseResponseSchema>;
+
+// ============================================
+// NPS RESPONSES TABLE
+// ============================================
+
+export const npsResponses = pgTable("nps_responses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  consultantId: varchar("consultant_id").references(() => consultants.id),
+  hospitalId: varchar("hospital_id").references(() => hospitals.id),
+  projectId: varchar("project_id").references(() => projects.id),
+  score: integer("score").notNull(), // 0-10
+  feedback: text("feedback"),
+  category: varchar("category"), // consultant, hospital, project, platform
+  respondentType: varchar("respondent_type"), // consultant, hospital_staff, admin
+  respondentId: varchar("respondent_id"),
+  submittedAt: timestamp("submitted_at").defaultNow(),
+});
+
+export const npsResponsesRelations = relations(npsResponses, ({ one }) => ({
+  consultant: one(consultants, {
+    fields: [npsResponses.consultantId],
+    references: [consultants.id],
+  }),
+  hospital: one(hospitals, {
+    fields: [npsResponses.hospitalId],
+    references: [hospitals.id],
+  }),
+  project: one(projects, {
+    fields: [npsResponses.projectId],
+    references: [projects.id],
+  }),
+}));
+
+export const insertNpsResponseSchema = createInsertSchema(npsResponses).omit({ id: true, submittedAt: true });
+export type NpsResponse = typeof npsResponses.$inferSelect;
+export type InsertNpsResponse = z.infer<typeof insertNpsResponseSchema>;
+
+// ============================================
+// INCIDENTS TABLE
+// ============================================
+
+export const incidents = pgTable("incidents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: varchar("title").notNull(),
+  description: text("description").notNull(),
+  severity: incidentSeverityEnum("severity").default("medium").notNull(),
+  status: incidentStatusEnum("status").default("reported").notNull(),
+  projectId: varchar("project_id").references(() => projects.id),
+  hospitalId: varchar("hospital_id").references(() => hospitals.id),
+  consultantId: varchar("consultant_id").references(() => consultants.id),
+  reportedById: varchar("reported_by_id").references(() => users.id).notNull(),
+  assignedToId: varchar("assigned_to_id").references(() => users.id),
+  incidentDate: timestamp("incident_date").notNull(),
+  location: varchar("location"),
+  category: varchar("category"), // safety, quality, compliance, technical, interpersonal
+  rootCause: text("root_cause"),
+  resolution: text("resolution"),
+  resolvedAt: timestamp("resolved_at"),
+  closedAt: timestamp("closed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const incidentsRelations = relations(incidents, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [incidents.projectId],
+    references: [projects.id],
+  }),
+  hospital: one(hospitals, {
+    fields: [incidents.hospitalId],
+    references: [hospitals.id],
+  }),
+  consultant: one(consultants, {
+    fields: [incidents.consultantId],
+    references: [consultants.id],
+  }),
+  reportedBy: one(users, {
+    fields: [incidents.reportedById],
+    references: [users.id],
+  }),
+  assignedTo: one(users, {
+    fields: [incidents.assignedToId],
+    references: [users.id],
+  }),
+  correctiveActions: many(correctiveActions),
+}));
+
+export const insertIncidentSchema = createInsertSchema(incidents).omit({ id: true, createdAt: true, updatedAt: true });
+export type Incident = typeof incidents.$inferSelect;
+export type InsertIncident = z.infer<typeof insertIncidentSchema>;
+
+// ============================================
+// CORRECTIVE ACTIONS TABLE
+// ============================================
+
+export const correctiveActions = pgTable("corrective_actions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  incidentId: varchar("incident_id").references(() => incidents.id).notNull(),
+  title: varchar("title").notNull(),
+  description: text("description").notNull(),
+  status: correctiveActionStatusEnum("status").default("pending").notNull(),
+  priority: varchar("priority").default("medium"), // low, medium, high, critical
+  assignedToId: varchar("assigned_to_id").references(() => users.id),
+  dueDate: date("due_date"),
+  completedAt: timestamp("completed_at"),
+  verifiedById: varchar("verified_by_id").references(() => users.id),
+  verifiedAt: timestamp("verified_at"),
+  evidence: text("evidence"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const correctiveActionsRelations = relations(correctiveActions, ({ one }) => ({
+  incident: one(incidents, {
+    fields: [correctiveActions.incidentId],
+    references: [incidents.id],
+  }),
+  assignedTo: one(users, {
+    fields: [correctiveActions.assignedToId],
+    references: [users.id],
+  }),
+  verifiedBy: one(users, {
+    fields: [correctiveActions.verifiedById],
+    references: [users.id],
+  }),
+}));
+
+export const insertCorrectiveActionSchema = createInsertSchema(correctiveActions).omit({ id: true, createdAt: true, updatedAt: true });
+export type CorrectiveAction = typeof correctiveActions.$inferSelect;
+export type InsertCorrectiveAction = z.infer<typeof insertCorrectiveActionSchema>;
+
+// ============================================
+// ACHIEVEMENT BADGES TABLE
+// ============================================
+
+export const achievementBadges = pgTable("achievement_badges", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull().unique(),
+  description: text("description").notNull(),
+  category: badgeCategoryEnum("category").notNull(),
+  iconUrl: varchar("icon_url"),
+  color: varchar("color"), // hex color for badge
+  pointValue: integer("point_value").default(0),
+  criteria: jsonb("criteria"), // { type: 'count', metric: 'projects_completed', threshold: 5 }
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertAchievementBadgeSchema = createInsertSchema(achievementBadges).omit({ id: true, createdAt: true });
+export type AchievementBadge = typeof achievementBadges.$inferSelect;
+export type InsertAchievementBadge = z.infer<typeof insertAchievementBadgeSchema>;
+
+// ============================================
+// CONSULTANT BADGES TABLE (Many-to-Many)
+// ============================================
+
+export const consultantBadges = pgTable("consultant_badges", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  consultantId: varchar("consultant_id").references(() => consultants.id).notNull(),
+  badgeId: varchar("badge_id").references(() => achievementBadges.id).notNull(),
+  earnedAt: timestamp("earned_at").defaultNow(),
+  awardedById: varchar("awarded_by_id").references(() => users.id),
+  notes: text("notes"),
+});
+
+export const consultantBadgesRelations = relations(consultantBadges, ({ one }) => ({
+  consultant: one(consultants, {
+    fields: [consultantBadges.consultantId],
+    references: [consultants.id],
+  }),
+  badge: one(achievementBadges, {
+    fields: [consultantBadges.badgeId],
+    references: [achievementBadges.id],
+  }),
+  awardedBy: one(users, {
+    fields: [consultantBadges.awardedById],
+    references: [users.id],
+  }),
+}));
+
+export const insertConsultantBadgeSchema = createInsertSchema(consultantBadges).omit({ id: true, earnedAt: true });
+export type ConsultantBadge = typeof consultantBadges.$inferSelect;
+export type InsertConsultantBadge = z.infer<typeof insertConsultantBadgeSchema>;
+
+// ============================================
+// POINT TRANSACTIONS TABLE
+// ============================================
+
+export const pointTransactions = pgTable("point_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  consultantId: varchar("consultant_id").references(() => consultants.id).notNull(),
+  type: pointTransactionTypeEnum("type").notNull(),
+  points: integer("points").notNull(),
+  balance: integer("balance").notNull(), // running balance after transaction
+  description: varchar("description").notNull(),
+  referenceType: varchar("reference_type"), // badge, referral, project, training, etc.
+  referenceId: varchar("reference_id"),
+  createdById: varchar("created_by_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const pointTransactionsRelations = relations(pointTransactions, ({ one }) => ({
+  consultant: one(consultants, {
+    fields: [pointTransactions.consultantId],
+    references: [consultants.id],
+  }),
+  createdBy: one(users, {
+    fields: [pointTransactions.createdById],
+    references: [users.id],
+  }),
+}));
+
+export const insertPointTransactionSchema = createInsertSchema(pointTransactions).omit({ id: true, createdAt: true });
+export type PointTransaction = typeof pointTransactions.$inferSelect;
+export type InsertPointTransaction = z.infer<typeof insertPointTransactionSchema>;
+
+// ============================================
+// REFERRALS TABLE
+// ============================================
+
+export const referrals = pgTable("referrals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  referrerId: varchar("referrer_id").references(() => consultants.id).notNull(),
+  referredName: varchar("referred_name").notNull(),
+  referredEmail: varchar("referred_email").notNull(),
+  referredPhone: varchar("referred_phone"),
+  status: referralStatusEnum("status").default("pending").notNull(),
+  notes: text("notes"),
+  hiredAsConsultantId: varchar("hired_as_consultant_id").references(() => consultants.id),
+  bonusPoints: integer("bonus_points").default(0),
+  bonusPaid: boolean("bonus_paid").default(false),
+  bonusPaidAt: timestamp("bonus_paid_at"),
+  contactedAt: timestamp("contacted_at"),
+  hiredAt: timestamp("hired_at"),
+  declinedReason: text("declined_reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const referralsRelations = relations(referrals, ({ one }) => ({
+  referrer: one(consultants, {
+    fields: [referrals.referrerId],
+    references: [consultants.id],
+  }),
+  hiredAsConsultant: one(consultants, {
+    fields: [referrals.hiredAsConsultantId],
+    references: [consultants.id],
+  }),
+}));
+
+export const insertReferralSchema = createInsertSchema(referrals).omit({ id: true, createdAt: true, updatedAt: true });
+export type Referral = typeof referrals.$inferSelect;
+export type InsertReferral = z.infer<typeof insertReferralSchema>;
+
+// ============================================
+// COMPLIANCE CHECKS TABLE
+// ============================================
+
+export const complianceChecks = pgTable("compliance_checks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  consultantId: varchar("consultant_id").references(() => consultants.id).notNull(),
+  checkType: complianceCheckTypeEnum("check_type").notNull(),
+  status: complianceCheckStatusEnum("status").default("pending").notNull(),
+  checkDate: date("check_date").notNull(),
+  expirationDate: date("expiration_date"),
+  verificationSource: varchar("verification_source"),
+  verificationId: varchar("verification_id"),
+  notes: text("notes"),
+  documentUrl: varchar("document_url"),
+  checkedById: varchar("checked_by_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const complianceChecksRelations = relations(complianceChecks, ({ one }) => ({
+  consultant: one(consultants, {
+    fields: [complianceChecks.consultantId],
+    references: [consultants.id],
+  }),
+  checkedBy: one(users, {
+    fields: [complianceChecks.checkedById],
+    references: [users.id],
+  }),
+}));
+
+export const insertComplianceCheckSchema = createInsertSchema(complianceChecks).omit({ id: true, createdAt: true, updatedAt: true });
+export type ComplianceCheck = typeof complianceChecks.$inferSelect;
+export type InsertComplianceCheck = z.infer<typeof insertComplianceCheckSchema>;
+
+// ============================================
+// COMPLIANCE AUDITS TABLE
+// ============================================
+
+export const complianceAudits = pgTable("compliance_audits", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  auditType: varchar("audit_type").notNull(), // hipaa, internal, external
+  projectId: varchar("project_id").references(() => projects.id),
+  hospitalId: varchar("hospital_id").references(() => hospitals.id),
+  auditDate: date("audit_date").notNull(),
+  findings: jsonb("findings"), // Array of { category, finding, severity, status }
+  overallScore: decimal("overall_score", { precision: 5, scale: 2 }),
+  passedChecks: integer("passed_checks").default(0),
+  failedChecks: integer("failed_checks").default(0),
+  totalChecks: integer("total_checks").default(0),
+  auditorId: varchar("auditor_id").references(() => users.id),
+  status: varchar("status").default("draft"), // draft, in_progress, completed, reviewed
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const complianceAuditsRelations = relations(complianceAudits, ({ one }) => ({
+  project: one(projects, {
+    fields: [complianceAudits.projectId],
+    references: [projects.id],
+  }),
+  hospital: one(hospitals, {
+    fields: [complianceAudits.hospitalId],
+    references: [hospitals.id],
+  }),
+  auditor: one(users, {
+    fields: [complianceAudits.auditorId],
+    references: [users.id],
+  }),
+}));
+
+export const insertComplianceAuditSchema = createInsertSchema(complianceAudits).omit({ id: true, createdAt: true, updatedAt: true });
+export type ComplianceAudit = typeof complianceAudits.$inferSelect;
+export type InsertComplianceAudit = z.infer<typeof insertComplianceAuditSchema>;
+
+// ============================================
 // PHASE 14 EXTENDED TYPES
 // ============================================
 
@@ -3874,4 +4337,225 @@ export interface CarpoolAnalytics {
     count: number;
   }>;
   recentGroups: CarpoolGroupWithDetails[];
+}
+
+// ============================================
+// PHASE 15 EXTENDED TYPES
+// ============================================
+
+export interface ConsultantScorecardWithDetails extends ConsultantScorecard {
+  consultant: {
+    id: string;
+    user: {
+      firstName: string | null;
+      lastName: string | null;
+      profileImageUrl: string | null;
+    };
+  };
+  project: {
+    id: string;
+    name: string;
+  } | null;
+  reviewedBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+}
+
+export interface PulseSurveyWithDetails extends PulseSurvey {
+  project: {
+    id: string;
+    name: string;
+  } | null;
+  createdBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+  responseCount: number;
+}
+
+export interface PulseResponseWithDetails extends PulseResponse {
+  survey: {
+    id: string;
+    title: string;
+  };
+  consultant: {
+    id: string;
+    user: {
+      firstName: string | null;
+      lastName: string | null;
+    };
+  };
+}
+
+export interface IncidentWithDetails extends Incident {
+  project: {
+    id: string;
+    name: string;
+  } | null;
+  hospital: {
+    id: string;
+    name: string;
+  } | null;
+  consultant: {
+    id: string;
+    user: {
+      firstName: string | null;
+      lastName: string | null;
+    };
+  } | null;
+  reportedBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  };
+  assignedTo: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+  correctiveActions: CorrectiveAction[];
+}
+
+export interface CorrectiveActionWithDetails extends CorrectiveAction {
+  incident: {
+    id: string;
+    title: string;
+  };
+  assignedTo: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+  verifiedBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+}
+
+export interface ConsultantBadgeWithDetails extends ConsultantBadge {
+  badge: AchievementBadge;
+  consultant: {
+    id: string;
+    user: {
+      firstName: string | null;
+      lastName: string | null;
+    };
+  };
+  awardedBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+}
+
+export interface PointTransactionWithDetails extends PointTransaction {
+  consultant: {
+    id: string;
+    user: {
+      firstName: string | null;
+      lastName: string | null;
+    };
+  };
+  createdBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+}
+
+export interface ReferralWithDetails extends Referral {
+  referrer: {
+    id: string;
+    user: {
+      firstName: string | null;
+      lastName: string | null;
+    };
+  };
+  hiredAsConsultant: {
+    id: string;
+    user: {
+      firstName: string | null;
+      lastName: string | null;
+    };
+  } | null;
+}
+
+export interface ComplianceCheckWithDetails extends ComplianceCheck {
+  consultant: {
+    id: string;
+    user: {
+      firstName: string | null;
+      lastName: string | null;
+    };
+  };
+  checkedBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+}
+
+export interface ComplianceAuditWithDetails extends ComplianceAudit {
+  project: {
+    id: string;
+    name: string;
+  } | null;
+  hospital: {
+    id: string;
+    name: string;
+  } | null;
+  auditor: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+}
+
+export interface QualityAnalytics {
+  avgOverallScore: number;
+  avgQualityScore: number;
+  avgPunctualityScore: number;
+  avgCommunicationScore: number;
+  avgTechnicalScore: number;
+  totalScorecards: number;
+  activeScorecards: number;
+  npsScore: number;
+  totalNpsResponses: number;
+  promoters: number;
+  passives: number;
+  detractors: number;
+}
+
+export interface GamificationAnalytics {
+  totalBadges: number;
+  totalBadgesAwarded: number;
+  totalPointsEarned: number;
+  totalPointsRedeemed: number;
+  totalReferrals: number;
+  hiredReferrals: number;
+  topEarners: Array<{
+    consultantId: string;
+    consultantName: string;
+    totalPoints: number;
+  }>;
+}
+
+export interface ComplianceAnalytics {
+  totalChecks: number;
+  passedChecks: number;
+  failedChecks: number;
+  expiredChecks: number;
+  pendingChecks: number;
+  complianceRate: number;
+  checksByType: Array<{
+    type: string;
+    total: number;
+    passed: number;
+    failed: number;
+  }>;
+  upcomingExpirations: ComplianceCheckWithDetails[];
 }
