@@ -37,7 +37,14 @@ export function DevRoleSwitcher() {
     localStorage.setItem(DEV_ROLE_KEY, role);
     setOverrideRole(role);
     setIsOpen(false);
+    // Invalidate all auth and permissions queries
     queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    queryClient.invalidateQueries({ predicate: (query) => {
+      const key = query.queryKey[0]?.toString() ?? '';
+      return key.includes('/api/permissions') ||
+        key.includes('/api/rbac/effective-permissions') ||
+        key.includes('/api/dev/');
+    }});
     window.location.reload();
   };
 
@@ -45,7 +52,14 @@ export function DevRoleSwitcher() {
     localStorage.removeItem(DEV_ROLE_KEY);
     setOverrideRole(null);
     setIsOpen(false);
+    // Invalidate all auth and permissions queries
     queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    queryClient.invalidateQueries({ predicate: (query) => {
+      const key = query.queryKey[0]?.toString() ?? '';
+      return key.includes('/api/permissions') ||
+        key.includes('/api/rbac/effective-permissions') ||
+        key.includes('/api/dev/');
+    }});
     window.location.reload();
   };
 

@@ -1793,6 +1793,116 @@ export async function registerRoutes(
     }
   });
 
+  // Development-only: Get permissions for a simulated role (for testing different views)
+  app.get('/api/dev/permissions/:role', isAuthenticated, async (req: any, res) => {
+    try {
+      // Only allow in development
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(403).json({ message: "Not available in production" });
+      }
+      
+      const simulatedRole = req.params.role as string;
+      const validRoles = ['admin', 'consultant', 'hospital_staff'];
+      
+      if (!validRoles.includes(simulatedRole)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+      
+      // Build simulated permissions based on role
+      let roleLevel: 'admin' | 'hospital_leadership' | 'hospital_staff' | 'consultant' = 'consultant';
+      let isLeadership = false;
+      
+      if (simulatedRole === 'admin') {
+        roleLevel = 'admin';
+      } else if (simulatedRole === 'hospital_staff') {
+        roleLevel = 'hospital_staff';
+      } else {
+        roleLevel = 'consultant';
+      }
+      
+      // Get access rules for simulated role
+      const allRules = await storage.getAllAccessRules();
+      const activeRules = allRules.filter(r => r.isActive);
+      
+      const restrictedPages: string[] = [];
+      const restrictedFeatures: string[] = [];
+      
+      for (const rule of activeRules) {
+        const allowedRoles = rule.allowedRoles as string[];
+        const deniedRoles = rule.deniedRoles as string[];
+        
+        let isRestricted = false;
+        
+        if (deniedRoles.includes(simulatedRole)) {
+          isRestricted = true;
+        } else if (allowedRoles.length > 0 && !allowedRoles.includes(simulatedRole)) {
+          isRestricted = true;
+        }
+        
+        if (isRestricted) {
+          if (rule.resourceType === 'page') {
+            restrictedPages.push(rule.resourceKey);
+          } else if (rule.resourceType === 'feature') {
+            restrictedFeatures.push(rule.resourceKey);
+          }
+        }
+      }
+      
+      res.json({
+        role: simulatedRole,
+        roleLevel,
+        isLeadership,
+        hospitalId: null,
+        assignedProjectIds: [],
+        restrictedPages,
+        restrictedFeatures,
+      });
+    } catch (error) {
+      console.error("Error fetching dev permissions:", error);
+      res.status(500).json({ message: "Failed to fetch dev permissions" });
+    }
+  });
+
+  // Development-only: Get effective permissions for a simulated role
+  app.get('/api/dev/effective-permissions/:role', isAuthenticated, async (req: any, res) => {
+    try {
+      // Only allow in development
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(403).json({ message: "Not available in production" });
+      }
+      
+      const simulatedRole = req.params.role as string;
+      const validRoles = ['admin', 'consultant', 'hospital_staff'];
+      
+      if (!validRoles.includes(simulatedRole)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+      
+      await ensureRbacSeeded();
+      
+      // Get permissions for the simulated role from RBAC
+      const roleData = await storage.getRoleByName(simulatedRole);
+      
+      if (!roleData) {
+        // Return empty permissions if role not found
+        return res.json([]);
+      }
+      
+      // Get permissions assigned to this role
+      const rolePermissions = await storage.getRolePermissions(roleData.id);
+      
+      res.json(rolePermissions.map((rp: any) => ({
+        permissionId: rp.permissionId,
+        permissionName: rp.permission?.name || '',
+        domain: rp.permission?.domain || '',
+        action: rp.permission?.action || '',
+      })));
+    } catch (error) {
+      console.error("Error fetching dev effective permissions:", error);
+      res.status(500).json({ message: "Failed to fetch dev effective permissions" });
+    }
+  });
+
   // User Activity routes
   app.get('/api/activities', isAuthenticated, async (req: any, res) => {
     try {

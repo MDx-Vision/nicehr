@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { type UserRoleLevel, type NavigationItem } from "@/lib/permissions";
+import { getDevRoleOverride } from "@/components/DevRoleSwitcher";
 
 interface PermissionsData {
   role: string | null;
@@ -39,14 +40,25 @@ interface PermissionsContextValue {
 const PermissionsContext = createContext<PermissionsContextValue | null>(null);
 
 export function PermissionsProvider({ children }: { children: ReactNode }) {
+  const devRoleOverride = getDevRoleOverride();
+  
+  // Use dev endpoints when dev mode is active
+  const permissionsEndpoint = devRoleOverride 
+    ? `/api/dev/permissions/${devRoleOverride}` 
+    : '/api/permissions';
+    
+  const effectivePermissionsEndpoint = devRoleOverride 
+    ? `/api/dev/effective-permissions/${devRoleOverride}` 
+    : '/api/rbac/effective-permissions';
+
   const { data: permissions, isLoading, error } = useQuery<PermissionsData>({
-    queryKey: ['/api/permissions'],
+    queryKey: [permissionsEndpoint, devRoleOverride],
     staleTime: 60000,
     refetchOnWindowFocus: true,
   });
 
   const { data: effectivePermissionsData = [] } = useQuery<EffectivePermission[]>({
-    queryKey: ['/api/rbac/effective-permissions'],
+    queryKey: [effectivePermissionsEndpoint, devRoleOverride],
     staleTime: 60000,
     refetchOnWindowFocus: true,
   });
