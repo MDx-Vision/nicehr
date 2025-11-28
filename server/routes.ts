@@ -50,6 +50,11 @@ import {
   insertLoginLabSchema,
   insertLoginLabParticipantSchema,
   insertKnowledgeArticleSchema,
+  insertEodReportSchema,
+  insertEscalationRuleSchema,
+  insertTicketHistorySchema,
+  insertDataRetentionPolicySchema,
+  insertTicketCommentSchema,
 } from "@shared/schema";
 import {
   sendWelcomeEmail,
@@ -4258,6 +4263,530 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching training analytics:", error);
       res.status(500).json({ message: "Failed to fetch training analytics" });
+    }
+  });
+
+  // ============================================
+  // PHASE 12: TICKETING & SUPPORT ROUTES
+  // ============================================
+
+  // EOD Report Routes
+  app.post('/api/eod-reports', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validated = insertEodReportSchema.parse({
+        ...req.body,
+        submittedById: userId,
+      });
+      const report = await storage.createEodReport(validated);
+      
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'eod_report',
+        resourceId: report.id,
+        resourceName: `EOD Report - ${validated.reportDate}`,
+        description: 'Created end of day report',
+      }, req);
+      
+      res.status(201).json(report);
+    } catch (error) {
+      console.error("Error creating EOD report:", error);
+      res.status(400).json({ message: "Failed to create EOD report" });
+    }
+  });
+
+  app.get('/api/eod-reports', isAuthenticated, async (req, res) => {
+    try {
+      const projectId = req.query.projectId as string;
+      const reports = await storage.getEodReportsWithDetails(projectId);
+      res.json(reports);
+    } catch (error) {
+      console.error("Error fetching EOD reports:", error);
+      res.status(500).json({ message: "Failed to fetch EOD reports" });
+    }
+  });
+
+  app.get('/api/eod-reports/:id', isAuthenticated, async (req, res) => {
+    try {
+      const report = await storage.getEodReportWithDetails(req.params.id);
+      if (!report) {
+        return res.status(404).json({ message: "EOD report not found" });
+      }
+      res.json(report);
+    } catch (error) {
+      console.error("Error fetching EOD report:", error);
+      res.status(500).json({ message: "Failed to fetch EOD report" });
+    }
+  });
+
+  app.patch('/api/eod-reports/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const report = await storage.updateEodReport(req.params.id, req.body);
+      if (!report) {
+        return res.status(404).json({ message: "EOD report not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'eod_report',
+          resourceId: report.id,
+          resourceName: `EOD Report - ${report.reportDate}`,
+          description: 'Updated end of day report',
+        }, req);
+      }
+      
+      res.json(report);
+    } catch (error) {
+      console.error("Error updating EOD report:", error);
+      res.status(500).json({ message: "Failed to update EOD report" });
+    }
+  });
+
+  app.post('/api/eod-reports/:id/submit', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const report = await storage.submitEodReport(req.params.id);
+      if (!report) {
+        return res.status(404).json({ message: "EOD report not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'eod_report',
+          resourceId: report.id,
+          resourceName: `EOD Report - ${report.reportDate}`,
+          description: 'Submitted end of day report',
+        }, req);
+        
+        const admins = await storage.getAllAdminUsers?.() || [];
+        for (const admin of admins) {
+          await storage.createNotification({
+            userId: admin.id,
+            type: 'info',
+            title: 'EOD Report Submitted',
+            message: `A new EOD report for ${report.reportDate} is pending approval`,
+            link: `/eod-reports/${report.id}`,
+          });
+        }
+      }
+      
+      res.json(report);
+    } catch (error) {
+      console.error("Error submitting EOD report:", error);
+      res.status(500).json({ message: "Failed to submit EOD report" });
+    }
+  });
+
+  app.post('/api/eod-reports/:id/approve', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const report = await storage.approveEodReport(req.params.id, userId);
+      if (!report) {
+        return res.status(404).json({ message: "EOD report not found" });
+      }
+      
+      await logActivity(userId, {
+        activityType: 'update',
+        resourceType: 'eod_report',
+        resourceId: report.id,
+        resourceName: `EOD Report - ${report.reportDate}`,
+        description: 'Approved end of day report',
+      }, req);
+      
+      await storage.createNotification({
+        userId: report.submittedById,
+        type: 'success',
+        title: 'EOD Report Approved',
+        message: `Your EOD report for ${report.reportDate} has been approved`,
+        link: `/eod-reports/${report.id}`,
+      });
+      
+      res.json(report);
+    } catch (error) {
+      console.error("Error approving EOD report:", error);
+      res.status(500).json({ message: "Failed to approve EOD report" });
+    }
+  });
+
+  app.post('/api/eod-reports/:id/reject', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const report = await storage.rejectEodReport(req.params.id);
+      if (!report) {
+        return res.status(404).json({ message: "EOD report not found" });
+      }
+      
+      await logActivity(userId, {
+        activityType: 'update',
+        resourceType: 'eod_report',
+        resourceId: report.id,
+        resourceName: `EOD Report - ${report.reportDate}`,
+        description: 'Rejected end of day report',
+      }, req);
+      
+      await storage.createNotification({
+        userId: report.submittedById,
+        type: 'warning',
+        title: 'EOD Report Rejected',
+        message: `Your EOD report for ${report.reportDate} was rejected. Please review and resubmit.`,
+        link: `/eod-reports/${report.id}`,
+      });
+      
+      res.json(report);
+    } catch (error) {
+      console.error("Error rejecting EOD report:", error);
+      res.status(500).json({ message: "Failed to reject EOD report" });
+    }
+  });
+
+  app.delete('/api/eod-reports/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      await storage.deleteEodReport(req.params.id);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'eod_report',
+          resourceId: req.params.id,
+          resourceName: 'EOD Report',
+          description: 'Deleted end of day report',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting EOD report:", error);
+      res.status(500).json({ message: "Failed to delete EOD report" });
+    }
+  });
+
+  app.get('/api/eod-reports/analytics', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const analytics = await storage.getEodReportAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching EOD report analytics:", error);
+      res.status(500).json({ message: "Failed to fetch EOD report analytics" });
+    }
+  });
+
+  app.get('/api/projects/:projectId/eod-reports/auto-populate', isAuthenticated, async (req, res) => {
+    try {
+      const date = req.query.date as string || new Date().toISOString().split('T')[0];
+      const autoPopulated = await storage.autoPopulateEodReport(req.params.projectId, date);
+      res.json(autoPopulated);
+    } catch (error) {
+      console.error("Error auto-populating EOD report:", error);
+      res.status(500).json({ message: "Failed to auto-populate EOD report" });
+    }
+  });
+
+  // Escalation Rules Routes
+  app.post('/api/escalation-rules', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validated = insertEscalationRuleSchema.parse({
+        ...req.body,
+        createdBy: userId,
+      });
+      const rule = await storage.createEscalationRule(validated);
+      
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'escalation_rule',
+        resourceId: rule.id,
+        resourceName: validated.name,
+        description: 'Created escalation rule',
+      }, req);
+      
+      res.status(201).json(rule);
+    } catch (error) {
+      console.error("Error creating escalation rule:", error);
+      res.status(400).json({ message: "Failed to create escalation rule" });
+    }
+  });
+
+  app.get('/api/escalation-rules', isAuthenticated, async (req, res) => {
+    try {
+      const projectId = req.query.projectId as string;
+      const rules = await storage.getEscalationRules(projectId);
+      res.json(rules);
+    } catch (error) {
+      console.error("Error fetching escalation rules:", error);
+      res.status(500).json({ message: "Failed to fetch escalation rules" });
+    }
+  });
+
+  app.get('/api/escalation-rules/:id', isAuthenticated, async (req, res) => {
+    try {
+      const rule = await storage.getEscalationRule(req.params.id);
+      if (!rule) {
+        return res.status(404).json({ message: "Escalation rule not found" });
+      }
+      res.json(rule);
+    } catch (error) {
+      console.error("Error fetching escalation rule:", error);
+      res.status(500).json({ message: "Failed to fetch escalation rule" });
+    }
+  });
+
+  app.patch('/api/escalation-rules/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const rule = await storage.updateEscalationRule(req.params.id, req.body);
+      if (!rule) {
+        return res.status(404).json({ message: "Escalation rule not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'escalation_rule',
+          resourceId: rule.id,
+          resourceName: rule.name,
+          description: 'Updated escalation rule',
+        }, req);
+      }
+      
+      res.json(rule);
+    } catch (error) {
+      console.error("Error updating escalation rule:", error);
+      res.status(500).json({ message: "Failed to update escalation rule" });
+    }
+  });
+
+  app.delete('/api/escalation-rules/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      await storage.deleteEscalationRule(req.params.id);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'escalation_rule',
+          resourceId: req.params.id,
+          resourceName: 'Escalation rule',
+          description: 'Deleted escalation rule',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting escalation rule:", error);
+      res.status(500).json({ message: "Failed to delete escalation rule" });
+    }
+  });
+
+  // Ticket History Routes
+  app.get('/api/support-tickets/:ticketId/history', isAuthenticated, async (req, res) => {
+    try {
+      const history = await storage.getTicketHistory(req.params.ticketId);
+      res.json(history);
+    } catch (error) {
+      console.error("Error fetching ticket history:", error);
+      res.status(500).json({ message: "Failed to fetch ticket history" });
+    }
+  });
+
+  app.get('/api/support-tickets/:id/full', isAuthenticated, async (req, res) => {
+    try {
+      const ticket = await storage.getSupportTicketWithHistory(req.params.id);
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+      res.json(ticket);
+    } catch (error) {
+      console.error("Error fetching ticket with history:", error);
+      res.status(500).json({ message: "Failed to fetch ticket with history" });
+    }
+  });
+
+  // Ticket Comments Routes
+  app.post('/api/support-tickets/:ticketId/comments', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validated = insertTicketCommentSchema.parse({
+        ...req.body,
+        ticketId: req.params.ticketId,
+        authorId: userId,
+      });
+      const comment = await storage.createTicketComment(validated);
+      
+      await storage.createTicketHistory({
+        ticketId: req.params.ticketId,
+        action: 'commented',
+        performedById: userId,
+        comment: req.body.content?.substring(0, 100),
+      });
+      
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'ticket_comment',
+        resourceId: comment.id,
+        resourceName: `Comment on ticket`,
+        description: 'Added comment to support ticket',
+      }, req);
+      
+      res.status(201).json(comment);
+    } catch (error) {
+      console.error("Error creating ticket comment:", error);
+      res.status(400).json({ message: "Failed to create ticket comment" });
+    }
+  });
+
+  app.get('/api/support-tickets/:ticketId/comments', isAuthenticated, async (req, res) => {
+    try {
+      const comments = await storage.getTicketComments(req.params.ticketId);
+      res.json(comments);
+    } catch (error) {
+      console.error("Error fetching ticket comments:", error);
+      res.status(500).json({ message: "Failed to fetch ticket comments" });
+    }
+  });
+
+  app.patch('/api/ticket-comments/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const comment = await storage.updateTicketComment(req.params.id, req.body);
+      if (!comment) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'ticket_comment',
+          resourceId: comment.id,
+          resourceName: 'Ticket comment',
+          description: 'Updated ticket comment',
+        }, req);
+      }
+      
+      res.json(comment);
+    } catch (error) {
+      console.error("Error updating ticket comment:", error);
+      res.status(500).json({ message: "Failed to update ticket comment" });
+    }
+  });
+
+  app.delete('/api/ticket-comments/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      await storage.deleteTicketComment(req.params.id);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'ticket_comment',
+          resourceId: req.params.id,
+          resourceName: 'Ticket comment',
+          description: 'Deleted ticket comment',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting ticket comment:", error);
+      res.status(500).json({ message: "Failed to delete ticket comment" });
+    }
+  });
+
+  // Data Retention Policy Routes
+  app.post('/api/data-retention-policies', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validated = insertDataRetentionPolicySchema.parse({
+        ...req.body,
+        createdBy: userId,
+      });
+      const policy = await storage.createDataRetentionPolicy(validated);
+      
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'data_retention_policy',
+        resourceId: policy.id,
+        resourceName: `Retention policy - ${validated.entityType}`,
+        description: 'Created data retention policy',
+      }, req);
+      
+      res.status(201).json(policy);
+    } catch (error) {
+      console.error("Error creating data retention policy:", error);
+      res.status(400).json({ message: "Failed to create data retention policy" });
+    }
+  });
+
+  app.get('/api/data-retention-policies', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const policies = await storage.getDataRetentionPolicies();
+      res.json(policies);
+    } catch (error) {
+      console.error("Error fetching data retention policies:", error);
+      res.status(500).json({ message: "Failed to fetch data retention policies" });
+    }
+  });
+
+  app.get('/api/data-retention-policies/:id', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const policy = await storage.getDataRetentionPolicy(req.params.id);
+      if (!policy) {
+        return res.status(404).json({ message: "Data retention policy not found" });
+      }
+      res.json(policy);
+    } catch (error) {
+      console.error("Error fetching data retention policy:", error);
+      res.status(500).json({ message: "Failed to fetch data retention policy" });
+    }
+  });
+
+  app.patch('/api/data-retention-policies/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const policy = await storage.updateDataRetentionPolicy(req.params.id, req.body);
+      if (!policy) {
+        return res.status(404).json({ message: "Data retention policy not found" });
+      }
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'update',
+          resourceType: 'data_retention_policy',
+          resourceId: policy.id,
+          resourceName: `Retention policy - ${policy.entityType}`,
+          description: 'Updated data retention policy',
+        }, req);
+      }
+      
+      res.json(policy);
+    } catch (error) {
+      console.error("Error updating data retention policy:", error);
+      res.status(500).json({ message: "Failed to update data retention policy" });
+    }
+  });
+
+  app.delete('/api/data-retention-policies/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      await storage.deleteDataRetentionPolicy(req.params.id);
+      
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'data_retention_policy',
+          resourceId: req.params.id,
+          resourceName: 'Data retention policy',
+          description: 'Deleted data retention policy',
+        }, req);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting data retention policy:", error);
+      res.status(500).json({ message: "Failed to delete data retention policy" });
     }
   });
 
