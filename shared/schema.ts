@@ -2707,3 +2707,692 @@ export interface EodReportAnalytics {
     reportCount: number;
   }>;
 }
+
+// ============================================
+// PHASE 13: FINANCIAL MANAGEMENT
+// ============================================
+
+// Expense category enum
+export const expenseCategoryEnum = pgEnum("expense_category", [
+  "travel",
+  "lodging",
+  "meals",
+  "transportation",
+  "parking",
+  "mileage",
+  "per_diem",
+  "equipment",
+  "supplies",
+  "training",
+  "other"
+]);
+
+// Expense status enum
+export const expenseStatusEnum = pgEnum("expense_status", [
+  "draft",
+  "submitted",
+  "approved",
+  "rejected",
+  "reimbursed"
+]);
+
+// Invoice status enum
+export const invoiceStatusEnum = pgEnum("invoice_status", [
+  "draft",
+  "pending",
+  "sent",
+  "paid",
+  "overdue",
+  "cancelled"
+]);
+
+// Payroll batch status enum
+export const payrollBatchStatusEnum = pgEnum("payroll_batch_status", [
+  "draft",
+  "processing",
+  "approved",
+  "paid",
+  "cancelled"
+]);
+
+// Scenario type enum
+export const scenarioTypeEnum = pgEnum("scenario_type", [
+  "baseline",
+  "optimistic",
+  "pessimistic",
+  "what_if"
+]);
+
+// ============================================
+// EXPENSE MANAGEMENT TABLES
+// ============================================
+
+// Per Diem Policies
+export const perDiemPolicies = pgTable("per_diem_policies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  dailyRate: decimal("daily_rate", { precision: 10, scale: 2 }).notNull(),
+  breakfastRate: decimal("breakfast_rate", { precision: 10, scale: 2 }),
+  lunchRate: decimal("lunch_rate", { precision: 10, scale: 2 }),
+  dinnerRate: decimal("dinner_rate", { precision: 10, scale: 2 }),
+  incidentalRate: decimal("incidental_rate", { precision: 10, scale: 2 }),
+  location: varchar("location"),
+  effectiveFrom: date("effective_from").notNull(),
+  effectiveTo: date("effective_to"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Mileage Rates
+export const mileageRates = pgTable("mileage_rates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  ratePerMile: decimal("rate_per_mile", { precision: 10, scale: 4 }).notNull(),
+  vehicleType: varchar("vehicle_type"),
+  effectiveFrom: date("effective_from").notNull(),
+  effectiveTo: date("effective_to"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Expenses
+export const expenses = pgTable("expenses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  consultantId: varchar("consultant_id").references(() => consultants.id).notNull(),
+  projectId: varchar("project_id").references(() => projects.id),
+  category: expenseCategoryEnum("category").notNull(),
+  description: text("description").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency").default("USD").notNull(),
+  expenseDate: date("expense_date").notNull(),
+  receiptUrl: varchar("receipt_url"),
+  receiptFileName: varchar("receipt_file_name"),
+  status: expenseStatusEnum("status").default("draft").notNull(),
+  // Mileage specific fields
+  mileageStart: varchar("mileage_start"),
+  mileageEnd: varchar("mileage_end"),
+  mileageDistance: decimal("mileage_distance", { precision: 10, scale: 2 }),
+  mileageRateId: varchar("mileage_rate_id").references(() => mileageRates.id),
+  // Per diem specific fields
+  perDiemPolicyId: varchar("per_diem_policy_id").references(() => perDiemPolicies.id),
+  perDiemDays: integer("per_diem_days"),
+  mealsIncluded: jsonb("meals_included"),
+  // Approval fields
+  submittedAt: timestamp("submitted_at"),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewNotes: text("review_notes"),
+  reimbursedAt: timestamp("reimbursed_at"),
+  invoiceId: varchar("invoice_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const expensesRelations = relations(expenses, ({ one }) => ({
+  consultant: one(consultants, {
+    fields: [expenses.consultantId],
+    references: [consultants.id],
+  }),
+  project: one(projects, {
+    fields: [expenses.projectId],
+    references: [projects.id],
+  }),
+  reviewer: one(users, {
+    fields: [expenses.reviewedBy],
+    references: [users.id],
+  }),
+  mileageRate: one(mileageRates, {
+    fields: [expenses.mileageRateId],
+    references: [mileageRates.id],
+  }),
+  perDiemPolicy: one(perDiemPolicies, {
+    fields: [expenses.perDiemPolicyId],
+    references: [perDiemPolicies.id],
+  }),
+}));
+
+// ============================================
+// INVOICE MANAGEMENT TABLES
+// ============================================
+
+// Invoice Templates
+export const invoiceTemplates = pgTable("invoice_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  headerText: text("header_text"),
+  footerText: text("footer_text"),
+  termsAndConditions: text("terms_and_conditions"),
+  logoUrl: varchar("logo_url"),
+  companyName: varchar("company_name"),
+  companyAddress: text("company_address"),
+  companyPhone: varchar("company_phone"),
+  companyEmail: varchar("company_email"),
+  paymentInstructions: text("payment_instructions"),
+  layoutConfig: jsonb("layout_config"),
+  isDefault: boolean("is_default").default(false).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Invoices
+export const invoices = pgTable("invoices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  invoiceNumber: varchar("invoice_number").unique(),
+  projectId: varchar("project_id").references(() => projects.id),
+  hospitalId: varchar("hospital_id").references(() => hospitals.id),
+  templateId: varchar("template_id").references(() => invoiceTemplates.id),
+  status: invoiceStatusEnum("status").default("draft").notNull(),
+  issueDate: date("issue_date"),
+  dueDate: date("due_date"),
+  periodStart: date("period_start"),
+  periodEnd: date("period_end"),
+  subtotal: decimal("subtotal", { precision: 12, scale: 2 }).default("0"),
+  taxRate: decimal("tax_rate", { precision: 5, scale: 2 }).default("0"),
+  taxAmount: decimal("tax_amount", { precision: 12, scale: 2 }).default("0"),
+  discountAmount: decimal("discount_amount", { precision: 12, scale: 2 }).default("0"),
+  totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).default("0"),
+  paidAmount: decimal("paid_amount", { precision: 12, scale: 2 }).default("0"),
+  notes: text("notes"),
+  internalNotes: text("internal_notes"),
+  pdfUrl: varchar("pdf_url"),
+  sentAt: timestamp("sent_at"),
+  paidAt: timestamp("paid_at"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const invoicesRelations = relations(invoices, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [invoices.projectId],
+    references: [projects.id],
+  }),
+  hospital: one(hospitals, {
+    fields: [invoices.hospitalId],
+    references: [hospitals.id],
+  }),
+  template: one(invoiceTemplates, {
+    fields: [invoices.templateId],
+    references: [invoiceTemplates.id],
+  }),
+  creator: one(users, {
+    fields: [invoices.createdBy],
+    references: [users.id],
+  }),
+  lineItems: many(invoiceLineItems),
+}));
+
+// Invoice Line Items
+export const invoiceLineItems = pgTable("invoice_line_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  invoiceId: varchar("invoice_id").references(() => invoices.id).notNull(),
+  description: text("description").notNull(),
+  quantity: decimal("quantity", { precision: 10, scale: 2 }).default("1"),
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  category: varchar("category"),
+  // Link to source data
+  timesheetEntryId: varchar("timesheet_entry_id"),
+  expenseId: varchar("expense_id").references(() => expenses.id),
+  consultantId: varchar("consultant_id").references(() => consultants.id),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const invoiceLineItemsRelations = relations(invoiceLineItems, ({ one }) => ({
+  invoice: one(invoices, {
+    fields: [invoiceLineItems.invoiceId],
+    references: [invoices.id],
+  }),
+  expense: one(expenses, {
+    fields: [invoiceLineItems.expenseId],
+    references: [expenses.id],
+  }),
+  consultant: one(consultants, {
+    fields: [invoiceLineItems.consultantId],
+    references: [consultants.id],
+  }),
+}));
+
+// ============================================
+// PAYROLL MANAGEMENT TABLES
+// ============================================
+
+// Pay Rates (history tracking)
+export const payRates = pgTable("pay_rates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  consultantId: varchar("consultant_id").references(() => consultants.id).notNull(),
+  hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }).notNull(),
+  overtimeRate: decimal("overtime_rate", { precision: 10, scale: 2 }),
+  effectiveFrom: date("effective_from").notNull(),
+  effectiveTo: date("effective_to"),
+  notes: text("notes"),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const payRatesRelations = relations(payRates, ({ one }) => ({
+  consultant: one(consultants, {
+    fields: [payRates.consultantId],
+    references: [consultants.id],
+  }),
+  approver: one(users, {
+    fields: [payRates.approvedBy],
+    references: [users.id],
+  }),
+}));
+
+// Payroll Batches
+export const payrollBatches = pgTable("payroll_batches", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  batchNumber: varchar("batch_number").unique(),
+  name: varchar("name").notNull(),
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  status: payrollBatchStatusEnum("status").default("draft").notNull(),
+  totalHours: decimal("total_hours", { precision: 10, scale: 2 }).default("0"),
+  totalRegularHours: decimal("total_regular_hours", { precision: 10, scale: 2 }).default("0"),
+  totalOvertimeHours: decimal("total_overtime_hours", { precision: 10, scale: 2 }).default("0"),
+  totalGrossPay: decimal("total_gross_pay", { precision: 12, scale: 2 }).default("0"),
+  totalExpenses: decimal("total_expenses", { precision: 12, scale: 2 }).default("0"),
+  totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).default("0"),
+  consultantCount: integer("consultant_count").default(0),
+  processedAt: timestamp("processed_at"),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  paidAt: timestamp("paid_at"),
+  exportedAt: timestamp("exported_at"),
+  exportFormat: varchar("export_format"),
+  notes: text("notes"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const payrollBatchesRelations = relations(payrollBatches, ({ one, many }) => ({
+  approver: one(users, {
+    fields: [payrollBatches.approvedBy],
+    references: [users.id],
+  }),
+  creator: one(users, {
+    fields: [payrollBatches.createdBy],
+    references: [users.id],
+  }),
+  entries: many(payrollEntries),
+}));
+
+// Payroll Entries
+export const payrollEntries = pgTable("payroll_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  batchId: varchar("batch_id").references(() => payrollBatches.id).notNull(),
+  consultantId: varchar("consultant_id").references(() => consultants.id).notNull(),
+  timesheetId: varchar("timesheet_id").references(() => timesheets.id),
+  regularHours: decimal("regular_hours", { precision: 10, scale: 2 }).default("0"),
+  overtimeHours: decimal("overtime_hours", { precision: 10, scale: 2 }).default("0"),
+  hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }).notNull(),
+  overtimeRate: decimal("overtime_rate", { precision: 10, scale: 2 }),
+  regularPay: decimal("regular_pay", { precision: 12, scale: 2 }).default("0"),
+  overtimePay: decimal("overtime_pay", { precision: 12, scale: 2 }).default("0"),
+  grossPay: decimal("gross_pay", { precision: 12, scale: 2 }).default("0"),
+  expenseReimbursement: decimal("expense_reimbursement", { precision: 12, scale: 2 }).default("0"),
+  totalPay: decimal("total_pay", { precision: 12, scale: 2 }).default("0"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const payrollEntriesRelations = relations(payrollEntries, ({ one }) => ({
+  batch: one(payrollBatches, {
+    fields: [payrollEntries.batchId],
+    references: [payrollBatches.id],
+  }),
+  consultant: one(consultants, {
+    fields: [payrollEntries.consultantId],
+    references: [consultants.id],
+  }),
+  timesheet: one(timesheets, {
+    fields: [payrollEntries.timesheetId],
+    references: [timesheets.id],
+  }),
+}));
+
+// Paycheck Stubs
+export const paycheckStubs = pgTable("paycheck_stubs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  payrollEntryId: varchar("payroll_entry_id").references(() => payrollEntries.id).notNull(),
+  consultantId: varchar("consultant_id").references(() => consultants.id).notNull(),
+  payDate: date("pay_date").notNull(),
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  regularHours: decimal("regular_hours", { precision: 10, scale: 2 }),
+  overtimeHours: decimal("overtime_hours", { precision: 10, scale: 2 }),
+  grossPay: decimal("gross_pay", { precision: 12, scale: 2 }),
+  expenseReimbursement: decimal("expense_reimbursement", { precision: 12, scale: 2 }),
+  netPay: decimal("net_pay", { precision: 12, scale: 2 }),
+  pdfUrl: varchar("pdf_url"),
+  details: jsonb("details"),
+  viewedAt: timestamp("viewed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const paycheckStubsRelations = relations(paycheckStubs, ({ one }) => ({
+  payrollEntry: one(payrollEntries, {
+    fields: [paycheckStubs.payrollEntryId],
+    references: [payrollEntries.id],
+  }),
+  consultant: one(consultants, {
+    fields: [paycheckStubs.consultantId],
+    references: [consultants.id],
+  }),
+}));
+
+// ============================================
+// BUDGET & SCENARIO MODELING TABLES
+// ============================================
+
+// Budget Scenarios
+export const budgetScenarios = pgTable("budget_scenarios", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  scenarioType: scenarioTypeEnum("scenario_type").default("what_if").notNull(),
+  isBaseline: boolean("is_baseline").default(false).notNull(),
+  // Budget parameters
+  estimatedHours: decimal("estimated_hours", { precision: 10, scale: 2 }),
+  hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }),
+  consultantCount: integer("consultant_count"),
+  durationWeeks: integer("duration_weeks"),
+  // Cost estimates
+  laborCost: decimal("labor_cost", { precision: 12, scale: 2 }),
+  travelCost: decimal("travel_cost", { precision: 12, scale: 2 }),
+  expenseCost: decimal("expense_cost", { precision: 12, scale: 2 }),
+  overheadCost: decimal("overhead_cost", { precision: 12, scale: 2 }),
+  totalBudget: decimal("total_budget", { precision: 12, scale: 2 }),
+  // Actuals (for baseline comparison)
+  actualLaborCost: decimal("actual_labor_cost", { precision: 12, scale: 2 }),
+  actualTravelCost: decimal("actual_travel_cost", { precision: 12, scale: 2 }),
+  actualExpenseCost: decimal("actual_expense_cost", { precision: 12, scale: 2 }),
+  actualTotalCost: decimal("actual_total_cost", { precision: 12, scale: 2 }),
+  // Variance
+  budgetVariance: decimal("budget_variance", { precision: 12, scale: 2 }),
+  variancePercentage: decimal("variance_percentage", { precision: 5, scale: 2 }),
+  // Assumptions
+  assumptions: jsonb("assumptions"),
+  // Metadata
+  createdBy: varchar("created_by").references(() => users.id),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const budgetScenariosRelations = relations(budgetScenarios, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [budgetScenarios.projectId],
+    references: [projects.id],
+  }),
+  creator: one(users, {
+    fields: [budgetScenarios.createdBy],
+    references: [users.id],
+  }),
+  metrics: many(scenarioMetrics),
+}));
+
+// Scenario Metrics (for tracking forecasts over time)
+export const scenarioMetrics = pgTable("scenario_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  scenarioId: varchar("scenario_id").references(() => budgetScenarios.id).notNull(),
+  metricDate: date("metric_date").notNull(),
+  metricType: varchar("metric_type").notNull(),
+  metricName: varchar("metric_name").notNull(),
+  plannedValue: decimal("planned_value", { precision: 12, scale: 2 }),
+  actualValue: decimal("actual_value", { precision: 12, scale: 2 }),
+  forecastValue: decimal("forecast_value", { precision: 12, scale: 2 }),
+  variance: decimal("variance", { precision: 12, scale: 2 }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const scenarioMetricsRelations = relations(scenarioMetrics, ({ one }) => ({
+  scenario: one(budgetScenarios, {
+    fields: [scenarioMetrics.scenarioId],
+    references: [budgetScenarios.id],
+  }),
+}));
+
+// ============================================
+// PHASE 13 INSERT SCHEMAS
+// ============================================
+
+export const insertPerDiemPolicySchema = createInsertSchema(perDiemPolicies).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMileageRateSchema = createInsertSchema(mileageRates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertExpenseSchema = createInsertSchema(expenses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertInvoiceTemplateSchema = createInsertSchema(invoiceTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertInvoiceSchema = createInsertSchema(invoices).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertInvoiceLineItemSchema = createInsertSchema(invoiceLineItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPayRateSchema = createInsertSchema(payRates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPayrollBatchSchema = createInsertSchema(payrollBatches).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPayrollEntrySchema = createInsertSchema(payrollEntries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPaycheckStubSchema = createInsertSchema(paycheckStubs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertBudgetScenarioSchema = createInsertSchema(budgetScenarios).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertScenarioMetricSchema = createInsertSchema(scenarioMetrics).omit({
+  id: true,
+  createdAt: true,
+});
+
+// ============================================
+// PHASE 13 TYPES
+// ============================================
+
+export type PerDiemPolicy = typeof perDiemPolicies.$inferSelect;
+export type InsertPerDiemPolicy = z.infer<typeof insertPerDiemPolicySchema>;
+
+export type MileageRate = typeof mileageRates.$inferSelect;
+export type InsertMileageRate = z.infer<typeof insertMileageRateSchema>;
+
+export type Expense = typeof expenses.$inferSelect;
+export type InsertExpense = z.infer<typeof insertExpenseSchema>;
+
+export type InvoiceTemplate = typeof invoiceTemplates.$inferSelect;
+export type InsertInvoiceTemplate = z.infer<typeof insertInvoiceTemplateSchema>;
+
+export type Invoice = typeof invoices.$inferSelect;
+export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
+
+export type InvoiceLineItem = typeof invoiceLineItems.$inferSelect;
+export type InsertInvoiceLineItem = z.infer<typeof insertInvoiceLineItemSchema>;
+
+export type PayRate = typeof payRates.$inferSelect;
+export type InsertPayRate = z.infer<typeof insertPayRateSchema>;
+
+export type PayrollBatch = typeof payrollBatches.$inferSelect;
+export type InsertPayrollBatch = z.infer<typeof insertPayrollBatchSchema>;
+
+export type PayrollEntry = typeof payrollEntries.$inferSelect;
+export type InsertPayrollEntry = z.infer<typeof insertPayrollEntrySchema>;
+
+export type PaycheckStub = typeof paycheckStubs.$inferSelect;
+export type InsertPaycheckStub = z.infer<typeof insertPaycheckStubSchema>;
+
+export type BudgetScenario = typeof budgetScenarios.$inferSelect;
+export type InsertBudgetScenario = z.infer<typeof insertBudgetScenarioSchema>;
+
+export type ScenarioMetric = typeof scenarioMetrics.$inferSelect;
+export type InsertScenarioMetric = z.infer<typeof insertScenarioMetricSchema>;
+
+// ============================================
+// PHASE 13 EXTENDED TYPES
+// ============================================
+
+export interface ExpenseWithDetails extends Expense {
+  consultant: {
+    id: string;
+    user: {
+      firstName: string | null;
+      lastName: string | null;
+    };
+  };
+  project: {
+    id: string;
+    name: string;
+  } | null;
+  reviewer: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+}
+
+export interface InvoiceWithDetails extends Invoice {
+  project: {
+    id: string;
+    name: string;
+  } | null;
+  hospital: {
+    id: string;
+    name: string;
+  } | null;
+  template: InvoiceTemplate | null;
+  lineItems: InvoiceLineItem[];
+  creator: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+}
+
+export interface PayrollBatchWithDetails extends PayrollBatch {
+  entries: PayrollEntryWithDetails[];
+  approver: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+  creator: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+}
+
+export interface PayrollEntryWithDetails extends PayrollEntry {
+  consultant: {
+    id: string;
+    user: {
+      firstName: string | null;
+      lastName: string | null;
+    };
+  };
+  timesheet: {
+    id: string;
+    weekStartDate: string;
+  } | null;
+}
+
+export interface PaycheckStubWithDetails extends PaycheckStub {
+  consultant: {
+    id: string;
+    user: {
+      firstName: string | null;
+      lastName: string | null;
+    };
+  };
+}
+
+export interface BudgetScenarioWithMetrics extends BudgetScenario {
+  project: {
+    id: string;
+    name: string;
+  } | null;
+  metrics: ScenarioMetric[];
+  creator: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+}
+
+// Analytics types
+export interface ExpenseAnalytics {
+  totalExpenses: number;
+  pendingApproval: number;
+  totalAmount: string;
+  byCategory: Array<{
+    category: string;
+    count: number;
+    amount: string;
+  }>;
+  byStatus: Array<{
+    status: string;
+    count: number;
+    amount: string;
+  }>;
+}
+
+export interface PayrollAnalytics {
+  totalBatches: number;
+  pendingBatches: number;
+  totalPaidAmount: string;
+  averagePayPerConsultant: string;
+  recentBatches: PayrollBatchWithDetails[];
+}

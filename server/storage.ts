@@ -184,6 +184,50 @@ import {
   EHR_IMPLEMENTATION_PHASES,
   NICEHR_TEAM_ROLES,
   HOSPITAL_TEAM_ROLES,
+  perDiemPolicies,
+  mileageRates,
+  expenses,
+  invoiceTemplates,
+  invoices,
+  invoiceLineItems,
+  payRates,
+  payrollBatches,
+  payrollEntries,
+  paycheckStubs,
+  budgetScenarios,
+  scenarioMetrics,
+  type PerDiemPolicy,
+  type InsertPerDiemPolicy,
+  type MileageRate,
+  type InsertMileageRate,
+  type Expense,
+  type InsertExpense,
+  type InvoiceTemplate,
+  type InsertInvoiceTemplate,
+  type Invoice,
+  type InsertInvoice,
+  type InvoiceLineItem,
+  type InsertInvoiceLineItem,
+  type PayRate,
+  type InsertPayRate,
+  type PayrollBatch,
+  type InsertPayrollBatch,
+  type PayrollEntry,
+  type InsertPayrollEntry,
+  type PaycheckStub,
+  type InsertPaycheckStub,
+  type BudgetScenario,
+  type InsertBudgetScenario,
+  type ScenarioMetric,
+  type InsertScenarioMetric,
+  type ExpenseWithDetails,
+  type InvoiceWithDetails,
+  type PayrollBatchWithDetails,
+  type PayrollEntryWithDetails,
+  type PaycheckStubWithDetails,
+  type BudgetScenarioWithMetrics,
+  type ExpenseAnalytics,
+  type PayrollAnalytics,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, ilike, or, desc, asc, sql } from "drizzle-orm";
@@ -542,6 +586,110 @@ export interface IStorage {
 
   // Training Analytics
   getTrainingAnalytics(): Promise<TrainingAnalytics>;
+
+  // ============================================
+  // PHASE 13: FINANCIAL MANAGEMENT
+  // ============================================
+
+  // Per Diem Policy Operations
+  listPerDiemPolicies(): Promise<PerDiemPolicy[]>;
+  getPerDiemPolicy(id: string): Promise<PerDiemPolicy | undefined>;
+  createPerDiemPolicy(policy: InsertPerDiemPolicy): Promise<PerDiemPolicy>;
+  updatePerDiemPolicy(id: string, data: Partial<InsertPerDiemPolicy>): Promise<PerDiemPolicy | undefined>;
+  deletePerDiemPolicy(id: string): Promise<void>;
+
+  // Mileage Rate Operations
+  listMileageRates(): Promise<MileageRate[]>;
+  getMileageRate(id: string): Promise<MileageRate | undefined>;
+  createMileageRate(rate: InsertMileageRate): Promise<MileageRate>;
+  updateMileageRate(id: string, data: Partial<InsertMileageRate>): Promise<MileageRate | undefined>;
+  deleteMileageRate(id: string): Promise<void>;
+
+  // Expense Operations
+  listExpenses(filters?: {
+    consultantId?: string;
+    projectId?: string;
+    status?: string;
+    category?: string;
+  }): Promise<ExpenseWithDetails[]>;
+  getExpense(id: string): Promise<ExpenseWithDetails | undefined>;
+  createExpense(expense: InsertExpense): Promise<Expense>;
+  updateExpense(id: string, data: Partial<InsertExpense>): Promise<Expense | undefined>;
+  submitExpense(id: string): Promise<Expense | undefined>;
+  approveExpense(id: string, reviewerId: string): Promise<Expense | undefined>;
+  rejectExpense(id: string, reviewerId: string, reason?: string): Promise<Expense | undefined>;
+  deleteExpense(id: string): Promise<void>;
+  getExpenseAnalytics(): Promise<ExpenseAnalytics>;
+
+  // Invoice Template Operations
+  listInvoiceTemplates(): Promise<InvoiceTemplate[]>;
+  getInvoiceTemplate(id: string): Promise<InvoiceTemplate | undefined>;
+  createInvoiceTemplate(template: InsertInvoiceTemplate): Promise<InvoiceTemplate>;
+  updateInvoiceTemplate(id: string, data: Partial<InsertInvoiceTemplate>): Promise<InvoiceTemplate | undefined>;
+  deleteInvoiceTemplate(id: string): Promise<void>;
+
+  // Invoice Operations
+  listInvoices(filters?: {
+    projectId?: string;
+    hospitalId?: string;
+    status?: string;
+  }): Promise<InvoiceWithDetails[]>;
+  getInvoice(id: string): Promise<InvoiceWithDetails | undefined>;
+  createInvoice(invoice: InsertInvoice): Promise<Invoice>;
+  updateInvoice(id: string, data: Partial<InsertInvoice>): Promise<Invoice | undefined>;
+  deleteInvoice(id: string): Promise<void>;
+  generateInvoiceFromTimesheet(timesheetId: string, templateId?: string): Promise<Invoice | undefined>;
+
+  // Invoice Line Item Operations
+  listInvoiceLineItems(invoiceId: string): Promise<InvoiceLineItem[]>;
+  createInvoiceLineItem(item: InsertInvoiceLineItem): Promise<InvoiceLineItem>;
+  updateInvoiceLineItem(id: string, data: Partial<InsertInvoiceLineItem>): Promise<InvoiceLineItem | undefined>;
+  deleteInvoiceLineItem(id: string): Promise<void>;
+
+  // Pay Rate Operations
+  listPayRates(consultantId?: string): Promise<PayRate[]>;
+  getPayRate(id: string): Promise<PayRate | undefined>;
+  createPayRate(rate: InsertPayRate): Promise<PayRate>;
+  updatePayRate(id: string, data: Partial<InsertPayRate>): Promise<PayRate | undefined>;
+  getCurrentPayRate(consultantId: string): Promise<PayRate | undefined>;
+
+  // Payroll Batch Operations
+  listPayrollBatches(filters?: {
+    status?: string;
+    periodStart?: string;
+    periodEnd?: string;
+  }): Promise<PayrollBatchWithDetails[]>;
+  getPayrollBatch(id: string): Promise<PayrollBatchWithDetails | undefined>;
+  createPayrollBatch(batch: InsertPayrollBatch): Promise<PayrollBatch>;
+  updatePayrollBatch(id: string, data: Partial<InsertPayrollBatch>): Promise<PayrollBatch | undefined>;
+  approvePayrollBatch(id: string, approverId: string): Promise<PayrollBatch | undefined>;
+  processPayrollBatch(id: string): Promise<PayrollBatch | undefined>;
+
+  // Payroll Entry Operations
+  listPayrollEntries(batchId: string): Promise<PayrollEntryWithDetails[]>;
+  createPayrollEntry(entry: InsertPayrollEntry): Promise<PayrollEntry>;
+  updatePayrollEntry(id: string, data: Partial<InsertPayrollEntry>): Promise<PayrollEntry | undefined>;
+
+  // Paycheck Stub Operations
+  listPaycheckStubs(consultantId: string): Promise<PaycheckStubWithDetails[]>;
+  getPaycheckStub(id: string): Promise<PaycheckStubWithDetails | undefined>;
+  createPaycheckStub(stub: InsertPaycheckStub): Promise<PaycheckStub>;
+
+  // Payroll Analytics
+  getPayrollAnalytics(): Promise<PayrollAnalytics>;
+
+  // Budget Scenario Operations
+  listBudgetScenarios(projectId?: string): Promise<BudgetScenarioWithMetrics[]>;
+  getBudgetScenario(id: string): Promise<BudgetScenarioWithMetrics | undefined>;
+  createBudgetScenario(scenario: InsertBudgetScenario): Promise<BudgetScenario>;
+  updateBudgetScenario(id: string, data: Partial<InsertBudgetScenario>): Promise<BudgetScenario | undefined>;
+  deleteBudgetScenario(id: string): Promise<void>;
+  cloneScenario(id: string, newName: string): Promise<BudgetScenario | undefined>;
+
+  // Scenario Metric Operations
+  listScenarioMetrics(scenarioId: string): Promise<ScenarioMetric[]>;
+  createScenarioMetric(metric: InsertScenarioMetric): Promise<ScenarioMetric>;
+  updateScenarioMetric(id: string, data: Partial<InsertScenarioMetric>): Promise<ScenarioMetric | undefined>;
 }
 
 export interface ConsultantSearchFilters {
@@ -4757,6 +4905,844 @@ export class DatabaseStorage implements IStorage {
       issuesPending: Number(pendingTickets[0]?.count) || 0,
       issuesEscalated: Number(escalatedTickets[0]?.count) || 0,
     };
+  }
+
+  // ============================================
+  // PHASE 13: FINANCIAL MANAGEMENT IMPLEMENTATIONS
+  // ============================================
+
+  // Per Diem Policy Operations
+  async listPerDiemPolicies(): Promise<PerDiemPolicy[]> {
+    return await db
+      .select()
+      .from(perDiemPolicies)
+      .orderBy(desc(perDiemPolicies.createdAt));
+  }
+
+  async getPerDiemPolicy(id: string): Promise<PerDiemPolicy | undefined> {
+    const results = await db
+      .select()
+      .from(perDiemPolicies)
+      .where(eq(perDiemPolicies.id, id));
+    return results[0];
+  }
+
+  async createPerDiemPolicy(policy: InsertPerDiemPolicy): Promise<PerDiemPolicy> {
+    const results = await db.insert(perDiemPolicies).values(policy).returning();
+    return results[0];
+  }
+
+  async updatePerDiemPolicy(id: string, data: Partial<InsertPerDiemPolicy>): Promise<PerDiemPolicy | undefined> {
+    const results = await db
+      .update(perDiemPolicies)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(perDiemPolicies.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deletePerDiemPolicy(id: string): Promise<void> {
+    await db.delete(perDiemPolicies).where(eq(perDiemPolicies.id, id));
+  }
+
+  // Mileage Rate Operations
+  async listMileageRates(): Promise<MileageRate[]> {
+    return await db
+      .select()
+      .from(mileageRates)
+      .orderBy(desc(mileageRates.effectiveDate));
+  }
+
+  async getMileageRate(id: string): Promise<MileageRate | undefined> {
+    const results = await db
+      .select()
+      .from(mileageRates)
+      .where(eq(mileageRates.id, id));
+    return results[0];
+  }
+
+  async createMileageRate(rate: InsertMileageRate): Promise<MileageRate> {
+    const results = await db.insert(mileageRates).values(rate).returning();
+    return results[0];
+  }
+
+  async updateMileageRate(id: string, data: Partial<InsertMileageRate>): Promise<MileageRate | undefined> {
+    const results = await db
+      .update(mileageRates)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(mileageRates.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteMileageRate(id: string): Promise<void> {
+    await db.delete(mileageRates).where(eq(mileageRates.id, id));
+  }
+
+  // Expense Operations
+  async listExpenses(filters?: {
+    consultantId?: string;
+    projectId?: string;
+    status?: string;
+    category?: string;
+  }): Promise<ExpenseWithDetails[]> {
+    const conditions: any[] = [];
+    if (filters?.consultantId) conditions.push(eq(expenses.consultantId, filters.consultantId));
+    if (filters?.projectId) conditions.push(eq(expenses.projectId, filters.projectId));
+    if (filters?.status) conditions.push(eq(expenses.status, filters.status as any));
+    if (filters?.category) conditions.push(eq(expenses.category, filters.category as any));
+
+    const results = conditions.length > 0
+      ? await db.select().from(expenses).where(and(...conditions)).orderBy(desc(expenses.createdAt))
+      : await db.select().from(expenses).orderBy(desc(expenses.createdAt));
+
+    return Promise.all(results.map((e) => this.buildExpenseWithDetails(e)));
+  }
+
+  async getExpense(id: string): Promise<ExpenseWithDetails | undefined> {
+    const results = await db.select().from(expenses).where(eq(expenses.id, id));
+    if (!results[0]) return undefined;
+    return this.buildExpenseWithDetails(results[0]);
+  }
+
+  async createExpense(expense: InsertExpense): Promise<Expense> {
+    const results = await db.insert(expenses).values(expense).returning();
+    return results[0];
+  }
+
+  async updateExpense(id: string, data: Partial<InsertExpense>): Promise<Expense | undefined> {
+    const results = await db
+      .update(expenses)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(expenses.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async submitExpense(id: string): Promise<Expense | undefined> {
+    const results = await db
+      .update(expenses)
+      .set({ status: "submitted", submittedAt: new Date(), updatedAt: new Date() })
+      .where(eq(expenses.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async approveExpense(id: string, reviewerId: string): Promise<Expense | undefined> {
+    const results = await db
+      .update(expenses)
+      .set({
+        status: "approved",
+        reviewedById: reviewerId,
+        reviewedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(expenses.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async rejectExpense(id: string, reviewerId: string, reason?: string): Promise<Expense | undefined> {
+    const results = await db
+      .update(expenses)
+      .set({
+        status: "rejected",
+        reviewedById: reviewerId,
+        reviewedAt: new Date(),
+        rejectionReason: reason || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(expenses.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteExpense(id: string): Promise<void> {
+    await db.delete(expenses).where(eq(expenses.id, id));
+  }
+
+  async getExpenseAnalytics(): Promise<ExpenseAnalytics> {
+    const totalResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(expenses);
+
+    const pendingResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(expenses)
+      .where(eq(expenses.status, "submitted"));
+
+    const totalAmountResult = await db
+      .select({ sum: sql<string>`COALESCE(SUM(${expenses.totalAmount}), 0)` })
+      .from(expenses);
+
+    const byCategoryResults = await db
+      .select({
+        category: expenses.category,
+        count: sql<number>`count(*)`,
+        amount: sql<string>`COALESCE(SUM(${expenses.totalAmount}), 0)`,
+      })
+      .from(expenses)
+      .groupBy(expenses.category);
+
+    const byStatusResults = await db
+      .select({
+        status: expenses.status,
+        count: sql<number>`count(*)`,
+        amount: sql<string>`COALESCE(SUM(${expenses.totalAmount}), 0)`,
+      })
+      .from(expenses)
+      .groupBy(expenses.status);
+
+    return {
+      totalExpenses: Number(totalResult[0]?.count) || 0,
+      pendingApproval: Number(pendingResult[0]?.count) || 0,
+      totalAmount: totalAmountResult[0]?.sum || "0",
+      byCategory: byCategoryResults.map((r) => ({
+        category: r.category,
+        count: Number(r.count) || 0,
+        amount: r.amount || "0",
+      })),
+      byStatus: byStatusResults.map((r) => ({
+        status: r.status,
+        count: Number(r.count) || 0,
+        amount: r.amount || "0",
+      })),
+    };
+  }
+
+  private async buildExpenseWithDetails(expense: Expense): Promise<ExpenseWithDetails> {
+    const consultant = await this.getConsultant(expense.consultantId);
+    const consultantUser = consultant ? await this.getUser(consultant.userId) : null;
+    
+    let projectData: ExpenseWithDetails["project"] = null;
+    if (expense.projectId) {
+      const project = await this.getProject(expense.projectId);
+      if (project) {
+        projectData = { id: project.id, name: project.name };
+      }
+    }
+
+    let reviewerData: ExpenseWithDetails["reviewer"] = null;
+    if (expense.reviewedById) {
+      const reviewer = await this.getUser(expense.reviewedById);
+      if (reviewer) {
+        reviewerData = {
+          id: reviewer.id,
+          firstName: reviewer.firstName,
+          lastName: reviewer.lastName,
+        };
+      }
+    }
+
+    return {
+      ...expense,
+      consultant: {
+        id: consultant?.id || "",
+        user: {
+          firstName: consultantUser?.firstName || null,
+          lastName: consultantUser?.lastName || null,
+        },
+      },
+      project: projectData,
+      reviewer: reviewerData,
+    };
+  }
+
+  // Invoice Template Operations
+  async listInvoiceTemplates(): Promise<InvoiceTemplate[]> {
+    return await db
+      .select()
+      .from(invoiceTemplates)
+      .orderBy(desc(invoiceTemplates.createdAt));
+  }
+
+  async getInvoiceTemplate(id: string): Promise<InvoiceTemplate | undefined> {
+    const results = await db
+      .select()
+      .from(invoiceTemplates)
+      .where(eq(invoiceTemplates.id, id));
+    return results[0];
+  }
+
+  async createInvoiceTemplate(template: InsertInvoiceTemplate): Promise<InvoiceTemplate> {
+    const results = await db.insert(invoiceTemplates).values(template).returning();
+    return results[0];
+  }
+
+  async updateInvoiceTemplate(id: string, data: Partial<InsertInvoiceTemplate>): Promise<InvoiceTemplate | undefined> {
+    const results = await db
+      .update(invoiceTemplates)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(invoiceTemplates.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteInvoiceTemplate(id: string): Promise<void> {
+    await db.delete(invoiceTemplates).where(eq(invoiceTemplates.id, id));
+  }
+
+  // Invoice Operations
+  async listInvoices(filters?: {
+    projectId?: string;
+    hospitalId?: string;
+    status?: string;
+  }): Promise<InvoiceWithDetails[]> {
+    const conditions: any[] = [];
+    if (filters?.projectId) conditions.push(eq(invoices.projectId, filters.projectId));
+    if (filters?.hospitalId) conditions.push(eq(invoices.hospitalId, filters.hospitalId));
+    if (filters?.status) conditions.push(eq(invoices.status, filters.status as any));
+
+    const results = conditions.length > 0
+      ? await db.select().from(invoices).where(and(...conditions)).orderBy(desc(invoices.createdAt))
+      : await db.select().from(invoices).orderBy(desc(invoices.createdAt));
+
+    return Promise.all(results.map((inv) => this.buildInvoiceWithDetails(inv)));
+  }
+
+  async getInvoice(id: string): Promise<InvoiceWithDetails | undefined> {
+    const results = await db.select().from(invoices).where(eq(invoices.id, id));
+    if (!results[0]) return undefined;
+    return this.buildInvoiceWithDetails(results[0]);
+  }
+
+  async createInvoice(invoice: InsertInvoice): Promise<Invoice> {
+    const results = await db.insert(invoices).values(invoice).returning();
+    return results[0];
+  }
+
+  async updateInvoice(id: string, data: Partial<InsertInvoice>): Promise<Invoice | undefined> {
+    const results = await db
+      .update(invoices)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(invoices.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteInvoice(id: string): Promise<void> {
+    await db.delete(invoiceLineItems).where(eq(invoiceLineItems.invoiceId, id));
+    await db.delete(invoices).where(eq(invoices.id, id));
+  }
+
+  async generateInvoiceFromTimesheet(timesheetId: string, templateId?: string): Promise<Invoice | undefined> {
+    const timesheet = await this.getTimesheet(timesheetId);
+    if (!timesheet) return undefined;
+
+    const consultant = await this.getConsultant(timesheet.consultantId);
+    if (!consultant) return undefined;
+
+    const project = timesheet.projectId ? await this.getProject(timesheet.projectId) : null;
+    const payRate = await this.getCurrentPayRate(timesheet.consultantId);
+    const hourlyRate = payRate?.hourlyRate || "0";
+    const totalHours = timesheet.totalHours || "0";
+    const subtotal = (parseFloat(totalHours) * parseFloat(hourlyRate)).toFixed(2);
+
+    const invoiceNumber = `INV-${Date.now()}`;
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 30);
+
+    const invoiceData: InsertInvoice = {
+      projectId: timesheet.projectId || null,
+      hospitalId: project?.hospitalId || null,
+      templateId: templateId || null,
+      invoiceNumber,
+      issueDate: new Date().toISOString().split("T")[0],
+      dueDate: dueDate.toISOString().split("T")[0],
+      status: "draft",
+      subtotal,
+      taxRate: "0",
+      taxAmount: "0",
+      totalAmount: subtotal,
+      notes: `Generated from timesheet for week of ${timesheet.weekStartDate}`,
+    };
+
+    const invoice = await this.createInvoice(invoiceData);
+
+    await this.createInvoiceLineItem({
+      invoiceId: invoice.id,
+      description: `Consulting services - Week of ${timesheet.weekStartDate}`,
+      quantity: totalHours,
+      unitPrice: hourlyRate,
+      amount: subtotal,
+      itemType: "labor",
+    });
+
+    return invoice;
+  }
+
+  private async buildInvoiceWithDetails(invoice: Invoice): Promise<InvoiceWithDetails> {
+    let projectData: InvoiceWithDetails["project"] = null;
+    if (invoice.projectId) {
+      const project = await this.getProject(invoice.projectId);
+      if (project) {
+        projectData = { id: project.id, name: project.name };
+      }
+    }
+
+    let hospitalData: InvoiceWithDetails["hospital"] = null;
+    if (invoice.hospitalId) {
+      const hospital = await this.getHospital(invoice.hospitalId);
+      if (hospital) {
+        hospitalData = { id: hospital.id, name: hospital.name };
+      }
+    }
+
+    let templateData: InvoiceTemplate | null = null;
+    if (invoice.templateId) {
+      templateData = (await this.getInvoiceTemplate(invoice.templateId)) || null;
+    }
+
+    const lineItems = await this.listInvoiceLineItems(invoice.id);
+
+    let creatorData: InvoiceWithDetails["creator"] = null;
+    if (invoice.createdBy) {
+      const creator = await this.getUser(invoice.createdBy);
+      if (creator) {
+        creatorData = {
+          id: creator.id,
+          firstName: creator.firstName,
+          lastName: creator.lastName,
+        };
+      }
+    }
+
+    return {
+      ...invoice,
+      project: projectData,
+      hospital: hospitalData,
+      template: templateData,
+      lineItems,
+      creator: creatorData,
+    };
+  }
+
+  // Invoice Line Item Operations
+  async listInvoiceLineItems(invoiceId: string): Promise<InvoiceLineItem[]> {
+    return await db
+      .select()
+      .from(invoiceLineItems)
+      .where(eq(invoiceLineItems.invoiceId, invoiceId))
+      .orderBy(asc(invoiceLineItems.createdAt));
+  }
+
+  async createInvoiceLineItem(item: InsertInvoiceLineItem): Promise<InvoiceLineItem> {
+    const results = await db.insert(invoiceLineItems).values(item).returning();
+    return results[0];
+  }
+
+  async updateInvoiceLineItem(id: string, data: Partial<InsertInvoiceLineItem>): Promise<InvoiceLineItem | undefined> {
+    const results = await db
+      .update(invoiceLineItems)
+      .set(data)
+      .where(eq(invoiceLineItems.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteInvoiceLineItem(id: string): Promise<void> {
+    await db.delete(invoiceLineItems).where(eq(invoiceLineItems.id, id));
+  }
+
+  // Pay Rate Operations
+  async listPayRates(consultantId?: string): Promise<PayRate[]> {
+    if (consultantId) {
+      return await db
+        .select()
+        .from(payRates)
+        .where(eq(payRates.consultantId, consultantId))
+        .orderBy(desc(payRates.effectiveDate));
+    }
+    return await db
+      .select()
+      .from(payRates)
+      .orderBy(desc(payRates.effectiveDate));
+  }
+
+  async getPayRate(id: string): Promise<PayRate | undefined> {
+    const results = await db.select().from(payRates).where(eq(payRates.id, id));
+    return results[0];
+  }
+
+  async createPayRate(rate: InsertPayRate): Promise<PayRate> {
+    const results = await db.insert(payRates).values(rate).returning();
+    return results[0];
+  }
+
+  async updatePayRate(id: string, data: Partial<InsertPayRate>): Promise<PayRate | undefined> {
+    const results = await db
+      .update(payRates)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(payRates.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async getCurrentPayRate(consultantId: string): Promise<PayRate | undefined> {
+    const today = new Date().toISOString().split("T")[0];
+    const results = await db
+      .select()
+      .from(payRates)
+      .where(
+        and(
+          eq(payRates.consultantId, consultantId),
+          eq(payRates.isActive, true),
+          lte(payRates.effectiveDate, today)
+        )
+      )
+      .orderBy(desc(payRates.effectiveDate))
+      .limit(1);
+    return results[0];
+  }
+
+  // Payroll Batch Operations
+  async listPayrollBatches(filters?: {
+    status?: string;
+    periodStart?: string;
+    periodEnd?: string;
+  }): Promise<PayrollBatchWithDetails[]> {
+    const conditions: any[] = [];
+    if (filters?.status) conditions.push(eq(payrollBatches.status, filters.status as any));
+    if (filters?.periodStart) conditions.push(gte(payrollBatches.periodStart, filters.periodStart));
+    if (filters?.periodEnd) conditions.push(lte(payrollBatches.periodEnd, filters.periodEnd));
+
+    const results = conditions.length > 0
+      ? await db.select().from(payrollBatches).where(and(...conditions)).orderBy(desc(payrollBatches.createdAt))
+      : await db.select().from(payrollBatches).orderBy(desc(payrollBatches.createdAt));
+
+    return Promise.all(results.map((batch) => this.buildPayrollBatchWithDetails(batch)));
+  }
+
+  async getPayrollBatch(id: string): Promise<PayrollBatchWithDetails | undefined> {
+    const results = await db.select().from(payrollBatches).where(eq(payrollBatches.id, id));
+    if (!results[0]) return undefined;
+    return this.buildPayrollBatchWithDetails(results[0]);
+  }
+
+  async createPayrollBatch(batch: InsertPayrollBatch): Promise<PayrollBatch> {
+    const batchNumber = `PB-${Date.now()}`;
+    const results = await db.insert(payrollBatches).values({ ...batch, batchNumber }).returning();
+    return results[0];
+  }
+
+  async updatePayrollBatch(id: string, data: Partial<InsertPayrollBatch>): Promise<PayrollBatch | undefined> {
+    const results = await db
+      .update(payrollBatches)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(payrollBatches.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async approvePayrollBatch(id: string, approverId: string): Promise<PayrollBatch | undefined> {
+    const results = await db
+      .update(payrollBatches)
+      .set({
+        status: "approved",
+        approvedBy: approverId,
+        approvedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(payrollBatches.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async processPayrollBatch(id: string): Promise<PayrollBatch | undefined> {
+    const results = await db
+      .update(payrollBatches)
+      .set({
+        status: "processing",
+        processedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(payrollBatches.id, id))
+      .returning();
+    return results[0];
+  }
+
+  private async buildPayrollBatchWithDetails(batch: PayrollBatch): Promise<PayrollBatchWithDetails> {
+    const entries = await this.listPayrollEntries(batch.id);
+
+    let approverData: PayrollBatchWithDetails["approver"] = null;
+    if (batch.approvedBy) {
+      const approver = await this.getUser(batch.approvedBy);
+      if (approver) {
+        approverData = {
+          id: approver.id,
+          firstName: approver.firstName,
+          lastName: approver.lastName,
+        };
+      }
+    }
+
+    let creatorData: PayrollBatchWithDetails["creator"] = null;
+    if (batch.createdBy) {
+      const creator = await this.getUser(batch.createdBy);
+      if (creator) {
+        creatorData = {
+          id: creator.id,
+          firstName: creator.firstName,
+          lastName: creator.lastName,
+        };
+      }
+    }
+
+    return {
+      ...batch,
+      entries,
+      approver: approverData,
+      creator: creatorData,
+    };
+  }
+
+  // Payroll Entry Operations
+  async listPayrollEntries(batchId: string): Promise<PayrollEntryWithDetails[]> {
+    const results = await db
+      .select()
+      .from(payrollEntries)
+      .where(eq(payrollEntries.batchId, batchId));
+    return Promise.all(results.map((entry) => this.buildPayrollEntryWithDetails(entry)));
+  }
+
+  async createPayrollEntry(entry: InsertPayrollEntry): Promise<PayrollEntry> {
+    const results = await db.insert(payrollEntries).values(entry).returning();
+    return results[0];
+  }
+
+  async updatePayrollEntry(id: string, data: Partial<InsertPayrollEntry>): Promise<PayrollEntry | undefined> {
+    const results = await db
+      .update(payrollEntries)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(payrollEntries.id, id))
+      .returning();
+    return results[0];
+  }
+
+  private async buildPayrollEntryWithDetails(entry: PayrollEntry): Promise<PayrollEntryWithDetails> {
+    const consultant = await this.getConsultant(entry.consultantId);
+    const consultantUser = consultant ? await this.getUser(consultant.userId) : null;
+
+    let timesheetData: PayrollEntryWithDetails["timesheet"] = null;
+    if (entry.timesheetId) {
+      const timesheet = await this.getTimesheet(entry.timesheetId);
+      if (timesheet) {
+        timesheetData = {
+          id: timesheet.id,
+          weekStartDate: timesheet.weekStartDate,
+        };
+      }
+    }
+
+    return {
+      ...entry,
+      consultant: {
+        id: consultant?.id || "",
+        user: {
+          firstName: consultantUser?.firstName || null,
+          lastName: consultantUser?.lastName || null,
+        },
+      },
+      timesheet: timesheetData,
+    };
+  }
+
+  // Paycheck Stub Operations
+  async listPaycheckStubs(consultantId: string): Promise<PaycheckStubWithDetails[]> {
+    const results = await db
+      .select()
+      .from(paycheckStubs)
+      .where(eq(paycheckStubs.consultantId, consultantId))
+      .orderBy(desc(paycheckStubs.payDate));
+    return Promise.all(results.map((stub) => this.buildPaycheckStubWithDetails(stub)));
+  }
+
+  async getPaycheckStub(id: string): Promise<PaycheckStubWithDetails | undefined> {
+    const results = await db.select().from(paycheckStubs).where(eq(paycheckStubs.id, id));
+    if (!results[0]) return undefined;
+    return this.buildPaycheckStubWithDetails(results[0]);
+  }
+
+  async createPaycheckStub(stub: InsertPaycheckStub): Promise<PaycheckStub> {
+    const results = await db.insert(paycheckStubs).values(stub).returning();
+    return results[0];
+  }
+
+  private async buildPaycheckStubWithDetails(stub: PaycheckStub): Promise<PaycheckStubWithDetails> {
+    const consultant = await this.getConsultant(stub.consultantId);
+    const consultantUser = consultant ? await this.getUser(consultant.userId) : null;
+
+    return {
+      ...stub,
+      consultant: {
+        id: consultant?.id || "",
+        user: {
+          firstName: consultantUser?.firstName || null,
+          lastName: consultantUser?.lastName || null,
+        },
+      },
+    };
+  }
+
+  // Payroll Analytics
+  async getPayrollAnalytics(): Promise<PayrollAnalytics> {
+    const totalResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(payrollBatches);
+
+    const pendingResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(payrollBatches)
+      .where(or(
+        eq(payrollBatches.status, "draft"),
+        eq(payrollBatches.status, "submitted"),
+        eq(payrollBatches.status, "approved")
+      ));
+
+    const paidAmountResult = await db
+      .select({ sum: sql<string>`COALESCE(SUM(${payrollBatches.totalAmount}), 0)` })
+      .from(payrollBatches)
+      .where(eq(payrollBatches.status, "paid"));
+
+    const avgPayResult = await db
+      .select({ avg: sql<string>`COALESCE(AVG(${payrollEntries.totalPay}), 0)` })
+      .from(payrollEntries);
+
+    const recentBatchesResults = await db
+      .select()
+      .from(payrollBatches)
+      .orderBy(desc(payrollBatches.createdAt))
+      .limit(5);
+
+    const recentBatches = await Promise.all(
+      recentBatchesResults.map((batch) => this.buildPayrollBatchWithDetails(batch))
+    );
+
+    return {
+      totalBatches: Number(totalResult[0]?.count) || 0,
+      pendingBatches: Number(pendingResult[0]?.count) || 0,
+      totalPaidAmount: paidAmountResult[0]?.sum || "0",
+      averagePayPerConsultant: avgPayResult[0]?.avg || "0",
+      recentBatches,
+    };
+  }
+
+  // Budget Scenario Operations
+  async listBudgetScenarios(projectId?: string): Promise<BudgetScenarioWithMetrics[]> {
+    const results = projectId
+      ? await db
+          .select()
+          .from(budgetScenarios)
+          .where(eq(budgetScenarios.projectId, projectId))
+          .orderBy(desc(budgetScenarios.createdAt))
+      : await db
+          .select()
+          .from(budgetScenarios)
+          .orderBy(desc(budgetScenarios.createdAt));
+
+    return Promise.all(results.map((scenario) => this.buildBudgetScenarioWithMetrics(scenario)));
+  }
+
+  async getBudgetScenario(id: string): Promise<BudgetScenarioWithMetrics | undefined> {
+    const results = await db.select().from(budgetScenarios).where(eq(budgetScenarios.id, id));
+    if (!results[0]) return undefined;
+    return this.buildBudgetScenarioWithMetrics(results[0]);
+  }
+
+  async createBudgetScenario(scenario: InsertBudgetScenario): Promise<BudgetScenario> {
+    const results = await db.insert(budgetScenarios).values(scenario).returning();
+    return results[0];
+  }
+
+  async updateBudgetScenario(id: string, data: Partial<InsertBudgetScenario>): Promise<BudgetScenario | undefined> {
+    const results = await db
+      .update(budgetScenarios)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(budgetScenarios.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteBudgetScenario(id: string): Promise<void> {
+    await db.delete(scenarioMetrics).where(eq(scenarioMetrics.scenarioId, id));
+    await db.delete(budgetScenarios).where(eq(budgetScenarios.id, id));
+  }
+
+  async cloneScenario(id: string, newName: string): Promise<BudgetScenario | undefined> {
+    const original = await db.select().from(budgetScenarios).where(eq(budgetScenarios.id, id));
+    if (!original[0]) return undefined;
+
+    const { id: _, createdAt, updatedAt, ...rest } = original[0];
+    const clonedScenario = await this.createBudgetScenario({
+      ...rest,
+      name: newName,
+      isBaseline: false,
+    });
+
+    const originalMetrics = await this.listScenarioMetrics(id);
+    for (const metric of originalMetrics) {
+      const { id: __, scenarioId, createdAt: ___, ...metricRest } = metric;
+      await this.createScenarioMetric({
+        ...metricRest,
+        scenarioId: clonedScenario.id,
+      });
+    }
+
+    return clonedScenario;
+  }
+
+  private async buildBudgetScenarioWithMetrics(scenario: BudgetScenario): Promise<BudgetScenarioWithMetrics> {
+    let projectData: BudgetScenarioWithMetrics["project"] = null;
+    if (scenario.projectId) {
+      const project = await this.getProject(scenario.projectId);
+      if (project) {
+        projectData = { id: project.id, name: project.name };
+      }
+    }
+
+    const metrics = await this.listScenarioMetrics(scenario.id);
+
+    let creatorData: BudgetScenarioWithMetrics["creator"] = null;
+    if (scenario.createdBy) {
+      const creator = await this.getUser(scenario.createdBy);
+      if (creator) {
+        creatorData = {
+          id: creator.id,
+          firstName: creator.firstName,
+          lastName: creator.lastName,
+        };
+      }
+    }
+
+    return {
+      ...scenario,
+      project: projectData,
+      metrics,
+      creator: creatorData,
+    };
+  }
+
+  // Scenario Metric Operations
+  async listScenarioMetrics(scenarioId: string): Promise<ScenarioMetric[]> {
+    return await db
+      .select()
+      .from(scenarioMetrics)
+      .where(eq(scenarioMetrics.scenarioId, scenarioId))
+      .orderBy(asc(scenarioMetrics.metricDate));
+  }
+
+  async createScenarioMetric(metric: InsertScenarioMetric): Promise<ScenarioMetric> {
+    const results = await db.insert(scenarioMetrics).values(metric).returning();
+    return results[0];
+  }
+
+  async updateScenarioMetric(id: string, data: Partial<InsertScenarioMetric>): Promise<ScenarioMetric | undefined> {
+    const results = await db
+      .update(scenarioMetrics)
+      .set(data)
+      .where(eq(scenarioMetrics.id, id))
+      .returning();
+    return results[0];
   }
 }
 
