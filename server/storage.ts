@@ -9290,17 +9290,20 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
-    const roleDefinitions: Array<{ name: string; displayName: string; description: string; permissions: string[] }> = [
+    const roleDefinitions: Array<{ name: string; displayName: string; description: string; roleType: 'base' | 'implementation' | 'custom'; permissions: string[] }> = [
+      // === BASE ROLES ===
       {
         name: 'admin',
         displayName: 'Administrator',
         description: 'Full access to all system features',
+        roleType: 'base',
         permissions: permissionDefinitions.map(p => p.name),
       },
       {
         name: 'hospital_leadership',
         displayName: 'Hospital Leadership',
         description: 'Hospital-wide view access to reports and financials',
+        roleType: 'base',
         permissions: [
           'dashboard:view', 'projects:view', 'consultants:view', 'hospitals:view',
           'timesheets:view_all', 'support_tickets:view_all', 'eod_reports:view_all',
@@ -9312,6 +9315,7 @@ export class DatabaseStorage implements IStorage {
         name: 'hospital_staff',
         displayName: 'Hospital Staff',
         description: 'Operational data access for hospital staff',
+        roleType: 'base',
         permissions: [
           'dashboard:view', 'projects:view', 'timesheets:view_all', 'timesheets:approve',
           'support_tickets:view_all', 'support_tickets:manage', 'eod_reports:view_all',
@@ -9322,10 +9326,156 @@ export class DatabaseStorage implements IStorage {
         name: 'consultant',
         displayName: 'Consultant',
         description: 'Access to assigned projects and own data',
+        roleType: 'base',
         permissions: [
           'dashboard:view', 'projects:view', 'timesheets:view_own', 'timesheets:edit_own',
           'support_tickets:view_own', 'support_tickets:create', 'eod_reports:view_own',
           'eod_reports:create', 'training:view', 'travel:view_own',
+        ],
+      },
+
+      // === IMPLEMENTATION LEADERSHIP ROLES ===
+      {
+        name: 'implementation_project_manager',
+        displayName: 'Implementation Project Manager',
+        description: 'Overall project oversight across all implementation phases',
+        roleType: 'implementation',
+        permissions: [
+          'dashboard:view', 'dashboard:admin', 'projects:view', 'projects:create', 'projects:edit',
+          'consultants:view', 'consultants:manage', 'hospitals:view',
+          'timesheets:view_all', 'timesheets:approve', 'support_tickets:view_all', 'support_tickets:manage',
+          'eod_reports:view_all', 'training:view', 'training:manage', 'travel:view_all', 'travel:manage',
+          'financials:view', 'financials:manage', 'quality:view', 'quality:manage',
+          'compliance:view', 'reports:view', 'reports:create', 'reports:manage',
+        ],
+      },
+      {
+        name: 'go_live_coordinator',
+        displayName: 'Go-Live Coordinator',
+        description: 'Manages go-live operations, command center, and escalations',
+        roleType: 'implementation',
+        permissions: [
+          'dashboard:view', 'projects:view', 'consultants:view',
+          'timesheets:view_all', 'support_tickets:view_all', 'support_tickets:manage',
+          'eod_reports:view_all', 'training:view', 'quality:view', 'quality:manage',
+          'compliance:view', 'reports:view',
+        ],
+      },
+      {
+        name: 'training_lead',
+        displayName: 'Training Lead',
+        description: 'Manages training programs and super user coordination',
+        roleType: 'implementation',
+        permissions: [
+          'dashboard:view', 'projects:view', 'consultants:view',
+          'timesheets:view_all', 'support_tickets:view_all',
+          'eod_reports:view_all', 'training:view', 'training:manage',
+          'quality:view', 'reports:view',
+        ],
+      },
+      {
+        name: 'command_center_manager',
+        displayName: 'Command Center Manager',
+        description: 'Real-time operations management during go-live phases',
+        roleType: 'implementation',
+        permissions: [
+          'dashboard:view', 'projects:view', 'consultants:view',
+          'timesheets:view_all', 'support_tickets:view_all', 'support_tickets:manage',
+          'eod_reports:view_all', 'eod_reports:create', 'quality:view', 'reports:view',
+        ],
+      },
+      {
+        name: 'application_analyst',
+        displayName: 'Application Analyst',
+        description: 'Technical configuration, build, and tier 2 support',
+        roleType: 'implementation',
+        permissions: [
+          'dashboard:view', 'projects:view', 'timesheets:view_own', 'timesheets:edit_own',
+          'support_tickets:view_all', 'support_tickets:create', 'support_tickets:manage',
+          'eod_reports:view_own', 'eod_reports:create', 'training:view', 'travel:view_own',
+        ],
+      },
+      {
+        name: 'support_desk_lead',
+        displayName: 'Support Desk Lead',
+        description: 'Tier 1 support management and ticket triage',
+        roleType: 'implementation',
+        permissions: [
+          'dashboard:view', 'projects:view', 'consultants:view',
+          'timesheets:view_all', 'support_tickets:view_all', 'support_tickets:manage',
+          'eod_reports:view_all', 'training:view', 'reports:view',
+        ],
+      },
+      {
+        name: 'quality_assurance_lead',
+        displayName: 'Quality Assurance Lead',
+        description: 'Quality metrics, compliance tracking, and audit management',
+        roleType: 'implementation',
+        permissions: [
+          'dashboard:view', 'projects:view', 'consultants:view',
+          'timesheets:view_all', 'support_tickets:view_all', 'eod_reports:view_all',
+          'training:view', 'quality:view', 'quality:manage',
+          'compliance:view', 'compliance:manage', 'reports:view', 'reports:create',
+        ],
+      },
+
+      // === PHASE-SPECIFIC ROLES ===
+      {
+        name: 'at_the_elbow_support',
+        displayName: 'At-the-Elbow Support',
+        description: 'On-floor support during go-live providing direct user assistance',
+        roleType: 'implementation',
+        permissions: [
+          'dashboard:view', 'projects:view', 'timesheets:view_own', 'timesheets:edit_own',
+          'support_tickets:view_own', 'support_tickets:create',
+          'eod_reports:view_own', 'eod_reports:create', 'training:view',
+        ],
+      },
+      {
+        name: 'super_user',
+        displayName: 'Super User',
+        description: 'Hospital staff with elevated training and support access',
+        roleType: 'implementation',
+        permissions: [
+          'dashboard:view', 'projects:view', 'timesheets:view_own',
+          'support_tickets:view_own', 'support_tickets:create',
+          'eod_reports:view_own', 'training:view', 'quality:view',
+        ],
+      },
+      {
+        name: 'optimization_analyst',
+        displayName: 'Optimization Analyst',
+        description: 'Post-go-live workflow optimization and efficiency improvements',
+        roleType: 'implementation',
+        permissions: [
+          'dashboard:view', 'projects:view', 'consultants:view',
+          'timesheets:view_all', 'support_tickets:view_all', 'eod_reports:view_all',
+          'training:view', 'quality:view', 'quality:manage',
+          'reports:view', 'reports:create',
+        ],
+      },
+      {
+        name: 'stabilization_lead',
+        displayName: 'Stabilization Lead',
+        description: 'Post-go-live stabilization phase management and issue resolution',
+        roleType: 'implementation',
+        permissions: [
+          'dashboard:view', 'projects:view', 'consultants:view',
+          'timesheets:view_all', 'support_tickets:view_all', 'support_tickets:manage',
+          'eod_reports:view_all', 'training:view', 'quality:view',
+          'compliance:view', 'reports:view',
+        ],
+      },
+      {
+        name: 'transition_coordinator',
+        displayName: 'Transition Coordinator',
+        description: 'Manages transition from implementation to ongoing operations',
+        roleType: 'implementation',
+        permissions: [
+          'dashboard:view', 'projects:view', 'consultants:view', 'hospitals:view',
+          'timesheets:view_all', 'support_tickets:view_all', 'eod_reports:view_all',
+          'training:view', 'training:manage', 'quality:view',
+          'compliance:view', 'reports:view', 'reports:create',
         ],
       },
     ];
