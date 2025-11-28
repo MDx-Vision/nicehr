@@ -38,6 +38,9 @@ import {
   GraduationCap,
   Book,
   Monitor,
+  Ticket,
+  FileCheck,
+  AlertTriangle,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -55,6 +58,9 @@ const adminItems = [
   { title: "Assessments", url: "/assessments", icon: ClipboardCheck },
   { title: "Login Labs", url: "/login-labs", icon: Monitor },
   { title: "Knowledge Base", url: "/knowledge-base", icon: Book },
+  { title: "Support Tickets", url: "/support-tickets", icon: Ticket },
+  { title: "EOD Reports", url: "/eod-reports", icon: FileCheck },
+  { title: "Escalation", url: "/escalation-management", icon: AlertTriangle },
   { title: "Schedules", url: "/schedules", icon: Calendar },
   { title: "Timesheets", url: "/timesheets", icon: Clock },
   { title: "Availability", url: "/availability", icon: CalendarDays },
@@ -74,6 +80,8 @@ const consultantItems = [
   { title: "Assessments", url: "/assessments", icon: ClipboardCheck },
   { title: "Login Labs", url: "/login-labs", icon: Monitor },
   { title: "Knowledge Base", url: "/knowledge-base", icon: Book },
+  { title: "Support Tickets", url: "/support-tickets", icon: Ticket },
+  { title: "EOD Reports", url: "/eod-reports", icon: FileCheck },
   { title: "Command Center", url: "/command-center", icon: Radio },
   { title: "My Schedule", url: "/my-schedule", icon: Calendar },
   { title: "Timesheets", url: "/timesheets", icon: Clock },
@@ -90,6 +98,7 @@ const hospitalStaffItems = [
   { title: "Assessments", url: "/assessments", icon: ClipboardCheck },
   { title: "Login Labs", url: "/login-labs", icon: Monitor },
   { title: "Knowledge Base", url: "/knowledge-base", icon: Book },
+  { title: "Support Tickets", url: "/support-tickets", icon: Ticket },
   { title: "Command Center", url: "/command-center", icon: Radio },
   { title: "Schedules", url: "/schedules", icon: Calendar },
   { title: "Timesheets", url: "/timesheets", icon: Clock },

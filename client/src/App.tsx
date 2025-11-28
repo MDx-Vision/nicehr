@@ -41,6 +41,9 @@ import Training from "@/pages/Training";
 import Assessments from "@/pages/Assessments";
 import LoginLabs from "@/pages/LoginLabs";
 import KnowledgeBase from "@/pages/KnowledgeBase";
+import SupportTickets from "@/pages/SupportTickets";
+import EodReports from "@/pages/EodReports";
+import EscalationManagement from "@/pages/EscalationManagement";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -178,6 +181,9 @@ function Router() {
       <Route path="/assessments" component={() => <ProtectedRoute component={Assessments} />} />
       <Route path="/login-labs" component={() => <ProtectedRoute component={LoginLabs} />} />
       <Route path="/knowledge-base" component={() => <ProtectedRoute component={KnowledgeBase} />} />
+      <Route path="/support-tickets" component={() => <ProtectedRoute component={SupportTickets} />} />
+      <Route path="/eod-reports" component={() => <ProtectedRoute component={EodReports} />} />
+      <Route path="/escalation-management" component={() => <ProtectedRoute component={EscalationManagement} requiredRoles={["admin"]} />} />
       <Route component={NotFound} />
     </Switch>
   );
