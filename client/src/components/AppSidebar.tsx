@@ -133,7 +133,7 @@ function getRoleBadge(roleLevel: string, isLeadership: boolean) {
 export function AppSidebar() {
   const [location] = useLocation();
   const { user, isAdmin } = useAuth();
-  const { roleLevel, hasPageAccess, isLeadership, assignedProjectIds } = usePermissions();
+  const { roleLevel, hasNavAccess, isLeadership, assignedProjectIds } = usePermissions();
 
   const groupedNavigation = getGroupedNavigation(roleLevel);
 
@@ -150,7 +150,7 @@ export function AppSidebar() {
   const renderNavItem = (item: NavigationItem) => {
     const Icon = ICON_MAP[item.icon] || LayoutDashboard;
     
-    if (!hasPageAccess(item.url)) {
+    if (!hasNavAccess(item)) {
       return null;
     }
 
@@ -196,7 +196,7 @@ export function AppSidebar() {
           const items = groupedNavigation[category];
           if (!items || items.length === 0) return null;
 
-          const filteredItems = items.filter(item => hasPageAccess(item.url));
+          const filteredItems = items.filter(item => hasNavAccess(item));
           if (filteredItems.length === 0) return null;
 
           return (

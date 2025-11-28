@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated, requireRole, optionalAuth } from "./replitAuth";
+import { setupAuth, isAuthenticated, requireRole, requirePermission, requireAnyPermission, optionalAuth } from "./replitAuth";
 import {
   ObjectStorageService,
   ObjectNotFoundError,
@@ -216,7 +216,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post('/api/hospitals', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+  app.post('/api/hospitals', isAuthenticated, requireAnyPermission('hospitals:create', 'admin:manage'), async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       const validated = insertHospitalSchema.parse(req.body);
@@ -239,7 +239,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch('/api/hospitals/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+  app.patch('/api/hospitals/:id', isAuthenticated, requireAnyPermission('hospitals:edit', 'admin:manage'), async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       const hospital = await storage.updateHospital(req.params.id, req.body);
@@ -264,7 +264,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete('/api/hospitals/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+  app.delete('/api/hospitals/:id', isAuthenticated, requirePermission('hospitals:delete'), async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       const hospitalId = req.params.id;
@@ -329,7 +329,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete('/api/units/:id', isAuthenticated, requireRole('admin'), async (req, res) => {
+  app.delete('/api/units/:id', isAuthenticated, requirePermission('admin:manage'), async (req, res) => {
     try {
       await storage.deleteHospitalUnit(req.params.id);
       res.status(204).send();
@@ -377,7 +377,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete('/api/modules/:id', isAuthenticated, requireRole('admin'), async (req, res) => {
+  app.delete('/api/modules/:id', isAuthenticated, requirePermission('admin:manage'), async (req, res) => {
     try {
       await storage.deleteHospitalModule(req.params.id);
       res.status(204).send();
@@ -388,7 +388,7 @@ export async function registerRoutes(
   });
 
   // Consultant routes
-  app.get('/api/consultants', isAuthenticated, async (req, res) => {
+  app.get('/api/consultants', isAuthenticated, requireAnyPermission('consultants:view', 'admin:view'), async (req, res) => {
     try {
       const consultants = await storage.getAllConsultants();
       res.json(consultants);
@@ -414,7 +414,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get('/api/consultants/:id', isAuthenticated, async (req, res) => {
+  app.get('/api/consultants/:id', isAuthenticated, requireAnyPermission('consultants:view', 'admin:view'), async (req, res) => {
     try {
       const consultant = await storage.getConsultant(req.params.id);
       if (!consultant) {
@@ -1506,8 +1506,8 @@ export async function registerRoutes(
     }
   };
 
-  // List all roles (admin only)
-  app.get('/api/admin/rbac/roles', isAuthenticated, requireRole('admin'), async (req, res) => {
+  // List all roles (RBAC manage permission required)
+  app.get('/api/admin/rbac/roles', isAuthenticated, requirePermission('rbac:manage'), async (req, res) => {
     try {
       await ensureRbacSeeded();
       const roleType = req.query.roleType as 'base' | 'custom' | undefined;
@@ -1522,7 +1522,7 @@ export async function registerRoutes(
   });
 
   // Get single role with permissions
-  app.get('/api/admin/rbac/roles/:id', isAuthenticated, requireRole('admin'), async (req, res) => {
+  app.get('/api/admin/rbac/roles/:id', isAuthenticated, requirePermission('rbac:manage'), async (req, res) => {
     try {
       await ensureRbacSeeded();
       const role = await storage.getRoleWithPermissions(req.params.id);
@@ -1537,7 +1537,7 @@ export async function registerRoutes(
   });
 
   // Create custom role
-  app.post('/api/admin/rbac/roles', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+  app.post('/api/admin/rbac/roles', isAuthenticated, requirePermission('rbac:manage'), async (req: any, res) => {
     try {
       await ensureRbacSeeded();
       const userId = req.user?.claims?.sub;
@@ -1555,7 +1555,7 @@ export async function registerRoutes(
   });
 
   // Update role
-  app.patch('/api/admin/rbac/roles/:id', isAuthenticated, requireRole('admin'), async (req, res) => {
+  app.patch('/api/admin/rbac/roles/:id', isAuthenticated, requirePermission('rbac:manage'), async (req, res) => {
     try {
       const role = await storage.updateRole(req.params.id, req.body);
       if (!role) {
@@ -1569,7 +1569,7 @@ export async function registerRoutes(
   });
 
   // Delete role (custom roles only)
-  app.delete('/api/admin/rbac/roles/:id', isAuthenticated, requireRole('admin'), async (req, res) => {
+  app.delete('/api/admin/rbac/roles/:id', isAuthenticated, requirePermission('rbac:manage'), async (req, res) => {
     try {
       const role = await storage.getRole(req.params.id);
       if (!role) {
@@ -1587,7 +1587,7 @@ export async function registerRoutes(
   });
 
   // List all permissions
-  app.get('/api/admin/rbac/permissions', isAuthenticated, requireRole('admin'), async (req, res) => {
+  app.get('/api/admin/rbac/permissions', isAuthenticated, requirePermission('rbac:manage'), async (req, res) => {
     try {
       await ensureRbacSeeded();
       const domain = req.query.domain as string | undefined;
@@ -1601,7 +1601,7 @@ export async function registerRoutes(
   });
 
   // Set permissions for a role
-  app.put('/api/admin/rbac/roles/:id/permissions', isAuthenticated, requireRole('admin'), async (req, res) => {
+  app.put('/api/admin/rbac/roles/:id/permissions', isAuthenticated, requirePermission('rbac:manage'), async (req, res) => {
     try {
       const { permissionIds } = req.body;
       if (!Array.isArray(permissionIds)) {
@@ -1616,7 +1616,7 @@ export async function registerRoutes(
   });
 
   // List user role assignments
-  app.get('/api/admin/rbac/assignments', isAuthenticated, requireRole('admin'), async (req, res) => {
+  app.get('/api/admin/rbac/assignments', isAuthenticated, requirePermission('rbac:manage'), async (req, res) => {
     try {
       const userId = req.query.userId as string;
       if (!userId) {
@@ -1631,7 +1631,7 @@ export async function registerRoutes(
   });
 
   // Assign role to user
-  app.post('/api/admin/rbac/assignments', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+  app.post('/api/admin/rbac/assignments', isAuthenticated, requirePermission('rbac:manage'), async (req: any, res) => {
     try {
       const assignedBy = req.user?.claims?.sub;
       const assignment = await storage.assignRoleToUser({
@@ -1646,7 +1646,7 @@ export async function registerRoutes(
   });
 
   // Remove role from user
-  app.delete('/api/admin/rbac/assignments', isAuthenticated, requireRole('admin'), async (req, res) => {
+  app.delete('/api/admin/rbac/assignments', isAuthenticated, requirePermission('rbac:manage'), async (req, res) => {
     try {
       const { userId, roleId, projectId } = req.body;
       if (!userId || !roleId) {
@@ -2741,7 +2741,7 @@ export async function registerRoutes(
   });
 
   // Support Ticket Routes
-  app.get('/api/projects/:projectId/support/tickets', isAuthenticated, async (req, res) => {
+  app.get('/api/projects/:projectId/support/tickets', isAuthenticated, requireAnyPermission('support_tickets:view_all', 'support_tickets:view_own'), async (req, res) => {
     try {
       const tickets = await storage.getSupportTickets(req.params.projectId);
       res.json(tickets);
@@ -2774,7 +2774,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post('/api/projects/:projectId/support/tickets', isAuthenticated, async (req: any, res) => {
+  app.post('/api/projects/:projectId/support/tickets', isAuthenticated, requirePermission('support_tickets:create'), async (req: any, res) => {
     try {
       const validated = insertSupportTicketSchema.parse({
         ...req.body,
@@ -2812,7 +2812,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post('/api/support/tickets/:id/assign', isAuthenticated, async (req: any, res) => {
+  app.post('/api/support/tickets/:id/assign', isAuthenticated, requirePermission('support_tickets:manage'), async (req: any, res) => {
     try {
       const { consultantId } = req.body;
       if (!consultantId) {
@@ -3009,7 +3009,7 @@ export async function registerRoutes(
   // ============================================
 
   // Timesheet Routes
-  app.get('/api/timesheets', isAuthenticated, async (req: any, res) => {
+  app.get('/api/timesheets', isAuthenticated, requireAnyPermission('timesheets:view_all', 'timesheets:view_own'), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const consultant = await storage.getConsultantByUserId(userId);
@@ -3037,7 +3037,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post('/api/timesheets', isAuthenticated, async (req: any, res) => {
+  app.post('/api/timesheets', isAuthenticated, requirePermission('timesheets:edit_own'), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const consultant = await storage.getConsultantByUserId(userId);
@@ -3113,7 +3113,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post('/api/timesheets/:id/approve', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+  app.post('/api/timesheets/:id/approve', isAuthenticated, requirePermission('timesheets:approve'), async (req: any, res) => {
     try {
       const approverId = req.user.claims.sub;
       const timesheet = await storage.approveTimesheet(req.params.id, approverId);
@@ -3147,7 +3147,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post('/api/timesheets/:id/reject', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+  app.post('/api/timesheets/:id/reject', isAuthenticated, requirePermission('timesheets:approve'), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { reason } = req.body;
@@ -4548,7 +4548,7 @@ export async function registerRoutes(
   });
 
   // Training Analytics Route
-  app.get('/api/training/analytics', isAuthenticated, requireRole('admin'), async (req, res) => {
+  app.get('/api/training/analytics', isAuthenticated, requirePermission('training:manage'), async (req, res) => {
     try {
       const analytics = await storage.getTrainingAnalytics();
       res.json(analytics);
@@ -4563,7 +4563,7 @@ export async function registerRoutes(
   // ============================================
 
   // EOD Report Routes
-  app.post('/api/eod-reports', isAuthenticated, async (req: any, res) => {
+  app.post('/api/eod-reports', isAuthenticated, requirePermission('eod_reports:create'), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const validated = insertEodReportSchema.parse({
@@ -4587,7 +4587,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get('/api/eod-reports', isAuthenticated, async (req, res) => {
+  app.get('/api/eod-reports', isAuthenticated, requireAnyPermission('eod_reports:view_all', 'eod_reports:view_own'), async (req, res) => {
     try {
       const projectId = req.query.projectId as string;
       const reports = await storage.getEodReportsWithDetails(projectId);
@@ -4661,7 +4661,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post('/api/eod-reports/:id/approve', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+  app.post('/api/eod-reports/:id/approve', isAuthenticated, requirePermission('eod_reports:view_all'), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const report = await storage.approveEodReport(req.params.id, userId);
@@ -4692,7 +4692,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post('/api/eod-reports/:id/reject', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+  app.post('/api/eod-reports/:id/reject', isAuthenticated, requirePermission('eod_reports:view_all'), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const report = await storage.rejectEodReport(req.params.id);
@@ -4745,7 +4745,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get('/api/eod-reports/analytics', isAuthenticated, requireRole('admin'), async (req, res) => {
+  app.get('/api/eod-reports/analytics', isAuthenticated, requirePermission('eod_reports:view_all'), async (req, res) => {
     try {
       const analytics = await storage.getEodReportAnalytics();
       res.json(analytics);

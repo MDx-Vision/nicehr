@@ -1,6 +1,6 @@
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { type UserRoleLevel } from "@/lib/permissions";
+import { type UserRoleLevel, type NavigationItem } from "@/lib/permissions";
 
 interface PermissionsData {
   role: string | null;
@@ -12,8 +12,16 @@ interface PermissionsData {
   restrictedFeatures: string[];
 }
 
+interface EffectivePermission {
+  permissionId: string;
+  permissionName: string;
+  domain: string;
+  action: string;
+}
+
 interface PermissionsContextValue {
   permissions: PermissionsData | null;
+  effectivePermissions: EffectivePermission[];
   isLoading: boolean;
   error: Error | null;
   roleLevel: UserRoleLevel;
@@ -24,6 +32,8 @@ interface PermissionsContextValue {
   hasFeatureAccess: (featureKey: string) => boolean;
   canAccessRole: (requiredRoles: string[]) => boolean;
   canAccessProject: (projectId: string) => boolean;
+  hasPermission: (permissionName: string) => boolean;
+  hasNavAccess: (item: NavigationItem) => boolean;
 }
 
 const PermissionsContext = createContext<PermissionsContextValue | null>(null);
@@ -35,12 +45,21 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     refetchOnWindowFocus: true,
   });
 
-  // Use roleLevel from API, default to consultant
+  const { data: effectivePermissionsData = [] } = useQuery<EffectivePermission[]>({
+    queryKey: ['/api/rbac/effective-permissions'],
+    staleTime: 60000,
+    refetchOnWindowFocus: true,
+  });
+
   const roleLevel: UserRoleLevel = permissions?.roleLevel || 'consultant';
   
   const isLeadership = permissions?.isLeadership || false;
   const assignedProjectIds = permissions?.assignedProjectIds || [];
   const hospitalId = permissions?.hospitalId || null;
+
+  const permissionSet = useMemo(() => {
+    return new Set(effectivePermissionsData.map(p => p.permissionName));
+  }, [effectivePermissionsData]);
 
   const hasPageAccess = (pageKey: string): boolean => {
     if (!permissions) return true;
@@ -63,10 +82,25 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     return assignedProjectIds.includes(projectId);
   };
 
+  const hasPermission = (permissionName: string): boolean => {
+    if (roleLevel === 'admin') return true;
+    return permissionSet.has(permissionName);
+  };
+
+  const hasNavAccess = (item: NavigationItem): boolean => {
+    if (!item.roles.includes(roleLevel)) return false;
+    if (!hasPageAccess(item.url)) return false;
+    if (item.requiredPermission && !hasPermission(item.requiredPermission)) {
+      return false;
+    }
+    return true;
+  };
+
   return (
     <PermissionsContext.Provider
       value={{
         permissions: permissions || null,
+        effectivePermissions: effectivePermissionsData,
         isLoading,
         error: error as Error | null,
         roleLevel,
@@ -77,6 +111,8 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         hasFeatureAccess,
         canAccessRole,
         canAccessProject,
+        hasPermission,
+        hasNavAccess,
       }}
     >
       {children}

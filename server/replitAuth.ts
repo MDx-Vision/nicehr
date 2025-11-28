@@ -233,3 +233,59 @@ export const optionalAuth: RequestHandler = async (req, res, next) => {
   
   return next();
 };
+
+export const requirePermission = (...permissionNames: string[]): RequestHandler => {
+  return async (req, res, next) => {
+    const user = req.user as any;
+    if (!user?.claims?.sub) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const userId = user.claims.sub;
+    const projectId = req.params.projectId || req.query.projectId as string | undefined;
+
+    try {
+      for (const permissionName of permissionNames) {
+        const hasPermission = await storage.hasPermission(userId, permissionName, projectId);
+        if (!hasPermission) {
+          return res.status(403).json({ 
+            message: "Forbidden: Insufficient permissions",
+            required: permissionName
+          });
+        }
+      }
+      next();
+    } catch (error) {
+      console.error("Error checking permission:", error);
+      return res.status(500).json({ message: "Error checking permissions" });
+    }
+  };
+};
+
+export const requireAnyPermission = (...permissionNames: string[]): RequestHandler => {
+  return async (req, res, next) => {
+    const user = req.user as any;
+    if (!user?.claims?.sub) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const userId = user.claims.sub;
+    const projectId = req.params.projectId || req.query.projectId as string | undefined;
+
+    try {
+      for (const permissionName of permissionNames) {
+        const hasPermission = await storage.hasPermission(userId, permissionName, projectId);
+        if (hasPermission) {
+          return next();
+        }
+      }
+      return res.status(403).json({ 
+        message: "Forbidden: Insufficient permissions",
+        required: permissionNames
+      });
+    } catch (error) {
+      console.error("Error checking permission:", error);
+      return res.status(500).json({ message: "Error checking permissions" });
+    }
+  };
+};
