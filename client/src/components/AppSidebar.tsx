@@ -37,6 +37,7 @@ import {
   ArrowLeftRight,
   GraduationCap,
   Book,
+  Monitor,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -52,6 +53,7 @@ const adminItems = [
   { title: "Onboarding", url: "/onboarding", icon: ClipboardCheck },
   { title: "Training", url: "/training", icon: GraduationCap },
   { title: "Assessments", url: "/assessments", icon: ClipboardCheck },
+  { title: "Login Labs", url: "/login-labs", icon: Monitor },
   { title: "Knowledge Base", url: "/knowledge-base", icon: Book },
   { title: "Schedules", url: "/schedules", icon: Calendar },
   { title: "Timesheets", url: "/timesheets", icon: Clock },
@@ -70,6 +72,7 @@ const consultantItems = [
   { title: "My Onboarding", url: "/onboarding", icon: ClipboardCheck },
   { title: "Training", url: "/training", icon: GraduationCap },
   { title: "Assessments", url: "/assessments", icon: ClipboardCheck },
+  { title: "Login Labs", url: "/login-labs", icon: Monitor },
   { title: "Knowledge Base", url: "/knowledge-base", icon: Book },
   { title: "Command Center", url: "/command-center", icon: Radio },
   { title: "My Schedule", url: "/my-schedule", icon: Calendar },
@@ -85,6 +88,7 @@ const hospitalStaffItems = [
   { title: "Projects", url: "/projects", icon: FolderKanban },
   { title: "Training", url: "/training", icon: GraduationCap },
   { title: "Assessments", url: "/assessments", icon: ClipboardCheck },
+  { title: "Login Labs", url: "/login-labs", icon: Monitor },
   { title: "Knowledge Base", url: "/knowledge-base", icon: Book },
   { title: "Command Center", url: "/command-center", icon: Radio },
   { title: "Schedules", url: "/schedules", icon: Calendar },

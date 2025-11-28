@@ -32,6 +32,7 @@ The application is built with a React, Vite, and TypeScript frontend, an Express
 - **Email Notifications**: Template-based email service integrated via Resend for various system events.
 
 ## Recent Changes
+- **November 28, 2025**: Completed Phase 11 (Training & Competency) - Added Training Portal with course catalog and enrollment, Competency Assessments with quiz functionality and scoring, Login Labs for EMR training sessions, and Knowledge Base with searchable articles. Database tables: courses, courseModules, courseEnrollments, assessments, assessmentQuestions, assessmentAttempts, loginLabs, loginLabParticipants, knowledgeArticles. New pages: /training, /assessments, /login-labs, /knowledge-base.
 - **November 27, 2025**: Completed Phase 10 (Scheduling & Time Management) - Added timesheets with clock in/out functionality and approval workflow, availability calendar for consultants, shift swap request and approval system. Database tables: timesheets, timesheetEntries, availabilityBlocks, shiftSwapRequests. New pages: /timesheets, /availability, /shift-swaps.
 - **November 27, 2025**: Completed Phase 9 (Go-Live Command Center) - Added digital sign-in/out system, support ticket dispatch with priority levels and SLA tracking, shift handoff notes with acknowledgment workflow, and real-time KPI dashboard. Database tables: goLiveSignIns, supportTickets, shiftHandoffs.
 

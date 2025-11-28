@@ -404,14 +404,14 @@ function ArticleFormDialog({
               <div className="space-y-2">
                 <Label htmlFor="moduleId">EMR Module (Optional)</Label>
                 <Select
-                  value={formData.moduleId}
-                  onValueChange={(value) => setFormData({ ...formData, moduleId: value })}
+                  value={formData.moduleId || "none"}
+                  onValueChange={(value) => setFormData({ ...formData, moduleId: value === "none" ? "" : value })}
                 >
                   <SelectTrigger data-testid="select-article-module">
                     <SelectValue placeholder="Select module" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {modules.map((module) => (
                       <SelectItem key={module.id} value={module.id}>
                         {module.name}
@@ -671,12 +671,12 @@ export default function KnowledgeBase() {
 
         <TabsContent value="browse" className="space-y-4">
           <div className="flex flex-wrap gap-2">
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <Select value={categoryFilter || "all"} onValueChange={(v) => setCategoryFilter(v === "all" ? "" : v)}>
               <SelectTrigger className="w-48" data-testid="select-filter-category">
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Categories</SelectItem>
+                <SelectItem value="all">All Categories</SelectItem>
                 {CATEGORIES.map((cat) => (
                   <SelectItem key={cat.value} value={cat.value}>
                     {cat.label}
@@ -685,12 +685,12 @@ export default function KnowledgeBase() {
               </SelectContent>
             </Select>
             
-            <Select value={moduleFilter} onValueChange={setModuleFilter}>
+            <Select value={moduleFilter || "all"} onValueChange={(v) => setModuleFilter(v === "all" ? "" : v)}>
               <SelectTrigger className="w-48" data-testid="select-filter-module">
                 <SelectValue placeholder="All Modules" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Modules</SelectItem>
+                <SelectItem value="all">All Modules</SelectItem>
                 {modules.map((module) => (
                   <SelectItem key={module.id} value={module.id}>
                     {module.name}
@@ -700,12 +700,12 @@ export default function KnowledgeBase() {
             </Select>
             
             {isAdmin && (
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter || "all"} onValueChange={(v) => setStatusFilter(v === "all" ? "" : v)}>
                 <SelectTrigger className="w-40" data-testid="select-filter-status">
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Status</SelectItem>
+                  <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="draft">Draft</SelectItem>
                   <SelectItem value="published">Published</SelectItem>
                   <SelectItem value="archived">Archived</SelectItem>
