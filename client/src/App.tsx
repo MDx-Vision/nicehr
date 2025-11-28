@@ -11,12 +11,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PermissionsProvider } from "@/hooks/use-permissions";
+import { ProjectContextProvider } from "@/hooks/use-project-context";
 
 import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
 import Hospitals from "@/pages/Hospitals";
 import Consultants from "@/pages/Consultants";
 import Projects from "@/pages/Projects";
+import MyProjects from "@/pages/MyProjects";
 import Schedules from "@/pages/Schedules";
 import BudgetCalculator from "@/pages/BudgetCalculator";
 import RoiDashboard from "@/pages/RoiDashboard";
@@ -172,6 +174,7 @@ function Router() {
       <Route path="/hospitals" component={() => <ProtectedRoute component={Hospitals} />} />
       <Route path="/consultants" component={() => <ProtectedRoute component={Consultants} />} />
       <Route path="/projects" component={() => <ProtectedRoute component={Projects} />} />
+      <Route path="/my-projects" component={() => <ProtectedRoute component={MyProjects} />} />
       <Route path="/schedules" component={() => <ProtectedRoute component={Schedules} />} />
       <Route path="/budget" component={() => <ProtectedRoute component={BudgetCalculator} />} />
       <Route path="/roi" component={() => <ProtectedRoute component={RoiDashboard} />} />
@@ -223,10 +226,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <PermissionsProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
+        <ProjectContextProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </ProjectContextProvider>
       </PermissionsProvider>
     </QueryClientProvider>
   );
