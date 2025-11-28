@@ -464,6 +464,7 @@ export interface IStorage {
   // Schedule Assignment operations
   getScheduleAssignments(scheduleId: string): Promise<ScheduleAssignment[]>;
   getConsultantSchedules(consultantId: string): Promise<ScheduleAssignment[]>;
+  getProjectsForConsultant(consultantId: string): Promise<string[]>;
   createScheduleAssignment(assignment: InsertScheduleAssignment): Promise<ScheduleAssignment>;
   deleteScheduleAssignment(id: string): Promise<boolean>;
 
@@ -1650,6 +1651,18 @@ export class DatabaseStorage implements IStorage {
 
   async getConsultantSchedules(consultantId: string): Promise<ScheduleAssignment[]> {
     return await db.select().from(scheduleAssignments).where(eq(scheduleAssignments.consultantId, consultantId));
+  }
+
+  async getProjectsForConsultant(consultantId: string): Promise<string[]> {
+    // Join scheduleAssignments -> projectSchedules -> projects to get unique project IDs
+    const results = await db
+      .selectDistinct({ projectId: projectSchedules.projectId })
+      .from(scheduleAssignments)
+      .innerJoin(projectSchedules, eq(scheduleAssignments.scheduleId, projectSchedules.id))
+      .innerJoin(projects, eq(projectSchedules.projectId, projects.id))
+      .where(eq(scheduleAssignments.consultantId, consultantId));
+    
+    return results.map(r => r.projectId);
   }
 
   async createScheduleAssignment(assignment: InsertScheduleAssignment): Promise<ScheduleAssignment> {

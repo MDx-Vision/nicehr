@@ -1525,23 +1525,8 @@ export async function registerRoutes(
       if (user && effectiveRole === 'consultant' && roleLevel === 'consultant') {
         const consultant = await storage.getConsultantByUserId(user.id);
         if (consultant) {
-          // Get consultant's assigned projects via schedule assignments
-          const assignments = await storage.getConsultantSchedules(consultant.id);
-          const scheduleIds = assignments.map((a: any) => a.scheduleId).filter(Boolean);
-          
-          // Fetch project IDs from schedules (use getSchedule for each unique schedule)
-          const projectIdSet = new Set<string>();
-          for (const scheduleId of scheduleIds) {
-            try {
-              const schedule = await storage.getSchedule(scheduleId);
-              if (schedule?.projectId) {
-                projectIdSet.add(schedule.projectId);
-              }
-            } catch (e) {
-              // Schedule may not exist, skip
-            }
-          }
-          assignedProjectIds = Array.from(projectIdSet);
+          // Get consultant's assigned project IDs using efficient JOIN query
+          assignedProjectIds = await storage.getProjectsForConsultant(consultant.id);
         }
       }
       
