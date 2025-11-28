@@ -18,24 +18,67 @@ The platform features a clean, minimal interface with a professional healthcare 
 The application is built with a React, Vite, and TypeScript frontend, an Express.js backend, and a PostgreSQL database managed via Drizzle ORM. State management is handled by TanStack Query v5, and routing with Wouter. Authentication is provided by Replit Auth (OpenID Connect). Document storage leverages Replit Object Storage, with fine-grained access control using ACL policies. The system incorporates robust activity logging, real-time notifications, and a comprehensive role-based access control (RBAC) system for managing content restrictions.
 
 ### Feature Specifications
-- **Multi-Role Authentication**: Admin, Hospital Staff, and Consultant roles with distinct access levels.
+
+#### Core Platform Features
+- **Multi-Role Authentication**: Admin, Hospital Staff, and Consultant roles with distinct access levels via Replit Auth (OpenID Connect).
 - **Consultant Management**: Profiles with experience tracking, EMR badges, ratings, document uploads, and advanced search/filtering capabilities.
 - **Project Lifecycle Management**: An 11-phase EHR implementation methodology with visual progress tracking, tasks, milestones, and risk registers.
 - **Onboarding Workflow**: Streamlined consultant onboarding with task categories, progress tracking, and admin review/approval.
-- **Go-Live Command Center**: Real-time dashboard for managing go-live operations including digital sign-in/out, support ticket dispatch with SLA tracking, and shift handoff notes with acknowledgments.
-- **Scheduling**: Tools for creating shifts, assigning consultants, and managing approval workflows.
-- **Document Management**: Secure upload, status tracking, expiration alerts, and type-specific document handling.
+- **Document Management**: Secure upload via Replit Object Storage, status tracking, expiration alerts, and type-specific document handling.
 - **Analytics & Reporting**: Role-specific dashboards providing platform metrics, hospital ROI analysis, and consultant performance insights.
 - **Activity Tracking & Notifications**: Comprehensive logging of user actions and in-app/email notifications for key events.
 - **Content Restriction System**: Role-based access control for pages, APIs, and features, with audit logging.
 - **Account Management**: User settings for privacy, notification preferences, and account deletion requests.
 - **Email Notifications**: Template-based email service integrated via Resend for various system events.
-- **Financial Management**: Expense tracking with receipt uploads, mileage/per diem policies, invoice generation with line items and templates, payroll batch processing with pay rates and paycheck stubs, budget scenario modeling with what-if analysis.
-- **Travel Management**: Travel preferences (airline/hotel/rental car preferences, rewards numbers, emergency contacts), travel booking management (flights, hotels, rental cars with confirmation tracking), travel itineraries, transportation coordination (carpool matching, shuttle schedules, transportation contacts).
-- **Quality Assurance**: Consultant performance scorecards with ratings, pulse surveys for team sentiment tracking, NPS response collection and analysis, incident reporting with corrective action workflows.
-- **Gamification**: Point tracking and level progression, achievement badges with automated awarding, leaderboards with filtering options, referral program with bonus tracking and status management.
-- **Compliance Management**: HIPAA compliance dashboard with health scoring, compliance checks (licensure, certifications, training verification) with expiration tracking, compliance audits with findings and recommendations.
-- **AI Analytics**: Platform health scoring, intelligent insights generation, consultant recommendations, attrition risk analysis, demand forecasting, and performance trend analysis.
+
+#### Go-Live Operations (Phase 9)
+- **Go-Live Command Center**: Real-time dashboard for managing go-live operations.
+- **Digital Sign-In/Out**: Track consultant presence during go-live shifts.
+- **Support Ticket Dispatch**: Priority-based ticketing with SLA tracking.
+- **Shift Handoff Notes**: Structured handoff with acknowledgment workflow.
+
+#### Scheduling & Time Management (Phase 10)
+- **Timesheets**: Clock in/out functionality with approval workflow.
+- **Availability Calendar**: Consultants can set their available time blocks.
+- **Shift Swap Requests**: Request and approval system for shift changes.
+
+#### Training & Competency (Phase 11)
+- **Training Portal**: Course catalog with modules and enrollment tracking.
+- **Competency Assessments**: Quiz functionality with scoring and pass/fail tracking.
+- **Login Labs**: EMR training sessions with participant tracking.
+- **Knowledge Base**: Searchable articles organized by category.
+
+#### Support Ticketing & Escalation (Phase 12)
+- **Support Tickets**: Full CRUD with priority/status filtering, comments, and SLA tracking.
+- **EOD Reports**: Daily submission workflow with approval process.
+- **Escalation Rules**: Configurable escalation triggers and actions.
+- **Data Retention Policies**: HIPAA-compliant retention management.
+
+#### Financial Management (Phase 13)
+- **Expenses**: Submission with receipt uploads, mileage/per diem tracking, approval workflow.
+- **Invoices**: Line item management, templates, auto-generation from timesheets.
+- **Payroll**: Batch processing, pay rate management, paycheck stubs.
+- **Budget Modeling**: Scenario planning with metrics tracking and what-if analysis.
+
+#### Travel Management (Phase 14)
+- **Travel Preferences**: Airline/hotel/rental car preferences, rewards numbers, emergency contacts.
+- **Travel Bookings**: Flights, hotels, rentals with confirmation tracking and cost estimates.
+- **Travel Itineraries**: Trip planning with booking aggregation.
+- **Transportation Coordination**: Carpool matching, shuttle schedules, transportation contacts.
+
+#### Quality Assurance & Gamification (Phase 15)
+- **Consultant Scorecards**: Performance metrics with ratings.
+- **Pulse Surveys**: Team sentiment tracking with response analysis.
+- **NPS Responses**: Satisfaction tracking and analysis.
+- **Incident Reporting**: Safety/quality issues with corrective action workflows.
+- **Gamification**: Point tracking, level progression, achievement badges, leaderboards, referral program.
+- **Compliance Center**: HIPAA dashboard, compliance checks (licensure, certifications, training), audits with findings.
+- **AI Analytics**: Platform health scoring, intelligent insights, consultant recommendations, attrition risk, demand forecasting.
+
+#### Integrations (Phase 16)
+- **Digital Signatures**: Contract templates with variable replacement, multi-signer workflows with sequence ordering, signature capture using react-signature-canvas, complete audit trail of all signing events.
+- **Real-Time Chat**: WebSocket server with secure session-based authentication, channels (project/unit/module/direct/announcement types), real-time messaging with typing indicators, read receipts, quiet hours enforcement, shift chat summaries.
+- **Identity Verification**: 3-step consultant wizard (personal info, document upload, review), admin review queue with approve/reject/resubmit actions, fraud flag management, verification events audit trail.
 
 ## Recent Changes
 - **November 28, 2025**: Completed Phase 16 (Integrations) - Added Digital Signatures system with contract templates, multi-signer workflows, and signature capture using react-signature-canvas with audit trail. Real-Time Chat feature with WebSocket server (secure session-based authentication), channels, direct messages, typing indicators, read receipts, quiet hours enforcement, and shift summaries. Identity Verification system with consultant wizard (personal info, document upload, review), admin review queue with approve/reject/resubmit actions, fraud flagging, and verification events audit trail. Database tables: contractTemplates, contracts, contractSigners, contractSignatures, contractAuditEvents (digital signatures); chatChannels, channelMembers, chatMessages, chatMessageReads, shiftChatSummaries (chat); identityVerifications, identityDocuments, verificationEvents, fraudFlags (identity verification). New pages: /contracts, /chat, /identity-verification. WebSocket endpoint: /ws with cookie-signature authentication.
@@ -60,3 +103,46 @@ The architecture emphasizes modularity and scalability, with clear separation be
 - **Tailwind CSS**: Utility-first CSS framework.
 - **TanStack Query**: Data fetching and state management.
 - **Wouter**: React routing library.
+- **WebSocket (ws)**: Real-time communication for chat feature.
+- **react-signature-canvas**: Digital signature capture widget.
+- **cookie-signature**: Secure session cookie validation for WebSocket authentication.
+
+## All Available Pages
+| Page | Route | Description |
+|------|-------|-------------|
+| Dashboard | / | Role-specific overview with key metrics |
+| Hospitals | /hospitals | Hospital management (Admin) |
+| Projects | /projects | Project lifecycle management |
+| Project Phases | /project-phases | 11-phase EHR methodology tracking |
+| Consultants | /consultants | Consultant directory and profiles |
+| Schedule | /schedule | Shift scheduling and assignments |
+| Command Center | /command-center | Go-live operations dashboard |
+| Onboarding | /onboarding | Consultant onboarding workflow |
+| Timesheets | /timesheets | Time tracking and clock in/out |
+| Availability | /availability | Consultant availability calendar |
+| Shift Swaps | /shift-swaps | Shift swap requests |
+| Training | /training | Course catalog and enrollment |
+| Assessments | /assessments | Competency testing |
+| Login Labs | /login-labs | EMR training sessions |
+| Knowledge Base | /knowledge-base | Searchable articles |
+| Support Tickets | /support-tickets | Ticket management |
+| EOD Reports | /eod-reports | End-of-day reporting |
+| Escalation Management | /escalation-management | Escalation rules (Admin) |
+| Expenses | /expenses | Expense tracking and submission |
+| Invoices | /invoices | Invoice management |
+| Payroll | /payroll | Payroll processing (Admin) |
+| Budget Modeling | /budget-modeling | Financial scenarios (Admin) |
+| Travel Preferences | /travel-preferences | Personal travel settings |
+| Travel Bookings | /travel-bookings | Trip booking management |
+| Transportation | /transportation | Carpool/shuttle coordination |
+| Quality Assurance | /quality-assurance | Scorecards, surveys, incidents |
+| Gamification | /gamification | Points, badges, leaderboards |
+| Compliance Center | /compliance-center | HIPAA compliance tracking |
+| Contracts | /contracts | Digital signature workflows |
+| Chat | /chat | Real-time messaging |
+| Identity Verification | /identity-verification | Consultant verification |
+| ROI Survey | /roi-survey | Hospital satisfaction survey |
+| Analytics | /analytics | Platform analytics dashboard |
+| Access Control | /access-control | Page permissions (Admin) |
+| Activity Log | /activity-log | User activity audit (Admin) |
+| Account | /account | Personal settings |
