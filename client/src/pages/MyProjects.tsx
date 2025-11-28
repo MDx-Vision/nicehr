@@ -13,6 +13,7 @@ export default function MyProjects() {
     assignedProjectIds, 
     selectedProjectId, 
     filterByProject, 
+    isProjectAccessible,
     isAdmin, 
     hasMultipleProjects 
   } = useProjectContext();
@@ -30,13 +31,12 @@ export default function MyProjects() {
     return acc;
   }, {} as Record<string, Hospital>);
 
-  const accessibleProjects = isAdmin 
-    ? projects 
-    : projects.filter(p => assignedProjectIds.includes(p.id));
-
+  const projectsWithProjectId = projects.map(p => ({ ...p, projectId: p.id }));
+  const filteredProjects = filterByProject(projectsWithProjectId);
+  
   const displayedProjects = selectedProjectId 
-    ? accessibleProjects.filter(p => p.id === selectedProjectId)
-    : accessibleProjects;
+    ? filteredProjects.filter(p => p.id === selectedProjectId)
+    : filteredProjects;
 
   const getStatusColor = (status: string) => {
     switch (status) {

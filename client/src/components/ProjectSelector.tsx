@@ -17,9 +17,9 @@ interface ProjectSelectorProps {
 
 export function ProjectSelector({ className, showAllOption = false }: ProjectSelectorProps) {
   const { 
-    assignedProjectIds, 
     selectedProjectId, 
     setSelectedProjectId, 
+    isProjectAccessible,
     isAdmin,
     hasMultipleProjects 
   } = useProjectContext();
@@ -28,9 +28,7 @@ export function ProjectSelector({ className, showAllOption = false }: ProjectSel
     queryKey: ['/api/projects'],
   });
 
-  const accessibleProjects = isAdmin 
-    ? projects 
-    : projects.filter(p => assignedProjectIds.includes(p.id));
+  const accessibleProjects = projects.filter(p => isProjectAccessible(p.id));
 
   if (accessibleProjects.length === 0) {
     return null;

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from "react";
 import { usePermissions } from "./use-permissions";
 
 interface ProjectContextValue {
@@ -18,7 +18,10 @@ const ProjectContext = createContext<ProjectContextValue | null>(null);
 const STORAGE_KEY = "nicehr_selected_project";
 
 export function ProjectContextProvider({ children }: { children: ReactNode }) {
-  const { roleLevel, assignedProjectIds, hospitalId } = usePermissions();
+  const { roleLevel, assignedProjectIds } = usePermissions();
+  
+  const prevRoleLevelRef = useRef(roleLevel);
+  const prevAssignedProjectIdsRef = useRef(assignedProjectIds);
   
   const [selectedProjectId, setSelectedProjectIdState] = useState<string | null>(() => {
     if (typeof window !== "undefined") {
@@ -40,15 +43,33 @@ export function ProjectContextProvider({ children }: { children: ReactNode }) {
   }, [selectedProjectId]);
 
   useEffect(() => {
+    const roleLevelChanged = prevRoleLevelRef.current !== roleLevel;
+    const projectsChanged = JSON.stringify(prevAssignedProjectIdsRef.current) !== JSON.stringify(assignedProjectIds);
+    
+    prevRoleLevelRef.current = roleLevel;
+    prevAssignedProjectIdsRef.current = assignedProjectIds;
+    
+    if (roleLevelChanged) {
+      setSelectedProjectIdState(null);
+      localStorage.removeItem(STORAGE_KEY);
+      return;
+    }
+    
+    if (!isAdmin && assignedProjectIds.length === 0) {
+      setSelectedProjectIdState(null);
+      localStorage.removeItem(STORAGE_KEY);
+      return;
+    }
+    
+    if (!isAdmin && selectedProjectId && !assignedProjectIds.includes(selectedProjectId)) {
+      setSelectedProjectIdState(assignedProjectIds.length > 0 ? assignedProjectIds[0] : null);
+      return;
+    }
+    
     if (!isAdmin && assignedProjectIds.length > 0 && !selectedProjectId) {
       setSelectedProjectIdState(assignedProjectIds[0]);
     }
-    if (!isAdmin && selectedProjectId && assignedProjectIds.length > 0) {
-      if (!assignedProjectIds.includes(selectedProjectId)) {
-        setSelectedProjectIdState(assignedProjectIds[0]);
-      }
-    }
-  }, [assignedProjectIds, isAdmin, selectedProjectId]);
+  }, [assignedProjectIds, roleLevel, isAdmin, selectedProjectId]);
 
   const setSelectedProjectId = (id: string | null) => {
     setSelectedProjectIdState(id);
