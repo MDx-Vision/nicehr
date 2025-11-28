@@ -48,6 +48,9 @@ import Expenses from "@/pages/Expenses";
 import Invoices from "@/pages/Invoices";
 import Payroll from "@/pages/Payroll";
 import BudgetModeling from "@/pages/BudgetModeling";
+import TravelPreferences from "@/pages/TravelPreferences";
+import TravelBookings from "@/pages/TravelBookings";
+import Transportation from "@/pages/Transportation";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -192,6 +195,9 @@ function Router() {
       <Route path="/invoices" component={() => <ProtectedRoute component={Invoices} />} />
       <Route path="/payroll" component={() => <ProtectedRoute component={Payroll} />} />
       <Route path="/budget-modeling" component={() => <ProtectedRoute component={BudgetModeling} requiredRoles={["admin"]} />} />
+      <Route path="/travel-preferences" component={() => <ProtectedRoute component={TravelPreferences} />} />
+      <Route path="/travel-bookings" component={() => <ProtectedRoute component={TravelBookings} />} />
+      <Route path="/transportation" component={() => <ProtectedRoute component={Transportation} />} />
       <Route component={NotFound} />
     </Switch>
   );

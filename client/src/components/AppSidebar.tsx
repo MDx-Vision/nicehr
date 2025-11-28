@@ -45,6 +45,9 @@ import {
   Receipt,
   Banknote,
   TrendingUp,
+  Plane,
+  Luggage,
+  Bus,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -69,6 +72,9 @@ const adminItems = [
   { title: "Timesheets", url: "/timesheets", icon: Clock },
   { title: "Availability", url: "/availability", icon: CalendarDays },
   { title: "Shift Swaps", url: "/shift-swaps", icon: ArrowLeftRight },
+  { title: "Travel Preferences", url: "/travel-preferences", icon: Plane },
+  { title: "Travel Bookings", url: "/travel-bookings", icon: Luggage },
+  { title: "Transportation", url: "/transportation", icon: Bus },
   { title: "Expenses", url: "/expenses", icon: DollarSign },
   { title: "Invoices", url: "/invoices", icon: Receipt },
   { title: "Payroll", url: "/payroll", icon: Banknote },
@@ -94,6 +100,9 @@ const consultantItems = [
   { title: "Timesheets", url: "/timesheets", icon: Clock },
   { title: "Availability", url: "/availability", icon: CalendarDays },
   { title: "Shift Swaps", url: "/shift-swaps", icon: ArrowLeftRight },
+  { title: "Travel Preferences", url: "/travel-preferences", icon: Plane },
+  { title: "Travel Bookings", url: "/travel-bookings", icon: Luggage },
+  { title: "Transportation", url: "/transportation", icon: Bus },
   { title: "Expenses", url: "/expenses", icon: DollarSign },
   { title: "Payroll", url: "/payroll", icon: Banknote },
   { title: "Documents", url: "/my-documents", icon: FileText },
@@ -112,6 +121,7 @@ const hospitalStaffItems = [
   { title: "Schedules", url: "/schedules", icon: Calendar },
   { title: "Timesheets", url: "/timesheets", icon: Clock },
   { title: "Shift Swaps", url: "/shift-swaps", icon: ArrowLeftRight },
+  { title: "Transportation", url: "/transportation", icon: Bus },
   { title: "Invoices", url: "/invoices", icon: Receipt },
   { title: "Consultants", url: "/consultants", icon: Users },
   { title: "ROI Survey", url: "/roi-survey", icon: BarChart3 },
