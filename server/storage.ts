@@ -161,6 +161,26 @@ import {
   type LoginLabParticipantWithUser,
   type KnowledgeArticleWithDetails,
   type TrainingAnalytics,
+  eodReports,
+  escalationRules,
+  ticketHistory,
+  dataRetentionPolicies,
+  ticketComments,
+  type EodReport,
+  type InsertEodReport,
+  type EscalationRule,
+  type InsertEscalationRule,
+  type TicketHistory,
+  type InsertTicketHistory,
+  type DataRetentionPolicy,
+  type InsertDataRetentionPolicy,
+  type TicketComment,
+  type InsertTicketComment,
+  type EodReportWithDetails,
+  type TicketHistoryWithDetails,
+  type TicketCommentWithDetails,
+  type SupportTicketWithHistory,
+  type EodReportAnalytics,
   EHR_IMPLEMENTATION_PHASES,
   NICEHR_TEAM_ROLES,
   HOSPITAL_TEAM_ROLES,
@@ -4288,6 +4308,454 @@ export class DatabaseStorage implements IStorage {
       },
       recentEnrollments,
       popularCourses,
+    };
+  }
+
+  // ============================================
+  // PHASE 12: TICKETING & SUPPORT
+  // ============================================
+
+  // EOD Report Operations
+  async getEodReports(projectId?: string): Promise<EodReport[]> {
+    if (projectId) {
+      return await db
+        .select()
+        .from(eodReports)
+        .where(eq(eodReports.projectId, projectId))
+        .orderBy(desc(eodReports.reportDate));
+    }
+    return await db
+      .select()
+      .from(eodReports)
+      .orderBy(desc(eodReports.reportDate));
+  }
+
+  async getEodReport(id: string): Promise<EodReport | undefined> {
+    const results = await db
+      .select()
+      .from(eodReports)
+      .where(eq(eodReports.id, id));
+    return results[0];
+  }
+
+  async getEodReportWithDetails(id: string): Promise<EodReportWithDetails | undefined> {
+    const report = await this.getEodReport(id);
+    if (!report) return undefined;
+    return this.buildEodReportWithDetails(report);
+  }
+
+  async getEodReportsWithDetails(projectId?: string): Promise<EodReportWithDetails[]> {
+    const reports = await this.getEodReports(projectId);
+    return Promise.all(reports.map((r) => this.buildEodReportWithDetails(r)));
+  }
+
+  async getEodReportsByDate(date: string, projectId?: string): Promise<EodReportWithDetails[]> {
+    const conditions = [eq(eodReports.reportDate, date)];
+    if (projectId) {
+      conditions.push(eq(eodReports.projectId, projectId));
+    }
+    const results = await db
+      .select()
+      .from(eodReports)
+      .where(and(...conditions));
+    return Promise.all(results.map((r) => this.buildEodReportWithDetails(r)));
+  }
+
+  async createEodReport(report: InsertEodReport): Promise<EodReport> {
+    const results = await db.insert(eodReports).values(report).returning();
+    return results[0];
+  }
+
+  async updateEodReport(id: string, data: Partial<InsertEodReport>): Promise<EodReport | undefined> {
+    const results = await db
+      .update(eodReports)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(eodReports.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async submitEodReport(id: string): Promise<EodReport | undefined> {
+    return this.updateEodReport(id, {
+      status: "submitted",
+      submittedAt: new Date(),
+    } as Partial<InsertEodReport>);
+  }
+
+  async approveEodReport(id: string, approverId: string): Promise<EodReport | undefined> {
+    const results = await db
+      .update(eodReports)
+      .set({
+        status: "approved",
+        approvedById: approverId,
+        approvedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(eodReports.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async rejectEodReport(id: string): Promise<EodReport | undefined> {
+    return this.updateEodReport(id, { status: "rejected" } as Partial<InsertEodReport>);
+  }
+
+  async deleteEodReport(id: string): Promise<void> {
+    await db.delete(eodReports).where(eq(eodReports.id, id));
+  }
+
+  private async buildEodReportWithDetails(report: EodReport): Promise<EodReportWithDetails> {
+    const project = await this.getProject(report.projectId);
+    const submittedBy = await this.getUser(report.submittedById);
+    let approvedBy: EodReportWithDetails["approvedBy"] = null;
+    if (report.approvedById) {
+      const approver = await this.getUser(report.approvedById);
+      if (approver) {
+        approvedBy = {
+          id: approver.id,
+          firstName: approver.firstName,
+          lastName: approver.lastName,
+        };
+      }
+    }
+
+    return {
+      ...report,
+      project: {
+        id: project?.id || "",
+        name: project?.name || "Unknown",
+      },
+      submittedBy: {
+        id: submittedBy?.id || "",
+        firstName: submittedBy?.firstName || null,
+        lastName: submittedBy?.lastName || null,
+      },
+      approvedBy,
+    };
+  }
+
+  // Escalation Rules Operations
+  async getEscalationRules(projectId?: string): Promise<EscalationRule[]> {
+    if (projectId) {
+      return await db
+        .select()
+        .from(escalationRules)
+        .where(eq(escalationRules.projectId, projectId))
+        .orderBy(desc(escalationRules.createdAt));
+    }
+    return await db
+      .select()
+      .from(escalationRules)
+      .orderBy(desc(escalationRules.createdAt));
+  }
+
+  async getEscalationRule(id: string): Promise<EscalationRule | undefined> {
+    const results = await db
+      .select()
+      .from(escalationRules)
+      .where(eq(escalationRules.id, id));
+    return results[0];
+  }
+
+  async getActiveEscalationRules(projectId?: string): Promise<EscalationRule[]> {
+    const conditions = [eq(escalationRules.isActive, true)];
+    if (projectId) {
+      conditions.push(eq(escalationRules.projectId, projectId));
+    }
+    return await db
+      .select()
+      .from(escalationRules)
+      .where(and(...conditions));
+  }
+
+  async createEscalationRule(rule: InsertEscalationRule): Promise<EscalationRule> {
+    const results = await db.insert(escalationRules).values(rule).returning();
+    return results[0];
+  }
+
+  async updateEscalationRule(id: string, data: Partial<InsertEscalationRule>): Promise<EscalationRule | undefined> {
+    const results = await db
+      .update(escalationRules)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(escalationRules.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteEscalationRule(id: string): Promise<void> {
+    await db.delete(escalationRules).where(eq(escalationRules.id, id));
+  }
+
+  // Ticket History Operations
+  async getTicketHistory(ticketId: string): Promise<TicketHistoryWithDetails[]> {
+    const results = await db
+      .select()
+      .from(ticketHistory)
+      .where(eq(ticketHistory.ticketId, ticketId))
+      .orderBy(desc(ticketHistory.createdAt));
+    return Promise.all(results.map((h) => this.buildTicketHistoryWithDetails(h)));
+  }
+
+  async createTicketHistory(entry: InsertTicketHistory): Promise<TicketHistory> {
+    const results = await db.insert(ticketHistory).values(entry).returning();
+    return results[0];
+  }
+
+  private async buildTicketHistoryWithDetails(history: TicketHistory): Promise<TicketHistoryWithDetails> {
+    const ticket = await this.getSupportTicket(history.ticketId);
+    const performedBy = await this.getUser(history.performedById);
+
+    return {
+      ...history,
+      ticket: {
+        id: ticket?.id || "",
+        ticketNumber: ticket?.ticketNumber || null,
+        title: ticket?.title || "Unknown",
+      },
+      performedBy: {
+        id: performedBy?.id || "",
+        firstName: performedBy?.firstName || null,
+        lastName: performedBy?.lastName || null,
+      },
+    };
+  }
+
+  // Ticket Comments Operations
+  async getTicketComments(ticketId: string): Promise<TicketCommentWithDetails[]> {
+    const results = await db
+      .select()
+      .from(ticketComments)
+      .where(eq(ticketComments.ticketId, ticketId))
+      .orderBy(asc(ticketComments.createdAt));
+    return Promise.all(results.map((c) => this.buildTicketCommentWithDetails(c)));
+  }
+
+  async createTicketComment(comment: InsertTicketComment): Promise<TicketComment> {
+    const results = await db.insert(ticketComments).values(comment).returning();
+    return results[0];
+  }
+
+  async updateTicketComment(id: string, data: Partial<InsertTicketComment>): Promise<TicketComment | undefined> {
+    const results = await db
+      .update(ticketComments)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(ticketComments.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteTicketComment(id: string): Promise<void> {
+    await db.delete(ticketComments).where(eq(ticketComments.id, id));
+  }
+
+  private async buildTicketCommentWithDetails(comment: TicketComment): Promise<TicketCommentWithDetails> {
+    const author = await this.getUser(comment.authorId);
+    return {
+      ...comment,
+      author: {
+        id: author?.id || "",
+        firstName: author?.firstName || null,
+        lastName: author?.lastName || null,
+        profileImageUrl: author?.profileImageUrl || null,
+      },
+    };
+  }
+
+  // Support Ticket with Full History
+  async getSupportTicketWithHistory(id: string): Promise<SupportTicketWithHistory | undefined> {
+    const ticket = await this.getSupportTicket(id);
+    if (!ticket) return undefined;
+
+    const project = await this.getProject(ticket.projectId);
+    let reportedBy: SupportTicketWithHistory["reportedBy"] = null;
+    if (ticket.reportedById) {
+      const reporter = await this.getUser(ticket.reportedById);
+      if (reporter) {
+        reportedBy = {
+          id: reporter.id,
+          firstName: reporter.firstName,
+          lastName: reporter.lastName,
+        };
+      }
+    }
+
+    let assignedTo: SupportTicketWithHistory["assignedTo"] = null;
+    if (ticket.assignedToId) {
+      const consultant = await this.getConsultant(ticket.assignedToId);
+      if (consultant) {
+        const user = await this.getUser(consultant.userId);
+        assignedTo = {
+          id: consultant.id,
+          user: {
+            firstName: user?.firstName || null,
+            lastName: user?.lastName || null,
+          },
+        };
+      }
+    }
+
+    const history = await this.getTicketHistory(id);
+    const comments = await this.getTicketComments(id);
+
+    return {
+      ...ticket,
+      project: {
+        id: project?.id || "",
+        name: project?.name || "Unknown",
+      },
+      reportedBy,
+      assignedTo,
+      history,
+      comments,
+    };
+  }
+
+  // Data Retention Policy Operations
+  async getDataRetentionPolicies(): Promise<DataRetentionPolicy[]> {
+    return await db
+      .select()
+      .from(dataRetentionPolicies)
+      .orderBy(asc(dataRetentionPolicies.entityType));
+  }
+
+  async getDataRetentionPolicy(id: string): Promise<DataRetentionPolicy | undefined> {
+    const results = await db
+      .select()
+      .from(dataRetentionPolicies)
+      .where(eq(dataRetentionPolicies.id, id));
+    return results[0];
+  }
+
+  async createDataRetentionPolicy(policy: InsertDataRetentionPolicy): Promise<DataRetentionPolicy> {
+    const results = await db.insert(dataRetentionPolicies).values(policy).returning();
+    return results[0];
+  }
+
+  async updateDataRetentionPolicy(id: string, data: Partial<InsertDataRetentionPolicy>): Promise<DataRetentionPolicy | undefined> {
+    const results = await db
+      .update(dataRetentionPolicies)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(dataRetentionPolicies.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteDataRetentionPolicy(id: string): Promise<void> {
+    await db.delete(dataRetentionPolicies).where(eq(dataRetentionPolicies.id, id));
+  }
+
+  // EOD Report Analytics
+  async getEodReportAnalytics(): Promise<EodReportAnalytics> {
+    const today = new Date().toISOString().split("T")[0];
+
+    const totalResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(eodReports);
+
+    const submittedTodayResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(eodReports)
+      .where(eq(eodReports.reportDate, today));
+
+    const pendingApprovalResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(eodReports)
+      .where(eq(eodReports.status, "submitted"));
+
+    const avgIssuesResult = await db
+      .select({
+        avgResolved: sql<number>`AVG(${eodReports.issuesResolved})`,
+        avgPending: sql<number>`AVG(${eodReports.issuesPending})`,
+      })
+      .from(eodReports);
+
+    const recentReportsResults = await db
+      .select()
+      .from(eodReports)
+      .orderBy(desc(eodReports.createdAt))
+      .limit(10);
+
+    const recentReports = await Promise.all(
+      recentReportsResults.map((r) => this.buildEodReportWithDetails(r))
+    );
+
+    const reportsByProjectResults = await db
+      .select({
+        projectId: eodReports.projectId,
+        reportCount: sql<number>`count(*)`,
+      })
+      .from(eodReports)
+      .groupBy(eodReports.projectId)
+      .orderBy(desc(sql`count(*)`))
+      .limit(10);
+
+    const reportsByProject = await Promise.all(
+      reportsByProjectResults.map(async (rp) => {
+        const project = await this.getProject(rp.projectId);
+        return {
+          projectId: rp.projectId,
+          projectName: project?.name || "Unknown",
+          reportCount: Number(rp.reportCount) || 0,
+        };
+      })
+    );
+
+    return {
+      totalReports: Number(totalResult[0]?.count) || 0,
+      submittedToday: Number(submittedTodayResult[0]?.count) || 0,
+      pendingApproval: Number(pendingApprovalResult[0]?.count) || 0,
+      averageIssuesResolved: Math.round(Number(avgIssuesResult[0]?.avgResolved) || 0),
+      averageIssuesPending: Math.round(Number(avgIssuesResult[0]?.avgPending) || 0),
+      recentReports,
+      reportsByProject,
+    };
+  }
+
+  // Auto-populate EOD report from tickets
+  async autoPopulateEodReport(projectId: string, date: string): Promise<Partial<InsertEodReport>> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const resolvedTickets = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(supportTickets)
+      .where(
+        and(
+          eq(supportTickets.projectId, projectId),
+          gte(supportTickets.resolvedAt, startOfDay),
+          lte(supportTickets.resolvedAt, endOfDay)
+        )
+      );
+
+    const pendingTickets = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(supportTickets)
+      .where(
+        and(
+          eq(supportTickets.projectId, projectId),
+          or(
+            eq(supportTickets.status, "open"),
+            eq(supportTickets.status, "in_progress")
+          )
+        )
+      );
+
+    const escalatedTickets = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(supportTickets)
+      .where(
+        and(
+          eq(supportTickets.projectId, projectId),
+          eq(supportTickets.status, "escalated")
+        )
+      );
+
+    return {
+      issuesResolved: Number(resolvedTickets[0]?.count) || 0,
+      issuesPending: Number(pendingTickets[0]?.count) || 0,
+      issuesEscalated: Number(escalatedTickets[0]?.count) || 0,
     };
   }
 }

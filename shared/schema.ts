@@ -2422,3 +2422,288 @@ export interface TrainingAnalytics {
     completionRate: number;
   }>;
 }
+
+// ============================================
+// PHASE 12: TICKETING & SUPPORT
+// ============================================
+
+// Enums for Phase 12
+export const eodReportStatusEnum = pgEnum("eod_report_status", ["draft", "submitted", "approved", "rejected"]);
+export const escalationTriggerTypeEnum = pgEnum("escalation_trigger_type", ["time_based", "priority_based", "sla_breach", "manual"]);
+export const ticketActionTypeEnum = pgEnum("ticket_action_type", ["created", "updated", "assigned", "escalated", "resolved", "closed", "commented", "reopened"]);
+export const dataRetentionEntityEnum = pgEnum("data_retention_entity", ["tickets", "reports", "audit_logs", "documents", "user_data"]);
+
+// End of Day Reports
+export const eodReports = pgTable("eod_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  reportDate: date("report_date").notNull(),
+  submittedById: varchar("submitted_by_id").references(() => users.id).notNull(),
+  status: eodReportStatusEnum("status").default("draft").notNull(),
+  issuesResolved: integer("issues_resolved").default(0),
+  issuesPending: integer("issues_pending").default(0),
+  issuesEscalated: integer("issues_escalated").default(0),
+  resolvedSummary: text("resolved_summary"),
+  pendingSummary: text("pending_summary"),
+  highlights: text("highlights"),
+  challenges: text("challenges"),
+  tomorrowPlan: text("tomorrow_plan"),
+  notes: text("notes"),
+  approvedById: varchar("approved_by_id").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  submittedAt: timestamp("submitted_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_eod_reports_project").on(table.projectId),
+  index("idx_eod_reports_date").on(table.reportDate),
+  index("idx_eod_reports_submitted_by").on(table.submittedById),
+]);
+
+export const eodReportsRelations = relations(eodReports, ({ one }) => ({
+  project: one(projects, {
+    fields: [eodReports.projectId],
+    references: [projects.id],
+  }),
+  submittedBy: one(users, {
+    fields: [eodReports.submittedById],
+    references: [users.id],
+  }),
+  approvedBy: one(users, {
+    fields: [eodReports.approvedById],
+    references: [users.id],
+  }),
+}));
+
+// Escalation Rules Configuration
+export const escalationRules = pgTable("escalation_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  triggerType: escalationTriggerTypeEnum("trigger_type").default("time_based").notNull(),
+  priority: ticketPriorityEnum("priority"),
+  timeThresholdMinutes: integer("time_threshold_minutes"),
+  escalateToPriority: ticketPriorityEnum("escalate_to_priority"),
+  notifyRoles: text("notify_roles").array(),
+  notifyUserIds: text("notify_user_ids").array(),
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_escalation_rules_project").on(table.projectId),
+  index("idx_escalation_rules_active").on(table.isActive),
+]);
+
+export const escalationRulesRelations = relations(escalationRules, ({ one }) => ({
+  project: one(projects, {
+    fields: [escalationRules.projectId],
+    references: [projects.id],
+  }),
+  creator: one(users, {
+    fields: [escalationRules.createdBy],
+    references: [users.id],
+  }),
+}));
+
+// Ticket History/Audit Trail
+export const ticketHistory = pgTable("ticket_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketId: varchar("ticket_id").references(() => supportTickets.id).notNull(),
+  action: ticketActionTypeEnum("action").notNull(),
+  performedById: varchar("performed_by_id").references(() => users.id).notNull(),
+  previousValue: jsonb("previous_value"),
+  newValue: jsonb("new_value"),
+  comment: text("comment"),
+  ipAddress: varchar("ip_address"),
+  userAgent: varchar("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_ticket_history_ticket").on(table.ticketId),
+  index("idx_ticket_history_performed_by").on(table.performedById),
+  index("idx_ticket_history_created_at").on(table.createdAt),
+]);
+
+export const ticketHistoryRelations = relations(ticketHistory, ({ one }) => ({
+  ticket: one(supportTickets, {
+    fields: [ticketHistory.ticketId],
+    references: [supportTickets.id],
+  }),
+  performedBy: one(users, {
+    fields: [ticketHistory.performedById],
+    references: [users.id],
+  }),
+}));
+
+// Data Retention Policies (HIPAA Compliance)
+export const dataRetentionPolicies = pgTable("data_retention_policies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  entityType: dataRetentionEntityEnum("entity_type").notNull(),
+  retentionDays: integer("retention_days").notNull(),
+  description: text("description"),
+  hipaaRequired: boolean("hipaa_required").default(false),
+  autoDelete: boolean("auto_delete").default(false),
+  archiveBeforeDelete: boolean("archive_before_delete").default(true),
+  lastRunAt: timestamp("last_run_at"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const dataRetentionPoliciesRelations = relations(dataRetentionPolicies, ({ one }) => ({
+  creator: one(users, {
+    fields: [dataRetentionPolicies.createdBy],
+    references: [users.id],
+  }),
+}));
+
+// Ticket Comments (for support threads)
+export const ticketComments = pgTable("ticket_comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketId: varchar("ticket_id").references(() => supportTickets.id).notNull(),
+  authorId: varchar("author_id").references(() => users.id).notNull(),
+  content: text("content").notNull(),
+  isInternal: boolean("is_internal").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_ticket_comments_ticket").on(table.ticketId),
+  index("idx_ticket_comments_author").on(table.authorId),
+]);
+
+export const ticketCommentsRelations = relations(ticketComments, ({ one }) => ({
+  ticket: one(supportTickets, {
+    fields: [ticketComments.ticketId],
+    references: [supportTickets.id],
+  }),
+  author: one(users, {
+    fields: [ticketComments.authorId],
+    references: [users.id],
+  }),
+}));
+
+// Insert schemas for Phase 12
+export const insertEodReportSchema = createInsertSchema(eodReports).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertEscalationRuleSchema = createInsertSchema(escalationRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTicketHistorySchema = createInsertSchema(ticketHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertDataRetentionPolicySchema = createInsertSchema(dataRetentionPolicies).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTicketCommentSchema = createInsertSchema(ticketComments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Phase 12 Types
+export type EodReport = typeof eodReports.$inferSelect;
+export type InsertEodReport = z.infer<typeof insertEodReportSchema>;
+
+export type EscalationRule = typeof escalationRules.$inferSelect;
+export type InsertEscalationRule = z.infer<typeof insertEscalationRuleSchema>;
+
+export type TicketHistory = typeof ticketHistory.$inferSelect;
+export type InsertTicketHistory = z.infer<typeof insertTicketHistorySchema>;
+
+export type DataRetentionPolicy = typeof dataRetentionPolicies.$inferSelect;
+export type InsertDataRetentionPolicy = z.infer<typeof insertDataRetentionPolicySchema>;
+
+export type TicketComment = typeof ticketComments.$inferSelect;
+export type InsertTicketComment = z.infer<typeof insertTicketCommentSchema>;
+
+// ============================================
+// PHASE 12 EXTENDED TYPES
+// ============================================
+
+export interface EodReportWithDetails extends EodReport {
+  project: {
+    id: string;
+    name: string;
+  };
+  submittedBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  };
+  approvedBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+}
+
+export interface TicketHistoryWithDetails extends TicketHistory {
+  ticket: {
+    id: string;
+    ticketNumber: string | null;
+    title: string;
+  };
+  performedBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  };
+}
+
+export interface TicketCommentWithDetails extends TicketComment {
+  author: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    profileImageUrl: string | null;
+  };
+}
+
+export interface SupportTicketWithHistory extends SupportTicket {
+  project: {
+    id: string;
+    name: string;
+  };
+  reportedBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+  assignedTo: {
+    id: string;
+    user: {
+      firstName: string | null;
+      lastName: string | null;
+    };
+  } | null;
+  history: TicketHistoryWithDetails[];
+  comments: TicketCommentWithDetails[];
+}
+
+// EOD Report Analytics
+export interface EodReportAnalytics {
+  totalReports: number;
+  submittedToday: number;
+  pendingApproval: number;
+  averageIssuesResolved: number;
+  averageIssuesPending: number;
+  recentReports: EodReportWithDetails[];
+  reportsByProject: Array<{
+    projectId: string;
+    projectName: string;
+    reportCount: number;
+  }>;
+}
