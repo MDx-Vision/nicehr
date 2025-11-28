@@ -16,6 +16,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useProjectContext } from "@/hooks/use-project-context";
+import { ProjectSelector } from "@/components/ProjectSelector";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format, formatDistanceToNow } from "date-fns";
 import { 
@@ -1403,8 +1405,9 @@ export default function Expenses() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const { user, isAdmin } = useAuth();
+  const { filterByProject, isAdmin: isAdminContext } = useProjectContext();
 
-  const { data: expenses = [], isLoading: expensesLoading } = useQuery<ExpenseWithDetails[]>({
+  const { data: expensesRaw = [], isLoading: expensesLoading } = useQuery<ExpenseWithDetails[]>({
     queryKey: ['/api/expenses'],
   });
 
@@ -1423,6 +1426,8 @@ export default function Expenses() {
   const { data: perDiemPolicies = [] } = useQuery<PerDiemPolicy[]>({
     queryKey: ['/api/per-diem-policies'],
   });
+
+  const expenses = filterByProject(expensesRaw);
 
   const filteredExpenses = expenses.filter(expense => {
     if (statusFilter !== "all" && expense.status !== statusFilter) return false;
@@ -1454,10 +1459,13 @@ export default function Expenses() {
           <h1 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">Expenses</h1>
           <p className="text-muted-foreground">Manage expense reports and reimbursements</p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)} data-testid="button-create-expense">
-          <Plus className="h-4 w-4 mr-2" />
-          New Expense
-        </Button>
+        <div className="flex items-center gap-2">
+          {isAdminContext && <ProjectSelector className="mr-2" showAllOption />}
+          <Button onClick={() => setShowCreateDialog(true)} data-testid="button-create-expense">
+            <Plus className="h-4 w-4 mr-2" />
+            New Expense
+          </Button>
+        </div>
       </div>
 
       <ExpenseStats expenses={expenses} />

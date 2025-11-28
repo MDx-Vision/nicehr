@@ -15,6 +15,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useProjectContext } from "@/hooks/use-project-context";
+import { ProjectSelector } from "@/components/ProjectSelector";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, isToday, differenceInMinutes, parseISO } from "date-fns";
 import { 
@@ -925,6 +927,7 @@ function ViewTimesheetDialog({
 export default function Timesheets() {
   const { toast } = useToast();
   const { isAdmin } = useAuth();
+  const { filterByProject, isAdmin: isAdminContext } = useProjectContext();
   const [activeTab, setActiveTab] = useState("my-timesheets");
   const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -938,7 +941,7 @@ export default function Timesheets() {
   const goToNextWeek = () => setCurrentWeekStart(addWeeks(currentWeekStart, 1));
   const goToToday = () => setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
 
-  const { data: timesheets, isLoading: timesheetsLoading } = useQuery<TimesheetWithDetails[]>({
+  const { data: timesheetsRaw, isLoading: timesheetsLoading } = useQuery<TimesheetWithDetails[]>({
     queryKey: ["/api/timesheets"],
   });
 
@@ -946,10 +949,13 @@ export default function Timesheets() {
     queryKey: ["/api/projects"],
   });
 
-  const { data: pendingTimesheets, isLoading: pendingLoading } = useQuery<TimesheetWithDetails[]>({
+  const { data: pendingTimesheetsRaw, isLoading: pendingLoading } = useQuery<TimesheetWithDetails[]>({
     queryKey: ["/api/admin/timesheets/pending"],
     enabled: isAdmin,
   });
+
+  const timesheets = filterByProject(timesheetsRaw || []);
+  const pendingTimesheets = filterByProject(pendingTimesheetsRaw || []);
 
   const { data: selectedEntries, isLoading: entriesLoading } = useQuery<TimesheetEntry[]>({
     queryKey: ["/api/timesheets", selectedTimesheet?.id, "entries"],
@@ -997,7 +1003,7 @@ export default function Timesheets() {
     return sum;
   }, 0) || 0;
 
-  const pendingApprovalCount = pendingTimesheets?.length || 0;
+  const pendingApprovalCount = pendingTimesheets.length;
 
   const createTimesheetMutation = useMutation({
     mutationFn: async (data: { weekStartDate: string; projectId?: string; notes?: string }) => {
@@ -1147,6 +1153,7 @@ export default function Timesheets() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {isAdminContext && <ProjectSelector className="mr-2" showAllOption />}
           <Button 
             variant="outline" 
             size="icon"

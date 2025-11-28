@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { useProjectContext } from "@/hooks/use-project-context";
+import { ProjectSelector } from "@/components/ProjectSelector";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format, formatDistanceToNow } from "date-fns";
 import { 
@@ -521,10 +523,10 @@ export default function EodReports() {
   const [selectedReport, setSelectedReport] = useState<EodReportWithDetails | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
-  const [projectFilter, setProjectFilter] = useState("all");
   const { toast } = useToast();
+  const { filterByProject, isAdmin } = useProjectContext();
 
-  const { data: reports = [], isLoading: reportsLoading } = useQuery<EodReportWithDetails[]>({
+  const { data: reportsRaw = [], isLoading: reportsLoading } = useQuery<EodReportWithDetails[]>({
     queryKey: ['/api/eod-reports'],
   });
 
@@ -535,6 +537,8 @@ export default function EodReports() {
   const { data: projects = [] } = useQuery<Project[]>({
     queryKey: ['/api/projects'],
   });
+
+  const reports = filterByProject(reportsRaw);
 
   const approveMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -568,7 +572,6 @@ export default function EodReports() {
 
   const filteredReports = reports.filter(report => {
     if (statusFilter !== "all" && report.status !== statusFilter) return false;
-    if (projectFilter !== "all" && report.projectId !== projectFilter) return false;
     return true;
   });
 
@@ -581,10 +584,13 @@ export default function EodReports() {
             End-of-day reports for daily work summaries
           </p>
         </div>
-        <Button onClick={() => setCreateDialogOpen(true)} data-testid="button-new-report">
-          <Plus className="h-4 w-4 mr-2" />
-          New Report
-        </Button>
+        <div className="flex items-center gap-2">
+          {isAdmin && <ProjectSelector className="mr-2" showAllOption />}
+          <Button onClick={() => setCreateDialogOpen(true)} data-testid="button-new-report">
+            <Plus className="h-4 w-4 mr-2" />
+            New Report
+          </Button>
+        </div>
       </div>
 
       <AnalyticsCards analytics={analytics} />
@@ -610,17 +616,6 @@ export default function EodReports() {
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={projectFilter} onValueChange={setProjectFilter}>
-                <SelectTrigger className="w-[160px]" data-testid="filter-project">
-                  <SelectValue placeholder="Project" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Projects</SelectItem>
-                  {projects.map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           </div>
         </CardHeader>
@@ -636,11 +631,11 @@ export default function EodReports() {
               <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium">No reports found</h3>
               <p className="text-muted-foreground mb-4">
-                {statusFilter !== "all" || projectFilter !== "all"
+                {statusFilter !== "all"
                   ? "Try adjusting your filters"
                   : "Create your first EOD report to get started"}
               </p>
-              {statusFilter === "all" && projectFilter === "all" && (
+              {statusFilter === "all" && (
                 <Button onClick={() => setCreateDialogOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   New Report

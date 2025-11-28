@@ -15,6 +15,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { useProjectContext } from "@/hooks/use-project-context";
+import { ProjectSelector } from "@/components/ProjectSelector";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format, formatDistanceToNow } from "date-fns";
 import { 
@@ -632,9 +634,9 @@ export default function SupportTickets() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
-  const [projectFilter, setProjectFilter] = useState("all");
+  const { filterByProject, isAdmin } = useProjectContext();
 
-  const { data: tickets = [], isLoading: ticketsLoading } = useQuery<SupportTicketWithDetails[]>({
+  const { data: ticketsRaw = [], isLoading: ticketsLoading } = useQuery<SupportTicketWithDetails[]>({
     queryKey: ['/api/support-tickets'],
   });
 
@@ -645,6 +647,8 @@ export default function SupportTickets() {
   const { data: consultants = [] } = useQuery<Consultant[]>({
     queryKey: ['/api/consultants'],
   });
+
+  const tickets = filterByProject(ticketsRaw);
 
   const filteredTickets = tickets.filter(ticket => {
     if (searchQuery) {
@@ -658,7 +662,6 @@ export default function SupportTickets() {
     
     if (statusFilter !== "all" && ticket.status !== statusFilter) return false;
     if (priorityFilter !== "all" && ticket.priority !== priorityFilter) return false;
-    if (projectFilter !== "all" && ticket.projectId !== projectFilter) return false;
     
     return true;
   });
@@ -672,10 +675,13 @@ export default function SupportTickets() {
             Manage and track support tickets across all projects
           </p>
         </div>
-        <Button onClick={() => setCreateDialogOpen(true)} data-testid="button-new-ticket">
-          <Plus className="h-4 w-4 mr-2" />
-          New Ticket
-        </Button>
+        <div className="flex items-center gap-2">
+          {isAdmin && <ProjectSelector className="mr-2" showAllOption />}
+          <Button onClick={() => setCreateDialogOpen(true)} data-testid="button-new-ticket">
+            <Plus className="h-4 w-4 mr-2" />
+            New Ticket
+          </Button>
+        </div>
       </div>
 
       {!ticketsLoading && <TicketStats tickets={tickets} />}
@@ -723,17 +729,6 @@ export default function SupportTickets() {
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={projectFilter} onValueChange={setProjectFilter}>
-                <SelectTrigger className="w-[160px]" data-testid="filter-project">
-                  <SelectValue placeholder="Project" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Projects</SelectItem>
-                  {projects.map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           </div>
         </CardHeader>
@@ -749,11 +744,11 @@ export default function SupportTickets() {
               <Ticket className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium">No tickets found</h3>
               <p className="text-muted-foreground mb-4">
-                {searchQuery || statusFilter !== "all" || priorityFilter !== "all" || projectFilter !== "all"
+                {searchQuery || statusFilter !== "all" || priorityFilter !== "all"
                   ? "Try adjusting your filters"
                   : "Create your first support ticket to get started"}
               </p>
-              {!searchQuery && statusFilter === "all" && priorityFilter === "all" && projectFilter === "all" && (
+              {!searchQuery && statusFilter === "all" && priorityFilter === "all" && (
                 <Button onClick={() => setCreateDialogOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   New Ticket
