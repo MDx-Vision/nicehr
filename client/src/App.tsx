@@ -7,6 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationCenter } from "@/components/NotificationCenter";
+import { DevRoleSwitcher } from "@/components/DevRoleSwitcher";
 import { useAuth } from "@/hooks/useAuth";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -81,6 +82,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           <header className="flex items-center justify-between gap-2 p-3 border-b bg-card">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
             <div className="flex items-center gap-2">
+              <DevRoleSwitcher />
               <NotificationCenter />
               <ThemeToggle />
             </div>
