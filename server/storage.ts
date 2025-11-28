@@ -309,9 +309,57 @@ import {
   type ComplianceAnalytics,
   type AIAnalytics,
   type AIInsight,
+  contractTemplates,
+  contracts,
+  contractSigners,
+  contractSignatures,
+  contractAuditEvents,
+  chatChannels,
+  channelMembers,
+  chatMessages,
+  chatMessageReads,
+  shiftChatSummaries,
+  identityVerifications,
+  identityDocuments,
+  verificationEvents,
+  fraudFlags,
+  type ContractTemplate,
+  type InsertContractTemplate,
+  type Contract,
+  type InsertContract,
+  type ContractSigner,
+  type InsertContractSigner,
+  type ContractSignature,
+  type InsertContractSignature,
+  type ContractAuditEvent,
+  type InsertContractAuditEvent,
+  type ContractWithDetails,
+  type ContractSignerWithDetails,
+  type ChatChannel,
+  type InsertChatChannel,
+  type ChannelMember,
+  type InsertChannelMember,
+  type ChatMessage,
+  type InsertChatMessage,
+  type ChatMessageRead,
+  type InsertChatMessageRead,
+  type ShiftChatSummary,
+  type InsertShiftChatSummary,
+  type ChatChannelWithDetails,
+  type ChatMessageWithSender,
+  type IdentityVerification,
+  type InsertIdentityVerification,
+  type IdentityDocument,
+  type InsertIdentityDocument,
+  type VerificationEvent,
+  type InsertVerificationEvent,
+  type FraudFlag,
+  type InsertFraudFlag,
+  type IdentityVerificationWithDetails,
+  type FraudFlagWithDetails,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, lte, ilike, or, desc, asc, sql } from "drizzle-orm";
+import { eq, and, gte, lte, ilike, or, desc, asc, sql, inArray, lt, gt } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -925,6 +973,97 @@ export interface IStorage {
   
   // AI Analytics
   getAIAnalytics(): Promise<AIAnalytics>;
+
+  // ============================================
+  // PHASE 16: DIGITAL SIGNATURES & CONTRACTS
+  // ============================================
+
+  // Contract Templates
+  createContractTemplate(data: InsertContractTemplate): Promise<ContractTemplate>;
+  getContractTemplate(id: string): Promise<ContractTemplate | undefined>;
+  listContractTemplates(filters?: { isActive?: boolean; templateType?: string }): Promise<ContractTemplate[]>;
+  updateContractTemplate(id: string, data: Partial<InsertContractTemplate>): Promise<ContractTemplate | undefined>;
+  deleteContractTemplate(id: string): Promise<boolean>;
+
+  // Contracts
+  createContract(data: InsertContract): Promise<Contract>;
+  getContract(id: string): Promise<Contract | undefined>;
+  getContractWithDetails(id: string): Promise<ContractWithDetails | undefined>;
+  listContracts(filters?: { consultantId?: string; projectId?: string; status?: string }): Promise<ContractWithDetails[]>;
+  updateContract(id: string, data: Partial<InsertContract>): Promise<Contract | undefined>;
+  generateContractNumber(): Promise<string>;
+
+  // Contract Signers
+  createContractSigner(data: InsertContractSigner): Promise<ContractSigner>;
+  getContractSigners(contractId: string): Promise<ContractSignerWithDetails[]>;
+  updateContractSigner(id: string, data: Partial<InsertContractSigner>): Promise<ContractSigner | undefined>;
+
+  // Contract Signatures
+  createContractSignature(data: InsertContractSignature): Promise<ContractSignature>;
+  getContractSignatures(contractId: string): Promise<ContractSignature[]>;
+
+  // Contract Audit Events
+  createContractAuditEvent(data: InsertContractAuditEvent): Promise<ContractAuditEvent>;
+  getContractAuditEvents(contractId: string): Promise<ContractAuditEvent[]>;
+
+  // ============================================
+  // PHASE 17: REAL-TIME CHAT
+  // ============================================
+
+  // Chat Channels
+  createChatChannel(data: InsertChatChannel): Promise<ChatChannel>;
+  getChatChannel(id: string): Promise<ChatChannel | undefined>;
+  getChatChannelWithDetails(id: string, userId: string): Promise<ChatChannelWithDetails | undefined>;
+  listChatChannels(userId: string, filters?: { projectId?: string; channelType?: string }): Promise<ChatChannelWithDetails[]>;
+  updateChatChannel(id: string, data: Partial<InsertChatChannel>): Promise<ChatChannel | undefined>;
+
+  // Channel Members
+  addChannelMember(data: InsertChannelMember): Promise<ChannelMember>;
+  removeChannelMember(channelId: string, userId: string): Promise<boolean>;
+  getChannelMembers(channelId: string): Promise<ChannelMember[]>;
+  updateChannelMember(id: string, data: Partial<InsertChannelMember>): Promise<ChannelMember | undefined>;
+  isChannelMember(channelId: string, userId: string): Promise<boolean>;
+
+  // Chat Messages
+  createChatMessage(data: InsertChatMessage): Promise<ChatMessage>;
+  getChatMessage(id: string): Promise<ChatMessage | undefined>;
+  getChatMessages(channelId: string, options?: { limit?: number; before?: string }): Promise<ChatMessageWithSender[]>;
+  updateChatMessage(id: string, data: Partial<InsertChatMessage>): Promise<ChatMessage | undefined>;
+  deleteMessage(id: string): Promise<boolean>;
+
+  // Message Reads
+  markMessageRead(data: InsertChatMessageRead): Promise<ChatMessageRead>;
+  getUnreadCount(channelId: string, userId: string): Promise<number>;
+
+  // Shift Summaries
+  createShiftSummary(data: InsertShiftChatSummary): Promise<ShiftChatSummary>;
+  getShiftSummaries(channelId: string, filters?: { shiftDate?: string }): Promise<ShiftChatSummary[]>;
+
+  // ============================================
+  // PHASE 18: IDENTITY VERIFICATION
+  // ============================================
+
+  // Identity Verifications
+  createIdentityVerification(data: InsertIdentityVerification): Promise<IdentityVerification>;
+  getIdentityVerification(id: string): Promise<IdentityVerification | undefined>;
+  getIdentityVerificationWithDetails(id: string): Promise<IdentityVerificationWithDetails | undefined>;
+  getUserVerification(userId: string): Promise<IdentityVerification | undefined>;
+  listIdentityVerifications(filters?: { status?: string; consultantId?: string }): Promise<IdentityVerificationWithDetails[]>;
+  updateIdentityVerification(id: string, data: Partial<InsertIdentityVerification>): Promise<IdentityVerification | undefined>;
+
+  // Identity Documents
+  createIdentityDocument(data: InsertIdentityDocument): Promise<IdentityDocument>;
+  getIdentityDocuments(verificationId: string): Promise<IdentityDocument[]>;
+  updateIdentityDocument(id: string, data: Partial<InsertIdentityDocument>): Promise<IdentityDocument | undefined>;
+
+  // Verification Events
+  createVerificationEvent(data: InsertVerificationEvent): Promise<VerificationEvent>;
+  getVerificationEvents(verificationId: string): Promise<VerificationEvent[]>;
+
+  // Fraud Flags
+  createFraudFlag(data: InsertFraudFlag): Promise<FraudFlag>;
+  getFraudFlags(filters?: { userId?: string; isResolved?: boolean }): Promise<FraudFlagWithDetails[]>;
+  updateFraudFlag(id: string, data: Partial<InsertFraudFlag>): Promise<FraudFlag | undefined>;
 }
 
 export interface ConsultantSearchFilters {
@@ -7711,6 +7850,476 @@ export class DatabaseStorage implements IStorage {
       demandForecast,
       performanceTrends
     };
+  }
+
+  // ============================================
+  // DIGITAL SIGNATURES & CONTRACTS
+  // ============================================
+
+  async createContractTemplate(data: InsertContractTemplate): Promise<ContractTemplate> {
+    const [template] = await db.insert(contractTemplates).values(data).returning();
+    return template;
+  }
+
+  async getContractTemplate(id: string): Promise<ContractTemplate | undefined> {
+    const [template] = await db.select().from(contractTemplates).where(eq(contractTemplates.id, id));
+    return template;
+  }
+
+  async listContractTemplates(filters?: { isActive?: boolean; templateType?: string }): Promise<ContractTemplate[]> {
+    const conditions: any[] = [];
+    if (filters?.isActive !== undefined) conditions.push(eq(contractTemplates.isActive, filters.isActive));
+    if (filters?.templateType) conditions.push(eq(contractTemplates.templateType, filters.templateType));
+    return conditions.length > 0
+      ? db.select().from(contractTemplates).where(and(...conditions)).orderBy(desc(contractTemplates.createdAt))
+      : db.select().from(contractTemplates).orderBy(desc(contractTemplates.createdAt));
+  }
+
+  async updateContractTemplate(id: string, data: Partial<InsertContractTemplate>): Promise<ContractTemplate | undefined> {
+    const [updated] = await db.update(contractTemplates).set({ ...data, updatedAt: new Date() }).where(eq(contractTemplates.id, id)).returning();
+    return updated;
+  }
+
+  async deleteContractTemplate(id: string): Promise<boolean> {
+    const result = await db.delete(contractTemplates).where(eq(contractTemplates.id, id));
+    return true;
+  }
+
+  async createContract(data: InsertContract): Promise<Contract> {
+    const contractNumber = await this.generateContractNumber();
+    const [contract] = await db.insert(contracts).values({ ...data, contractNumber }).returning();
+    return contract;
+  }
+
+  async getContract(id: string): Promise<Contract | undefined> {
+    const [contract] = await db.select().from(contracts).where(eq(contracts.id, id));
+    return contract;
+  }
+
+  async getContractWithDetails(id: string): Promise<ContractWithDetails | undefined> {
+    const [contract] = await db.select().from(contracts).where(eq(contracts.id, id));
+    if (!contract) return undefined;
+
+    const template = contract.templateId
+      ? await this.getContractTemplate(contract.templateId)
+      : null;
+
+    let consultantData = null;
+    if (contract.consultantId) {
+      const [consultant] = await db.select({
+        id: consultants.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+      }).from(consultants).leftJoin(users, eq(consultants.userId, users.id)).where(eq(consultants.id, contract.consultantId));
+      if (consultant) {
+        consultantData = { id: consultant.id, user: { firstName: consultant.firstName, lastName: consultant.lastName } };
+      }
+    }
+
+    let projectData = null;
+    if (contract.projectId) {
+      const [project] = await db.select({ id: projects.id, name: projects.name }).from(projects).where(eq(projects.id, contract.projectId));
+      projectData = project || null;
+    }
+
+    let hospitalData = null;
+    if (contract.hospitalId) {
+      const [hospital] = await db.select({ id: hospitals.id, name: hospitals.name }).from(hospitals).where(eq(hospitals.id, contract.hospitalId));
+      hospitalData = hospital || null;
+    }
+
+    let createdByData = null;
+    if (contract.createdById) {
+      const [user] = await db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName }).from(users).where(eq(users.id, contract.createdById));
+      createdByData = user || null;
+    }
+
+    const signers = await this.getContractSigners(id);
+
+    return {
+      ...contract,
+      template: template || null,
+      consultant: consultantData,
+      project: projectData,
+      hospital: hospitalData,
+      createdBy: createdByData,
+      signers,
+    };
+  }
+
+  async listContracts(filters?: { consultantId?: string; projectId?: string; status?: string }): Promise<ContractWithDetails[]> {
+    const conditions: any[] = [];
+    if (filters?.consultantId) conditions.push(eq(contracts.consultantId, filters.consultantId));
+    if (filters?.projectId) conditions.push(eq(contracts.projectId, filters.projectId));
+    if (filters?.status) conditions.push(eq(contracts.status, filters.status as any));
+
+    const contractsList = conditions.length > 0
+      ? await db.select().from(contracts).where(and(...conditions)).orderBy(desc(contracts.createdAt))
+      : await db.select().from(contracts).orderBy(desc(contracts.createdAt));
+
+    const results: ContractWithDetails[] = [];
+    for (const contract of contractsList) {
+      const withDetails = await this.getContractWithDetails(contract.id);
+      if (withDetails) results.push(withDetails);
+    }
+    return results;
+  }
+
+  async updateContract(id: string, data: Partial<InsertContract>): Promise<Contract | undefined> {
+    const [updated] = await db.update(contracts).set({ ...data, updatedAt: new Date() }).where(eq(contracts.id, id)).returning();
+    return updated;
+  }
+
+  async generateContractNumber(): Promise<string> {
+    const year = new Date().getFullYear();
+    const allContracts = await db.select({ contractNumber: contracts.contractNumber }).from(contracts);
+    const yearContracts = allContracts.filter(c => c.contractNumber?.startsWith(`NICEHR-${year}`));
+    const nextNum = yearContracts.length + 1;
+    return `NICEHR-${year}-${String(nextNum).padStart(5, '0')}`;
+  }
+
+  async createContractSigner(data: InsertContractSigner): Promise<ContractSigner> {
+    const [signer] = await db.insert(contractSigners).values(data).returning();
+    return signer;
+  }
+
+  async getContractSigners(contractId: string): Promise<ContractSignerWithDetails[]> {
+    const signersList = await db.select().from(contractSigners).where(eq(contractSigners.contractId, contractId)).orderBy(contractSigners.signingOrder);
+    const results: ContractSignerWithDetails[] = [];
+
+    for (const signer of signersList) {
+      const [user] = await db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName, email: users.email }).from(users).where(eq(users.id, signer.userId));
+      const signatures = await db.select().from(contractSignatures).where(eq(contractSignatures.signerId, signer.id));
+      results.push({ ...signer, user: user || { id: signer.userId, firstName: null, lastName: null, email: null }, signatures });
+    }
+    return results;
+  }
+
+  async updateContractSigner(id: string, data: Partial<InsertContractSigner>): Promise<ContractSigner | undefined> {
+    const [updated] = await db.update(contractSigners).set(data).where(eq(contractSigners.id, id)).returning();
+    return updated;
+  }
+
+  async createContractSignature(data: InsertContractSignature): Promise<ContractSignature> {
+    const [signature] = await db.insert(contractSignatures).values(data).returning();
+    return signature;
+  }
+
+  async getContractSignatures(contractId: string): Promise<ContractSignature[]> {
+    return db.select().from(contractSignatures).where(eq(contractSignatures.contractId, contractId));
+  }
+
+  async createContractAuditEvent(data: InsertContractAuditEvent): Promise<ContractAuditEvent> {
+    const [event] = await db.insert(contractAuditEvents).values(data).returning();
+    return event;
+  }
+
+  async getContractAuditEvents(contractId: string): Promise<ContractAuditEvent[]> {
+    return db.select().from(contractAuditEvents).where(eq(contractAuditEvents.contractId, contractId)).orderBy(desc(contractAuditEvents.createdAt));
+  }
+
+  // ============================================
+  // REAL-TIME CHAT
+  // ============================================
+
+  async createChatChannel(data: InsertChatChannel): Promise<ChatChannel> {
+    const [channel] = await db.insert(chatChannels).values(data).returning();
+    return channel;
+  }
+
+  async getChatChannel(id: string): Promise<ChatChannel | undefined> {
+    const [channel] = await db.select().from(chatChannels).where(eq(chatChannels.id, id));
+    return channel;
+  }
+
+  async getChatChannelWithDetails(id: string, userId: string): Promise<ChatChannelWithDetails | undefined> {
+    const [channel] = await db.select().from(chatChannels).where(eq(chatChannels.id, id));
+    if (!channel) return undefined;
+
+    let projectData = null;
+    if (channel.projectId) {
+      const [project] = await db.select({ id: projects.id, name: projects.name }).from(projects).where(eq(projects.id, channel.projectId));
+      projectData = project || null;
+    }
+
+    let unitData = null;
+    if (channel.unitId) {
+      const [unit] = await db.select({ id: hospitalUnits.id, name: hospitalUnits.name }).from(hospitalUnits).where(eq(hospitalUnits.id, channel.unitId));
+      unitData = unit || null;
+    }
+
+    let createdByData = null;
+    if (channel.createdById) {
+      const [user] = await db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName }).from(users).where(eq(users.id, channel.createdById));
+      createdByData = user || null;
+    }
+
+    const members = await db.select().from(channelMembers).where(eq(channelMembers.channelId, id));
+    const memberCount = members.length;
+    const unreadCount = await this.getUnreadCount(id, userId);
+
+    const [lastMessage] = await db.select().from(chatMessages).where(and(eq(chatMessages.channelId, id), eq(chatMessages.isDeleted, false))).orderBy(desc(chatMessages.createdAt)).limit(1);
+
+    let lastMessageWithSender: ChatMessageWithSender | null = null;
+    if (lastMessage) {
+      const [sender] = await db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName, profileImageUrl: users.profileImageUrl }).from(users).where(eq(users.id, lastMessage.senderId));
+      lastMessageWithSender = { ...lastMessage, sender: sender || { id: lastMessage.senderId, firstName: null, lastName: null, profileImageUrl: null } };
+    }
+
+    return {
+      ...channel,
+      project: projectData,
+      unit: unitData,
+      createdBy: createdByData,
+      memberCount,
+      unreadCount,
+      lastMessage: lastMessageWithSender,
+    };
+  }
+
+  async listChatChannels(userId: string, filters?: { projectId?: string; channelType?: string }): Promise<ChatChannelWithDetails[]> {
+    const userMemberships = await db.select({ channelId: channelMembers.channelId }).from(channelMembers).where(eq(channelMembers.userId, userId));
+    const memberChannelIds = userMemberships.map(m => m.channelId);
+
+    if (memberChannelIds.length === 0) return [];
+
+    const conditions: any[] = [inArray(chatChannels.id, memberChannelIds), eq(chatChannels.isArchived, false)];
+    if (filters?.projectId) conditions.push(eq(chatChannels.projectId, filters.projectId));
+    if (filters?.channelType) conditions.push(eq(chatChannels.channelType, filters.channelType));
+
+    const channelsList = await db.select().from(chatChannels).where(and(...conditions)).orderBy(desc(chatChannels.updatedAt));
+
+    const results: ChatChannelWithDetails[] = [];
+    for (const channel of channelsList) {
+      const withDetails = await this.getChatChannelWithDetails(channel.id, userId);
+      if (withDetails) results.push(withDetails);
+    }
+    return results;
+  }
+
+  async updateChatChannel(id: string, data: Partial<InsertChatChannel>): Promise<ChatChannel | undefined> {
+    const [updated] = await db.update(chatChannels).set({ ...data, updatedAt: new Date() }).where(eq(chatChannels.id, id)).returning();
+    return updated;
+  }
+
+  async addChannelMember(data: InsertChannelMember): Promise<ChannelMember> {
+    const [member] = await db.insert(channelMembers).values(data).returning();
+    return member;
+  }
+
+  async removeChannelMember(channelId: string, userId: string): Promise<boolean> {
+    await db.delete(channelMembers).where(and(eq(channelMembers.channelId, channelId), eq(channelMembers.userId, userId)));
+    return true;
+  }
+
+  async getChannelMembers(channelId: string): Promise<ChannelMember[]> {
+    return db.select().from(channelMembers).where(eq(channelMembers.channelId, channelId));
+  }
+
+  async updateChannelMember(id: string, data: Partial<InsertChannelMember>): Promise<ChannelMember | undefined> {
+    const [updated] = await db.update(channelMembers).set(data).where(eq(channelMembers.id, id)).returning();
+    return updated;
+  }
+
+  async isChannelMember(channelId: string, userId: string): Promise<boolean> {
+    const [member] = await db.select().from(channelMembers).where(and(eq(channelMembers.channelId, channelId), eq(channelMembers.userId, userId)));
+    return !!member;
+  }
+
+  async createChatMessage(data: InsertChatMessage): Promise<ChatMessage> {
+    const [message] = await db.insert(chatMessages).values(data).returning();
+    await db.update(chatChannels).set({ updatedAt: new Date() }).where(eq(chatChannels.id, data.channelId));
+    return message;
+  }
+
+  async getChatMessage(id: string): Promise<ChatMessage | undefined> {
+    const [message] = await db.select().from(chatMessages).where(eq(chatMessages.id, id));
+    return message;
+  }
+
+  async getChatMessages(channelId: string, options?: { limit?: number; before?: string }): Promise<ChatMessageWithSender[]> {
+    const conditions: any[] = [eq(chatMessages.channelId, channelId), eq(chatMessages.isDeleted, false)];
+    if (options?.before) {
+      const [beforeMsg] = await db.select().from(chatMessages).where(eq(chatMessages.id, options.before));
+      if (beforeMsg?.createdAt) {
+        conditions.push(lt(chatMessages.createdAt, beforeMsg.createdAt));
+      }
+    }
+
+    const limit = options?.limit || 50;
+    const messages = await db.select().from(chatMessages).where(and(...conditions)).orderBy(desc(chatMessages.createdAt)).limit(limit);
+
+    const results: ChatMessageWithSender[] = [];
+    for (const message of messages.reverse()) {
+      const [sender] = await db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName, profileImageUrl: users.profileImageUrl }).from(users).where(eq(users.id, message.senderId));
+      results.push({ ...message, sender: sender || { id: message.senderId, firstName: null, lastName: null, profileImageUrl: null } });
+    }
+    return results;
+  }
+
+  async updateChatMessage(id: string, data: Partial<InsertChatMessage>): Promise<ChatMessage | undefined> {
+    const [updated] = await db.update(chatMessages).set({ ...data, isEdited: true, updatedAt: new Date() }).where(eq(chatMessages.id, id)).returning();
+    return updated;
+  }
+
+  async deleteMessage(id: string): Promise<boolean> {
+    await db.update(chatMessages).set({ isDeleted: true, updatedAt: new Date() }).where(eq(chatMessages.id, id));
+    return true;
+  }
+
+  async markMessageRead(data: InsertChatMessageRead): Promise<ChatMessageRead> {
+    const existing = await db.select().from(chatMessageReads).where(and(eq(chatMessageReads.messageId, data.messageId), eq(chatMessageReads.userId, data.userId)));
+    if (existing.length > 0) return existing[0];
+    const [read] = await db.insert(chatMessageReads).values(data).returning();
+    return read;
+  }
+
+  async getUnreadCount(channelId: string, userId: string): Promise<number> {
+    const [membership] = await db.select().from(channelMembers).where(and(eq(channelMembers.channelId, channelId), eq(channelMembers.userId, userId)));
+    if (!membership) return 0;
+
+    const lastReadAt = membership.lastReadAt || new Date(0);
+    const unreadMessages = await db.select().from(chatMessages).where(and(eq(chatMessages.channelId, channelId), eq(chatMessages.isDeleted, false), gt(chatMessages.createdAt, lastReadAt)));
+    return unreadMessages.length;
+  }
+
+  async createShiftSummary(data: InsertShiftChatSummary): Promise<ShiftChatSummary> {
+    const [summary] = await db.insert(shiftChatSummaries).values(data).returning();
+    return summary;
+  }
+
+  async getShiftSummaries(channelId: string, filters?: { shiftDate?: string }): Promise<ShiftChatSummary[]> {
+    const conditions: any[] = [eq(shiftChatSummaries.channelId, channelId)];
+    if (filters?.shiftDate) conditions.push(eq(shiftChatSummaries.shiftDate, filters.shiftDate));
+    return db.select().from(shiftChatSummaries).where(and(...conditions)).orderBy(desc(shiftChatSummaries.shiftDate));
+  }
+
+  // ============================================
+  // IDENTITY VERIFICATION
+  // ============================================
+
+  async createIdentityVerification(data: InsertIdentityVerification): Promise<IdentityVerification> {
+    const [verification] = await db.insert(identityVerifications).values(data).returning();
+    return verification;
+  }
+
+  async getIdentityVerification(id: string): Promise<IdentityVerification | undefined> {
+    const [verification] = await db.select().from(identityVerifications).where(eq(identityVerifications.id, id));
+    return verification;
+  }
+
+  async getIdentityVerificationWithDetails(id: string): Promise<IdentityVerificationWithDetails | undefined> {
+    const [verification] = await db.select().from(identityVerifications).where(eq(identityVerifications.id, id));
+    if (!verification) return undefined;
+
+    const [user] = await db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName, email: users.email }).from(users).where(eq(users.id, verification.userId));
+
+    let consultantData = null;
+    if (verification.consultantId) {
+      consultantData = { id: verification.consultantId };
+    }
+
+    let reviewedByData = null;
+    if (verification.reviewedById) {
+      const [reviewer] = await db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName }).from(users).where(eq(users.id, verification.reviewedById));
+      reviewedByData = reviewer || null;
+    }
+
+    const documents = await this.getIdentityDocuments(id);
+    const events = await this.getVerificationEvents(id);
+    const flags = await db.select().from(fraudFlags).where(eq(fraudFlags.verificationId, id));
+
+    return {
+      ...verification,
+      user: user || { id: verification.userId, firstName: null, lastName: null, email: null },
+      consultant: consultantData,
+      reviewedBy: reviewedByData,
+      documents,
+      events,
+      fraudFlags: flags,
+    };
+  }
+
+  async getUserVerification(userId: string): Promise<IdentityVerification | undefined> {
+    const [verification] = await db.select().from(identityVerifications).where(eq(identityVerifications.userId, userId)).orderBy(desc(identityVerifications.createdAt)).limit(1);
+    return verification;
+  }
+
+  async listIdentityVerifications(filters?: { status?: string; consultantId?: string }): Promise<IdentityVerificationWithDetails[]> {
+    const conditions: any[] = [];
+    if (filters?.status) conditions.push(eq(identityVerifications.status, filters.status as any));
+    if (filters?.consultantId) conditions.push(eq(identityVerifications.consultantId, filters.consultantId));
+
+    const verificationsList = conditions.length > 0
+      ? await db.select().from(identityVerifications).where(and(...conditions)).orderBy(desc(identityVerifications.createdAt))
+      : await db.select().from(identityVerifications).orderBy(desc(identityVerifications.createdAt));
+
+    const results: IdentityVerificationWithDetails[] = [];
+    for (const v of verificationsList) {
+      const withDetails = await this.getIdentityVerificationWithDetails(v.id);
+      if (withDetails) results.push(withDetails);
+    }
+    return results;
+  }
+
+  async updateIdentityVerification(id: string, data: Partial<InsertIdentityVerification>): Promise<IdentityVerification | undefined> {
+    const [updated] = await db.update(identityVerifications).set({ ...data, updatedAt: new Date() }).where(eq(identityVerifications.id, id)).returning();
+    return updated;
+  }
+
+  async createIdentityDocument(data: InsertIdentityDocument): Promise<IdentityDocument> {
+    const [doc] = await db.insert(identityDocuments).values(data).returning();
+    return doc;
+  }
+
+  async getIdentityDocuments(verificationId: string): Promise<IdentityDocument[]> {
+    return db.select().from(identityDocuments).where(eq(identityDocuments.verificationId, verificationId));
+  }
+
+  async updateIdentityDocument(id: string, data: Partial<InsertIdentityDocument>): Promise<IdentityDocument | undefined> {
+    const [updated] = await db.update(identityDocuments).set(data).where(eq(identityDocuments.id, id)).returning();
+    return updated;
+  }
+
+  async createVerificationEvent(data: InsertVerificationEvent): Promise<VerificationEvent> {
+    const [event] = await db.insert(verificationEvents).values(data).returning();
+    return event;
+  }
+
+  async getVerificationEvents(verificationId: string): Promise<VerificationEvent[]> {
+    return db.select().from(verificationEvents).where(eq(verificationEvents.verificationId, verificationId)).orderBy(desc(verificationEvents.createdAt));
+  }
+
+  async createFraudFlag(data: InsertFraudFlag): Promise<FraudFlag> {
+    const [flag] = await db.insert(fraudFlags).values(data).returning();
+    return flag;
+  }
+
+  async getFraudFlags(filters?: { userId?: string; isResolved?: boolean }): Promise<FraudFlagWithDetails[]> {
+    const conditions: any[] = [];
+    if (filters?.userId) conditions.push(eq(fraudFlags.userId, filters.userId));
+    if (filters?.isResolved !== undefined) conditions.push(eq(fraudFlags.isResolved, filters.isResolved));
+
+    const flagsList = conditions.length > 0
+      ? await db.select().from(fraudFlags).where(and(...conditions)).orderBy(desc(fraudFlags.createdAt))
+      : await db.select().from(fraudFlags).orderBy(desc(fraudFlags.createdAt));
+
+    const results: FraudFlagWithDetails[] = [];
+    for (const flag of flagsList) {
+      const [user] = await db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName, email: users.email }).from(users).where(eq(users.id, flag.userId));
+      let resolvedByData = null;
+      if (flag.resolvedById) {
+        const [resolver] = await db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName }).from(users).where(eq(users.id, flag.resolvedById));
+        resolvedByData = resolver || null;
+      }
+      results.push({ ...flag, user: user || { id: flag.userId, firstName: null, lastName: null, email: null }, resolvedBy: resolvedByData });
+    }
+    return results;
+  }
+
+  async updateFraudFlag(id: string, data: Partial<InsertFraudFlag>): Promise<FraudFlag | undefined> {
+    const [updated] = await db.update(fraudFlags).set(data).where(eq(fraudFlags.id, id)).returning();
+    return updated;
   }
 }
 
