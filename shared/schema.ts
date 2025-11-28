@@ -3396,3 +3396,482 @@ export interface PayrollAnalytics {
   averagePayPerConsultant: string;
   recentBatches: PayrollBatchWithDetails[];
 }
+
+// ============================================
+// PHASE 14: TRAVEL MANAGEMENT
+// ============================================
+
+// Travel-related enums
+export const seatPreferenceEnum = pgEnum("seat_preference", ["window", "middle", "aisle"]);
+export const rentalCarPreferenceEnum = pgEnum("rental_car_preference", ["economy", "compact", "midsize", "fullsize", "suv", "luxury"]);
+export const bookingTypeEnum = pgEnum("booking_type", ["flight", "hotel", "rental_car"]);
+export const bookingStatusEnum = pgEnum("booking_status", ["pending", "confirmed", "cancelled", "completed"]);
+export const itineraryStatusEnum = pgEnum("itinerary_status", ["draft", "confirmed", "in_progress", "completed", "cancelled"]);
+export const carpoolStatusEnum = pgEnum("carpool_status", ["open", "full", "cancelled", "completed"]);
+export const carpoolRoleEnum = pgEnum("carpool_role", ["driver", "rider"]);
+export const carpoolMemberStatusEnum = pgEnum("carpool_member_status", ["pending", "confirmed", "cancelled"]);
+export const transportationRoleEnum = pgEnum("transportation_role", ["driver", "shuttle_driver", "coordinator", "other"]);
+
+// ============================================
+// TRAVEL PREFERENCES TABLE
+// ============================================
+
+export const travelPreferences = pgTable("travel_preferences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  consultantId: varchar("consultant_id").references(() => consultants.id).notNull().unique(),
+  preferredAirlines: text("preferred_airlines").array(),
+  seatPreference: seatPreferenceEnum("seat_preference"),
+  rentalCarPreference: rentalCarPreferenceEnum("rental_car_preference"),
+  rentalCarCompany: varchar("rental_car_company"),
+  rentalCarRewardsNumber: varchar("rental_car_rewards_number"),
+  mealPreference: varchar("meal_preference"),
+  specialRequests: text("special_requests"),
+  emergencyContactName: varchar("emergency_contact_name"),
+  emergencyContactPhone: varchar("emergency_contact_phone"),
+  emergencyContactRelation: varchar("emergency_contact_relation"),
+  travelNotes: text("travel_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const travelPreferencesRelations = relations(travelPreferences, ({ one }) => ({
+  consultant: one(consultants, {
+    fields: [travelPreferences.consultantId],
+    references: [consultants.id],
+  }),
+}));
+
+// ============================================
+// TRAVEL BOOKINGS TABLE
+// ============================================
+
+export const travelBookings = pgTable("travel_bookings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  consultantId: varchar("consultant_id").references(() => consultants.id).notNull(),
+  projectId: varchar("project_id").references(() => projects.id),
+  bookingType: bookingTypeEnum("booking_type").notNull(),
+  status: bookingStatusEnum("status").default("pending").notNull(),
+  departureDate: date("departure_date"),
+  returnDate: date("return_date"),
+  // Flight fields
+  airline: varchar("airline"),
+  flightNumber: varchar("flight_number"),
+  departureAirport: varchar("departure_airport"),
+  arrivalAirport: varchar("arrival_airport"),
+  departureTime: time("departure_time"),
+  arrivalTime: time("arrival_time"),
+  // Hotel fields
+  hotelName: varchar("hotel_name"),
+  hotelAddress: varchar("hotel_address"),
+  hotelConfirmationNumber: varchar("hotel_confirmation_number"),
+  checkInDate: date("check_in_date"),
+  checkOutDate: date("check_out_date"),
+  // Rental car fields
+  rentalCompany: varchar("rental_company"),
+  pickupLocation: varchar("pickup_location"),
+  dropoffLocation: varchar("dropoff_location"),
+  vehicleType: varchar("vehicle_type"),
+  rentalConfirmationNumber: varchar("rental_confirmation_number"),
+  // Cost fields
+  estimatedCost: decimal("estimated_cost", { precision: 10, scale: 2 }),
+  actualCost: decimal("actual_cost", { precision: 10, scale: 2 }),
+  confirmationNumber: varchar("confirmation_number"),
+  bookingReference: varchar("booking_reference"),
+  notes: text("notes"),
+  bookedById: varchar("booked_by_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const travelBookingsRelations = relations(travelBookings, ({ one, many }) => ({
+  consultant: one(consultants, {
+    fields: [travelBookings.consultantId],
+    references: [consultants.id],
+  }),
+  project: one(projects, {
+    fields: [travelBookings.projectId],
+    references: [projects.id],
+  }),
+  bookedBy: one(users, {
+    fields: [travelBookings.bookedById],
+    references: [users.id],
+  }),
+  itineraryBookings: many(itineraryBookings),
+}));
+
+// ============================================
+// TRAVEL ITINERARIES TABLE
+// ============================================
+
+export const travelItineraries = pgTable("travel_itineraries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  consultantId: varchar("consultant_id").references(() => consultants.id).notNull(),
+  projectId: varchar("project_id").references(() => projects.id),
+  tripName: varchar("trip_name").notNull(),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  status: itineraryStatusEnum("status").default("draft").notNull(),
+  totalEstimatedCost: decimal("total_estimated_cost", { precision: 12, scale: 2 }),
+  notes: text("notes"),
+  createdById: varchar("created_by_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const travelItinerariesRelations = relations(travelItineraries, ({ one, many }) => ({
+  consultant: one(consultants, {
+    fields: [travelItineraries.consultantId],
+    references: [consultants.id],
+  }),
+  project: one(projects, {
+    fields: [travelItineraries.projectId],
+    references: [projects.id],
+  }),
+  createdBy: one(users, {
+    fields: [travelItineraries.createdById],
+    references: [users.id],
+  }),
+  itineraryBookings: many(itineraryBookings),
+}));
+
+// ============================================
+// ITINERARY BOOKINGS TABLE (Many-to-Many)
+// ============================================
+
+export const itineraryBookings = pgTable("itinerary_bookings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  itineraryId: varchar("itinerary_id").references(() => travelItineraries.id).notNull(),
+  bookingId: varchar("booking_id").references(() => travelBookings.id).notNull(),
+  sequenceOrder: integer("sequence_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const itineraryBookingsRelations = relations(itineraryBookings, ({ one }) => ({
+  itinerary: one(travelItineraries, {
+    fields: [itineraryBookings.itineraryId],
+    references: [travelItineraries.id],
+  }),
+  booking: one(travelBookings, {
+    fields: [itineraryBookings.bookingId],
+    references: [travelBookings.id],
+  }),
+}));
+
+// ============================================
+// CARPOOL GROUPS TABLE
+// ============================================
+
+export const carpoolGroups = pgTable("carpool_groups", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  groupName: varchar("group_name").notNull(),
+  driverId: varchar("driver_id").references(() => consultants.id),
+  departureLocation: varchar("departure_location").notNull(),
+  destinationLocation: varchar("destination_location").notNull(),
+  departureTime: time("departure_time").notNull(),
+  departureDate: date("departure_date").notNull(),
+  seatsAvailable: integer("seats_available").default(0),
+  vehicleDescription: varchar("vehicle_description"),
+  status: carpoolStatusEnum("status").default("open").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const carpoolGroupsRelations = relations(carpoolGroups, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [carpoolGroups.projectId],
+    references: [projects.id],
+  }),
+  driver: one(consultants, {
+    fields: [carpoolGroups.driverId],
+    references: [consultants.id],
+  }),
+  members: many(carpoolMembers),
+}));
+
+// ============================================
+// CARPOOL MEMBERS TABLE
+// ============================================
+
+export const carpoolMembers = pgTable("carpool_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  carpoolId: varchar("carpool_id").references(() => carpoolGroups.id).notNull(),
+  consultantId: varchar("consultant_id").references(() => consultants.id).notNull(),
+  role: carpoolRoleEnum("role").default("rider").notNull(),
+  pickupLocation: varchar("pickup_location"),
+  pickupTime: time("pickup_time"),
+  status: carpoolMemberStatusEnum("status").default("pending").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const carpoolMembersRelations = relations(carpoolMembers, ({ one }) => ({
+  carpool: one(carpoolGroups, {
+    fields: [carpoolMembers.carpoolId],
+    references: [carpoolGroups.id],
+  }),
+  consultant: one(consultants, {
+    fields: [carpoolMembers.consultantId],
+    references: [consultants.id],
+  }),
+}));
+
+// ============================================
+// SHUTTLE SCHEDULES TABLE
+// ============================================
+
+export const shuttleSchedules = pgTable("shuttle_schedules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id),
+  shuttleName: varchar("shuttle_name").notNull(),
+  route: varchar("route"),
+  departureLocation: varchar("departure_location").notNull(),
+  arrivalLocation: varchar("arrival_location").notNull(),
+  departureTime: time("departure_time").notNull(),
+  arrivalTime: time("arrival_time").notNull(),
+  daysOfWeek: text("days_of_week").array(),
+  startDate: date("start_date"),
+  endDate: date("end_date"),
+  capacity: integer("capacity"),
+  driverName: varchar("driver_name"),
+  driverPhone: varchar("driver_phone"),
+  vehicleInfo: varchar("vehicle_info"),
+  isActive: boolean("is_active").default(true).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const shuttleSchedulesRelations = relations(shuttleSchedules, ({ one }) => ({
+  project: one(projects, {
+    fields: [shuttleSchedules.projectId],
+    references: [projects.id],
+  }),
+}));
+
+// ============================================
+// TRANSPORTATION CONTACTS TABLE
+// ============================================
+
+export const transportationContacts = pgTable("transportation_contacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id),
+  name: varchar("name").notNull(),
+  role: transportationRoleEnum("role").default("driver").notNull(),
+  phone: varchar("phone"),
+  email: varchar("email"),
+  photoUrl: varchar("photo_url"),
+  company: varchar("company"),
+  vehicleInfo: varchar("vehicle_info"),
+  availability: text("availability"),
+  notes: text("notes"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const transportationContactsRelations = relations(transportationContacts, ({ one }) => ({
+  project: one(projects, {
+    fields: [transportationContacts.projectId],
+    references: [projects.id],
+  }),
+}));
+
+// ============================================
+// PHASE 14 INSERT SCHEMAS
+// ============================================
+
+export const insertTravelPreferenceSchema = createInsertSchema(travelPreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTravelBookingSchema = createInsertSchema(travelBookings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTravelItinerarySchema = createInsertSchema(travelItineraries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertItineraryBookingSchema = createInsertSchema(itineraryBookings).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCarpoolGroupSchema = createInsertSchema(carpoolGroups).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCarpoolMemberSchema = createInsertSchema(carpoolMembers).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertShuttleScheduleSchema = createInsertSchema(shuttleSchedules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTransportationContactSchema = createInsertSchema(transportationContacts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// ============================================
+// PHASE 14 TYPES
+// ============================================
+
+export type TravelPreference = typeof travelPreferences.$inferSelect;
+export type InsertTravelPreference = z.infer<typeof insertTravelPreferenceSchema>;
+
+export type TravelBooking = typeof travelBookings.$inferSelect;
+export type InsertTravelBooking = z.infer<typeof insertTravelBookingSchema>;
+
+export type TravelItinerary = typeof travelItineraries.$inferSelect;
+export type InsertTravelItinerary = z.infer<typeof insertTravelItinerarySchema>;
+
+export type ItineraryBooking = typeof itineraryBookings.$inferSelect;
+export type InsertItineraryBooking = z.infer<typeof insertItineraryBookingSchema>;
+
+export type CarpoolGroup = typeof carpoolGroups.$inferSelect;
+export type InsertCarpoolGroup = z.infer<typeof insertCarpoolGroupSchema>;
+
+export type CarpoolMember = typeof carpoolMembers.$inferSelect;
+export type InsertCarpoolMember = z.infer<typeof insertCarpoolMemberSchema>;
+
+export type ShuttleSchedule = typeof shuttleSchedules.$inferSelect;
+export type InsertShuttleSchedule = z.infer<typeof insertShuttleScheduleSchema>;
+
+export type TransportationContact = typeof transportationContacts.$inferSelect;
+export type InsertTransportationContact = z.infer<typeof insertTransportationContactSchema>;
+
+// ============================================
+// PHASE 14 EXTENDED TYPES
+// ============================================
+
+export interface TravelPreferenceWithConsultant extends TravelPreference {
+  consultant: {
+    id: string;
+    user: {
+      firstName: string | null;
+      lastName: string | null;
+    };
+  };
+}
+
+export interface TravelBookingWithDetails extends TravelBooking {
+  consultant: {
+    id: string;
+    user: {
+      firstName: string | null;
+      lastName: string | null;
+    };
+  };
+  project: {
+    id: string;
+    name: string;
+  } | null;
+  bookedBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+}
+
+export interface TravelItineraryWithDetails extends TravelItinerary {
+  consultant: {
+    id: string;
+    user: {
+      firstName: string | null;
+      lastName: string | null;
+    };
+  };
+  project: {
+    id: string;
+    name: string;
+  } | null;
+  createdBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+  bookings: TravelBookingWithDetails[];
+}
+
+export interface CarpoolGroupWithDetails extends CarpoolGroup {
+  project: {
+    id: string;
+    name: string;
+  };
+  driver: {
+    id: string;
+    user: {
+      firstName: string | null;
+      lastName: string | null;
+    };
+  } | null;
+  members: CarpoolMemberWithDetails[];
+}
+
+export interface CarpoolMemberWithDetails extends CarpoolMember {
+  consultant: {
+    id: string;
+    user: {
+      firstName: string | null;
+      lastName: string | null;
+    };
+  };
+}
+
+export interface ShuttleScheduleWithDetails extends ShuttleSchedule {
+  project: {
+    id: string;
+    name: string;
+  } | null;
+}
+
+export interface TransportationContactWithProject extends TransportationContact {
+  project: {
+    id: string;
+    name: string;
+  } | null;
+}
+
+export interface TravelAnalytics {
+  totalBookings: number;
+  pendingBookings: number;
+  confirmedBookings: number;
+  totalEstimatedCost: string;
+  totalActualCost: string;
+  bookingsByType: Array<{
+    type: string;
+    count: number;
+    cost: string;
+  }>;
+  bookingsByStatus: Array<{
+    status: string;
+    count: number;
+  }>;
+  upcomingTrips: TravelItineraryWithDetails[];
+}
+
+export interface CarpoolAnalytics {
+  totalGroups: number;
+  openGroups: number;
+  totalMembers: number;
+  groupsByStatus: Array<{
+    status: string;
+    count: number;
+  }>;
+  recentGroups: CarpoolGroupWithDetails[];
+}
