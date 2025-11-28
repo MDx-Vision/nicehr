@@ -456,51 +456,112 @@
 
 ---
 
-## PHASE 16: REMAINING FEATURES & INTEGRATIONS
+## PHASE 16: ROLE-BASED ACCESS CONTROL (RBAC) ✅
 
-### 16.1 Zoho Suite Feature Comparison (Reference Only - Not Integrations)
+### 16.0 Granular RBAC System ✅
+- [x] Create roles table (name, displayName, description, roleType, isActive)
+- [x] Create permissions table (domain, action, name, displayName, description)
+- [x] Create role_permissions junction table
+- [x] Create user_role_assignments table
+- [x] 44 granular permissions across 15 domains
+- [x] Permission-based API middleware (17+ endpoints protected)
+- [x] Permission context provider (usePermissions hook)
+- [x] Navigation gating by permissions (hasNavAccess function)
+- [x] Role Management admin UI with permission matrix
+- [x] Custom role creation capability
+- [x] Project context filtering for consultants
+
+### 16.0.1 Base Roles (4 roles) ✅
+- [x] Administrator - Full system access (all 44 permissions)
+- [x] Hospital Leadership - Hospital-wide view access to reports/financials
+- [x] Hospital Staff - Operational data access
+- [x] Consultant - Access to assigned projects and own data only
+
+### 16.0.2 Implementation Leadership Roles (7 roles) ✅
+- [x] Implementation Project Manager - Full project oversight across all phases
+- [x] Go-Live Coordinator - Command center & escalation management
+- [x] Training Lead - Training program & super user coordination
+- [x] Command Center Manager - Real-time go-live operations
+- [x] Application Analyst - Technical config, build & tier 2 support
+- [x] Support Desk Lead - Tier 1 support & ticket triage
+- [x] Quality Assurance Lead - Quality metrics & compliance tracking
+
+### 16.0.3 Phase-Specific Roles (5 roles) ✅
+- [x] At-the-Elbow Support - On-floor go-live assistance
+- [x] Super User - Hospital staff with elevated training/support access
+- [x] Optimization Analyst - Post-go-live workflow optimization
+- [x] Stabilization Lead - Post-go-live issue resolution
+- [x] Transition Coordinator - Implementation to operations handoff
+
+### 16.0.4 Permission Domains (15 domains) ✅
+- [x] dashboard (view, admin)
+- [x] projects (view, create, edit, delete)
+- [x] consultants (view, create, manage)
+- [x] hospitals (view, create, manage)
+- [x] timesheets (view_own, view_all, edit_own, approve)
+- [x] support_tickets (view_own, view_all, create, manage)
+- [x] eod_reports (view_own, view_all, create)
+- [x] training (view, manage)
+- [x] travel (view_own, view_all, manage)
+- [x] financials (view, manage)
+- [x] quality (view, manage)
+- [x] compliance (view, manage)
+- [x] reports (view, create, manage)
+- [x] admin (view, manage)
+- [x] rbac (view, manage)
+
+---
+
+## PHASE 17: REMAINING FEATURES & INTEGRATIONS
+
+### 17.1 Zoho Suite Feature Comparison (Reference Only - Not Integrations)
 These were example features we wanted to replicate in our own system:
 
 | Zoho Product | Feature Intent | NICEHR Status | Implementation |
 |--------------|----------------|---------------|----------------|
-| Zoho Sign | Contracts/E-signatures | **GAP** | Need: Digital signature capture, contract generation |
+| Zoho Sign | Contracts/E-signatures | **DONE** | Phase 17.2: Digital signature capture, contract templates |
 | Zoho Shifts | Scheduling | **DONE** | Phase 10: Timesheets, availability, shift swaps, sign-in/out |
 | Zoho Desk | Ticketing | **DONE** | Phase 12: Support tickets, SLA, escalations, EOD reports |
 | Zoho Learn | Training/LMS | **DONE** | Phase 11: Courses, assessments, login labs, knowledge base |
-| Zoho Cliq | Chat/Messaging | **DEFERRED** | Phase 9.5: Unit-based real-time chat (not yet implemented) |
+| Zoho Cliq | Chat/Messaging | **DONE** | Phase 17.3: Real-time WebSocket chat with channels and DMs |
 | Zoho Analytics | Reporting | **DONE** | Analytics dashboards, KPIs, AI insights, ROI tracking |
 
-**Result: 4/6 features covered, 2 gaps remaining**
+**Result: 6/6 features covered - All Zoho equivalents implemented!**
 
-### 16.2 Digital Signatures & Contracts (GAP from Zoho Sign)
-- [ ] Contract generation after docs approved
-- [ ] Digital signature capture widget
-- [ ] Signature/initials storage on file
-- [ ] Contract templates
-- [ ] Multi-party signing workflow
-- [ ] Signature audit trail
+### 17.2 Digital Signatures & Contracts ✅
+- [x] Create contracts table with signature tracking
+- [x] Digital signature capture widget (react-signature-canvas)
+- [x] Signature image storage in Object Storage
+- [x] Contract templates system
+- [x] Multi-party signing workflow (signer1/signer2 fields)
+- [x] Signature audit trail (signedAt timestamps, IP tracking)
+- [x] Contract status workflow (draft/sent/partially_signed/completed/cancelled)
+- [x] Contracts page with create/view/sign capabilities
 
-### 16.3 Real-Time Chat (GAP from Zoho Cliq - Deferred)
-- [ ] Create chat_channels table
-- [ ] Auto-create channels per unit/module
-- [ ] WebSocket real-time messaging
-- [ ] Channel membership by role
-- [ ] Message history
-- [ ] Quiet hours configuration (7pm-7am)
-- [ ] Shift summary/cliffnotes feature
+### 17.3 Real-Time Chat ✅
+- [x] Create chat_channels table
+- [x] Create chat_messages table
+- [x] Create direct_messages table
+- [x] WebSocket server with secure session authentication
+- [x] Real-time message broadcast
+- [x] Channel membership by role
+- [x] Message history with infinite scroll
+- [x] Direct messaging between users
+- [x] Message read receipts (isRead flag)
+- [x] Chat page with channels and DMs tabs
 
-### 16.4 Identity Verification
+### 17.4 Identity Verification 🔄
 - [ ] ID.me integration
 - [ ] Document verification
 - [ ] Fraud prevention
 - [ ] Multi-device detection
 
-### 16.5 EMR Vendor APIs
+### 17.5 EMR Vendor APIs (Future)
 - [ ] Epic training verification
 - [ ] Cerner certification tracking
 - [ ] Other EMR integrations
 
-### 16.6 External System Integrations
+### 17.6 External System Integrations (Future)
 - [ ] Travel booking APIs
 - [ ] Expense management APIs
 - [ ] Payroll system integration
@@ -579,11 +640,12 @@ These were example features we wanted to replicate in our own system:
 | Phase 12 (Ticketing) | 18 | 18 | 0 | 0 |
 | Phase 13 (Financial) | 25 | 25 | 0 | 0 |
 | Phase 14 (Travel) | 18 | 18 | 0 | 0 |
-| Phase 15 (Advanced) | 25 | 19 | 0 | 6 |
-| Phase 16 (Remaining) | 24 | 0 | 0 | 24 |
-| **TOTAL** | **315** | **285** | **0** | **30** |
+| Phase 15 (Advanced) | 25 | 25 | 0 | 0 |
+| Phase 16 (RBAC) | 32 | 32 | 0 | 0 |
+| Phase 17 (Digital Sig/Chat/Integrations) | 26 | 18 | 0 | 8 |
+| **TOTAL** | **349** | **341** | **0** | **8** |
 
-**Overall Progress: 90% Complete**
+**Overall Progress: 98% Complete**
 
 ---
 
@@ -595,26 +657,35 @@ These were example features we wanted to replicate in our own system:
 | Help Desk & Ticketing | Zoho Desk | **COMPLETE** |
 | Training & LMS | Zoho Learn | **COMPLETE** |
 | Analytics & Reporting | Zoho Analytics | **COMPLETE** |
-| Digital Signatures | Zoho Sign | **NOT STARTED** |
-| Real-Time Chat | Zoho Cliq | **DEFERRED** |
+| Digital Signatures | Zoho Sign | **COMPLETE** |
+| Real-Time Chat | Zoho Cliq | **COMPLETE** |
 
-**4 of 6 Zoho-equivalent features are fully implemented in NICEHR**
+**6 of 6 Zoho-equivalent features are fully implemented in NICEHR**
 
 ---
 
 ## NEXT STEPS
 
-**Priority Gaps to Address:**
-1. **Digital Signatures (16.2)** - Contract generation, e-signature capture, signature storage
-2. **Real-Time Chat (16.3)** - Unit-based messaging (currently deferred)
-
-**Optional Integrations:**
-- Identity verification (ID.me)
-- EMR vendor APIs (Epic, Cerner)
-- External system connections
+**Optional Integrations (Future):**
+- Identity verification (ID.me) - 17.4
+- EMR vendor APIs (Epic, Cerner) - 17.5
+- External system connections - 17.6
 
 **Deferred Items:**
 - Mobile Experience (PWA, offline mode, push notifications, biometric login)
+- Calendar sync (Google, Outlook)
+
+---
+
+## RECENT UPDATES
+
+**November 28, 2025:**
+- Added 11 implementation-specific roles to RBAC (Go-Live Coordinator, Training Lead, etc.)
+- Added 5 phase-specific roles (At-the-Elbow Support, Super User, Optimization Analyst, etc.)
+- Total of 15 roles now available (4 base + 11 implementation)
+- 44 granular permissions across 15 domains
+- Permission-based navigation gating
+- Role Management admin UI with permission matrix
 
 ---
 
