@@ -357,6 +357,41 @@ import {
   type InsertFraudFlag,
   type IdentityVerificationWithDetails,
   type FraudFlagWithDetails,
+  reportTemplates,
+  savedReports,
+  scheduledReports,
+  reportRuns,
+  exportLogs,
+  executiveDashboards,
+  dashboardWidgets,
+  kpiDefinitions,
+  kpiSnapshots,
+  type ReportTemplate,
+  type InsertReportTemplate,
+  type SavedReport,
+  type InsertSavedReport,
+  type ScheduledReport,
+  type InsertScheduledReport,
+  type ReportRun,
+  type InsertReportRun,
+  type ExportLog,
+  type InsertExportLog,
+  type ExecutiveDashboard,
+  type InsertExecutiveDashboard,
+  type DashboardWidget,
+  type InsertDashboardWidget,
+  type KpiDefinition,
+  type InsertKpiDefinition,
+  type KpiSnapshot,
+  type InsertKpiSnapshot,
+  type ReportTemplateWithDetails,
+  type SavedReportWithDetails,
+  type ScheduledReportWithDetails,
+  type ReportRunWithDetails,
+  type ExecutiveDashboardWithDetails,
+  type KpiDefinitionWithDetails,
+  type ReportAnalytics,
+  type DashboardAnalytics,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, ilike, or, desc, asc, sql, inArray, lt, gt } from "drizzle-orm";
@@ -1064,6 +1099,74 @@ export interface IStorage {
   createFraudFlag(data: InsertFraudFlag): Promise<FraudFlag>;
   getFraudFlags(filters?: { userId?: string; isResolved?: boolean }): Promise<FraudFlagWithDetails[]>;
   updateFraudFlag(id: string, data: Partial<InsertFraudFlag>): Promise<FraudFlag | undefined>;
+
+  // ============================================
+  // PHASE 17: REPORTING & BUSINESS INTELLIGENCE
+  // ============================================
+
+  // Report Templates
+  createReportTemplate(data: InsertReportTemplate): Promise<ReportTemplate>;
+  getReportTemplate(id: string): Promise<ReportTemplate | undefined>;
+  listReportTemplates(filters?: { category?: string; isActive?: boolean }): Promise<ReportTemplateWithDetails[]>;
+  updateReportTemplate(id: string, data: Partial<InsertReportTemplate>): Promise<ReportTemplate | undefined>;
+  deleteReportTemplate(id: string): Promise<boolean>;
+
+  // Saved Reports
+  createSavedReport(data: InsertSavedReport): Promise<SavedReport>;
+  getSavedReport(id: string): Promise<SavedReport | undefined>;
+  getSavedReportWithDetails(id: string): Promise<SavedReportWithDetails | undefined>;
+  listSavedReports(userId: string, filters?: { templateId?: string; isFavorite?: boolean; isPublic?: boolean }): Promise<SavedReportWithDetails[]>;
+  updateSavedReport(id: string, data: Partial<InsertSavedReport>): Promise<SavedReport | undefined>;
+  deleteSavedReport(id: string): Promise<boolean>;
+
+  // Scheduled Reports
+  createScheduledReport(data: InsertScheduledReport): Promise<ScheduledReport>;
+  getScheduledReport(id: string): Promise<ScheduledReport | undefined>;
+  listScheduledReports(userId: string, filters?: { isActive?: boolean }): Promise<ScheduledReportWithDetails[]>;
+  updateScheduledReport(id: string, data: Partial<InsertScheduledReport>): Promise<ScheduledReport | undefined>;
+  deleteScheduledReport(id: string): Promise<boolean>;
+  getScheduledReportsDue(): Promise<ScheduledReport[]>;
+
+  // Report Runs
+  createReportRun(data: InsertReportRun): Promise<ReportRun>;
+  getReportRun(id: string): Promise<ReportRun | undefined>;
+  listReportRuns(filters?: { userId?: string; savedReportId?: string; scheduledReportId?: string; status?: string }): Promise<ReportRunWithDetails[]>;
+  updateReportRun(id: string, data: Partial<InsertReportRun>): Promise<ReportRun | undefined>;
+
+  // Export Logs
+  createExportLog(data: InsertExportLog): Promise<ExportLog>;
+  listExportLogs(userId: string, filters?: { exportType?: string; format?: string }): Promise<ExportLog[]>;
+
+  // Executive Dashboards
+  createExecutiveDashboard(data: InsertExecutiveDashboard): Promise<ExecutiveDashboard>;
+  getExecutiveDashboard(id: string): Promise<ExecutiveDashboard | undefined>;
+  getExecutiveDashboardWithDetails(id: string): Promise<ExecutiveDashboardWithDetails | undefined>;
+  listExecutiveDashboards(userId: string, filters?: { isPublic?: boolean }): Promise<ExecutiveDashboardWithDetails[]>;
+  updateExecutiveDashboard(id: string, data: Partial<InsertExecutiveDashboard>): Promise<ExecutiveDashboard | undefined>;
+  deleteExecutiveDashboard(id: string): Promise<boolean>;
+
+  // Dashboard Widgets
+  createDashboardWidget(data: InsertDashboardWidget): Promise<DashboardWidget>;
+  getDashboardWidget(id: string): Promise<DashboardWidget | undefined>;
+  listDashboardWidgets(dashboardId: string): Promise<DashboardWidget[]>;
+  updateDashboardWidget(id: string, data: Partial<InsertDashboardWidget>): Promise<DashboardWidget | undefined>;
+  deleteDashboardWidget(id: string): Promise<boolean>;
+
+  // KPI Definitions
+  createKpiDefinition(data: InsertKpiDefinition): Promise<KpiDefinition>;
+  getKpiDefinition(id: string): Promise<KpiDefinition | undefined>;
+  listKpiDefinitions(filters?: { category?: string; isActive?: boolean }): Promise<KpiDefinitionWithDetails[]>;
+  updateKpiDefinition(id: string, data: Partial<InsertKpiDefinition>): Promise<KpiDefinition | undefined>;
+  deleteKpiDefinition(id: string): Promise<boolean>;
+
+  // KPI Snapshots
+  createKpiSnapshot(data: InsertKpiSnapshot): Promise<KpiSnapshot>;
+  listKpiSnapshots(kpiId: string, filters?: { limit?: number }): Promise<KpiSnapshot[]>;
+  getLatestKpiSnapshot(kpiId: string): Promise<KpiSnapshot | undefined>;
+
+  // Analytics
+  getReportAnalytics(): Promise<ReportAnalytics>;
+  getDashboardAnalytics(): Promise<DashboardAnalytics>;
 }
 
 export interface ConsultantSearchFilters {
@@ -8320,6 +8423,520 @@ export class DatabaseStorage implements IStorage {
   async updateFraudFlag(id: string, data: Partial<InsertFraudFlag>): Promise<FraudFlag | undefined> {
     const [updated] = await db.update(fraudFlags).set(data).where(eq(fraudFlags.id, id)).returning();
     return updated;
+  }
+
+  // ============================================
+  // PHASE 17: REPORTING & BUSINESS INTELLIGENCE
+  // ============================================
+
+  // Report Templates
+  async createReportTemplate(data: InsertReportTemplate): Promise<ReportTemplate> {
+    const [template] = await db.insert(reportTemplates).values(data).returning();
+    return template;
+  }
+
+  async getReportTemplate(id: string): Promise<ReportTemplate | undefined> {
+    const [template] = await db.select().from(reportTemplates).where(eq(reportTemplates.id, id));
+    return template;
+  }
+
+  async listReportTemplates(filters?: { category?: string; isActive?: boolean }): Promise<ReportTemplateWithDetails[]> {
+    const conditions: any[] = [];
+    if (filters?.category) conditions.push(eq(reportTemplates.category, filters.category));
+    if (filters?.isActive !== undefined) conditions.push(eq(reportTemplates.isActive, filters.isActive));
+
+    const templatesList = conditions.length > 0
+      ? await db.select().from(reportTemplates).where(and(...conditions)).orderBy(desc(reportTemplates.createdAt))
+      : await db.select().from(reportTemplates).orderBy(desc(reportTemplates.createdAt));
+
+    const results: ReportTemplateWithDetails[] = [];
+    for (const template of templatesList) {
+      let createdByData = null;
+      if (template.createdById) {
+        const [creator] = await db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName }).from(users).where(eq(users.id, template.createdById));
+        createdByData = creator || null;
+      }
+
+      const savedReportCountResult = await db.select().from(savedReports).where(eq(savedReports.templateId, template.id));
+      const savedReportCount = savedReportCountResult.length;
+
+      results.push({
+        ...template,
+        createdBy: createdByData,
+        savedReportCount,
+      });
+    }
+    return results;
+  }
+
+  async updateReportTemplate(id: string, data: Partial<InsertReportTemplate>): Promise<ReportTemplate | undefined> {
+    const [updated] = await db.update(reportTemplates).set({ ...data, updatedAt: new Date() }).where(eq(reportTemplates.id, id)).returning();
+    return updated;
+  }
+
+  async deleteReportTemplate(id: string): Promise<boolean> {
+    await db.delete(reportTemplates).where(eq(reportTemplates.id, id));
+    return true;
+  }
+
+  // Saved Reports
+  async createSavedReport(data: InsertSavedReport): Promise<SavedReport> {
+    const [report] = await db.insert(savedReports).values(data).returning();
+    return report;
+  }
+
+  async getSavedReport(id: string): Promise<SavedReport | undefined> {
+    const [report] = await db.select().from(savedReports).where(eq(savedReports.id, id));
+    return report;
+  }
+
+  async getSavedReportWithDetails(id: string): Promise<SavedReportWithDetails | undefined> {
+    const [report] = await db.select().from(savedReports).where(eq(savedReports.id, id));
+    if (!report) return undefined;
+
+    let templateData = null;
+    if (report.templateId) {
+      const [template] = await db.select().from(reportTemplates).where(eq(reportTemplates.id, report.templateId));
+      templateData = template || null;
+    }
+
+    const [user] = await db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName }).from(users).where(eq(users.id, report.userId));
+
+    const scheduledReportsList = await db.select().from(scheduledReports).where(eq(scheduledReports.savedReportId, id));
+
+    const [lastRun] = await db.select().from(reportRuns).where(eq(reportRuns.savedReportId, id)).orderBy(desc(reportRuns.createdAt)).limit(1);
+
+    return {
+      ...report,
+      template: templateData,
+      user: user || { id: report.userId, firstName: null, lastName: null },
+      scheduledReports: scheduledReportsList,
+      lastRun: lastRun || null,
+    };
+  }
+
+  async listSavedReports(userId: string, filters?: { templateId?: string; isFavorite?: boolean; isPublic?: boolean }): Promise<SavedReportWithDetails[]> {
+    const conditions: any[] = [eq(savedReports.userId, userId)];
+    if (filters?.templateId) conditions.push(eq(savedReports.templateId, filters.templateId));
+    if (filters?.isFavorite !== undefined) conditions.push(eq(savedReports.isFavorite, filters.isFavorite));
+    if (filters?.isPublic !== undefined) conditions.push(eq(savedReports.isPublic, filters.isPublic));
+
+    const reportsList = await db.select().from(savedReports).where(and(...conditions)).orderBy(desc(savedReports.createdAt));
+
+    const results: SavedReportWithDetails[] = [];
+    for (const report of reportsList) {
+      const withDetails = await this.getSavedReportWithDetails(report.id);
+      if (withDetails) results.push(withDetails);
+    }
+    return results;
+  }
+
+  async updateSavedReport(id: string, data: Partial<InsertSavedReport>): Promise<SavedReport | undefined> {
+    const [updated] = await db.update(savedReports).set({ ...data, updatedAt: new Date() }).where(eq(savedReports.id, id)).returning();
+    return updated;
+  }
+
+  async deleteSavedReport(id: string): Promise<boolean> {
+    await db.delete(savedReports).where(eq(savedReports.id, id));
+    return true;
+  }
+
+  // Scheduled Reports
+  async createScheduledReport(data: InsertScheduledReport): Promise<ScheduledReport> {
+    const [report] = await db.insert(scheduledReports).values(data).returning();
+    return report;
+  }
+
+  async getScheduledReport(id: string): Promise<ScheduledReport | undefined> {
+    const [report] = await db.select().from(scheduledReports).where(eq(scheduledReports.id, id));
+    return report;
+  }
+
+  async listScheduledReports(userId: string, filters?: { isActive?: boolean }): Promise<ScheduledReportWithDetails[]> {
+    const conditions: any[] = [eq(scheduledReports.userId, userId)];
+    if (filters?.isActive !== undefined) conditions.push(eq(scheduledReports.isActive, filters.isActive));
+
+    const reportsList = await db.select().from(scheduledReports).where(and(...conditions)).orderBy(desc(scheduledReports.createdAt));
+
+    const results: ScheduledReportWithDetails[] = [];
+    for (const report of reportsList) {
+      const savedReportWithDetails = await this.getSavedReportWithDetails(report.savedReportId);
+      if (!savedReportWithDetails) continue;
+
+      const [user] = await db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName }).from(users).where(eq(users.id, report.userId));
+
+      const [lastRun] = await db.select().from(reportRuns).where(eq(reportRuns.scheduledReportId, report.id)).orderBy(desc(reportRuns.createdAt)).limit(1);
+
+      results.push({
+        ...report,
+        savedReport: savedReportWithDetails,
+        user: user || { id: report.userId, firstName: null, lastName: null },
+        lastRun: lastRun || null,
+      });
+    }
+    return results;
+  }
+
+  async updateScheduledReport(id: string, data: Partial<InsertScheduledReport>): Promise<ScheduledReport | undefined> {
+    const [updated] = await db.update(scheduledReports).set({ ...data, updatedAt: new Date() }).where(eq(scheduledReports.id, id)).returning();
+    return updated;
+  }
+
+  async deleteScheduledReport(id: string): Promise<boolean> {
+    await db.delete(scheduledReports).where(eq(scheduledReports.id, id));
+    return true;
+  }
+
+  async getScheduledReportsDue(): Promise<ScheduledReport[]> {
+    const now = new Date();
+    return db.select().from(scheduledReports).where(
+      and(
+        eq(scheduledReports.isActive, true),
+        lte(scheduledReports.nextRunAt, now)
+      )
+    ).orderBy(asc(scheduledReports.nextRunAt));
+  }
+
+  // Report Runs
+  async createReportRun(data: InsertReportRun): Promise<ReportRun> {
+    const [run] = await db.insert(reportRuns).values(data).returning();
+    return run;
+  }
+
+  async getReportRun(id: string): Promise<ReportRun | undefined> {
+    const [run] = await db.select().from(reportRuns).where(eq(reportRuns.id, id));
+    return run;
+  }
+
+  async listReportRuns(filters?: { userId?: string; savedReportId?: string; scheduledReportId?: string; status?: string }): Promise<ReportRunWithDetails[]> {
+    const conditions: any[] = [];
+    if (filters?.userId) conditions.push(eq(reportRuns.userId, filters.userId));
+    if (filters?.savedReportId) conditions.push(eq(reportRuns.savedReportId, filters.savedReportId));
+    if (filters?.scheduledReportId) conditions.push(eq(reportRuns.scheduledReportId, filters.scheduledReportId));
+    if (filters?.status) conditions.push(eq(reportRuns.status, filters.status));
+
+    const runsList = conditions.length > 0
+      ? await db.select().from(reportRuns).where(and(...conditions)).orderBy(desc(reportRuns.createdAt))
+      : await db.select().from(reportRuns).orderBy(desc(reportRuns.createdAt));
+
+    const results: ReportRunWithDetails[] = [];
+    for (const run of runsList) {
+      let savedReportData = null;
+      if (run.savedReportId) {
+        const [sr] = await db.select({ id: savedReports.id, name: savedReports.name }).from(savedReports).where(eq(savedReports.id, run.savedReportId));
+        savedReportData = sr || null;
+      }
+
+      let scheduledReportData = null;
+      if (run.scheduledReportId) {
+        const [schr] = await db.select({ id: scheduledReports.id, name: scheduledReports.name }).from(scheduledReports).where(eq(scheduledReports.id, run.scheduledReportId));
+        scheduledReportData = schr || null;
+      }
+
+      const [user] = await db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName }).from(users).where(eq(users.id, run.userId));
+
+      results.push({
+        ...run,
+        savedReport: savedReportData,
+        scheduledReport: scheduledReportData,
+        user: user || { id: run.userId, firstName: null, lastName: null },
+      });
+    }
+    return results;
+  }
+
+  async updateReportRun(id: string, data: Partial<InsertReportRun>): Promise<ReportRun | undefined> {
+    const [updated] = await db.update(reportRuns).set(data).where(eq(reportRuns.id, id)).returning();
+    return updated;
+  }
+
+  // Export Logs
+  async createExportLog(data: InsertExportLog): Promise<ExportLog> {
+    const [log] = await db.insert(exportLogs).values(data).returning();
+    return log;
+  }
+
+  async listExportLogs(userId: string, filters?: { exportType?: string; format?: string }): Promise<ExportLog[]> {
+    const conditions: any[] = [eq(exportLogs.userId, userId)];
+    if (filters?.exportType) conditions.push(eq(exportLogs.exportType, filters.exportType));
+    if (filters?.format) conditions.push(eq(exportLogs.format, filters.format));
+
+    return db.select().from(exportLogs).where(and(...conditions)).orderBy(desc(exportLogs.createdAt));
+  }
+
+  // Executive Dashboards
+  async createExecutiveDashboard(data: InsertExecutiveDashboard): Promise<ExecutiveDashboard> {
+    const [dashboard] = await db.insert(executiveDashboards).values(data).returning();
+    return dashboard;
+  }
+
+  async getExecutiveDashboard(id: string): Promise<ExecutiveDashboard | undefined> {
+    const [dashboard] = await db.select().from(executiveDashboards).where(eq(executiveDashboards.id, id));
+    return dashboard;
+  }
+
+  async getExecutiveDashboardWithDetails(id: string): Promise<ExecutiveDashboardWithDetails | undefined> {
+    const [dashboard] = await db.select().from(executiveDashboards).where(eq(executiveDashboards.id, id));
+    if (!dashboard) return undefined;
+
+    const [user] = await db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName }).from(users).where(eq(users.id, dashboard.userId));
+
+    const widgetsList = await db.select().from(dashboardWidgets).where(eq(dashboardWidgets.dashboardId, id)).orderBy(asc(dashboardWidgets.createdAt));
+
+    return {
+      ...dashboard,
+      user: user || { id: dashboard.userId, firstName: null, lastName: null },
+      widgets: widgetsList,
+      widgetCount: widgetsList.length,
+    };
+  }
+
+  async listExecutiveDashboards(userId: string, filters?: { isPublic?: boolean }): Promise<ExecutiveDashboardWithDetails[]> {
+    const conditions: any[] = [];
+    if (filters?.isPublic !== undefined) {
+      conditions.push(or(eq(executiveDashboards.userId, userId), eq(executiveDashboards.isPublic, true)));
+      if (filters.isPublic) {
+        conditions.push(eq(executiveDashboards.isPublic, true));
+      }
+    } else {
+      conditions.push(or(eq(executiveDashboards.userId, userId), eq(executiveDashboards.isPublic, true)));
+    }
+
+    const dashboardsList = await db.select().from(executiveDashboards).where(and(...conditions)).orderBy(desc(executiveDashboards.createdAt));
+
+    const results: ExecutiveDashboardWithDetails[] = [];
+    for (const dashboard of dashboardsList) {
+      const withDetails = await this.getExecutiveDashboardWithDetails(dashboard.id);
+      if (withDetails) results.push(withDetails);
+    }
+    return results;
+  }
+
+  async updateExecutiveDashboard(id: string, data: Partial<InsertExecutiveDashboard>): Promise<ExecutiveDashboard | undefined> {
+    const [updated] = await db.update(executiveDashboards).set({ ...data, updatedAt: new Date() }).where(eq(executiveDashboards.id, id)).returning();
+    return updated;
+  }
+
+  async deleteExecutiveDashboard(id: string): Promise<boolean> {
+    await db.delete(dashboardWidgets).where(eq(dashboardWidgets.dashboardId, id));
+    await db.delete(executiveDashboards).where(eq(executiveDashboards.id, id));
+    return true;
+  }
+
+  // Dashboard Widgets
+  async createDashboardWidget(data: InsertDashboardWidget): Promise<DashboardWidget> {
+    const [widget] = await db.insert(dashboardWidgets).values(data).returning();
+    return widget;
+  }
+
+  async getDashboardWidget(id: string): Promise<DashboardWidget | undefined> {
+    const [widget] = await db.select().from(dashboardWidgets).where(eq(dashboardWidgets.id, id));
+    return widget;
+  }
+
+  async listDashboardWidgets(dashboardId: string): Promise<DashboardWidget[]> {
+    return db.select().from(dashboardWidgets).where(eq(dashboardWidgets.dashboardId, dashboardId)).orderBy(asc(dashboardWidgets.createdAt));
+  }
+
+  async updateDashboardWidget(id: string, data: Partial<InsertDashboardWidget>): Promise<DashboardWidget | undefined> {
+    const [updated] = await db.update(dashboardWidgets).set({ ...data, updatedAt: new Date() }).where(eq(dashboardWidgets.id, id)).returning();
+    return updated;
+  }
+
+  async deleteDashboardWidget(id: string): Promise<boolean> {
+    await db.delete(dashboardWidgets).where(eq(dashboardWidgets.id, id));
+    return true;
+  }
+
+  // KPI Definitions
+  async createKpiDefinition(data: InsertKpiDefinition): Promise<KpiDefinition> {
+    const [kpi] = await db.insert(kpiDefinitions).values(data).returning();
+    return kpi;
+  }
+
+  async getKpiDefinition(id: string): Promise<KpiDefinition | undefined> {
+    const [kpi] = await db.select().from(kpiDefinitions).where(eq(kpiDefinitions.id, id));
+    return kpi;
+  }
+
+  async listKpiDefinitions(filters?: { category?: string; isActive?: boolean }): Promise<KpiDefinitionWithDetails[]> {
+    const conditions: any[] = [];
+    if (filters?.category) conditions.push(eq(kpiDefinitions.category, filters.category));
+    if (filters?.isActive !== undefined) conditions.push(eq(kpiDefinitions.isActive, filters.isActive));
+
+    const kpisList = conditions.length > 0
+      ? await db.select().from(kpiDefinitions).where(and(...conditions)).orderBy(desc(kpiDefinitions.createdAt))
+      : await db.select().from(kpiDefinitions).orderBy(desc(kpiDefinitions.createdAt));
+
+    const results: KpiDefinitionWithDetails[] = [];
+    for (const kpi of kpisList) {
+      let createdByData = null;
+      if (kpi.createdById) {
+        const [creator] = await db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName }).from(users).where(eq(users.id, kpi.createdById));
+        createdByData = creator || null;
+      }
+
+      const latestSnapshot = await this.getLatestKpiSnapshot(kpi.id);
+
+      let trend: 'up' | 'down' | 'stable' = 'stable';
+      if (latestSnapshot?.percentChange) {
+        const percentChange = parseFloat(latestSnapshot.percentChange);
+        if (percentChange > 1) trend = 'up';
+        else if (percentChange < -1) trend = 'down';
+      }
+
+      results.push({
+        ...kpi,
+        createdBy: createdByData,
+        latestSnapshot: latestSnapshot || null,
+        trend,
+      });
+    }
+    return results;
+  }
+
+  async updateKpiDefinition(id: string, data: Partial<InsertKpiDefinition>): Promise<KpiDefinition | undefined> {
+    const [updated] = await db.update(kpiDefinitions).set({ ...data, updatedAt: new Date() }).where(eq(kpiDefinitions.id, id)).returning();
+    return updated;
+  }
+
+  async deleteKpiDefinition(id: string): Promise<boolean> {
+    await db.delete(kpiSnapshots).where(eq(kpiSnapshots.kpiId, id));
+    await db.delete(kpiDefinitions).where(eq(kpiDefinitions.id, id));
+    return true;
+  }
+
+  // KPI Snapshots
+  async createKpiSnapshot(data: InsertKpiSnapshot): Promise<KpiSnapshot> {
+    const [snapshot] = await db.insert(kpiSnapshots).values(data).returning();
+    return snapshot;
+  }
+
+  async listKpiSnapshots(kpiId: string, filters?: { limit?: number }): Promise<KpiSnapshot[]> {
+    const limit = filters?.limit || 100;
+    return db.select().from(kpiSnapshots).where(eq(kpiSnapshots.kpiId, kpiId)).orderBy(desc(kpiSnapshots.periodEnd)).limit(limit);
+  }
+
+  async getLatestKpiSnapshot(kpiId: string): Promise<KpiSnapshot | undefined> {
+    const [snapshot] = await db.select().from(kpiSnapshots).where(eq(kpiSnapshots.kpiId, kpiId)).orderBy(desc(kpiSnapshots.periodEnd)).limit(1);
+    return snapshot;
+  }
+
+  // Analytics
+  async getReportAnalytics(): Promise<ReportAnalytics> {
+    const allSavedReports = await db.select().from(savedReports);
+    const allScheduledReports = await db.select().from(scheduledReports);
+    const allExportLogs = await db.select().from(exportLogs);
+    const allReportRuns = await db.select().from(reportRuns);
+    const allTemplates = await db.select().from(reportTemplates);
+
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+    const reportsThisWeek = allReportRuns.filter(r => r.createdAt && r.createdAt >= oneWeekAgo).length;
+    const exportsThisWeek = allExportLogs.filter(e => e.createdAt && e.createdAt >= oneWeekAgo).length;
+
+    const categoryMap = new Map<string, number>();
+    for (const template of allTemplates) {
+      const count = categoryMap.get(template.category) || 0;
+      categoryMap.set(template.category, count + 1);
+    }
+    const reportsByCategory = Array.from(categoryMap.entries()).map(([category, count]) => ({ category, count }));
+
+    const formatMap = new Map<string, number>();
+    for (const log of allExportLogs) {
+      const count = formatMap.get(log.format) || 0;
+      formatMap.set(log.format, count + 1);
+    }
+    const exportsByFormat = Array.from(formatMap.entries()).map(([format, count]) => ({ format, count }));
+
+    const reportRunCounts = new Map<string, number>();
+    for (const run of allReportRuns) {
+      if (run.savedReportId) {
+        const count = reportRunCounts.get(run.savedReportId) || 0;
+        reportRunCounts.set(run.savedReportId, count + 1);
+      }
+    }
+    const topReportIds = Array.from(reportRunCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+    
+    const topReports: Array<{ id: string; name: string; runCount: number }> = [];
+    for (const [reportId, runCount] of topReportIds) {
+      const [report] = await db.select({ id: savedReports.id, name: savedReports.name }).from(savedReports).where(eq(savedReports.id, reportId));
+      if (report) {
+        topReports.push({ id: report.id, name: report.name, runCount });
+      }
+    }
+
+    return {
+      totalReports: allSavedReports.length,
+      totalScheduledReports: allScheduledReports.length,
+      totalExports: allExportLogs.length,
+      reportsThisWeek,
+      exportsThisWeek,
+      reportsByCategory,
+      exportsByFormat,
+      topReports,
+    };
+  }
+
+  async getDashboardAnalytics(): Promise<DashboardAnalytics> {
+    const allDashboards = await db.select().from(executiveDashboards);
+    const allWidgets = await db.select().from(dashboardWidgets);
+    const allKpis = await db.select().from(kpiDefinitions);
+
+    const categoryMap = new Map<string, number>();
+    for (const kpi of allKpis) {
+      const count = categoryMap.get(kpi.category) || 0;
+      categoryMap.set(kpi.category, count + 1);
+    }
+    const kpisByCategory = Array.from(categoryMap.entries()).map(([category, count]) => ({ category, count }));
+
+    let healthy = 0;
+    let warning = 0;
+    let critical = 0;
+
+    for (const kpi of allKpis) {
+      const latestSnapshot = await this.getLatestKpiSnapshot(kpi.id);
+      if (latestSnapshot) {
+        const value = parseFloat(latestSnapshot.value);
+        const warningThreshold = kpi.warningThreshold ? parseFloat(kpi.warningThreshold) : null;
+        const criticalThreshold = kpi.criticalThreshold ? parseFloat(kpi.criticalThreshold) : null;
+
+        if (kpi.trendDirection === 'higher_is_better') {
+          if (criticalThreshold !== null && value <= criticalThreshold) {
+            critical++;
+          } else if (warningThreshold !== null && value <= warningThreshold) {
+            warning++;
+          } else {
+            healthy++;
+          }
+        } else {
+          if (criticalThreshold !== null && value >= criticalThreshold) {
+            critical++;
+          } else if (warningThreshold !== null && value >= warningThreshold) {
+            warning++;
+          } else {
+            healthy++;
+          }
+        }
+      } else {
+        healthy++;
+      }
+    }
+
+    return {
+      totalDashboards: allDashboards.length,
+      totalWidgets: allWidgets.length,
+      totalKpis: allKpis.length,
+      kpisByCategory,
+      kpiHealthStatus: {
+        healthy,
+        warning,
+        critical,
+      },
+    };
   }
 }
 

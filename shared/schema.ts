@@ -4598,6 +4598,247 @@ export type FraudFlag = typeof fraudFlags.$inferSelect;
 export type InsertFraudFlag = z.infer<typeof insertFraudFlagSchema>;
 
 // ============================================
+// PHASE 17: REPORTING & BUSINESS INTELLIGENCE
+// ============================================
+
+// Report Templates - Pre-built report definitions
+export const reportTemplates = pgTable("report_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  category: varchar("category").notNull(), // consultants, projects, financial, compliance, training, operations
+  dataSource: varchar("data_source").notNull(), // The primary table/entity for the report
+  availableColumns: jsonb("available_columns").notNull(), // Array of column definitions with name, label, type, format
+  defaultColumns: text("default_columns").array(), // Default selected columns
+  availableFilters: jsonb("available_filters"), // Filter definitions
+  defaultFilters: jsonb("default_filters"), // Default filter values
+  supportedFormats: text("supported_formats").array().default(["csv", "pdf", "excel"]).notNull(),
+  sortOptions: jsonb("sort_options"), // Available sort fields
+  groupByOptions: text("group_by_options").array(), // Available grouping fields
+  isActive: boolean("is_active").default(true).notNull(),
+  createdById: varchar("created_by_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Saved Reports - User-customized reports
+export const savedReports = pgTable("saved_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  templateId: varchar("template_id").references(() => reportTemplates.id),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  selectedColumns: text("selected_columns").array().notNull(),
+  filters: jsonb("filters"), // Applied filters
+  sortBy: varchar("sort_by"),
+  sortOrder: varchar("sort_order").default("asc"),
+  groupBy: varchar("group_by"),
+  chartType: varchar("chart_type"), // bar, line, pie, table, none
+  chartConfig: jsonb("chart_config"), // Chart-specific options
+  isPublic: boolean("is_public").default(false).notNull(),
+  isFavorite: boolean("is_favorite").default(false).notNull(),
+  lastRunAt: timestamp("last_run_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Scheduled Reports - Automatic report generation
+export const scheduledReports = pgTable("scheduled_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  savedReportId: varchar("saved_report_id").references(() => savedReports.id).notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  name: varchar("name").notNull(),
+  schedule: varchar("schedule").notNull(), // cron expression or preset: daily, weekly, monthly
+  timezone: varchar("timezone").default("America/New_York").notNull(),
+  exportFormat: varchar("export_format").default("pdf").notNull(), // pdf, excel, csv
+  recipients: text("recipients").array(), // Email addresses
+  includeCharts: boolean("include_charts").default(true).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  lastRunAt: timestamp("last_run_at"),
+  nextRunAt: timestamp("next_run_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Report Runs - Execution history
+export const reportRuns = pgTable("report_runs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  savedReportId: varchar("saved_report_id").references(() => savedReports.id),
+  scheduledReportId: varchar("scheduled_report_id").references(() => scheduledReports.id),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  status: varchar("status").default("pending").notNull(), // pending, running, completed, failed
+  exportFormat: varchar("export_format"),
+  rowCount: integer("row_count"),
+  fileUrl: varchar("file_url"),
+  fileSizeBytes: integer("file_size_bytes"),
+  executionTimeMs: integer("execution_time_ms"),
+  errorMessage: text("error_message"),
+  parameters: jsonb("parameters"), // Filters and options used
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Export Logs - Track all data exports
+export const exportLogs = pgTable("export_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  exportType: varchar("export_type").notNull(), // report, data_table, dashboard
+  sourceType: varchar("source_type").notNull(), // consultants, projects, invoices, etc.
+  format: varchar("format").notNull(), // csv, pdf, excel
+  rowCount: integer("row_count"),
+  fileSizeBytes: integer("file_size_bytes"),
+  fileUrl: varchar("file_url"),
+  filters: jsonb("filters"), // What filters were applied
+  ipAddress: varchar("ip_address"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Executive Dashboards - Custom dashboard configurations
+export const executiveDashboards = pgTable("executive_dashboards", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  layout: jsonb("layout"), // Grid layout configuration
+  refreshInterval: integer("refresh_interval").default(300), // Seconds, default 5 min
+  isDefault: boolean("is_default").default(false).notNull(),
+  isPublic: boolean("is_public").default(false).notNull(),
+  theme: varchar("theme").default("light"), // light, dark, auto
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Dashboard Widgets - Individual dashboard components
+export const dashboardWidgets = pgTable("dashboard_widgets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  dashboardId: varchar("dashboard_id").references(() => executiveDashboards.id).notNull(),
+  title: varchar("title").notNull(),
+  widgetType: varchar("widget_type").notNull(), // kpi, chart, table, metric, gauge, heatmap, trend
+  dataSource: varchar("data_source").notNull(), // API endpoint or query
+  config: jsonb("config").notNull(), // Widget-specific configuration
+  position: jsonb("position").notNull(), // x, y, width, height in grid
+  refreshInterval: integer("refresh_interval"), // Override dashboard default
+  drillDownConfig: jsonb("drill_down_config"), // Click to view details
+  thresholds: jsonb("thresholds"), // Color coding based on values
+  isVisible: boolean("is_visible").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// KPI Definitions - Reusable KPI metrics
+export const kpiDefinitions = pgTable("kpi_definitions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  category: varchar("category").notNull(), // financial, operational, quality, compliance
+  calculation: text("calculation").notNull(), // Formula or query
+  unit: varchar("unit"), // %, $, count, hours
+  format: varchar("format").default("number"), // number, currency, percentage, duration
+  targetValue: decimal("target_value", { precision: 15, scale: 2 }),
+  warningThreshold: decimal("warning_threshold", { precision: 15, scale: 2 }),
+  criticalThreshold: decimal("critical_threshold", { precision: 15, scale: 2 }),
+  trendDirection: varchar("trend_direction").default("higher_is_better"), // higher_is_better, lower_is_better
+  dataSource: varchar("data_source").notNull(),
+  refreshFrequency: varchar("refresh_frequency").default("hourly"), // realtime, hourly, daily, weekly
+  isActive: boolean("is_active").default(true).notNull(),
+  createdById: varchar("created_by_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// KPI Snapshots - Historical KPI values
+export const kpiSnapshots = pgTable("kpi_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  kpiId: varchar("kpi_id").references(() => kpiDefinitions.id).notNull(),
+  value: decimal("value", { precision: 15, scale: 4 }).notNull(),
+  previousValue: decimal("previous_value", { precision: 15, scale: 4 }),
+  percentChange: decimal("percent_change", { precision: 10, scale: 2 }),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  metadata: jsonb("metadata"), // Additional context
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Report Relations
+export const reportTemplatesRelations = relations(reportTemplates, ({ one, many }) => ({
+  createdBy: one(users, { fields: [reportTemplates.createdById], references: [users.id] }),
+  savedReports: many(savedReports),
+}));
+
+export const savedReportsRelations = relations(savedReports, ({ one, many }) => ({
+  template: one(reportTemplates, { fields: [savedReports.templateId], references: [reportTemplates.id] }),
+  user: one(users, { fields: [savedReports.userId], references: [users.id] }),
+  scheduledReports: many(scheduledReports),
+  runs: many(reportRuns),
+}));
+
+export const scheduledReportsRelations = relations(scheduledReports, ({ one, many }) => ({
+  savedReport: one(savedReports, { fields: [scheduledReports.savedReportId], references: [savedReports.id] }),
+  user: one(users, { fields: [scheduledReports.userId], references: [users.id] }),
+  runs: many(reportRuns),
+}));
+
+export const reportRunsRelations = relations(reportRuns, ({ one }) => ({
+  savedReport: one(savedReports, { fields: [reportRuns.savedReportId], references: [savedReports.id] }),
+  scheduledReport: one(scheduledReports, { fields: [reportRuns.scheduledReportId], references: [scheduledReports.id] }),
+  user: one(users, { fields: [reportRuns.userId], references: [users.id] }),
+}));
+
+export const exportLogsRelations = relations(exportLogs, ({ one }) => ({
+  user: one(users, { fields: [exportLogs.userId], references: [users.id] }),
+}));
+
+export const executiveDashboardsRelations = relations(executiveDashboards, ({ one, many }) => ({
+  user: one(users, { fields: [executiveDashboards.userId], references: [users.id] }),
+  widgets: many(dashboardWidgets),
+}));
+
+export const dashboardWidgetsRelations = relations(dashboardWidgets, ({ one }) => ({
+  dashboard: one(executiveDashboards, { fields: [dashboardWidgets.dashboardId], references: [executiveDashboards.id] }),
+}));
+
+export const kpiDefinitionsRelations = relations(kpiDefinitions, ({ one, many }) => ({
+  createdBy: one(users, { fields: [kpiDefinitions.createdById], references: [users.id] }),
+  snapshots: many(kpiSnapshots),
+}));
+
+export const kpiSnapshotsRelations = relations(kpiSnapshots, ({ one }) => ({
+  kpi: one(kpiDefinitions, { fields: [kpiSnapshots.kpiId], references: [kpiDefinitions.id] }),
+}));
+
+// Insert schemas
+export const insertReportTemplateSchema = createInsertSchema(reportTemplates).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertSavedReportSchema = createInsertSchema(savedReports).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertScheduledReportSchema = createInsertSchema(scheduledReports).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertReportRunSchema = createInsertSchema(reportRuns).omit({ id: true, createdAt: true });
+export const insertExportLogSchema = createInsertSchema(exportLogs).omit({ id: true, createdAt: true });
+export const insertExecutiveDashboardSchema = createInsertSchema(executiveDashboards).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertDashboardWidgetSchema = createInsertSchema(dashboardWidgets).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertKpiDefinitionSchema = createInsertSchema(kpiDefinitions).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertKpiSnapshotSchema = createInsertSchema(kpiSnapshots).omit({ id: true, createdAt: true });
+
+// Types
+export type ReportTemplate = typeof reportTemplates.$inferSelect;
+export type InsertReportTemplate = z.infer<typeof insertReportTemplateSchema>;
+export type SavedReport = typeof savedReports.$inferSelect;
+export type InsertSavedReport = z.infer<typeof insertSavedReportSchema>;
+export type ScheduledReport = typeof scheduledReports.$inferSelect;
+export type InsertScheduledReport = z.infer<typeof insertScheduledReportSchema>;
+export type ReportRun = typeof reportRuns.$inferSelect;
+export type InsertReportRun = z.infer<typeof insertReportRunSchema>;
+export type ExportLog = typeof exportLogs.$inferSelect;
+export type InsertExportLog = z.infer<typeof insertExportLogSchema>;
+export type ExecutiveDashboard = typeof executiveDashboards.$inferSelect;
+export type InsertExecutiveDashboard = z.infer<typeof insertExecutiveDashboardSchema>;
+export type DashboardWidget = typeof dashboardWidgets.$inferSelect;
+export type InsertDashboardWidget = z.infer<typeof insertDashboardWidgetSchema>;
+export type KpiDefinition = typeof kpiDefinitions.$inferSelect;
+export type InsertKpiDefinition = z.infer<typeof insertKpiDefinitionSchema>;
+export type KpiSnapshot = typeof kpiSnapshots.$inferSelect;
+export type InsertKpiSnapshot = z.infer<typeof insertKpiSnapshotSchema>;
+
+// ============================================
 // PHASE 14 EXTENDED TYPES
 // ============================================
 
@@ -5088,4 +5329,110 @@ export interface FraudFlagWithDetails extends FraudFlag {
     firstName: string | null;
     lastName: string | null;
   } | null;
+}
+
+// ============================================
+// PHASE 17 EXTENDED TYPES
+// ============================================
+
+export interface ReportTemplateWithDetails extends ReportTemplate {
+  createdBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+  savedReportCount: number;
+}
+
+export interface SavedReportWithDetails extends SavedReport {
+  template: ReportTemplate | null;
+  user: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  };
+  scheduledReports: ScheduledReport[];
+  lastRun: ReportRun | null;
+}
+
+export interface ScheduledReportWithDetails extends ScheduledReport {
+  savedReport: SavedReportWithDetails;
+  user: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  };
+  lastRun: ReportRun | null;
+}
+
+export interface ReportRunWithDetails extends ReportRun {
+  savedReport: {
+    id: string;
+    name: string;
+  } | null;
+  scheduledReport: {
+    id: string;
+    name: string;
+  } | null;
+  user: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  };
+}
+
+export interface ExecutiveDashboardWithDetails extends ExecutiveDashboard {
+  user: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  };
+  widgets: DashboardWidget[];
+  widgetCount: number;
+}
+
+export interface KpiDefinitionWithDetails extends KpiDefinition {
+  createdBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+  latestSnapshot: KpiSnapshot | null;
+  trend: 'up' | 'down' | 'stable';
+}
+
+export interface ReportAnalytics {
+  totalReports: number;
+  totalScheduledReports: number;
+  totalExports: number;
+  reportsThisWeek: number;
+  exportsThisWeek: number;
+  reportsByCategory: Array<{
+    category: string;
+    count: number;
+  }>;
+  exportsByFormat: Array<{
+    format: string;
+    count: number;
+  }>;
+  topReports: Array<{
+    id: string;
+    name: string;
+    runCount: number;
+  }>;
+}
+
+export interface DashboardAnalytics {
+  totalDashboards: number;
+  totalWidgets: number;
+  totalKpis: number;
+  kpisByCategory: Array<{
+    category: string;
+    count: number;
+  }>;
+  kpiHealthStatus: {
+    healthy: number;
+    warning: number;
+    critical: number;
+  };
 }
