@@ -1727,6 +1727,17 @@ export async function registerRoutes(
     }
   });
 
+  app.post('/api/admin/seed-demo-data', isAuthenticated, requireRole('admin'), async (req, res) => {
+    try {
+      const { seedDemoData } = await import('./seedDemoData');
+      await seedDemoData();
+      res.json({ success: true, message: "Demo data seeded successfully" });
+    } catch (error) {
+      console.error("Error seeding demo data:", error);
+      res.status(500).json({ message: "Failed to seed demo data" });
+    }
+  });
+
   // ============================================
   // RBAC (Role-Based Access Control) API
   // ============================================
