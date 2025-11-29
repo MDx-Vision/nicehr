@@ -6478,6 +6478,121 @@ export const insertWorkflowExecutionSchema = createInsertSchema(workflowExecutio
 export type InsertWorkflowExecution = z.infer<typeof insertWorkflowExecutionSchema>;
 export type WorkflowExecution = typeof workflowExecutions.$inferSelect;
 
+// ==========================================
+// PHASE 4: ADVANCED ANALYTICS TABLES
+// ==========================================
+
+// Cost Variance Status Enum
+export const costVarianceStatusEnum = pgEnum("cost_variance_status", [
+  "on_track",
+  "at_risk",
+  "over_budget",
+  "under_budget"
+]);
+
+// Go-Live Readiness Snapshots - Stores go-live readiness scores for projects
+export const goLiveReadinessSnapshots = pgTable("go_live_readiness_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  snapshotDate: date("snapshot_date").notNull(),
+  overallScore: decimal("overall_score", { precision: 5, scale: 2 }).notNull(),
+  confidenceLevel: decimal("confidence_level", { precision: 5, scale: 2 }),
+  indicators: jsonb("indicators"),
+  riskFactors: jsonb("risk_factors"),
+  recommendations: jsonb("recommendations"),
+  calculatedByUserId: varchar("calculated_by_user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_go_live_readiness_project").on(table.projectId),
+  index("idx_go_live_readiness_date").on(table.snapshotDate),
+]);
+
+export const insertGoLiveReadinessSnapshotSchema = createInsertSchema(goLiveReadinessSnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertGoLiveReadinessSnapshot = z.infer<typeof insertGoLiveReadinessSnapshotSchema>;
+export type GoLiveReadinessSnapshot = typeof goLiveReadinessSnapshots.$inferSelect;
+
+// Consultant Utilization Snapshots - Tracks consultant utilization metrics
+export const consultantUtilizationSnapshots = pgTable("consultant_utilization_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id),
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  totalConsultants: integer("total_consultants").notNull(),
+  averageUtilization: decimal("average_utilization", { precision: 5, scale: 2 }),
+  scheduledHours: decimal("scheduled_hours", { precision: 10, scale: 2 }),
+  actualHours: decimal("actual_hours", { precision: 10, scale: 2 }),
+  billableHours: decimal("billable_hours", { precision: 10, scale: 2 }),
+  utilizationByRole: jsonb("utilization_by_role"),
+  utilizationTrend: jsonb("utilization_trend"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_consultant_utilization_project").on(table.projectId),
+  index("idx_consultant_utilization_period").on(table.periodStart, table.periodEnd),
+]);
+
+export const insertConsultantUtilizationSnapshotSchema = createInsertSchema(consultantUtilizationSnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertConsultantUtilizationSnapshot = z.infer<typeof insertConsultantUtilizationSnapshotSchema>;
+export type ConsultantUtilizationSnapshot = typeof consultantUtilizationSnapshots.$inferSelect;
+
+// Timeline Forecast Snapshots - Project timeline predictions
+export const timelineForecastSnapshots = pgTable("timeline_forecast_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  forecastDate: date("forecast_date").notNull(),
+  originalEndDate: date("original_end_date").notNull(),
+  predictedEndDate: date("predicted_end_date").notNull(),
+  confidenceLevel: decimal("confidence_level", { precision: 5, scale: 2 }),
+  varianceDays: integer("variance_days"),
+  riskDrivers: jsonb("risk_drivers"),
+  scenarioAnalysis: jsonb("scenario_analysis"),
+  assumptions: jsonb("assumptions"),
+  createdByUserId: varchar("created_by_user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_timeline_forecast_project").on(table.projectId),
+  index("idx_timeline_forecast_date").on(table.forecastDate),
+]);
+
+export const insertTimelineForecastSnapshotSchema = createInsertSchema(timelineForecastSnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertTimelineForecastSnapshot = z.infer<typeof insertTimelineForecastSnapshotSchema>;
+export type TimelineForecastSnapshot = typeof timelineForecastSnapshots.$inferSelect;
+
+// Cost Variance Snapshots - Budget vs actual cost tracking
+export const costVarianceSnapshots = pgTable("cost_variance_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  snapshotDate: date("snapshot_date").notNull(),
+  budgetedAmount: decimal("budgeted_amount", { precision: 12, scale: 2 }).notNull(),
+  actualAmount: decimal("actual_amount", { precision: 12, scale: 2 }).notNull(),
+  varianceAmount: decimal("variance_amount", { precision: 12, scale: 2 }),
+  variancePercentage: decimal("variance_percentage", { precision: 5, scale: 2 }),
+  status: costVarianceStatusEnum("status").default("on_track").notNull(),
+  categoryBreakdown: jsonb("category_breakdown"),
+  forecastToComplete: decimal("forecast_to_complete", { precision: 12, scale: 2 }),
+  estimateAtCompletion: decimal("estimate_at_completion", { precision: 12, scale: 2 }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_cost_variance_project").on(table.projectId),
+  index("idx_cost_variance_date").on(table.snapshotDate),
+  index("idx_cost_variance_status").on(table.status),
+]);
+
+export const insertCostVarianceSnapshotSchema = createInsertSchema(costVarianceSnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertCostVarianceSnapshot = z.infer<typeof insertCostVarianceSnapshotSchema>;
+export type CostVarianceSnapshot = typeof costVarianceSnapshots.$inferSelect;
+
 // ============================================
 // PHASE 18 EXTENDED TYPES
 // ============================================
