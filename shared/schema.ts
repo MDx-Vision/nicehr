@@ -651,7 +651,8 @@ export const permissionDomainEnum = pgEnum("permission_domain", [
   "compliance",
   "reports",
   "admin",
-  "rbac"
+  "rbac",
+  "analytics"
 ]);
 
 // Permissions table - defines all available permissions

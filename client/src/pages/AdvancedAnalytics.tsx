@@ -159,8 +159,12 @@ export default function AdvancedAnalytics() {
     queryKey: ["/api/projects"],
   });
 
+  const projectIdParam = selectedProjectId !== "all" ? selectedProjectId : null;
+  
   const { data: analytics, isLoading, error } = useQuery<AdvancedAnalyticsSummary>({
-    queryKey: ["/api/analytics/advanced", selectedProjectId !== "all" ? selectedProjectId : undefined].filter(Boolean),
+    queryKey: projectIdParam 
+      ? ["/api/analytics/advanced", { projectId: projectIdParam }]
+      : ["/api/analytics/advanced"],
   });
 
   const computeReadinessMutation = useMutation({
@@ -169,7 +173,9 @@ export default function AdvancedAnalytics() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/analytics/advanced"] });
+      queryClient.invalidateQueries({ queryKey: projectIdParam 
+        ? ["/api/analytics/advanced", { projectId: projectIdParam }]
+        : ["/api/analytics/advanced"] });
       toast({
         title: "Success",
         description: "Go-live readiness score computed successfully.",
@@ -192,7 +198,9 @@ export default function AdvancedAnalytics() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/analytics/advanced"] });
+      queryClient.invalidateQueries({ queryKey: projectIdParam 
+        ? ["/api/analytics/advanced", { projectId: projectIdParam }]
+        : ["/api/analytics/advanced"] });
       toast({
         title: "Success",
         description: "Utilization metrics calculated successfully.",
@@ -213,7 +221,9 @@ export default function AdvancedAnalytics() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/analytics/advanced"] });
+      queryClient.invalidateQueries({ queryKey: projectIdParam 
+        ? ["/api/analytics/advanced", { projectId: projectIdParam }]
+        : ["/api/analytics/advanced"] });
       toast({
         title: "Success",
         description: "Timeline forecast computed successfully.",
@@ -234,7 +244,9 @@ export default function AdvancedAnalytics() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/analytics/advanced"] });
+      queryClient.invalidateQueries({ queryKey: projectIdParam 
+        ? ["/api/analytics/advanced", { projectId: projectIdParam }]
+        : ["/api/analytics/advanced"] });
       toast({
         title: "Success",
         description: "Cost variance computed successfully.",

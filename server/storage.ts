@@ -10178,6 +10178,8 @@ export class DatabaseStorage implements IStorage {
       { domain: 'admin', action: 'manage', name: 'admin:manage', displayName: 'Manage Admin', description: 'Full admin management' },
       { domain: 'rbac', action: 'view', name: 'rbac:view', displayName: 'View RBAC', description: 'View roles and permissions' },
       { domain: 'rbac', action: 'manage', name: 'rbac:manage', displayName: 'Manage RBAC', description: 'Manage roles and permissions' },
+      { domain: 'analytics', action: 'view', name: 'analytics:view', displayName: 'View Analytics', description: 'View advanced analytics dashboards' },
+      { domain: 'analytics', action: 'manage', name: 'analytics:manage', displayName: 'Manage Analytics', description: 'Compute and manage analytics data' },
     ];
 
     const createdPermissions: Map<string, Permission> = new Map();

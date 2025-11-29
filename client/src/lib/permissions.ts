@@ -20,6 +20,7 @@ export const NAVIGATION_CONFIG: NavigationItem[] = [
   { title: "Executive Dashboard", url: "/executive-dashboard", icon: "Gauge", category: "overview", roles: ["admin", "hospital_leadership"], requiredPermission: "reports:view" },
   { title: "Report Builder", url: "/report-builder", icon: "FileBarChart", category: "overview", roles: ["admin", "hospital_leadership"], requiredPermission: "reports:create" },
   { title: "ROI Dashboard", url: "/roi", icon: "BarChart3", category: "overview", roles: ["admin", "hospital_leadership"], requiredPermission: "financials:view" },
+  { title: "Advanced Analytics", url: "/advanced-analytics", icon: "TrendingUp", category: "overview", roles: ["admin"], requiredPermission: "analytics:view" },
   
   { title: "Projects", url: "/projects", icon: "FolderKanban", category: "operations", roles: ["admin", "hospital_leadership", "hospital_staff"], requiresProjectContext: true, requiredPermission: "projects:view" },
   { title: "My Projects", url: "/my-projects", icon: "FolderKanban", category: "operations", roles: ["consultant"], requiresProjectContext: true, requiredPermission: "projects:view" },
