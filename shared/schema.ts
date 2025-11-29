@@ -6595,6 +6595,36 @@ export type InsertCostVarianceSnapshot = z.infer<typeof insertCostVarianceSnapsh
 export type CostVarianceSnapshot = typeof costVarianceSnapshots.$inferSelect;
 
 // ============================================
+// RACI MATRIX
+// ============================================
+
+// RACI role enum
+export const raciRoleEnum = pgEnum("raci_role", ["responsible", "accountable", "consulted", "informed"]);
+
+// RACI Assignments table
+export const raciAssignments = pgTable("raci_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id, { onDelete: "cascade" }).notNull(),
+  phaseId: varchar("phase_id").references(() => projectPhases.id, { onDelete: "cascade" }),
+  taskId: varchar("task_id").references(() => projectTasks.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  role: raciRoleEnum("role").notNull(),
+  notes: text("notes"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_raci_project").on(table.projectId),
+  index("idx_raci_phase").on(table.phaseId),
+  index("idx_raci_task").on(table.taskId),
+  index("idx_raci_user").on(table.userId),
+]);
+
+export const insertRaciAssignmentSchema = createInsertSchema(raciAssignments).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertRaciAssignment = z.infer<typeof insertRaciAssignmentSchema>;
+export type RaciAssignment = typeof raciAssignments.$inferSelect;
+
+// ============================================
 // PHASE 18 EXTENDED TYPES
 // ============================================
 

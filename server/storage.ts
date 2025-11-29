@@ -495,6 +495,9 @@ import {
   type CostVarianceSnapshot,
   type InsertCostVarianceSnapshot,
   type AdvancedAnalyticsSummary,
+  raciAssignments,
+  type RaciAssignment,
+  type InsertRaciAssignment,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, ilike, or, desc, asc, sql, inArray, lt, gt } from "drizzle-orm";
@@ -1510,6 +1513,17 @@ export interface IStorage {
 
   // Combined Analytics Summary
   getAdvancedAnalyticsSummary(projectId?: string): Promise<AdvancedAnalyticsSummary>;
+
+  // ============================================
+  // RACI MATRIX
+  // ============================================
+  getRaciAssignmentsByProject(projectId: string): Promise<RaciAssignment[]>;
+  getRaciAssignmentsByPhase(phaseId: string): Promise<RaciAssignment[]>;
+  getRaciAssignmentsByTask(taskId: string): Promise<RaciAssignment[]>;
+  createRaciAssignment(data: InsertRaciAssignment): Promise<RaciAssignment>;
+  updateRaciAssignment(id: string, data: Partial<InsertRaciAssignment>): Promise<RaciAssignment | undefined>;
+  deleteRaciAssignment(id: string): Promise<boolean>;
+  bulkUpsertRaciAssignments(projectId: string, assignments: InsertRaciAssignment[]): Promise<RaciAssignment[]>;
 }
 
 export interface ConsultantSearchFilters {
@@ -10180,6 +10194,8 @@ export class DatabaseStorage implements IStorage {
       { domain: 'rbac', action: 'manage', name: 'rbac:manage', displayName: 'Manage RBAC', description: 'Manage roles and permissions' },
       { domain: 'analytics', action: 'view', name: 'analytics:view', displayName: 'View Analytics', description: 'View advanced analytics dashboards' },
       { domain: 'analytics', action: 'manage', name: 'analytics:manage', displayName: 'Manage Analytics', description: 'Compute and manage analytics data' },
+      { domain: 'projects', action: 'raci_view', name: 'projects:raci_view', displayName: 'View RACI Matrix', description: 'View RACI matrix assignments' },
+      { domain: 'projects', action: 'raci_manage', name: 'projects:raci_manage', displayName: 'Manage RACI Matrix', description: 'Manage RACI matrix assignments' },
     ];
 
     const createdPermissions: Map<string, Permission> = new Map();
@@ -10219,6 +10235,7 @@ export class DatabaseStorage implements IStorage {
           'timesheets:view_all', 'support_tickets:view_all', 'eod_reports:view_all',
           'training:view', 'travel:view_all', 'financials:view', 'quality:view',
           'compliance:view', 'reports:view', 'reports:create',
+          'projects:raci_view', 'projects:raci_manage',
         ],
       },
       {
@@ -11609,6 +11626,54 @@ export class DatabaseStorage implements IStorage {
       timelineForecast,
       costVariance
     };
+  }
+
+  // ============================================
+  // RACI MATRIX METHODS
+  // ============================================
+
+  async getRaciAssignmentsByProject(projectId: string): Promise<RaciAssignment[]> {
+    return await db.select().from(raciAssignments).where(eq(raciAssignments.projectId, projectId)).orderBy(raciAssignments.createdAt);
+  }
+
+  async getRaciAssignmentsByPhase(phaseId: string): Promise<RaciAssignment[]> {
+    return await db.select().from(raciAssignments).where(eq(raciAssignments.phaseId, phaseId)).orderBy(raciAssignments.createdAt);
+  }
+
+  async getRaciAssignmentsByTask(taskId: string): Promise<RaciAssignment[]> {
+    return await db.select().from(raciAssignments).where(eq(raciAssignments.taskId, taskId)).orderBy(raciAssignments.createdAt);
+  }
+
+  async createRaciAssignment(data: InsertRaciAssignment): Promise<RaciAssignment> {
+    const [assignment] = await db.insert(raciAssignments).values(data).returning();
+    return assignment;
+  }
+
+  async updateRaciAssignment(id: string, data: Partial<InsertRaciAssignment>): Promise<RaciAssignment | undefined> {
+    const [updated] = await db.update(raciAssignments)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(raciAssignments.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteRaciAssignment(id: string): Promise<boolean> {
+    const result = await db.delete(raciAssignments).where(eq(raciAssignments.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async bulkUpsertRaciAssignments(projectId: string, assignments: InsertRaciAssignment[]): Promise<RaciAssignment[]> {
+    await db.delete(raciAssignments).where(eq(raciAssignments.projectId, projectId));
+    
+    if (assignments.length === 0) {
+      return [];
+    }
+    
+    const inserted = await db.insert(raciAssignments)
+      .values(assignments.map(a => ({ ...a, projectId })))
+      .returning();
+    
+    return inserted;
   }
 }
 

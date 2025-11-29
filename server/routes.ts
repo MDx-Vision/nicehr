@@ -110,6 +110,7 @@ import {
   insertDashboardWidgetSchema,
   insertKpiDefinitionSchema,
   insertKpiSnapshotSchema,
+  insertRaciAssignmentSchema,
 } from "@shared/schema";
 import {
   sendWelcomeEmail,
@@ -11562,6 +11563,95 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error computing cost variance:", error);
       res.status(500).json({ message: "Failed to compute cost variance" });
+    }
+  });
+
+  // ============================================
+  // RACI MATRIX ROUTES
+  // ============================================
+
+  // Get all RACI assignments for a project
+  app.get('/api/projects/:projectId/raci', isAuthenticated, requireAnyPermission('projects:raci_view', 'admin:manage'), async (req: any, res) => {
+    try {
+      const { projectId } = req.params;
+      const assignments = await storage.getRaciAssignmentsByProject(projectId);
+      res.json(assignments);
+    } catch (error) {
+      console.error("Error fetching RACI assignments:", error);
+      res.status(500).json({ message: "Failed to fetch RACI assignments" });
+    }
+  });
+
+  // Create a RACI assignment
+  app.post('/api/projects/:projectId/raci', isAuthenticated, requireAnyPermission('projects:raci_manage', 'admin:manage'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const { projectId } = req.params;
+      const validated = insertRaciAssignmentSchema.parse({
+        ...req.body,
+        projectId,
+        createdBy: userId,
+      });
+      const assignment = await storage.createRaciAssignment(validated);
+      res.status(201).json(assignment);
+    } catch (error) {
+      console.error("Error creating RACI assignment:", error);
+      res.status(400).json({ message: "Failed to create RACI assignment" });
+    }
+  });
+
+  // Update a RACI assignment
+  app.put('/api/raci/:id', isAuthenticated, requireAnyPermission('projects:raci_manage', 'admin:manage'), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const updated = await storage.updateRaciAssignment(id, req.body);
+      if (!updated) {
+        return res.status(404).json({ message: "RACI assignment not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating RACI assignment:", error);
+      res.status(400).json({ message: "Failed to update RACI assignment" });
+    }
+  });
+
+  // Delete a RACI assignment
+  app.delete('/api/raci/:id', isAuthenticated, requireAnyPermission('projects:raci_manage', 'admin:manage'), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteRaciAssignment(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "RACI assignment not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting RACI assignment:", error);
+      res.status(500).json({ message: "Failed to delete RACI assignment" });
+    }
+  });
+
+  // Bulk update RACI assignments for a project
+  app.post('/api/projects/:projectId/raci/bulk', isAuthenticated, requireAnyPermission('projects:raci_manage', 'admin:manage'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const { projectId } = req.params;
+      const { assignments } = req.body;
+      
+      if (!Array.isArray(assignments)) {
+        return res.status(400).json({ message: "assignments must be an array" });
+      }
+      
+      const validatedAssignments = assignments.map(a => ({
+        ...a,
+        projectId,
+        createdBy: userId,
+      }));
+      
+      const result = await storage.bulkUpsertRaciAssignments(projectId, validatedAssignments);
+      res.json(result);
+    } catch (error) {
+      console.error("Error bulk updating RACI assignments:", error);
+      res.status(400).json({ message: "Failed to bulk update RACI assignments" });
     }
   });
 

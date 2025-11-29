@@ -45,6 +45,7 @@ import {
   consultantUtilizationSnapshots,
   timelineForecastSnapshots,
   costVarianceSnapshots,
+  raciAssignments,
 } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 
@@ -573,6 +574,214 @@ const projectPhaseData = [
     actualStartDate: "2024-12-01",
     status: "in_progress" as const,
     completionPercentage: 45,
+  },
+];
+
+// RACI Matrix demo data - assigns team members to project phases with RACI roles
+const demoRaciAssignments = [
+  // Project 1 - Phase 1 (Discovery & Planning) assignments
+  {
+    id: "raci-1",
+    projectId: "project-1",
+    phaseId: "phase-1-1",
+    userId: "user-c1",
+    role: "responsible" as const,
+    notes: "Lead discovery sessions and workflow analysis",
+    createdBy: "user-c1",
+  },
+  {
+    id: "raci-2",
+    projectId: "project-1",
+    phaseId: "phase-1-1",
+    userId: "user-c2",
+    role: "accountable" as const,
+    notes: "Overall accountability for discovery phase completion",
+    createdBy: "user-c1",
+  },
+  {
+    id: "raci-3",
+    projectId: "project-1",
+    phaseId: "phase-1-1",
+    userId: "user-c3",
+    role: "consulted" as const,
+    notes: "Provide input on technical requirements",
+    createdBy: "user-c1",
+  },
+  {
+    id: "raci-4",
+    projectId: "project-1",
+    phaseId: "phase-1-1",
+    userId: "user-c4",
+    role: "informed" as const,
+    notes: "Keep informed of project progress",
+    createdBy: "user-c1",
+  },
+  // Project 1 - Phase 2 (Build & Configuration) assignments
+  {
+    id: "raci-5",
+    projectId: "project-1",
+    phaseId: "phase-1-2",
+    userId: "user-c3",
+    role: "responsible" as const,
+    notes: "Lead system configuration and build activities",
+    createdBy: "user-c1",
+  },
+  {
+    id: "raci-6",
+    projectId: "project-1",
+    phaseId: "phase-1-2",
+    userId: "user-c1",
+    role: "accountable" as const,
+    notes: "Approve all configuration changes",
+    createdBy: "user-c1",
+  },
+  {
+    id: "raci-7",
+    projectId: "project-1",
+    phaseId: "phase-1-2",
+    userId: "user-c5",
+    role: "consulted" as const,
+    notes: "Consult on integration requirements",
+    createdBy: "user-c1",
+  },
+  {
+    id: "raci-8",
+    projectId: "project-1",
+    phaseId: "phase-1-2",
+    userId: "user-c2",
+    role: "informed" as const,
+    notes: "Status updates on build progress",
+    createdBy: "user-c1",
+  },
+  // Project 1 - Phase 3 (Testing & Validation) assignments
+  {
+    id: "raci-9",
+    projectId: "project-1",
+    phaseId: "phase-1-3",
+    userId: "user-c4",
+    role: "responsible" as const,
+    notes: "Lead testing coordination and execution",
+    createdBy: "user-c1",
+  },
+  {
+    id: "raci-10",
+    projectId: "project-1",
+    phaseId: "phase-1-3",
+    userId: "user-c1",
+    role: "accountable" as const,
+    notes: "Sign off on testing results",
+    createdBy: "user-c1",
+  },
+  {
+    id: "raci-11",
+    projectId: "project-1",
+    phaseId: "phase-1-3",
+    userId: "user-c3",
+    role: "consulted" as const,
+    notes: "Provide technical support for testing issues",
+    createdBy: "user-c1",
+  },
+  // Project 1 - Phase 4 (Go-Live & Support) assignments
+  {
+    id: "raci-12",
+    projectId: "project-1",
+    phaseId: "phase-1-4",
+    userId: "user-c1",
+    role: "responsible" as const,
+    notes: "Lead go-live execution and command center",
+    createdBy: "user-c1",
+  },
+  {
+    id: "raci-13",
+    projectId: "project-1",
+    phaseId: "phase-1-4",
+    userId: "user-c2",
+    role: "accountable" as const,
+    notes: "Final go-live approval and escalation decisions",
+    createdBy: "user-c1",
+  },
+  {
+    id: "raci-14",
+    projectId: "project-1",
+    phaseId: "phase-1-4",
+    userId: "user-c3",
+    role: "responsible" as const,
+    notes: "At-the-elbow support during go-live",
+    createdBy: "user-c1",
+  },
+  {
+    id: "raci-15",
+    projectId: "project-1",
+    phaseId: "phase-1-4",
+    userId: "user-c4",
+    role: "consulted" as const,
+    notes: "Issue resolution and troubleshooting",
+    createdBy: "user-c1",
+  },
+  // Project 2 - Phase 1 (Assessment Phase) assignments
+  {
+    id: "raci-16",
+    projectId: "project-2",
+    phaseId: "phase-2-1",
+    userId: "user-c2",
+    role: "responsible" as const,
+    notes: "Lead Cerner optimization assessment",
+    createdBy: "user-c2",
+  },
+  {
+    id: "raci-17",
+    projectId: "project-2",
+    phaseId: "phase-2-1",
+    userId: "user-c1",
+    role: "accountable" as const,
+    notes: "Overall project accountability",
+    createdBy: "user-c2",
+  },
+  {
+    id: "raci-18",
+    projectId: "project-2",
+    phaseId: "phase-2-1",
+    userId: "user-c5",
+    role: "informed" as const,
+    notes: "Kept informed for knowledge transfer",
+    createdBy: "user-c2",
+  },
+  // Project 2 - Phase 2 (Optimization Build) assignments
+  {
+    id: "raci-19",
+    projectId: "project-2",
+    phaseId: "phase-2-2",
+    userId: "user-c2",
+    role: "responsible" as const,
+    notes: "Lead optimization implementation",
+    createdBy: "user-c2",
+  },
+  {
+    id: "raci-20",
+    projectId: "project-2",
+    phaseId: "phase-2-2",
+    userId: "user-c1",
+    role: "accountable" as const,
+    notes: "Approve optimization changes",
+    createdBy: "user-c2",
+  },
+  {
+    id: "raci-21",
+    projectId: "project-2",
+    phaseId: "phase-2-2",
+    userId: "user-c4",
+    role: "consulted" as const,
+    notes: "Consulted on workflow optimizations",
+    createdBy: "user-c2",
+  },
+  {
+    id: "raci-22",
+    projectId: "project-2",
+    phaseId: "phase-2-2",
+    userId: "user-c3",
+    role: "informed" as const,
+    notes: "Updates on optimization progress",
+    createdBy: "user-c2",
   },
 ];
 
@@ -2152,6 +2361,11 @@ export async function seedDemoData() {
     console.log("Seeding project phases...");
     for (const phase of projectPhaseData) {
       await db.insert(projectPhases).values(phase).onConflictDoNothing();
+    }
+
+    console.log("Seeding RACI assignments...");
+    for (const assignment of demoRaciAssignments) {
+      await db.insert(raciAssignments).values(assignment).onConflictDoNothing();
     }
 
     console.log("Seeding training courses...");
