@@ -431,6 +431,57 @@ import {
   type ConsultantCertification,
   type InsertConsultantCertification,
   type QuestionnaireWithSkills,
+  // Phase 18: Integration & Automation
+  integrationConnections,
+  syncJobs,
+  syncEvents,
+  calendarSyncSettings,
+  ehrSystems,
+  ehrStatusMetrics,
+  ehrIncidents,
+  ehrIncidentUpdates,
+  payrollSyncProfiles,
+  payrollExportJobs,
+  escalationTriggers,
+  escalationEvents,
+  notificationQueue,
+  automationWorkflows,
+  workflowExecutions,
+  type IntegrationConnection,
+  type InsertIntegrationConnection,
+  type SyncJob,
+  type InsertSyncJob,
+  type SyncEvent,
+  type InsertSyncEvent,
+  type CalendarSyncSettings,
+  type InsertCalendarSyncSettings,
+  type EhrSystem,
+  type InsertEhrSystem,
+  type EhrStatusMetric,
+  type InsertEhrStatusMetric,
+  type EhrIncident,
+  type InsertEhrIncident,
+  type EhrIncidentUpdate,
+  type InsertEhrIncidentUpdate,
+  type PayrollSyncProfile,
+  type InsertPayrollSyncProfile,
+  type PayrollExportJob,
+  type InsertPayrollExportJob,
+  type EscalationTrigger,
+  type InsertEscalationTrigger,
+  type EscalationEvent,
+  type InsertEscalationEvent,
+  type NotificationQueueItem,
+  type InsertNotificationQueue,
+  type AutomationWorkflow,
+  type InsertAutomationWorkflow,
+  type WorkflowExecution,
+  type InsertWorkflowExecution,
+  type IntegrationAnalytics,
+  type EhrMonitoringAnalytics,
+  type EscalationAnalytics,
+  type SyncJobWithDetails,
+  type EhrIncidentWithDetails,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, ilike, or, desc, asc, sql, inArray, lt, gt } from "drizzle-orm";
@@ -1317,6 +1368,104 @@ export interface IStorage {
   
   // Seeding
   seedBaseRolesAndPermissions(): Promise<void>;
+
+  // ============================================
+  // PHASE 18: INTEGRATION & AUTOMATION
+  // ============================================
+
+  // Integration Connections
+  getIntegrationConnection(id: string): Promise<IntegrationConnection | undefined>;
+  listIntegrationConnections(filters?: { category?: string; provider?: string; status?: string; isActive?: boolean }): Promise<IntegrationConnection[]>;
+  createIntegrationConnection(data: InsertIntegrationConnection): Promise<IntegrationConnection>;
+  updateIntegrationConnection(id: string, data: Partial<InsertIntegrationConnection>): Promise<IntegrationConnection | undefined>;
+  deleteIntegrationConnection(id: string): Promise<boolean>;
+
+  // Sync Jobs
+  getSyncJob(id: string): Promise<SyncJob | undefined>;
+  listSyncJobs(filters?: { connectionId?: string; status?: string }): Promise<SyncJob[]>;
+  createSyncJob(data: InsertSyncJob): Promise<SyncJob>;
+  updateSyncJob(id: string, data: Partial<InsertSyncJob>): Promise<SyncJob | undefined>;
+
+  // Sync Events
+  listSyncEvents(syncJobId: string): Promise<SyncEvent[]>;
+  createSyncEvent(data: InsertSyncEvent): Promise<SyncEvent>;
+
+  // Calendar Sync Settings
+  getCalendarSyncSettings(userId: string): Promise<CalendarSyncSettings | undefined>;
+  listCalendarSyncSettings(connectionId: string): Promise<CalendarSyncSettings[]>;
+  createCalendarSyncSettings(data: InsertCalendarSyncSettings): Promise<CalendarSyncSettings>;
+  updateCalendarSyncSettings(id: string, data: Partial<InsertCalendarSyncSettings>): Promise<CalendarSyncSettings | undefined>;
+
+  // EHR Systems
+  getEhrSystem(id: string): Promise<EhrSystem | undefined>;
+  listEhrSystems(filters?: { hospitalId?: string; vendor?: string; status?: string; isMonitored?: boolean }): Promise<EhrSystem[]>;
+  createEhrSystem(data: InsertEhrSystem): Promise<EhrSystem>;
+  updateEhrSystem(id: string, data: Partial<InsertEhrSystem>): Promise<EhrSystem | undefined>;
+  deleteEhrSystem(id: string): Promise<boolean>;
+
+  // EHR Status Metrics
+  listEhrStatusMetrics(ehrSystemId: string, limit?: number): Promise<EhrStatusMetric[]>;
+  createEhrStatusMetric(data: InsertEhrStatusMetric): Promise<EhrStatusMetric>;
+
+  // EHR Incidents
+  getEhrIncident(id: string): Promise<EhrIncident | undefined>;
+  listEhrIncidents(filters?: { ehrSystemId?: string; severity?: string; status?: string }): Promise<EhrIncident[]>;
+  createEhrIncident(data: InsertEhrIncident): Promise<EhrIncident>;
+  updateEhrIncident(id: string, data: Partial<InsertEhrIncident>): Promise<EhrIncident | undefined>;
+
+  // EHR Incident Updates
+  listEhrIncidentUpdates(incidentId: string): Promise<EhrIncidentUpdate[]>;
+  createEhrIncidentUpdate(data: InsertEhrIncidentUpdate): Promise<EhrIncidentUpdate>;
+
+  // Payroll Sync Profiles
+  getPayrollSyncProfile(id: string): Promise<PayrollSyncProfile | undefined>;
+  listPayrollSyncProfiles(filters?: { connectionId?: string; isActive?: boolean }): Promise<PayrollSyncProfile[]>;
+  createPayrollSyncProfile(data: InsertPayrollSyncProfile): Promise<PayrollSyncProfile>;
+  updatePayrollSyncProfile(id: string, data: Partial<InsertPayrollSyncProfile>): Promise<PayrollSyncProfile | undefined>;
+  deletePayrollSyncProfile(id: string): Promise<boolean>;
+
+  // Payroll Export Jobs
+  getPayrollExportJob(id: string): Promise<PayrollExportJob | undefined>;
+  listPayrollExportJobs(filters?: { profileId?: string; batchId?: string; status?: string }): Promise<PayrollExportJob[]>;
+  createPayrollExportJob(data: InsertPayrollExportJob): Promise<PayrollExportJob>;
+  updatePayrollExportJob(id: string, data: Partial<InsertPayrollExportJob>): Promise<PayrollExportJob | undefined>;
+
+  // Escalation Triggers
+  getEscalationTrigger(id: string): Promise<EscalationTrigger | undefined>;
+  listEscalationTriggers(filters?: { ruleId?: string; triggerType?: string; isActive?: boolean }): Promise<EscalationTrigger[]>;
+  createEscalationTrigger(data: InsertEscalationTrigger): Promise<EscalationTrigger>;
+  updateEscalationTrigger(id: string, data: Partial<InsertEscalationTrigger>): Promise<EscalationTrigger | undefined>;
+  deleteEscalationTrigger(id: string): Promise<boolean>;
+
+  // Escalation Events
+  getEscalationEvent(id: string): Promise<EscalationEvent | undefined>;
+  listEscalationEvents(filters?: { triggerId?: string; ticketId?: string; incidentId?: string }): Promise<EscalationEvent[]>;
+  createEscalationEvent(data: InsertEscalationEvent): Promise<EscalationEvent>;
+  updateEscalationEvent(id: string, data: Partial<InsertEscalationEvent>): Promise<EscalationEvent | undefined>;
+
+  // Notification Queue
+  getNotificationQueueItem(id: string): Promise<NotificationQueueItem | undefined>;
+  listNotificationQueue(filters?: { status?: string; type?: string; recipientUserId?: string }): Promise<NotificationQueueItem[]>;
+  createNotificationQueueItem(data: InsertNotificationQueue): Promise<NotificationQueueItem>;
+  updateNotificationQueueItem(id: string, data: Partial<InsertNotificationQueue>): Promise<NotificationQueueItem | undefined>;
+
+  // Automation Workflows
+  getAutomationWorkflow(id: string): Promise<AutomationWorkflow | undefined>;
+  listAutomationWorkflows(filters?: { category?: string; triggerEvent?: string; isActive?: boolean }): Promise<AutomationWorkflow[]>;
+  createAutomationWorkflow(data: InsertAutomationWorkflow): Promise<AutomationWorkflow>;
+  updateAutomationWorkflow(id: string, data: Partial<InsertAutomationWorkflow>): Promise<AutomationWorkflow | undefined>;
+  deleteAutomationWorkflow(id: string): Promise<boolean>;
+
+  // Workflow Executions
+  getWorkflowExecution(id: string): Promise<WorkflowExecution | undefined>;
+  listWorkflowExecutions(filters?: { workflowId?: string; status?: string }): Promise<WorkflowExecution[]>;
+  createWorkflowExecution(data: InsertWorkflowExecution): Promise<WorkflowExecution>;
+  updateWorkflowExecution(id: string, data: Partial<InsertWorkflowExecution>): Promise<WorkflowExecution | undefined>;
+
+  // Analytics
+  getIntegrationAnalytics(): Promise<IntegrationAnalytics>;
+  getEhrMonitoringAnalytics(): Promise<EhrMonitoringAnalytics>;
+  getEscalationAnalytics(): Promise<EscalationAnalytics>;
 }
 
 export interface ConsultantSearchFilters {
@@ -10220,6 +10369,660 @@ export class DatabaseStorage implements IStorage {
 
       await this.setRolePermissions(role.id, permissionIds);
     }
+  }
+
+  // ============================================
+  // PHASE 18: INTEGRATION & AUTOMATION
+  // ============================================
+
+  // Integration Connections
+  async getIntegrationConnection(id: string): Promise<IntegrationConnection | undefined> {
+    const [connection] = await db.select().from(integrationConnections).where(eq(integrationConnections.id, id));
+    return connection;
+  }
+
+  async listIntegrationConnections(filters?: { category?: string; provider?: string; status?: string; isActive?: boolean }): Promise<IntegrationConnection[]> {
+    const conditions = [];
+    if (filters?.category) conditions.push(eq(integrationConnections.category, filters.category));
+    if (filters?.provider) conditions.push(eq(integrationConnections.provider, filters.provider as any));
+    if (filters?.status) conditions.push(eq(integrationConnections.status, filters.status as any));
+    if (filters?.isActive !== undefined) conditions.push(eq(integrationConnections.isActive, filters.isActive));
+    
+    const query = conditions.length > 0 
+      ? db.select().from(integrationConnections).where(and(...conditions))
+      : db.select().from(integrationConnections);
+    return query.orderBy(desc(integrationConnections.createdAt));
+  }
+
+  async createIntegrationConnection(data: InsertIntegrationConnection): Promise<IntegrationConnection> {
+    const [connection] = await db.insert(integrationConnections).values(data).returning();
+    return connection;
+  }
+
+  async updateIntegrationConnection(id: string, data: Partial<InsertIntegrationConnection>): Promise<IntegrationConnection | undefined> {
+    const [updated] = await db.update(integrationConnections)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(integrationConnections.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteIntegrationConnection(id: string): Promise<boolean> {
+    const result = await db.delete(integrationConnections).where(eq(integrationConnections.id, id));
+    return true;
+  }
+
+  // Sync Jobs
+  async getSyncJob(id: string): Promise<SyncJob | undefined> {
+    const [job] = await db.select().from(syncJobs).where(eq(syncJobs.id, id));
+    return job;
+  }
+
+  async listSyncJobs(filters?: { connectionId?: string; status?: string }): Promise<SyncJob[]> {
+    const conditions = [];
+    if (filters?.connectionId) conditions.push(eq(syncJobs.connectionId, filters.connectionId));
+    if (filters?.status) conditions.push(eq(syncJobs.status, filters.status as any));
+    
+    const query = conditions.length > 0
+      ? db.select().from(syncJobs).where(and(...conditions))
+      : db.select().from(syncJobs);
+    return query.orderBy(desc(syncJobs.createdAt));
+  }
+
+  async createSyncJob(data: InsertSyncJob): Promise<SyncJob> {
+    const [job] = await db.insert(syncJobs).values(data).returning();
+    return job;
+  }
+
+  async updateSyncJob(id: string, data: Partial<InsertSyncJob>): Promise<SyncJob | undefined> {
+    const [updated] = await db.update(syncJobs).set(data).where(eq(syncJobs.id, id)).returning();
+    return updated;
+  }
+
+  // Sync Events
+  async listSyncEvents(syncJobId: string): Promise<SyncEvent[]> {
+    return db.select().from(syncEvents).where(eq(syncEvents.syncJobId, syncJobId)).orderBy(desc(syncEvents.createdAt));
+  }
+
+  async createSyncEvent(data: InsertSyncEvent): Promise<SyncEvent> {
+    const [event] = await db.insert(syncEvents).values(data).returning();
+    return event;
+  }
+
+  // Calendar Sync Settings
+  async getCalendarSyncSettings(userId: string): Promise<CalendarSyncSettings | undefined> {
+    const [settings] = await db.select().from(calendarSyncSettings).where(eq(calendarSyncSettings.userId, userId));
+    return settings;
+  }
+
+  async listCalendarSyncSettings(connectionId: string): Promise<CalendarSyncSettings[]> {
+    return db.select().from(calendarSyncSettings).where(eq(calendarSyncSettings.connectionId, connectionId));
+  }
+
+  async createCalendarSyncSettings(data: InsertCalendarSyncSettings): Promise<CalendarSyncSettings> {
+    const [settings] = await db.insert(calendarSyncSettings).values(data).returning();
+    return settings;
+  }
+
+  async updateCalendarSyncSettings(id: string, data: Partial<InsertCalendarSyncSettings>): Promise<CalendarSyncSettings | undefined> {
+    const [updated] = await db.update(calendarSyncSettings)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(calendarSyncSettings.id, id))
+      .returning();
+    return updated;
+  }
+
+  // EHR Systems
+  async getEhrSystem(id: string): Promise<EhrSystem | undefined> {
+    const [system] = await db.select().from(ehrSystems).where(eq(ehrSystems.id, id));
+    return system;
+  }
+
+  async listEhrSystems(filters?: { hospitalId?: string; vendor?: string; status?: string; isMonitored?: boolean }): Promise<EhrSystem[]> {
+    const conditions = [];
+    if (filters?.hospitalId) conditions.push(eq(ehrSystems.hospitalId, filters.hospitalId));
+    if (filters?.vendor) conditions.push(eq(ehrSystems.vendor, filters.vendor));
+    if (filters?.status) conditions.push(eq(ehrSystems.status, filters.status as any));
+    if (filters?.isMonitored !== undefined) conditions.push(eq(ehrSystems.isMonitored, filters.isMonitored));
+    
+    const query = conditions.length > 0
+      ? db.select().from(ehrSystems).where(and(...conditions))
+      : db.select().from(ehrSystems);
+    return query.orderBy(desc(ehrSystems.createdAt));
+  }
+
+  async createEhrSystem(data: InsertEhrSystem): Promise<EhrSystem> {
+    const [system] = await db.insert(ehrSystems).values(data).returning();
+    return system;
+  }
+
+  async updateEhrSystem(id: string, data: Partial<InsertEhrSystem>): Promise<EhrSystem | undefined> {
+    const [updated] = await db.update(ehrSystems)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(ehrSystems.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteEhrSystem(id: string): Promise<boolean> {
+    await db.delete(ehrSystems).where(eq(ehrSystems.id, id));
+    return true;
+  }
+
+  // EHR Status Metrics
+  async listEhrStatusMetrics(ehrSystemId: string, limit: number = 100): Promise<EhrStatusMetric[]> {
+    return db.select().from(ehrStatusMetrics)
+      .where(eq(ehrStatusMetrics.ehrSystemId, ehrSystemId))
+      .orderBy(desc(ehrStatusMetrics.timestamp))
+      .limit(limit);
+  }
+
+  async createEhrStatusMetric(data: InsertEhrStatusMetric): Promise<EhrStatusMetric> {
+    const [metric] = await db.insert(ehrStatusMetrics).values(data).returning();
+    return metric;
+  }
+
+  // EHR Incidents
+  async getEhrIncident(id: string): Promise<EhrIncident | undefined> {
+    const [incident] = await db.select().from(ehrIncidents).where(eq(ehrIncidents.id, id));
+    return incident;
+  }
+
+  async listEhrIncidents(filters?: { ehrSystemId?: string; severity?: string; status?: string }): Promise<EhrIncident[]> {
+    const conditions = [];
+    if (filters?.ehrSystemId) conditions.push(eq(ehrIncidents.ehrSystemId, filters.ehrSystemId));
+    if (filters?.severity) conditions.push(eq(ehrIncidents.severity, filters.severity as any));
+    if (filters?.status) conditions.push(eq(ehrIncidents.status, filters.status));
+    
+    const query = conditions.length > 0
+      ? db.select().from(ehrIncidents).where(and(...conditions))
+      : db.select().from(ehrIncidents);
+    return query.orderBy(desc(ehrIncidents.startedAt));
+  }
+
+  async createEhrIncident(data: InsertEhrIncident): Promise<EhrIncident> {
+    const [incident] = await db.insert(ehrIncidents).values(data).returning();
+    return incident;
+  }
+
+  async updateEhrIncident(id: string, data: Partial<InsertEhrIncident>): Promise<EhrIncident | undefined> {
+    const [updated] = await db.update(ehrIncidents)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(ehrIncidents.id, id))
+      .returning();
+    return updated;
+  }
+
+  // EHR Incident Updates
+  async listEhrIncidentUpdates(incidentId: string): Promise<EhrIncidentUpdate[]> {
+    return db.select().from(ehrIncidentUpdates)
+      .where(eq(ehrIncidentUpdates.incidentId, incidentId))
+      .orderBy(desc(ehrIncidentUpdates.createdAt));
+  }
+
+  async createEhrIncidentUpdate(data: InsertEhrIncidentUpdate): Promise<EhrIncidentUpdate> {
+    const [update] = await db.insert(ehrIncidentUpdates).values(data).returning();
+    return update;
+  }
+
+  // Payroll Sync Profiles
+  async getPayrollSyncProfile(id: string): Promise<PayrollSyncProfile | undefined> {
+    const [profile] = await db.select().from(payrollSyncProfiles).where(eq(payrollSyncProfiles.id, id));
+    return profile;
+  }
+
+  async listPayrollSyncProfiles(filters?: { connectionId?: string; isActive?: boolean }): Promise<PayrollSyncProfile[]> {
+    const conditions = [];
+    if (filters?.connectionId) conditions.push(eq(payrollSyncProfiles.connectionId, filters.connectionId));
+    if (filters?.isActive !== undefined) conditions.push(eq(payrollSyncProfiles.isActive, filters.isActive));
+    
+    const query = conditions.length > 0
+      ? db.select().from(payrollSyncProfiles).where(and(...conditions))
+      : db.select().from(payrollSyncProfiles);
+    return query.orderBy(desc(payrollSyncProfiles.createdAt));
+  }
+
+  async createPayrollSyncProfile(data: InsertPayrollSyncProfile): Promise<PayrollSyncProfile> {
+    const [profile] = await db.insert(payrollSyncProfiles).values(data).returning();
+    return profile;
+  }
+
+  async updatePayrollSyncProfile(id: string, data: Partial<InsertPayrollSyncProfile>): Promise<PayrollSyncProfile | undefined> {
+    const [updated] = await db.update(payrollSyncProfiles)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(payrollSyncProfiles.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deletePayrollSyncProfile(id: string): Promise<boolean> {
+    await db.delete(payrollSyncProfiles).where(eq(payrollSyncProfiles.id, id));
+    return true;
+  }
+
+  // Payroll Export Jobs
+  async getPayrollExportJob(id: string): Promise<PayrollExportJob | undefined> {
+    const [job] = await db.select().from(payrollExportJobs).where(eq(payrollExportJobs.id, id));
+    return job;
+  }
+
+  async listPayrollExportJobs(filters?: { profileId?: string; batchId?: string; status?: string }): Promise<PayrollExportJob[]> {
+    const conditions = [];
+    if (filters?.profileId) conditions.push(eq(payrollExportJobs.profileId, filters.profileId));
+    if (filters?.batchId) conditions.push(eq(payrollExportJobs.batchId, filters.batchId));
+    if (filters?.status) conditions.push(eq(payrollExportJobs.status, filters.status as any));
+    
+    const query = conditions.length > 0
+      ? db.select().from(payrollExportJobs).where(and(...conditions))
+      : db.select().from(payrollExportJobs);
+    return query.orderBy(desc(payrollExportJobs.createdAt));
+  }
+
+  async createPayrollExportJob(data: InsertPayrollExportJob): Promise<PayrollExportJob> {
+    const [job] = await db.insert(payrollExportJobs).values(data).returning();
+    return job;
+  }
+
+  async updatePayrollExportJob(id: string, data: Partial<InsertPayrollExportJob>): Promise<PayrollExportJob | undefined> {
+    const [updated] = await db.update(payrollExportJobs).set(data).where(eq(payrollExportJobs.id, id)).returning();
+    return updated;
+  }
+
+  // Escalation Triggers
+  async getEscalationTrigger(id: string): Promise<EscalationTrigger | undefined> {
+    const [trigger] = await db.select().from(escalationTriggers).where(eq(escalationTriggers.id, id));
+    return trigger;
+  }
+
+  async listEscalationTriggers(filters?: { ruleId?: string; triggerType?: string; isActive?: boolean }): Promise<EscalationTrigger[]> {
+    const conditions = [];
+    if (filters?.ruleId) conditions.push(eq(escalationTriggers.ruleId, filters.ruleId));
+    if (filters?.triggerType) conditions.push(eq(escalationTriggers.triggerType, filters.triggerType));
+    if (filters?.isActive !== undefined) conditions.push(eq(escalationTriggers.isActive, filters.isActive));
+    
+    const query = conditions.length > 0
+      ? db.select().from(escalationTriggers).where(and(...conditions))
+      : db.select().from(escalationTriggers);
+    return query.orderBy(desc(escalationTriggers.createdAt));
+  }
+
+  async createEscalationTrigger(data: InsertEscalationTrigger): Promise<EscalationTrigger> {
+    const [trigger] = await db.insert(escalationTriggers).values(data).returning();
+    return trigger;
+  }
+
+  async updateEscalationTrigger(id: string, data: Partial<InsertEscalationTrigger>): Promise<EscalationTrigger | undefined> {
+    const [updated] = await db.update(escalationTriggers)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(escalationTriggers.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteEscalationTrigger(id: string): Promise<boolean> {
+    await db.delete(escalationTriggers).where(eq(escalationTriggers.id, id));
+    return true;
+  }
+
+  // Escalation Events
+  async getEscalationEvent(id: string): Promise<EscalationEvent | undefined> {
+    const [event] = await db.select().from(escalationEvents).where(eq(escalationEvents.id, id));
+    return event;
+  }
+
+  async listEscalationEvents(filters?: { triggerId?: string; ticketId?: string; incidentId?: string }): Promise<EscalationEvent[]> {
+    const conditions = [];
+    if (filters?.triggerId) conditions.push(eq(escalationEvents.triggerId, filters.triggerId));
+    if (filters?.ticketId) conditions.push(eq(escalationEvents.ticketId, filters.ticketId));
+    if (filters?.incidentId) conditions.push(eq(escalationEvents.incidentId, filters.incidentId));
+    
+    const query = conditions.length > 0
+      ? db.select().from(escalationEvents).where(and(...conditions))
+      : db.select().from(escalationEvents);
+    return query.orderBy(desc(escalationEvents.createdAt));
+  }
+
+  async createEscalationEvent(data: InsertEscalationEvent): Promise<EscalationEvent> {
+    const [event] = await db.insert(escalationEvents).values(data).returning();
+    return event;
+  }
+
+  async updateEscalationEvent(id: string, data: Partial<InsertEscalationEvent>): Promise<EscalationEvent | undefined> {
+    const [updated] = await db.update(escalationEvents).set(data).where(eq(escalationEvents.id, id)).returning();
+    return updated;
+  }
+
+  // Notification Queue
+  async getNotificationQueueItem(id: string): Promise<NotificationQueueItem | undefined> {
+    const [item] = await db.select().from(notificationQueue).where(eq(notificationQueue.id, id));
+    return item;
+  }
+
+  async listNotificationQueue(filters?: { status?: string; type?: string; recipientUserId?: string }): Promise<NotificationQueueItem[]> {
+    const conditions = [];
+    if (filters?.status) conditions.push(eq(notificationQueue.status, filters.status));
+    if (filters?.type) conditions.push(eq(notificationQueue.type, filters.type));
+    if (filters?.recipientUserId) conditions.push(eq(notificationQueue.recipientUserId, filters.recipientUserId));
+    
+    const query = conditions.length > 0
+      ? db.select().from(notificationQueue).where(and(...conditions))
+      : db.select().from(notificationQueue);
+    return query.orderBy(desc(notificationQueue.createdAt));
+  }
+
+  async createNotificationQueueItem(data: InsertNotificationQueue): Promise<NotificationQueueItem> {
+    const [item] = await db.insert(notificationQueue).values(data).returning();
+    return item;
+  }
+
+  async updateNotificationQueueItem(id: string, data: Partial<InsertNotificationQueue>): Promise<NotificationQueueItem | undefined> {
+    const [updated] = await db.update(notificationQueue).set(data).where(eq(notificationQueue.id, id)).returning();
+    return updated;
+  }
+
+  // Automation Workflows
+  async getAutomationWorkflow(id: string): Promise<AutomationWorkflow | undefined> {
+    const [workflow] = await db.select().from(automationWorkflows).where(eq(automationWorkflows.id, id));
+    return workflow;
+  }
+
+  async listAutomationWorkflows(filters?: { category?: string; triggerEvent?: string; isActive?: boolean }): Promise<AutomationWorkflow[]> {
+    const conditions = [];
+    if (filters?.category) conditions.push(eq(automationWorkflows.category, filters.category));
+    if (filters?.triggerEvent) conditions.push(eq(automationWorkflows.triggerEvent, filters.triggerEvent));
+    if (filters?.isActive !== undefined) conditions.push(eq(automationWorkflows.isActive, filters.isActive));
+    
+    const query = conditions.length > 0
+      ? db.select().from(automationWorkflows).where(and(...conditions))
+      : db.select().from(automationWorkflows);
+    return query.orderBy(desc(automationWorkflows.createdAt));
+  }
+
+  async createAutomationWorkflow(data: InsertAutomationWorkflow): Promise<AutomationWorkflow> {
+    const [workflow] = await db.insert(automationWorkflows).values(data).returning();
+    return workflow;
+  }
+
+  async updateAutomationWorkflow(id: string, data: Partial<InsertAutomationWorkflow>): Promise<AutomationWorkflow | undefined> {
+    const [updated] = await db.update(automationWorkflows)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(automationWorkflows.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteAutomationWorkflow(id: string): Promise<boolean> {
+    await db.delete(automationWorkflows).where(eq(automationWorkflows.id, id));
+    return true;
+  }
+
+  // Workflow Executions
+  async getWorkflowExecution(id: string): Promise<WorkflowExecution | undefined> {
+    const [execution] = await db.select().from(workflowExecutions).where(eq(workflowExecutions.id, id));
+    return execution;
+  }
+
+  async listWorkflowExecutions(filters?: { workflowId?: string; status?: string }): Promise<WorkflowExecution[]> {
+    const conditions = [];
+    if (filters?.workflowId) conditions.push(eq(workflowExecutions.workflowId, filters.workflowId));
+    if (filters?.status) conditions.push(eq(workflowExecutions.status, filters.status));
+    
+    const query = conditions.length > 0
+      ? db.select().from(workflowExecutions).where(and(...conditions))
+      : db.select().from(workflowExecutions);
+    return query.orderBy(desc(workflowExecutions.createdAt));
+  }
+
+  async createWorkflowExecution(data: InsertWorkflowExecution): Promise<WorkflowExecution> {
+    const [execution] = await db.insert(workflowExecutions).values(data).returning();
+    return execution;
+  }
+
+  async updateWorkflowExecution(id: string, data: Partial<InsertWorkflowExecution>): Promise<WorkflowExecution | undefined> {
+    const [updated] = await db.update(workflowExecutions).set(data).where(eq(workflowExecutions.id, id)).returning();
+    return updated;
+  }
+
+  // Integration Analytics
+  async getIntegrationAnalytics(): Promise<IntegrationAnalytics> {
+    const allConnections = await db.select().from(integrationConnections);
+    const activeConnections = allConnections.filter(c => c.isActive && c.status === 'connected');
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todaysJobs = await db.select().from(syncJobs)
+      .where(gte(syncJobs.createdAt, today));
+    
+    const successfulJobs = todaysJobs.filter(j => j.status === 'completed');
+    
+    const connectionsByProvider = allConnections.reduce((acc, conn) => {
+      const existing = acc.find(p => p.provider === conn.provider);
+      if (existing) {
+        existing.count++;
+      } else {
+        acc.push({ provider: conn.provider, count: 1, status: conn.status });
+      }
+      return acc;
+    }, [] as Array<{ provider: string; count: number; status: string }>);
+
+    const recentJobs = await db.select().from(syncJobs)
+      .orderBy(desc(syncJobs.createdAt))
+      .limit(10);
+
+    const recentSyncJobs: SyncJobWithDetails[] = await Promise.all(
+      recentJobs.map(async (job) => {
+        const [connection] = await db.select().from(integrationConnections)
+          .where(eq(integrationConnections.id, job.connectionId));
+        const eventCount = await db.select({ count: sql<number>`count(*)` })
+          .from(syncEvents)
+          .where(eq(syncEvents.syncJobId, job.id));
+        
+        let triggeredBy = null;
+        if (job.triggeredByUserId) {
+          const [user] = await db.select({
+            id: users.id,
+            firstName: users.firstName,
+            lastName: users.lastName
+          }).from(users).where(eq(users.id, job.triggeredByUserId));
+          triggeredBy = user || null;
+        }
+
+        return {
+          ...job,
+          connection,
+          triggeredBy,
+          eventCount: Number(eventCount[0]?.count || 0)
+        };
+      })
+    );
+
+    return {
+      totalConnections: allConnections.length,
+      activeConnections: activeConnections.length,
+      connectionsByProvider,
+      syncJobsToday: todaysJobs.length,
+      syncJobsSuccessRate: todaysJobs.length > 0 ? (successfulJobs.length / todaysJobs.length) * 100 : 100,
+      recentSyncJobs
+    };
+  }
+
+  async getEhrMonitoringAnalytics(): Promise<EhrMonitoringAnalytics> {
+    const allSystems = await db.select().from(ehrSystems);
+    const operationalSystems = allSystems.filter(s => s.status === 'operational');
+    const degradedSystems = allSystems.filter(s => s.status === 'degraded' || s.status === 'partial_outage');
+    
+    const activeIncidentsRaw = await db.select().from(ehrIncidents)
+      .where(and(
+        or(
+          eq(ehrIncidents.status, 'investigating'),
+          eq(ehrIncidents.status, 'identified'),
+          eq(ehrIncidents.status, 'monitoring')
+        )
+      ))
+      .orderBy(desc(ehrIncidents.startedAt));
+
+    const systemsWithIncidents = new Set(activeIncidentsRaw.map(i => i.ehrSystemId)).size;
+    
+    const avgUptime = allSystems.reduce((sum, s) => sum + parseFloat(s.uptimePercent || '0'), 0) / (allSystems.length || 1);
+    const avgResponseTime = allSystems.reduce((sum, s) => sum + (s.avgResponseTime || 0), 0) / (allSystems.length || 1);
+
+    const activeIncidents: EhrIncidentWithDetails[] = await Promise.all(
+      activeIncidentsRaw.slice(0, 10).map(async (incident) => {
+        const [ehrSystem] = await db.select().from(ehrSystems)
+          .where(eq(ehrSystems.id, incident.ehrSystemId));
+        
+        let reportedBy = null;
+        if (incident.reportedByUserId) {
+          const [user] = await db.select({
+            id: users.id,
+            firstName: users.firstName,
+            lastName: users.lastName
+          }).from(users).where(eq(users.id, incident.reportedByUserId));
+          reportedBy = user || null;
+        }
+
+        let assignedTo = null;
+        if (incident.assignedToUserId) {
+          const [user] = await db.select({
+            id: users.id,
+            firstName: users.firstName,
+            lastName: users.lastName
+          }).from(users).where(eq(users.id, incident.assignedToUserId));
+          assignedTo = user || null;
+        }
+
+        const updates = await db.select().from(ehrIncidentUpdates)
+          .where(eq(ehrIncidentUpdates.incidentId, incident.id))
+          .orderBy(desc(ehrIncidentUpdates.createdAt));
+
+        return {
+          ...incident,
+          ehrSystem,
+          reportedBy,
+          assignedTo,
+          updates
+        };
+      })
+    );
+
+    const systemsByVendor = allSystems.reduce((acc, sys) => {
+      const existing = acc.find(v => v.vendor === sys.vendor);
+      if (existing) {
+        existing.count++;
+        existing.avgUptime = (existing.avgUptime + parseFloat(sys.uptimePercent || '0')) / 2;
+      } else {
+        acc.push({ vendor: sys.vendor, count: 1, avgUptime: parseFloat(sys.uptimePercent || '0') });
+      }
+      return acc;
+    }, [] as Array<{ vendor: string; count: number; avgUptime: number }>);
+
+    return {
+      totalSystems: allSystems.length,
+      operationalSystems: operationalSystems.length,
+      degradedSystems: degradedSystems.length,
+      systemsWithIncidents,
+      averageUptime: avgUptime,
+      averageResponseTime: avgResponseTime,
+      activeIncidents,
+      systemsByVendor
+    };
+  }
+
+  async getEscalationAnalytics(): Promise<EscalationAnalytics> {
+    const allTriggers = await db.select().from(escalationTriggers);
+    const activeTriggers = allTriggers.filter(t => t.isActive);
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const weekAgo = new Date(today);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    
+    const todaysEvents = await db.select().from(escalationEvents)
+      .where(gte(escalationEvents.createdAt, today));
+    
+    const weeksEvents = await db.select().from(escalationEvents)
+      .where(gte(escalationEvents.createdAt, weekAgo));
+    
+    const eventsByType = allTriggers.reduce((acc, trigger) => {
+      const count = weeksEvents.filter(e => e.triggerId === trigger.id).length;
+      const existing = acc.find(t => t.type === trigger.triggerType);
+      if (existing) {
+        existing.count += count;
+      } else {
+        acc.push({ type: trigger.triggerType, count });
+      }
+      return acc;
+    }, [] as Array<{ type: string; count: number }>);
+    
+    const acknowledgedEvents = weeksEvents.filter(e => e.acknowledgedAt);
+    const acknowledgementRate = weeksEvents.length > 0 
+      ? (acknowledgedEvents.length / weeksEvents.length) * 100 
+      : 100;
+    
+    const recentEventsRaw = await db.select().from(escalationEvents)
+      .orderBy(desc(escalationEvents.createdAt))
+      .limit(10);
+
+    const avgResponseTime = acknowledgedEvents.length > 0
+      ? acknowledgedEvents.reduce((sum, e) => {
+          const created = new Date(e.createdAt!);
+          const acknowledged = new Date(e.acknowledgedAt!);
+          return sum + (acknowledged.getTime() - created.getTime()) / 60000; // minutes
+        }, 0) / acknowledgedEvents.length
+      : 0;
+
+    const recentEvents = await Promise.all(
+      recentEventsRaw.map(async (event) => {
+        const [trigger] = await db.select({
+          id: escalationTriggers.id,
+          name: escalationTriggers.name,
+          triggerType: escalationTriggers.triggerType
+        }).from(escalationTriggers).where(eq(escalationTriggers.id, event.triggerId));
+        
+        let ticket = null;
+        if (event.ticketId) {
+          const [t] = await db.select().from(supportTickets)
+            .where(eq(supportTickets.id, event.ticketId));
+          ticket = t || null;
+        }
+
+        let incident = null;
+        if (event.incidentId) {
+          const [i] = await db.select().from(incidents)
+            .where(eq(incidents.id, event.incidentId));
+          incident = i || null;
+        }
+
+        let acknowledgedBy = null;
+        if (event.acknowledgedByUserId) {
+          const [user] = await db.select({
+            id: users.id,
+            firstName: users.firstName,
+            lastName: users.lastName
+          }).from(users).where(eq(users.id, event.acknowledgedByUserId));
+          acknowledgedBy = user || null;
+        }
+
+        return {
+          ...event,
+          trigger,
+          ticket,
+          incident,
+          acknowledgedBy
+        };
+      })
+    );
+
+    return {
+      totalTriggers: allTriggers.length,
+      activeTriggers: activeTriggers.length,
+      eventsToday: todaysEvents.length,
+      eventsThisWeek: weeksEvents.length,
+      eventsByType,
+      averageResponseTime: avgResponseTime,
+      acknowledgementRate,
+      recentEvents
+    };
   }
 }
 
