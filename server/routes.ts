@@ -10694,6 +10694,701 @@ export async function registerRoutes(
     }
   });
 
+  // ============================================
+  // PHASE 18: INTEGRATION & AUTOMATION ROUTES
+  // ============================================
+
+  // Integration Connections
+  app.get('/api/integrations/connections', isAuthenticated, async (req, res) => {
+    try {
+      const { category, provider, status, isActive } = req.query;
+      const connections = await storage.listIntegrationConnections({
+        category: category as string,
+        provider: provider as string,
+        status: status as string,
+        isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined
+      });
+      res.json(connections);
+    } catch (error) {
+      console.error("Error listing integration connections:", error);
+      res.status(500).json({ message: "Failed to list integration connections" });
+    }
+  });
+
+  app.get('/api/integrations/connections/:id', isAuthenticated, async (req, res) => {
+    try {
+      const connection = await storage.getIntegrationConnection(req.params.id);
+      if (!connection) {
+        return res.status(404).json({ message: "Connection not found" });
+      }
+      res.json(connection);
+    } catch (error) {
+      console.error("Error getting integration connection:", error);
+      res.status(500).json({ message: "Failed to get integration connection" });
+    }
+  });
+
+  app.post('/api/integrations/connections', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const connection = await storage.createIntegrationConnection({
+        ...req.body,
+        createdByUserId: userId,
+      });
+      res.status(201).json(connection);
+    } catch (error) {
+      console.error("Error creating integration connection:", error);
+      res.status(500).json({ message: "Failed to create integration connection" });
+    }
+  });
+
+  app.patch('/api/integrations/connections/:id', isAuthenticated, async (req, res) => {
+    try {
+      const updated = await storage.updateIntegrationConnection(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ message: "Connection not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating integration connection:", error);
+      res.status(500).json({ message: "Failed to update integration connection" });
+    }
+  });
+
+  app.delete('/api/integrations/connections/:id', isAuthenticated, async (req, res) => {
+    try {
+      const deleted = await storage.deleteIntegrationConnection(req.params.id);
+      res.json({ success: deleted });
+    } catch (error) {
+      console.error("Error deleting integration connection:", error);
+      res.status(500).json({ message: "Failed to delete integration connection" });
+    }
+  });
+
+  // Sync Jobs
+  app.get('/api/integrations/sync-jobs', isAuthenticated, async (req, res) => {
+    try {
+      const { connectionId, status } = req.query;
+      const jobs = await storage.listSyncJobs({
+        connectionId: connectionId as string,
+        status: status as string
+      });
+      res.json(jobs);
+    } catch (error) {
+      console.error("Error listing sync jobs:", error);
+      res.status(500).json({ message: "Failed to list sync jobs" });
+    }
+  });
+
+  app.post('/api/integrations/sync-jobs', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const job = await storage.createSyncJob({
+        ...req.body,
+        triggeredByUserId: userId,
+        status: 'pending'
+      });
+      
+      // Simulate async job processing (mock for demo)
+      setTimeout(async () => {
+        await storage.updateSyncJob(job.id, {
+          status: 'in_progress',
+          startedAt: new Date()
+        });
+        
+        // Create sync event
+        await storage.createSyncEvent({
+          syncJobId: job.id,
+          eventType: 'started',
+          resourceType: 'sync_job',
+        });
+        
+        // Simulate processing
+        setTimeout(async () => {
+          const recordsProcessed = Math.floor(Math.random() * 100) + 10;
+          await storage.updateSyncJob(job.id, {
+            status: 'completed',
+            completedAt: new Date(),
+            recordsProcessed,
+            recordsSucceeded: recordsProcessed,
+            recordsFailed: 0
+          });
+          
+          await storage.createSyncEvent({
+            syncJobId: job.id,
+            eventType: 'completed',
+            resourceType: 'sync_job',
+            details: { recordsProcessed }
+          });
+        }, 3000);
+      }, 1000);
+      
+      res.status(201).json(job);
+    } catch (error) {
+      console.error("Error creating sync job:", error);
+      res.status(500).json({ message: "Failed to create sync job" });
+    }
+  });
+
+  app.get('/api/integrations/sync-jobs/:id', isAuthenticated, async (req, res) => {
+    try {
+      const job = await storage.getSyncJob(req.params.id);
+      if (!job) {
+        return res.status(404).json({ message: "Sync job not found" });
+      }
+      const events = await storage.listSyncEvents(job.id);
+      res.json({ ...job, events });
+    } catch (error) {
+      console.error("Error getting sync job:", error);
+      res.status(500).json({ message: "Failed to get sync job" });
+    }
+  });
+
+  // Calendar Sync Settings
+  app.get('/api/integrations/calendar-settings', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const settings = await storage.getCalendarSyncSettings(userId);
+      res.json(settings || null);
+    } catch (error) {
+      console.error("Error getting calendar settings:", error);
+      res.status(500).json({ message: "Failed to get calendar settings" });
+    }
+  });
+
+  app.post('/api/integrations/calendar-settings', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const settings = await storage.createCalendarSyncSettings({
+        ...req.body,
+        userId
+      });
+      res.status(201).json(settings);
+    } catch (error) {
+      console.error("Error creating calendar settings:", error);
+      res.status(500).json({ message: "Failed to create calendar settings" });
+    }
+  });
+
+  app.patch('/api/integrations/calendar-settings/:id', isAuthenticated, async (req, res) => {
+    try {
+      const updated = await storage.updateCalendarSyncSettings(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ message: "Calendar settings not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating calendar settings:", error);
+      res.status(500).json({ message: "Failed to update calendar settings" });
+    }
+  });
+
+  // EHR Systems Monitoring
+  app.get('/api/ehr-systems', isAuthenticated, async (req, res) => {
+    try {
+      const { hospitalId, vendor, status, isMonitored } = req.query;
+      const systems = await storage.listEhrSystems({
+        hospitalId: hospitalId as string,
+        vendor: vendor as string,
+        status: status as string,
+        isMonitored: isMonitored === 'true' ? true : isMonitored === 'false' ? false : undefined
+      });
+      res.json(systems);
+    } catch (error) {
+      console.error("Error listing EHR systems:", error);
+      res.status(500).json({ message: "Failed to list EHR systems" });
+    }
+  });
+
+  app.get('/api/ehr-systems/:id', isAuthenticated, async (req, res) => {
+    try {
+      const system = await storage.getEhrSystem(req.params.id);
+      if (!system) {
+        return res.status(404).json({ message: "EHR system not found" });
+      }
+      const metrics = await storage.listEhrStatusMetrics(system.id, 24);
+      res.json({ ...system, recentMetrics: metrics });
+    } catch (error) {
+      console.error("Error getting EHR system:", error);
+      res.status(500).json({ message: "Failed to get EHR system" });
+    }
+  });
+
+  app.post('/api/ehr-systems', isAuthenticated, async (req, res) => {
+    try {
+      const system = await storage.createEhrSystem(req.body);
+      res.status(201).json(system);
+    } catch (error) {
+      console.error("Error creating EHR system:", error);
+      res.status(500).json({ message: "Failed to create EHR system" });
+    }
+  });
+
+  app.patch('/api/ehr-systems/:id', isAuthenticated, async (req, res) => {
+    try {
+      const updated = await storage.updateEhrSystem(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ message: "EHR system not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating EHR system:", error);
+      res.status(500).json({ message: "Failed to update EHR system" });
+    }
+  });
+
+  app.delete('/api/ehr-systems/:id', isAuthenticated, async (req, res) => {
+    try {
+      const deleted = await storage.deleteEhrSystem(req.params.id);
+      res.json({ success: deleted });
+    } catch (error) {
+      console.error("Error deleting EHR system:", error);
+      res.status(500).json({ message: "Failed to delete EHR system" });
+    }
+  });
+
+  // EHR Status Metrics
+  app.get('/api/ehr-systems/:id/metrics', isAuthenticated, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const metrics = await storage.listEhrStatusMetrics(req.params.id, limit);
+      res.json(metrics);
+    } catch (error) {
+      console.error("Error listing EHR metrics:", error);
+      res.status(500).json({ message: "Failed to list EHR metrics" });
+    }
+  });
+
+  app.post('/api/ehr-systems/:id/metrics', isAuthenticated, async (req, res) => {
+    try {
+      const metric = await storage.createEhrStatusMetric({
+        ...req.body,
+        ehrSystemId: req.params.id
+      });
+      res.status(201).json(metric);
+    } catch (error) {
+      console.error("Error creating EHR metric:", error);
+      res.status(500).json({ message: "Failed to create EHR metric" });
+    }
+  });
+
+  // EHR Incidents
+  app.get('/api/ehr-incidents', isAuthenticated, async (req, res) => {
+    try {
+      const { ehrSystemId, severity, status } = req.query;
+      const incidents = await storage.listEhrIncidents({
+        ehrSystemId: ehrSystemId as string,
+        severity: severity as string,
+        status: status as string
+      });
+      res.json(incidents);
+    } catch (error) {
+      console.error("Error listing EHR incidents:", error);
+      res.status(500).json({ message: "Failed to list EHR incidents" });
+    }
+  });
+
+  app.get('/api/ehr-incidents/:id', isAuthenticated, async (req, res) => {
+    try {
+      const incident = await storage.getEhrIncident(req.params.id);
+      if (!incident) {
+        return res.status(404).json({ message: "EHR incident not found" });
+      }
+      const updates = await storage.listEhrIncidentUpdates(incident.id);
+      res.json({ ...incident, updates });
+    } catch (error) {
+      console.error("Error getting EHR incident:", error);
+      res.status(500).json({ message: "Failed to get EHR incident" });
+    }
+  });
+
+  app.post('/api/ehr-incidents', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const incident = await storage.createEhrIncident({
+        ...req.body,
+        reportedByUserId: userId
+      });
+      res.status(201).json(incident);
+    } catch (error) {
+      console.error("Error creating EHR incident:", error);
+      res.status(500).json({ message: "Failed to create EHR incident" });
+    }
+  });
+
+  app.patch('/api/ehr-incidents/:id', isAuthenticated, async (req, res) => {
+    try {
+      const updated = await storage.updateEhrIncident(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ message: "EHR incident not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating EHR incident:", error);
+      res.status(500).json({ message: "Failed to update EHR incident" });
+    }
+  });
+
+  app.post('/api/ehr-incidents/:id/updates', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const update = await storage.createEhrIncidentUpdate({
+        ...req.body,
+        incidentId: req.params.id,
+        createdByUserId: userId
+      });
+      res.status(201).json(update);
+    } catch (error) {
+      console.error("Error creating EHR incident update:", error);
+      res.status(500).json({ message: "Failed to create EHR incident update" });
+    }
+  });
+
+  // Payroll Sync Profiles
+  app.get('/api/payroll-sync/profiles', isAuthenticated, async (req, res) => {
+    try {
+      const { connectionId, isActive } = req.query;
+      const profiles = await storage.listPayrollSyncProfiles({
+        connectionId: connectionId as string,
+        isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined
+      });
+      res.json(profiles);
+    } catch (error) {
+      console.error("Error listing payroll sync profiles:", error);
+      res.status(500).json({ message: "Failed to list payroll sync profiles" });
+    }
+  });
+
+  app.post('/api/payroll-sync/profiles', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.createPayrollSyncProfile({
+        ...req.body,
+        createdByUserId: userId
+      });
+      res.status(201).json(profile);
+    } catch (error) {
+      console.error("Error creating payroll sync profile:", error);
+      res.status(500).json({ message: "Failed to create payroll sync profile" });
+    }
+  });
+
+  app.patch('/api/payroll-sync/profiles/:id', isAuthenticated, async (req, res) => {
+    try {
+      const updated = await storage.updatePayrollSyncProfile(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ message: "Profile not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating payroll sync profile:", error);
+      res.status(500).json({ message: "Failed to update payroll sync profile" });
+    }
+  });
+
+  app.delete('/api/payroll-sync/profiles/:id', isAuthenticated, async (req, res) => {
+    try {
+      const deleted = await storage.deletePayrollSyncProfile(req.params.id);
+      res.json({ success: deleted });
+    } catch (error) {
+      console.error("Error deleting payroll sync profile:", error);
+      res.status(500).json({ message: "Failed to delete payroll sync profile" });
+    }
+  });
+
+  // Payroll Export Jobs
+  app.get('/api/payroll-sync/exports', isAuthenticated, async (req, res) => {
+    try {
+      const { profileId, batchId, status } = req.query;
+      const jobs = await storage.listPayrollExportJobs({
+        profileId: profileId as string,
+        batchId: batchId as string,
+        status: status as string
+      });
+      res.json(jobs);
+    } catch (error) {
+      console.error("Error listing payroll export jobs:", error);
+      res.status(500).json({ message: "Failed to list payroll export jobs" });
+    }
+  });
+
+  app.post('/api/payroll-sync/exports', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const batchId = `BATCH-${Date.now()}`;
+      
+      const job = await storage.createPayrollExportJob({
+        ...req.body,
+        batchId,
+        triggeredByUserId: userId,
+        status: 'pending'
+      });
+      
+      // Simulate async export processing (mock for demo)
+      setTimeout(async () => {
+        await storage.updatePayrollExportJob(job.id, {
+          status: 'processing',
+          startedAt: new Date()
+        });
+        
+        setTimeout(async () => {
+          const recordCount = Math.floor(Math.random() * 50) + 5;
+          const totalAmount = (Math.random() * 100000 + 10000).toFixed(2);
+          await storage.updatePayrollExportJob(job.id, {
+            status: 'completed',
+            completedAt: new Date(),
+            recordCount,
+            totalAmount
+          });
+        }, 3000);
+      }, 1000);
+      
+      res.status(201).json(job);
+    } catch (error) {
+      console.error("Error creating payroll export job:", error);
+      res.status(500).json({ message: "Failed to create payroll export job" });
+    }
+  });
+
+  // Escalation Triggers
+  app.get('/api/escalation-triggers', isAuthenticated, async (req, res) => {
+    try {
+      const { ruleId, triggerType, isActive } = req.query;
+      const triggers = await storage.listEscalationTriggers({
+        ruleId: ruleId as string,
+        triggerType: triggerType as string,
+        isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined
+      });
+      res.json(triggers);
+    } catch (error) {
+      console.error("Error listing escalation triggers:", error);
+      res.status(500).json({ message: "Failed to list escalation triggers" });
+    }
+  });
+
+  app.post('/api/escalation-triggers', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const trigger = await storage.createEscalationTrigger({
+        ...req.body,
+        createdByUserId: userId
+      });
+      res.status(201).json(trigger);
+    } catch (error) {
+      console.error("Error creating escalation trigger:", error);
+      res.status(500).json({ message: "Failed to create escalation trigger" });
+    }
+  });
+
+  app.patch('/api/escalation-triggers/:id', isAuthenticated, async (req, res) => {
+    try {
+      const updated = await storage.updateEscalationTrigger(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ message: "Trigger not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating escalation trigger:", error);
+      res.status(500).json({ message: "Failed to update escalation trigger" });
+    }
+  });
+
+  app.delete('/api/escalation-triggers/:id', isAuthenticated, async (req, res) => {
+    try {
+      const deleted = await storage.deleteEscalationTrigger(req.params.id);
+      res.json({ success: deleted });
+    } catch (error) {
+      console.error("Error deleting escalation trigger:", error);
+      res.status(500).json({ message: "Failed to delete escalation trigger" });
+    }
+  });
+
+  // Escalation Events
+  app.get('/api/escalation-events', isAuthenticated, async (req, res) => {
+    try {
+      const { triggerId, ticketId, incidentId } = req.query;
+      const events = await storage.listEscalationEvents({
+        triggerId: triggerId as string,
+        ticketId: ticketId as string,
+        incidentId: incidentId as string
+      });
+      res.json(events);
+    } catch (error) {
+      console.error("Error listing escalation events:", error);
+      res.status(500).json({ message: "Failed to list escalation events" });
+    }
+  });
+
+  app.post('/api/escalation-events/:id/acknowledge', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const updated = await storage.updateEscalationEvent(req.params.id, {
+        acknowledgedAt: new Date(),
+        acknowledgedByUserId: userId
+      });
+      if (!updated) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Error acknowledging escalation event:", error);
+      res.status(500).json({ message: "Failed to acknowledge escalation event" });
+    }
+  });
+
+  // Automation Workflows
+  app.get('/api/automation/workflows', isAuthenticated, async (req, res) => {
+    try {
+      const { category, triggerEvent, isActive } = req.query;
+      const workflows = await storage.listAutomationWorkflows({
+        category: category as string,
+        triggerEvent: triggerEvent as string,
+        isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined
+      });
+      res.json(workflows);
+    } catch (error) {
+      console.error("Error listing automation workflows:", error);
+      res.status(500).json({ message: "Failed to list automation workflows" });
+    }
+  });
+
+  app.get('/api/automation/workflows/:id', isAuthenticated, async (req, res) => {
+    try {
+      const workflow = await storage.getAutomationWorkflow(req.params.id);
+      if (!workflow) {
+        return res.status(404).json({ message: "Workflow not found" });
+      }
+      const executions = await storage.listWorkflowExecutions({ workflowId: workflow.id });
+      res.json({ ...workflow, recentExecutions: executions.slice(0, 10) });
+    } catch (error) {
+      console.error("Error getting automation workflow:", error);
+      res.status(500).json({ message: "Failed to get automation workflow" });
+    }
+  });
+
+  app.post('/api/automation/workflows', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const workflow = await storage.createAutomationWorkflow({
+        ...req.body,
+        createdByUserId: userId
+      });
+      res.status(201).json(workflow);
+    } catch (error) {
+      console.error("Error creating automation workflow:", error);
+      res.status(500).json({ message: "Failed to create automation workflow" });
+    }
+  });
+
+  app.patch('/api/automation/workflows/:id', isAuthenticated, async (req, res) => {
+    try {
+      const updated = await storage.updateAutomationWorkflow(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ message: "Workflow not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating automation workflow:", error);
+      res.status(500).json({ message: "Failed to update automation workflow" });
+    }
+  });
+
+  app.delete('/api/automation/workflows/:id', isAuthenticated, async (req, res) => {
+    try {
+      const deleted = await storage.deleteAutomationWorkflow(req.params.id);
+      res.json({ success: deleted });
+    } catch (error) {
+      console.error("Error deleting automation workflow:", error);
+      res.status(500).json({ message: "Failed to delete automation workflow" });
+    }
+  });
+
+  // Workflow Executions
+  app.get('/api/automation/executions', isAuthenticated, async (req, res) => {
+    try {
+      const { workflowId, status } = req.query;
+      const executions = await storage.listWorkflowExecutions({
+        workflowId: workflowId as string,
+        status: status as string
+      });
+      res.json(executions);
+    } catch (error) {
+      console.error("Error listing workflow executions:", error);
+      res.status(500).json({ message: "Failed to list workflow executions" });
+    }
+  });
+
+  app.post('/api/automation/workflows/:id/execute', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const workflow = await storage.getAutomationWorkflow(req.params.id);
+      if (!workflow) {
+        return res.status(404).json({ message: "Workflow not found" });
+      }
+      
+      const execution = await storage.createWorkflowExecution({
+        workflowId: workflow.id,
+        triggeredByUserId: userId,
+        status: 'running',
+        startedAt: new Date()
+      });
+      
+      // Simulate async workflow execution (mock for demo)
+      setTimeout(async () => {
+        const actions = workflow.actions as any[];
+        const actionsExecuted = actions ? actions.map((action, i) => ({
+          step: i + 1,
+          action: action.type || 'action',
+          status: 'completed',
+          timestamp: new Date().toISOString()
+        })) : [];
+        
+        await storage.updateWorkflowExecution(execution.id, {
+          status: 'completed',
+          completedAt: new Date(),
+          actionsExecuted,
+          results: { success: true, stepsCompleted: actionsExecuted.length }
+        });
+      }, 2000);
+      
+      res.status(201).json(execution);
+    } catch (error) {
+      console.error("Error executing workflow:", error);
+      res.status(500).json({ message: "Failed to execute workflow" });
+    }
+  });
+
+  // Integration Analytics
+  app.get('/api/analytics/integrations', isAuthenticated, async (req, res) => {
+    try {
+      const analytics = await storage.getIntegrationAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error getting integration analytics:", error);
+      res.status(500).json({ message: "Failed to get integration analytics" });
+    }
+  });
+
+  app.get('/api/analytics/ehr-monitoring', isAuthenticated, async (req, res) => {
+    try {
+      const analytics = await storage.getEhrMonitoringAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error getting EHR monitoring analytics:", error);
+      res.status(500).json({ message: "Failed to get EHR monitoring analytics" });
+    }
+  });
+
+  app.get('/api/analytics/escalations', isAuthenticated, async (req, res) => {
+    try {
+      const analytics = await storage.getEscalationAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error getting escalation analytics:", error);
+      res.status(500).json({ message: "Failed to get escalation analytics" });
+    }
+  });
+
   // Setup WebSocket server for real-time chat
   const { setupWebSocket } = await import('./websocket');
   setupWebSocket(httpServer);
