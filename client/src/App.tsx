@@ -71,6 +71,7 @@ import StaffInvitations from "@/pages/StaffInvitations";
 import IntegrationsHub from "@/pages/integrations-hub";
 import EhrMonitoring from "@/pages/ehr-monitoring";
 import AdvancedAnalytics from "@/pages/AdvancedAnalytics";
+import RaciMatrix from "@/pages/RaciMatrix";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -236,6 +237,7 @@ function Router() {
       <Route path="/integrations" component={() => <ProtectedRoute component={IntegrationsHub} requiredRoles={["admin"]} />} />
       <Route path="/ehr-monitoring" component={() => <ProtectedRoute component={EhrMonitoring} requiredRoles={["admin"]} />} />
       <Route path="/advanced-analytics" component={() => <ProtectedRoute component={AdvancedAnalytics} requiredRoles={["admin"]} />} />
+      <Route path="/raci-matrix" component={() => <ProtectedRoute component={RaciMatrix} />} />
       <Route path="/access-denied" component={AccessDenied} />
       <Route component={NotFound} />
     </Switch>

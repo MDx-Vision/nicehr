@@ -2836,7 +2836,33 @@ export async function registerRoutes(
   app.get('/api/projects/:projectId/team', isAuthenticated, async (req, res) => {
     try {
       const assignments = await storage.getProjectTeamAssignments(req.params.projectId);
-      res.json(assignments);
+      const allRoleTemplates = await storage.getAllTeamRoleTemplates();
+      const assignmentsWithUsers = await Promise.all(
+        assignments.map(async (assignment) => {
+          const user = await storage.getUser(assignment.userId);
+          const roleTemplate = assignment.roleTemplateId 
+            ? allRoleTemplates.find(t => t.id === assignment.roleTemplateId) || null
+            : null;
+          return {
+            ...assignment,
+            user: user ? {
+              id: user.id,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              email: user.email,
+              profileImageUrl: user.profileImageUrl,
+            } : {
+              id: assignment.userId,
+              firstName: null,
+              lastName: null,
+              email: null,
+              profileImageUrl: null,
+            },
+            roleTemplate,
+          };
+        })
+      );
+      res.json(assignmentsWithUsers);
     } catch (error) {
       console.error("Error fetching project team:", error);
       res.status(500).json({ message: "Failed to fetch project team" });

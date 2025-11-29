@@ -27,6 +27,7 @@ export const NAVIGATION_CONFIG: NavigationItem[] = [
   { title: "Hospitals", url: "/hospitals", icon: "Building2", category: "operations", roles: ["admin"], requiredPermission: "hospitals:view" },
   { title: "Consultants", url: "/consultants", icon: "Users", category: "operations", roles: ["admin", "hospital_leadership"], requiredPermission: "consultants:view" },
   { title: "Project Phases", url: "/project-phases", icon: "Layers", category: "operations", roles: ["admin", "hospital_leadership", "hospital_staff"], requiresProjectContext: true, requiredPermission: "projects:view" },
+  { title: "RACI Matrix", url: "/raci-matrix", icon: "Grid3X3", category: "operations", roles: ["admin", "hospital_leadership"], requiredPermission: "projects:raci_view" },
   { title: "Onboarding", url: "/onboarding", icon: "ClipboardCheck", category: "operations", roles: ["admin", "hospital_leadership"], requiredPermission: "consultants:manage" },
   { title: "My Onboarding", url: "/onboarding", icon: "ClipboardCheck", category: "operations", roles: ["consultant"] },
   
