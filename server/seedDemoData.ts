@@ -41,6 +41,10 @@ import {
   escalationEvents,
   automationWorkflows,
   workflowExecutions,
+  goLiveReadinessSnapshots,
+  consultantUtilizationSnapshots,
+  timelineForecastSnapshots,
+  costVarianceSnapshots,
 } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 
@@ -1272,6 +1276,788 @@ const demoWorkflowExecutions = [
   },
 ];
 
+// Phase 4 Advanced Analytics Demo Data
+
+// Go-Live Readiness Snapshots - Weekly snapshots showing go-live readiness progression
+const demoGoLiveReadinessSnapshots = [
+  {
+    id: "golive-snap-1",
+    projectId: "project-1",
+    snapshotDate: "2024-10-21",
+    overallScore: "72.50",
+    confidenceLevel: "78.00",
+    indicators: {
+      training: 68,
+      documentation: 72,
+      testing: 55,
+      staffing: 85,
+      riskMitigation: 62,
+      systemIntegration: 70,
+      dataValidation: 75,
+    },
+    riskFactors: [
+      "Insufficient training coverage in ED module",
+      "Integration testing incomplete for lab interfaces",
+      "Documentation gaps in ICU workflows",
+    ],
+    recommendations: [
+      "Schedule additional training sessions for ED staff",
+      "Complete integration testing by week 3",
+      "Assign technical writer to complete ICU documentation",
+    ],
+    calculatedByUserId: "demo-admin",
+  },
+  {
+    id: "golive-snap-2",
+    projectId: "project-1",
+    snapshotDate: "2024-10-28",
+    overallScore: "78.25",
+    confidenceLevel: "82.00",
+    indicators: {
+      training: 75,
+      documentation: 78,
+      testing: 65,
+      staffing: 88,
+      riskMitigation: 70,
+      systemIntegration: 78,
+      dataValidation: 80,
+    },
+    riskFactors: [
+      "Integration testing still in progress",
+      "Minor documentation gaps remain",
+    ],
+    recommendations: [
+      "Continue focused training for night shift staff",
+      "Schedule go-live rehearsal for week 5",
+    ],
+    calculatedByUserId: "demo-admin",
+  },
+  {
+    id: "golive-snap-3",
+    projectId: "project-1",
+    snapshotDate: "2024-11-04",
+    overallScore: "84.75",
+    confidenceLevel: "88.00",
+    indicators: {
+      training: 85,
+      documentation: 85,
+      testing: 78,
+      staffing: 90,
+      riskMitigation: 82,
+      systemIntegration: 85,
+      dataValidation: 88,
+    },
+    riskFactors: [
+      "Final user acceptance testing pending",
+    ],
+    recommendations: [
+      "Complete UAT by week 6",
+      "Finalize contingency plans",
+    ],
+    calculatedByUserId: "demo-admin",
+  },
+  {
+    id: "golive-snap-4",
+    projectId: "project-2",
+    snapshotDate: "2024-10-21",
+    overallScore: "65.00",
+    confidenceLevel: "72.00",
+    indicators: {
+      training: 58,
+      documentation: 65,
+      testing: 48,
+      staffing: 78,
+      riskMitigation: 55,
+      systemIntegration: 68,
+      dataValidation: 72,
+    },
+    riskFactors: [
+      "PowerChart configuration behind schedule",
+      "FirstNet upgrade testing incomplete",
+      "Staff availability concerns during holiday period",
+      "Vendor support response times slower than expected",
+    ],
+    recommendations: [
+      "Accelerate PowerChart configuration work",
+      "Request dedicated vendor support resources",
+      "Schedule additional training sessions before holidays",
+      "Develop detailed contingency plan",
+    ],
+    calculatedByUserId: "demo-admin",
+  },
+  {
+    id: "golive-snap-5",
+    projectId: "project-2",
+    snapshotDate: "2024-11-04",
+    overallScore: "75.50",
+    confidenceLevel: "80.00",
+    indicators: {
+      training: 72,
+      documentation: 75,
+      testing: 68,
+      staffing: 82,
+      riskMitigation: 70,
+      systemIntegration: 78,
+      dataValidation: 80,
+    },
+    riskFactors: [
+      "Some integration testing still pending",
+      "Holiday staffing may impact timeline",
+    ],
+    recommendations: [
+      "Complete remaining integration tests",
+      "Confirm holiday coverage schedule",
+    ],
+    calculatedByUserId: "demo-admin",
+  },
+  {
+    id: "golive-snap-6",
+    projectId: "project-3",
+    snapshotDate: "2024-11-11",
+    overallScore: "88.25",
+    confidenceLevel: "92.00",
+    indicators: {
+      training: 92,
+      documentation: 88,
+      testing: 85,
+      staffing: 95,
+      riskMitigation: 85,
+      systemIntegration: 88,
+      dataValidation: 90,
+    },
+    riskFactors: [
+      "Minor Care Everywhere interface adjustments needed",
+    ],
+    recommendations: [
+      "Complete final interface testing",
+      "Schedule patient portal soft launch",
+    ],
+    calculatedByUserId: "demo-admin",
+  },
+  {
+    id: "golive-snap-7",
+    projectId: "project-3",
+    snapshotDate: "2024-11-18",
+    overallScore: "92.00",
+    confidenceLevel: "95.00",
+    indicators: {
+      training: 95,
+      documentation: 92,
+      testing: 90,
+      staffing: 95,
+      riskMitigation: 90,
+      systemIntegration: 92,
+      dataValidation: 94,
+    },
+    riskFactors: [],
+    recommendations: [
+      "Proceed with go-live as planned",
+      "Ensure 24/7 support coverage for first week",
+    ],
+    calculatedByUserId: "demo-admin",
+  },
+  {
+    id: "golive-snap-8",
+    projectId: "project-1",
+    snapshotDate: "2024-11-25",
+    overallScore: "89.50",
+    confidenceLevel: "91.00",
+    indicators: {
+      training: 90,
+      documentation: 90,
+      testing: 85,
+      staffing: 92,
+      riskMitigation: 88,
+      systemIntegration: 90,
+      dataValidation: 92,
+    },
+    riskFactors: [
+      "Minor testing gaps in edge cases",
+    ],
+    recommendations: [
+      "Complete edge case testing",
+      "Finalize go-live command center setup",
+    ],
+    calculatedByUserId: "demo-admin",
+  },
+];
+
+// Consultant Utilization Snapshots - Weekly utilization tracking
+const demoConsultantUtilizationSnapshots = [
+  {
+    id: "util-snap-1",
+    projectId: null,
+    periodStart: "2024-10-14",
+    periodEnd: "2024-10-20",
+    totalConsultants: 10,
+    averageUtilization: "82.50",
+    scheduledHours: "1800.00",
+    actualHours: "1485.00",
+    billableHours: "1420.00",
+    utilizationByRole: {
+      "Senior Consultant": 92,
+      "Implementation Specialist": 85,
+      "Trainer": 78,
+      "Clinical Informaticist": 80,
+      "Integration Architect": 88,
+    },
+    utilizationTrend: {
+      week1: 78,
+      week2: 80,
+      week3: 82,
+      week4: 85,
+    },
+  },
+  {
+    id: "util-snap-2",
+    projectId: null,
+    periodStart: "2024-10-21",
+    periodEnd: "2024-10-27",
+    totalConsultants: 11,
+    averageUtilization: "85.25",
+    scheduledHours: "1980.00",
+    actualHours: "1686.00",
+    billableHours: "1620.00",
+    utilizationByRole: {
+      "Senior Consultant": 94,
+      "Implementation Specialist": 88,
+      "Trainer": 80,
+      "Clinical Informaticist": 82,
+      "Integration Architect": 90,
+    },
+    utilizationTrend: {
+      week1: 80,
+      week2: 82,
+      week3: 85,
+      week4: 88,
+    },
+  },
+  {
+    id: "util-snap-3",
+    projectId: "project-1",
+    periodStart: "2024-10-28",
+    periodEnd: "2024-11-03",
+    totalConsultants: 6,
+    averageUtilization: "88.75",
+    scheduledHours: "1080.00",
+    actualHours: "958.00",
+    billableHours: "920.00",
+    utilizationByRole: {
+      "Senior Consultant": 95,
+      "Implementation Specialist": 90,
+      "Trainer": 82,
+      "Clinical Informaticist": 88,
+    },
+    utilizationTrend: {
+      week1: 85,
+      week2: 87,
+      week3: 88,
+      week4: 90,
+    },
+  },
+  {
+    id: "util-snap-4",
+    projectId: "project-2",
+    periodStart: "2024-10-28",
+    periodEnd: "2024-11-03",
+    totalConsultants: 5,
+    averageUtilization: "78.50",
+    scheduledHours: "900.00",
+    actualHours: "706.50",
+    billableHours: "680.00",
+    utilizationByRole: {
+      "Senior Consultant": 88,
+      "Implementation Specialist": 75,
+      "Trainer": 72,
+    },
+    utilizationTrend: {
+      week1: 72,
+      week2: 75,
+      week3: 78,
+      week4: 80,
+    },
+  },
+  {
+    id: "util-snap-5",
+    projectId: null,
+    periodStart: "2024-11-04",
+    periodEnd: "2024-11-10",
+    totalConsultants: 12,
+    averageUtilization: "91.25",
+    scheduledHours: "2160.00",
+    actualHours: "1971.00",
+    billableHours: "1890.00",
+    utilizationByRole: {
+      "Senior Consultant": 96,
+      "Implementation Specialist": 92,
+      "Trainer": 88,
+      "Clinical Informaticist": 90,
+      "Integration Architect": 94,
+    },
+    utilizationTrend: {
+      week1: 85,
+      week2: 88,
+      week3: 91,
+      week4: 92,
+    },
+  },
+  {
+    id: "util-snap-6",
+    projectId: null,
+    periodStart: "2024-11-11",
+    periodEnd: "2024-11-17",
+    totalConsultants: 11,
+    averageUtilization: "87.00",
+    scheduledHours: "1980.00",
+    actualHours: "1722.60",
+    billableHours: "1650.00",
+    utilizationByRole: {
+      "Senior Consultant": 92,
+      "Implementation Specialist": 88,
+      "Trainer": 82,
+      "Clinical Informaticist": 85,
+      "Integration Architect": 90,
+    },
+    utilizationTrend: {
+      week1: 88,
+      week2: 91,
+      week3: 87,
+      week4: 85,
+    },
+  },
+  {
+    id: "util-snap-7",
+    projectId: "project-3",
+    periodStart: "2024-11-18",
+    periodEnd: "2024-11-24",
+    totalConsultants: 4,
+    averageUtilization: "92.50",
+    scheduledHours: "720.00",
+    actualHours: "666.00",
+    billableHours: "640.00",
+    utilizationByRole: {
+      "Senior Consultant": 95,
+      "Implementation Specialist": 92,
+      "Trainer": 90,
+    },
+    utilizationTrend: {
+      week1: 88,
+      week2: 90,
+      week3: 92,
+      week4: 94,
+    },
+  },
+  {
+    id: "util-snap-8",
+    projectId: null,
+    periodStart: "2024-11-18",
+    periodEnd: "2024-11-24",
+    totalConsultants: 10,
+    averageUtilization: "68.50",
+    scheduledHours: "1800.00",
+    actualHours: "1233.00",
+    billableHours: "1180.00",
+    utilizationByRole: {
+      "Senior Consultant": 78,
+      "Implementation Specialist": 65,
+      "Trainer": 60,
+      "Clinical Informaticist": 70,
+      "Integration Architect": 75,
+    },
+    utilizationTrend: {
+      week1: 91,
+      week2: 87,
+      week3: 72,
+      week4: 68,
+    },
+  },
+];
+
+// Timeline Forecast Snapshots - Project timeline predictions
+const demoTimelineForecastSnapshots = [
+  {
+    id: "timeline-snap-1",
+    projectId: "project-1",
+    forecastDate: "2024-10-21",
+    originalEndDate: "2025-06-30",
+    predictedEndDate: "2025-07-15",
+    confidenceLevel: "75.00",
+    varianceDays: 15,
+    riskDrivers: [
+      "Resource constraints during holiday period",
+      "Integration testing complexity higher than expected",
+      "Staff availability challenges",
+    ],
+    scenarioAnalysis: {
+      best: "2025-06-15",
+      likely: "2025-07-15",
+      worst: "2025-08-01",
+    },
+    assumptions: {
+      avgTaskDuration: 5,
+      resourceAvailability: 80,
+      scopeStability: 85,
+      vendorResponseTime: 3,
+    },
+    createdByUserId: "demo-admin",
+  },
+  {
+    id: "timeline-snap-2",
+    projectId: "project-1",
+    forecastDate: "2024-11-04",
+    originalEndDate: "2025-06-30",
+    predictedEndDate: "2025-07-10",
+    confidenceLevel: "80.00",
+    varianceDays: 10,
+    riskDrivers: [
+      "Integration testing complexity",
+      "Staff availability challenges",
+    ],
+    scenarioAnalysis: {
+      best: "2025-06-25",
+      likely: "2025-07-10",
+      worst: "2025-07-25",
+    },
+    assumptions: {
+      avgTaskDuration: 4.5,
+      resourceAvailability: 85,
+      scopeStability: 88,
+      vendorResponseTime: 2,
+    },
+    createdByUserId: "demo-admin",
+  },
+  {
+    id: "timeline-snap-3",
+    projectId: "project-1",
+    forecastDate: "2024-11-25",
+    originalEndDate: "2025-06-30",
+    predictedEndDate: "2025-06-30",
+    confidenceLevel: "88.00",
+    varianceDays: 0,
+    riskDrivers: [],
+    scenarioAnalysis: {
+      best: "2025-06-20",
+      likely: "2025-06-30",
+      worst: "2025-07-10",
+    },
+    assumptions: {
+      avgTaskDuration: 4,
+      resourceAvailability: 90,
+      scopeStability: 92,
+      vendorResponseTime: 1,
+    },
+    createdByUserId: "demo-admin",
+  },
+  {
+    id: "timeline-snap-4",
+    projectId: "project-2",
+    forecastDate: "2024-10-21",
+    originalEndDate: "2025-04-15",
+    predictedEndDate: "2025-05-15",
+    confidenceLevel: "70.00",
+    varianceDays: 30,
+    riskDrivers: [
+      "Scope changes from stakeholder feedback",
+      "Technical challenges with FirstNet upgrade",
+      "Vendor delays on critical patches",
+      "Resource constraints",
+    ],
+    scenarioAnalysis: {
+      best: "2025-04-15",
+      likely: "2025-05-15",
+      worst: "2025-06-15",
+    },
+    assumptions: {
+      avgTaskDuration: 6,
+      resourceAvailability: 75,
+      scopeStability: 70,
+      vendorResponseTime: 5,
+    },
+    createdByUserId: "demo-admin",
+  },
+  {
+    id: "timeline-snap-5",
+    projectId: "project-2",
+    forecastDate: "2024-11-18",
+    originalEndDate: "2025-04-15",
+    predictedEndDate: "2025-05-01",
+    confidenceLevel: "78.00",
+    varianceDays: 16,
+    riskDrivers: [
+      "Scope changes partially addressed",
+      "Vendor response improved",
+    ],
+    scenarioAnalysis: {
+      best: "2025-04-20",
+      likely: "2025-05-01",
+      worst: "2025-05-20",
+    },
+    assumptions: {
+      avgTaskDuration: 5,
+      resourceAvailability: 82,
+      scopeStability: 80,
+      vendorResponseTime: 3,
+    },
+    createdByUserId: "demo-admin",
+  },
+  {
+    id: "timeline-snap-6",
+    projectId: "project-3",
+    forecastDate: "2024-11-04",
+    originalEndDate: "2025-03-31",
+    predictedEndDate: "2025-03-20",
+    confidenceLevel: "85.00",
+    varianceDays: -11,
+    riskDrivers: [],
+    scenarioAnalysis: {
+      best: "2025-03-10",
+      likely: "2025-03-20",
+      worst: "2025-03-31",
+    },
+    assumptions: {
+      avgTaskDuration: 4,
+      resourceAvailability: 92,
+      scopeStability: 95,
+      vendorResponseTime: 1,
+    },
+    createdByUserId: "demo-admin",
+  },
+  {
+    id: "timeline-snap-7",
+    projectId: "project-3",
+    forecastDate: "2024-11-25",
+    originalEndDate: "2025-03-31",
+    predictedEndDate: "2025-03-15",
+    confidenceLevel: "90.00",
+    varianceDays: -16,
+    riskDrivers: [],
+    scenarioAnalysis: {
+      best: "2025-03-01",
+      likely: "2025-03-15",
+      worst: "2025-03-25",
+    },
+    assumptions: {
+      avgTaskDuration: 3.5,
+      resourceAvailability: 95,
+      scopeStability: 98,
+      vendorResponseTime: 1,
+    },
+    createdByUserId: "demo-admin",
+  },
+  {
+    id: "timeline-snap-8",
+    projectId: "project-2",
+    forecastDate: "2024-11-25",
+    originalEndDate: "2025-04-15",
+    predictedEndDate: "2025-04-25",
+    confidenceLevel: "82.00",
+    varianceDays: 10,
+    riskDrivers: [
+      "Minor scope adjustments pending approval",
+    ],
+    scenarioAnalysis: {
+      best: "2025-04-15",
+      likely: "2025-04-25",
+      worst: "2025-05-10",
+    },
+    assumptions: {
+      avgTaskDuration: 4.5,
+      resourceAvailability: 85,
+      scopeStability: 85,
+      vendorResponseTime: 2,
+    },
+    createdByUserId: "demo-admin",
+  },
+];
+
+// Cost Variance Snapshots - Budget vs actual tracking
+const demoCostVarianceSnapshots = [
+  {
+    id: "cost-snap-1",
+    projectId: "project-1",
+    snapshotDate: "2024-10-21",
+    budgetedAmount: "2500000.00",
+    actualAmount: "680000.00",
+    varianceAmount: "-1820000.00",
+    variancePercentage: "-72.80",
+    status: "on_track" as const,
+    categoryBreakdown: {
+      labor: 520000,
+      travel: 85000,
+      software: 45000,
+      training: 25000,
+      expenses: 5000,
+    },
+    forecastToComplete: "1750000.00",
+    estimateAtCompletion: "2430000.00",
+  },
+  {
+    id: "cost-snap-2",
+    projectId: "project-1",
+    snapshotDate: "2024-11-04",
+    budgetedAmount: "2500000.00",
+    actualAmount: "1050000.00",
+    varianceAmount: "-1450000.00",
+    variancePercentage: "-58.00",
+    status: "on_track" as const,
+    categoryBreakdown: {
+      labor: 820000,
+      travel: 125000,
+      software: 65000,
+      training: 32000,
+      expenses: 8000,
+    },
+    forecastToComplete: "1380000.00",
+    estimateAtCompletion: "2430000.00",
+  },
+  {
+    id: "cost-snap-3",
+    projectId: "project-1",
+    snapshotDate: "2024-11-25",
+    budgetedAmount: "2500000.00",
+    actualAmount: "1650000.00",
+    varianceAmount: "-850000.00",
+    variancePercentage: "-34.00",
+    status: "on_track" as const,
+    categoryBreakdown: {
+      labor: 1350000,
+      travel: 165000,
+      software: 85000,
+      training: 40000,
+      expenses: 10000,
+    },
+    forecastToComplete: "780000.00",
+    estimateAtCompletion: "2430000.00",
+  },
+  {
+    id: "cost-snap-4",
+    projectId: "project-2",
+    snapshotDate: "2024-10-21",
+    budgetedAmount: "1800000.00",
+    actualAmount: "520000.00",
+    varianceAmount: "-1280000.00",
+    variancePercentage: "-71.11",
+    status: "at_risk" as const,
+    categoryBreakdown: {
+      labor: 420000,
+      travel: 55000,
+      software: 32000,
+      training: 10000,
+      expenses: 3000,
+    },
+    forecastToComplete: "1450000.00",
+    estimateAtCompletion: "1970000.00",
+  },
+  {
+    id: "cost-snap-5",
+    projectId: "project-2",
+    snapshotDate: "2024-11-18",
+    budgetedAmount: "1800000.00",
+    actualAmount: "1150000.00",
+    varianceAmount: "-650000.00",
+    variancePercentage: "-36.11",
+    status: "at_risk" as const,
+    categoryBreakdown: {
+      labor: 940000,
+      travel: 115000,
+      software: 62000,
+      training: 25000,
+      expenses: 8000,
+    },
+    forecastToComplete: "750000.00",
+    estimateAtCompletion: "1900000.00",
+  },
+  {
+    id: "cost-snap-6",
+    projectId: "project-3",
+    snapshotDate: "2024-11-04",
+    budgetedAmount: "950000.00",
+    actualAmount: "380000.00",
+    varianceAmount: "-570000.00",
+    variancePercentage: "-60.00",
+    status: "under_budget" as const,
+    categoryBreakdown: {
+      labor: 310000,
+      travel: 42000,
+      software: 18000,
+      training: 8000,
+      expenses: 2000,
+    },
+    forecastToComplete: "450000.00",
+    estimateAtCompletion: "830000.00",
+  },
+  {
+    id: "cost-snap-7",
+    projectId: "project-3",
+    snapshotDate: "2024-11-25",
+    budgetedAmount: "950000.00",
+    actualAmount: "680000.00",
+    varianceAmount: "-270000.00",
+    variancePercentage: "-28.42",
+    status: "under_budget" as const,
+    categoryBreakdown: {
+      labor: 560000,
+      travel: 72000,
+      software: 28000,
+      training: 15000,
+      expenses: 5000,
+    },
+    forecastToComplete: "175000.00",
+    estimateAtCompletion: "855000.00",
+  },
+  {
+    id: "cost-snap-8",
+    projectId: "project-2",
+    snapshotDate: "2024-11-25",
+    budgetedAmount: "1800000.00",
+    actualAmount: "1420000.00",
+    varianceAmount: "-380000.00",
+    variancePercentage: "-21.11",
+    status: "over_budget" as const,
+    categoryBreakdown: {
+      labor: 1180000,
+      travel: 135000,
+      software: 72000,
+      training: 28000,
+      expenses: 5000,
+    },
+    forecastToComplete: "480000.00",
+    estimateAtCompletion: "1900000.00",
+  },
+];
+
+// Seed function for Phase 4 Advanced Analytics data
+async function seedPhase4AnalyticsData() {
+  console.log("Seeding Phase 4 Advanced Analytics data...");
+
+  try {
+    console.log("  Seeding go-live readiness snapshots...");
+    for (const snapshot of demoGoLiveReadinessSnapshots) {
+      await db.insert(goLiveReadinessSnapshots).values(snapshot).onConflictDoNothing();
+    }
+
+    console.log("  Seeding consultant utilization snapshots...");
+    for (const snapshot of demoConsultantUtilizationSnapshots) {
+      await db.insert(consultantUtilizationSnapshots).values(snapshot).onConflictDoNothing();
+    }
+
+    console.log("  Seeding timeline forecast snapshots...");
+    for (const snapshot of demoTimelineForecastSnapshots) {
+      await db.insert(timelineForecastSnapshots).values(snapshot).onConflictDoNothing();
+    }
+
+    console.log("  Seeding cost variance snapshots...");
+    for (const snapshot of demoCostVarianceSnapshots) {
+      await db.insert(costVarianceSnapshots).values(snapshot).onConflictDoNothing();
+    }
+
+    console.log("Phase 4 Advanced Analytics data seeding completed!");
+  } catch (error) {
+    console.error("Error seeding Phase 4 Analytics data:", error);
+    throw error;
+  }
+}
+
 export async function seedDemoData() {
   console.log("Starting demo data seeding...");
 
@@ -1437,6 +2223,9 @@ export async function seedDemoData() {
     for (const exec of demoWorkflowExecutions) {
       await db.insert(workflowExecutions).values(exec).onConflictDoNothing();
     }
+
+    // Seed Phase 4 Advanced Analytics data
+    await seedPhase4AnalyticsData();
 
     console.log("Demo data seeding completed successfully!");
     return { success: true };
