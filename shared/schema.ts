@@ -6739,3 +6739,38 @@ export interface EscalationAnalytics {
   acknowledgementRate: number;
   recentEvents: EscalationEventWithDetails[];
 }
+
+// ==========================================
+// PHASE 4: ADVANCED ANALYTICS SUMMARY TYPES
+// ==========================================
+
+export interface AdvancedAnalyticsSummary {
+  goLiveReadiness: {
+    latestSnapshot: GoLiveReadinessSnapshot | null;
+    averageScore: number;
+    projectCount: number;
+    atRiskCount: number;
+    onTrackCount: number;
+  };
+  consultantUtilization: {
+    latestSnapshot: ConsultantUtilizationSnapshot | null;
+    averageUtilization: number;
+    totalScheduledHours: number;
+    totalActualHours: number;
+    utilizationTrend: 'improving' | 'stable' | 'declining';
+  };
+  timelineForecast: {
+    latestSnapshot: TimelineForecastSnapshot | null;
+    projectsOnSchedule: number;
+    projectsDelayed: number;
+    averageVarianceDays: number;
+  };
+  costVariance: {
+    latestSnapshot: CostVarianceSnapshot | null;
+    totalBudgeted: number;
+    totalActual: number;
+    overallVariancePercentage: number;
+    projectsOverBudget: number;
+    projectsUnderBudget: number;
+  };
+}

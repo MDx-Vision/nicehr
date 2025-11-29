@@ -11389,6 +11389,182 @@ export async function registerRoutes(
     }
   });
 
+  // ============================================
+  // PHASE 4: ADVANCED ANALYTICS ROUTES
+  // ============================================
+
+  // Get summary of all advanced analytics
+  app.get('/api/analytics/advanced', isAuthenticated, requirePermission('analytics:view'), async (req: any, res) => {
+    try {
+      const projectId = req.query.projectId as string | undefined;
+      const summary = await storage.getAdvancedAnalyticsSummary(projectId);
+      res.json(summary);
+    } catch (error) {
+      console.error("Error getting advanced analytics summary:", error);
+      res.status(500).json({ message: "Failed to get advanced analytics summary" });
+    }
+  });
+
+  // Go-Live Readiness Analytics
+  app.get('/api/analytics/advanced/readiness', isAuthenticated, requirePermission('analytics:view'), async (req: any, res) => {
+    try {
+      const projectId = req.query.projectId as string | undefined;
+      const snapshots = await storage.getGoLiveReadinessSnapshots(projectId);
+      res.json(snapshots);
+    } catch (error) {
+      console.error("Error getting go-live readiness snapshots:", error);
+      res.status(500).json({ message: "Failed to get go-live readiness snapshots" });
+    }
+  });
+
+  app.get('/api/analytics/advanced/readiness/:projectId', isAuthenticated, requirePermission('analytics:view'), async (req: any, res) => {
+    try {
+      const { projectId } = req.params;
+      const snapshot = await storage.getLatestGoLiveReadiness(projectId);
+      if (!snapshot) {
+        return res.status(404).json({ message: "No readiness snapshot found for this project" });
+      }
+      res.json(snapshot);
+    } catch (error) {
+      console.error("Error getting go-live readiness:", error);
+      res.status(500).json({ message: "Failed to get go-live readiness" });
+    }
+  });
+
+  app.post('/api/analytics/advanced/readiness/:projectId/compute', isAuthenticated, requirePermission('analytics:manage'), async (req: any, res) => {
+    try {
+      const { projectId } = req.params;
+      const userId = req.user?.id;
+      const snapshot = await storage.computeGoLiveReadinessScore(projectId, userId);
+      res.status(201).json(snapshot);
+    } catch (error) {
+      console.error("Error computing go-live readiness:", error);
+      res.status(500).json({ message: "Failed to compute go-live readiness" });
+    }
+  });
+
+  // Consultant Utilization Analytics
+  app.get('/api/analytics/advanced/utilization', isAuthenticated, requirePermission('analytics:view'), async (req: any, res) => {
+    try {
+      const projectId = req.query.projectId as string | undefined;
+      const snapshots = await storage.getConsultantUtilizationSnapshots(projectId);
+      res.json(snapshots);
+    } catch (error) {
+      console.error("Error getting utilization snapshots:", error);
+      res.status(500).json({ message: "Failed to get utilization snapshots" });
+    }
+  });
+
+  app.get('/api/analytics/advanced/utilization/:projectId', isAuthenticated, requirePermission('analytics:view'), async (req: any, res) => {
+    try {
+      const { projectId } = req.params;
+      const snapshot = await storage.getLatestConsultantUtilization(projectId);
+      if (!snapshot) {
+        return res.status(404).json({ message: "No utilization snapshot found" });
+      }
+      res.json(snapshot);
+    } catch (error) {
+      console.error("Error getting utilization:", error);
+      res.status(500).json({ message: "Failed to get utilization" });
+    }
+  });
+
+  app.post('/api/analytics/advanced/utilization/compute', isAuthenticated, requirePermission('analytics:manage'), async (req: any, res) => {
+    try {
+      const { projectId, periodStart, periodEnd } = req.body;
+      
+      const startDate = periodStart ? new Date(periodStart) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const endDate = periodEnd ? new Date(periodEnd) : new Date();
+      
+      const snapshot = await storage.computeConsultantUtilization(projectId, startDate, endDate);
+      res.status(201).json(snapshot);
+    } catch (error) {
+      console.error("Error computing utilization:", error);
+      res.status(500).json({ message: "Failed to compute utilization" });
+    }
+  });
+
+  // Timeline Forecast Analytics
+  app.get('/api/analytics/advanced/forecasts', isAuthenticated, requirePermission('analytics:view'), async (req: any, res) => {
+    try {
+      const projectId = req.query.projectId as string;
+      if (!projectId) {
+        return res.status(400).json({ message: "Project ID is required" });
+      }
+      const snapshots = await storage.getTimelineForecastSnapshots(projectId);
+      res.json(snapshots);
+    } catch (error) {
+      console.error("Error getting timeline forecasts:", error);
+      res.status(500).json({ message: "Failed to get timeline forecasts" });
+    }
+  });
+
+  app.get('/api/analytics/advanced/forecasts/:projectId', isAuthenticated, requirePermission('analytics:view'), async (req: any, res) => {
+    try {
+      const { projectId } = req.params;
+      const snapshot = await storage.getLatestTimelineForecast(projectId);
+      if (!snapshot) {
+        return res.status(404).json({ message: "No timeline forecast found for this project" });
+      }
+      res.json(snapshot);
+    } catch (error) {
+      console.error("Error getting timeline forecast:", error);
+      res.status(500).json({ message: "Failed to get timeline forecast" });
+    }
+  });
+
+  app.post('/api/analytics/advanced/forecasts/:projectId/compute', isAuthenticated, requirePermission('analytics:manage'), async (req: any, res) => {
+    try {
+      const { projectId } = req.params;
+      const userId = req.user?.id;
+      const snapshot = await storage.computeTimelineForecast(projectId, userId);
+      res.status(201).json(snapshot);
+    } catch (error) {
+      console.error("Error computing timeline forecast:", error);
+      res.status(500).json({ message: "Failed to compute timeline forecast" });
+    }
+  });
+
+  // Cost Variance Analytics
+  app.get('/api/analytics/advanced/cost-variance', isAuthenticated, requirePermission('analytics:view'), async (req: any, res) => {
+    try {
+      const projectId = req.query.projectId as string;
+      if (!projectId) {
+        return res.status(400).json({ message: "Project ID is required" });
+      }
+      const snapshots = await storage.getCostVarianceSnapshots(projectId);
+      res.json(snapshots);
+    } catch (error) {
+      console.error("Error getting cost variance snapshots:", error);
+      res.status(500).json({ message: "Failed to get cost variance snapshots" });
+    }
+  });
+
+  app.get('/api/analytics/advanced/cost-variance/:projectId', isAuthenticated, requirePermission('analytics:view'), async (req: any, res) => {
+    try {
+      const { projectId } = req.params;
+      const snapshot = await storage.getLatestCostVariance(projectId);
+      if (!snapshot) {
+        return res.status(404).json({ message: "No cost variance snapshot found for this project" });
+      }
+      res.json(snapshot);
+    } catch (error) {
+      console.error("Error getting cost variance:", error);
+      res.status(500).json({ message: "Failed to get cost variance" });
+    }
+  });
+
+  app.post('/api/analytics/advanced/cost-variance/:projectId/compute', isAuthenticated, requirePermission('analytics:manage'), async (req: any, res) => {
+    try {
+      const { projectId } = req.params;
+      const snapshot = await storage.computeCostVariance(projectId);
+      res.status(201).json(snapshot);
+    } catch (error) {
+      console.error("Error computing cost variance:", error);
+      res.status(500).json({ message: "Failed to compute cost variance" });
+    }
+  });
+
   // Setup WebSocket server for real-time chat
   const { setupWebSocket } = await import('./websocket');
   setupWebSocket(httpServer);

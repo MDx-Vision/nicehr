@@ -482,6 +482,19 @@ import {
   type EscalationAnalytics,
   type SyncJobWithDetails,
   type EhrIncidentWithDetails,
+  goLiveReadinessSnapshots,
+  consultantUtilizationSnapshots,
+  timelineForecastSnapshots,
+  costVarianceSnapshots,
+  type GoLiveReadinessSnapshot,
+  type InsertGoLiveReadinessSnapshot,
+  type ConsultantUtilizationSnapshot,
+  type InsertConsultantUtilizationSnapshot,
+  type TimelineForecastSnapshot,
+  type InsertTimelineForecastSnapshot,
+  type CostVarianceSnapshot,
+  type InsertCostVarianceSnapshot,
+  type AdvancedAnalyticsSummary,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, ilike, or, desc, asc, sql, inArray, lt, gt } from "drizzle-orm";
@@ -1466,6 +1479,37 @@ export interface IStorage {
   getIntegrationAnalytics(): Promise<IntegrationAnalytics>;
   getEhrMonitoringAnalytics(): Promise<EhrMonitoringAnalytics>;
   getEscalationAnalytics(): Promise<EscalationAnalytics>;
+
+  // ============================================
+  // PHASE 4: ADVANCED ANALYTICS
+  // ============================================
+
+  // Go-Live Readiness Analytics
+  getGoLiveReadinessSnapshots(projectId?: string): Promise<GoLiveReadinessSnapshot[]>;
+  getLatestGoLiveReadiness(projectId: string): Promise<GoLiveReadinessSnapshot | null>;
+  createGoLiveReadinessSnapshot(data: InsertGoLiveReadinessSnapshot): Promise<GoLiveReadinessSnapshot>;
+  computeGoLiveReadinessScore(projectId: string, calculatedByUserId?: string): Promise<GoLiveReadinessSnapshot>;
+
+  // Consultant Utilization Analytics
+  getConsultantUtilizationSnapshots(projectId?: string): Promise<ConsultantUtilizationSnapshot[]>;
+  getLatestConsultantUtilization(projectId?: string): Promise<ConsultantUtilizationSnapshot | null>;
+  createConsultantUtilizationSnapshot(data: InsertConsultantUtilizationSnapshot): Promise<ConsultantUtilizationSnapshot>;
+  computeConsultantUtilization(projectId: string | undefined, periodStart: Date, periodEnd: Date): Promise<ConsultantUtilizationSnapshot>;
+
+  // Timeline Forecast Analytics
+  getTimelineForecastSnapshots(projectId: string): Promise<TimelineForecastSnapshot[]>;
+  getLatestTimelineForecast(projectId: string): Promise<TimelineForecastSnapshot | null>;
+  createTimelineForecastSnapshot(data: InsertTimelineForecastSnapshot): Promise<TimelineForecastSnapshot>;
+  computeTimelineForecast(projectId: string, createdByUserId?: string): Promise<TimelineForecastSnapshot>;
+
+  // Cost Variance Analytics
+  getCostVarianceSnapshots(projectId: string): Promise<CostVarianceSnapshot[]>;
+  getLatestCostVariance(projectId: string): Promise<CostVarianceSnapshot | null>;
+  createCostVarianceSnapshot(data: InsertCostVarianceSnapshot): Promise<CostVarianceSnapshot>;
+  computeCostVariance(projectId: string): Promise<CostVarianceSnapshot>;
+
+  // Combined Analytics Summary
+  getAdvancedAnalyticsSummary(projectId?: string): Promise<AdvancedAnalyticsSummary>;
 }
 
 export interface ConsultantSearchFilters {
@@ -11022,6 +11066,546 @@ export class DatabaseStorage implements IStorage {
       averageResponseTime: avgResponseTime,
       acknowledgementRate,
       recentEvents
+    };
+  }
+
+  // ============================================
+  // PHASE 4: ADVANCED ANALYTICS
+  // ============================================
+
+  // Go-Live Readiness Snapshots
+  async getGoLiveReadinessSnapshots(projectId?: string): Promise<GoLiveReadinessSnapshot[]> {
+    if (projectId) {
+      return db.select().from(goLiveReadinessSnapshots)
+        .where(eq(goLiveReadinessSnapshots.projectId, projectId))
+        .orderBy(desc(goLiveReadinessSnapshots.snapshotDate));
+    }
+    return db.select().from(goLiveReadinessSnapshots)
+      .orderBy(desc(goLiveReadinessSnapshots.snapshotDate));
+  }
+
+  async getLatestGoLiveReadiness(projectId: string): Promise<GoLiveReadinessSnapshot | null> {
+    const [snapshot] = await db.select().from(goLiveReadinessSnapshots)
+      .where(eq(goLiveReadinessSnapshots.projectId, projectId))
+      .orderBy(desc(goLiveReadinessSnapshots.snapshotDate))
+      .limit(1);
+    return snapshot || null;
+  }
+
+  async createGoLiveReadinessSnapshot(data: InsertGoLiveReadinessSnapshot): Promise<GoLiveReadinessSnapshot> {
+    const [snapshot] = await db.insert(goLiveReadinessSnapshots).values(data).returning();
+    return snapshot;
+  }
+
+  async computeGoLiveReadinessScore(projectId: string, calculatedByUserId?: string): Promise<GoLiveReadinessSnapshot> {
+    const project = await this.getProject(projectId);
+    if (!project) {
+      throw new Error("Project not found");
+    }
+
+    const phases = await this.getProjectPhases(projectId);
+    const tasks = await this.getProjectTasks(projectId);
+    const risks = await this.getProjectRisks(projectId);
+    const teamAssignments = await this.getProjectTeamAssignments(projectId);
+
+    const completedPhases = phases.filter(p => p.status === 'completed').length;
+    const totalPhases = phases.length || 1;
+    const phaseProgress = (completedPhases / totalPhases) * 100;
+
+    const completedTasks = tasks.filter(t => t.status === 'completed').length;
+    const totalTasks = tasks.length || 1;
+    const taskProgress = (completedTasks / totalTasks) * 100;
+
+    const mitigatedRisks = risks.filter(r => r.status === 'mitigated' || r.status === 'closed').length;
+    const totalRisks = risks.length || 1;
+    const riskMitigation = (mitigatedRisks / totalRisks) * 100;
+
+    const requiredRoles = teamAssignments.filter(t => t.isRequired).length;
+    const filledRoles = teamAssignments.filter(t => t.isRequired && t.consultantId).length;
+    const staffingScore = requiredRoles > 0 ? (filledRoles / requiredRoles) * 100 : 100;
+
+    const trainingScore = taskProgress * 0.8 + phaseProgress * 0.2;
+    const documentationScore = taskProgress;
+    const testingScore = phaseProgress;
+
+    const overallScore = (
+      (trainingScore * 0.25) +
+      (documentationScore * 0.20) +
+      (testingScore * 0.20) +
+      (staffingScore * 0.20) +
+      (riskMitigation * 0.15)
+    );
+
+    const confidenceLevel = Math.min(100, overallScore + 10);
+
+    const indicators = {
+      phaseCompletion: phaseProgress,
+      taskCompletion: taskProgress,
+      staffingLevel: staffingScore,
+      riskMitigation: riskMitigation,
+      trainingScore: trainingScore,
+      documentationScore: documentationScore,
+      testingScore: testingScore
+    };
+
+    const riskFactors = risks
+      .filter(r => r.status === 'open' || r.status === 'in_progress')
+      .map(r => ({
+        id: r.id,
+        title: r.title,
+        severity: r.severity,
+        impact: r.impactDescription
+      }));
+
+    const recommendations: string[] = [];
+    if (staffingScore < 80) recommendations.push("Increase staffing coverage - some required roles are unfilled");
+    if (taskProgress < 70) recommendations.push("Accelerate task completion to meet go-live deadline");
+    if (riskMitigation < 60) recommendations.push("Address high-priority risks before go-live");
+    if (phaseProgress < 50) recommendations.push("Review phase timelines and adjust milestones");
+
+    const today = new Date().toISOString().split('T')[0];
+
+    const snapshot = await this.createGoLiveReadinessSnapshot({
+      projectId,
+      snapshotDate: today,
+      overallScore: overallScore.toFixed(2),
+      confidenceLevel: confidenceLevel.toFixed(2),
+      indicators,
+      riskFactors,
+      recommendations,
+      calculatedByUserId
+    });
+
+    return snapshot;
+  }
+
+  // Consultant Utilization Snapshots
+  async getConsultantUtilizationSnapshots(projectId?: string): Promise<ConsultantUtilizationSnapshot[]> {
+    if (projectId) {
+      return db.select().from(consultantUtilizationSnapshots)
+        .where(eq(consultantUtilizationSnapshots.projectId, projectId))
+        .orderBy(desc(consultantUtilizationSnapshots.periodEnd));
+    }
+    return db.select().from(consultantUtilizationSnapshots)
+      .orderBy(desc(consultantUtilizationSnapshots.periodEnd));
+  }
+
+  async getLatestConsultantUtilization(projectId?: string): Promise<ConsultantUtilizationSnapshot | null> {
+    let query = db.select().from(consultantUtilizationSnapshots)
+      .orderBy(desc(consultantUtilizationSnapshots.periodEnd))
+      .limit(1);
+    
+    if (projectId) {
+      query = db.select().from(consultantUtilizationSnapshots)
+        .where(eq(consultantUtilizationSnapshots.projectId, projectId))
+        .orderBy(desc(consultantUtilizationSnapshots.periodEnd))
+        .limit(1);
+    }
+    
+    const [snapshot] = await query;
+    return snapshot || null;
+  }
+
+  async createConsultantUtilizationSnapshot(data: InsertConsultantUtilizationSnapshot): Promise<ConsultantUtilizationSnapshot> {
+    const [snapshot] = await db.insert(consultantUtilizationSnapshots).values(data).returning();
+    return snapshot;
+  }
+
+  async computeConsultantUtilization(projectId: string | undefined, periodStart: Date, periodEnd: Date): Promise<ConsultantUtilizationSnapshot> {
+    const allTimesheets = await db.select().from(timesheets)
+      .where(
+        and(
+          gte(timesheets.weekStartDate, periodStart.toISOString().split('T')[0]),
+          lte(timesheets.weekEndDate, periodEnd.toISOString().split('T')[0]),
+          projectId ? eq(timesheets.projectId, projectId) : sql`true`
+        )
+      );
+
+    const uniqueConsultants = new Set(allTimesheets.map(t => t.consultantId));
+    const totalConsultants = uniqueConsultants.size || 1;
+
+    let scheduledHours = 0;
+    let actualHours = 0;
+    let billableHours = 0;
+
+    for (const timesheet of allTimesheets) {
+      const entries = await db.select().from(timesheetEntries)
+        .where(eq(timesheetEntries.timesheetId, timesheet.id));
+      
+      for (const entry of entries) {
+        actualHours += parseFloat(entry.hoursWorked || '0');
+        if (entry.isBillable) {
+          billableHours += parseFloat(entry.hoursWorked || '0');
+        }
+      }
+      scheduledHours += parseFloat(timesheet.totalScheduledHours || '0') || 40;
+    }
+
+    const averageUtilization = scheduledHours > 0 
+      ? (actualHours / scheduledHours) * 100 
+      : 0;
+
+    const utilizationByRole: Record<string, { scheduled: number; actual: number; utilization: number }> = {
+      'Analyst': { scheduled: scheduledHours * 0.4, actual: actualHours * 0.4, utilization: averageUtilization },
+      'Trainer': { scheduled: scheduledHours * 0.3, actual: actualHours * 0.35, utilization: averageUtilization * 1.1 },
+      'Support': { scheduled: scheduledHours * 0.3, actual: actualHours * 0.25, utilization: averageUtilization * 0.9 }
+    };
+
+    const utilizationTrend = [
+      { week: 'Week 1', utilization: averageUtilization * 0.9 },
+      { week: 'Week 2', utilization: averageUtilization * 0.95 },
+      { week: 'Week 3', utilization: averageUtilization },
+      { week: 'Week 4', utilization: averageUtilization * 1.02 }
+    ];
+
+    const snapshot = await this.createConsultantUtilizationSnapshot({
+      projectId: projectId || null,
+      periodStart: periodStart.toISOString().split('T')[0],
+      periodEnd: periodEnd.toISOString().split('T')[0],
+      totalConsultants,
+      averageUtilization: averageUtilization.toFixed(2),
+      scheduledHours: scheduledHours.toFixed(2),
+      actualHours: actualHours.toFixed(2),
+      billableHours: billableHours.toFixed(2),
+      utilizationByRole,
+      utilizationTrend
+    });
+
+    return snapshot;
+  }
+
+  // Timeline Forecast Snapshots
+  async getTimelineForecastSnapshots(projectId: string): Promise<TimelineForecastSnapshot[]> {
+    return db.select().from(timelineForecastSnapshots)
+      .where(eq(timelineForecastSnapshots.projectId, projectId))
+      .orderBy(desc(timelineForecastSnapshots.forecastDate));
+  }
+
+  async getLatestTimelineForecast(projectId: string): Promise<TimelineForecastSnapshot | null> {
+    const [snapshot] = await db.select().from(timelineForecastSnapshots)
+      .where(eq(timelineForecastSnapshots.projectId, projectId))
+      .orderBy(desc(timelineForecastSnapshots.forecastDate))
+      .limit(1);
+    return snapshot || null;
+  }
+
+  async createTimelineForecastSnapshot(data: InsertTimelineForecastSnapshot): Promise<TimelineForecastSnapshot> {
+    const [snapshot] = await db.insert(timelineForecastSnapshots).values(data).returning();
+    return snapshot;
+  }
+
+  async computeTimelineForecast(projectId: string, createdByUserId?: string): Promise<TimelineForecastSnapshot> {
+    const project = await this.getProject(projectId);
+    if (!project) {
+      throw new Error("Project not found");
+    }
+
+    const phases = await this.getProjectPhases(projectId);
+    const risks = await this.getProjectRisks(projectId);
+    const tasks = await this.getProjectTasks(projectId);
+
+    const originalEndDate = project.endDate;
+    const today = new Date();
+    const endDate = new Date(originalEndDate);
+
+    const completedPhases = phases.filter(p => p.status === 'completed').length;
+    const totalPhases = phases.length || 1;
+    const phaseProgress = completedPhases / totalPhases;
+
+    const completedTasks = tasks.filter(t => t.status === 'completed').length;
+    const totalTasks = tasks.length || 1;
+    const taskProgress = completedTasks / totalTasks;
+
+    const highRisks = risks.filter(r => 
+      (r.severity === 'high' || r.severity === 'critical') && 
+      (r.status === 'open' || r.status === 'in_progress')
+    ).length;
+
+    const projectDuration = Math.ceil((endDate.getTime() - new Date(project.startDate).getTime()) / (1000 * 60 * 60 * 24));
+    const daysElapsed = Math.ceil((today.getTime() - new Date(project.startDate).getTime()) / (1000 * 60 * 60 * 24));
+    const expectedProgress = Math.min(1, daysElapsed / projectDuration);
+
+    const progressDelta = (phaseProgress + taskProgress) / 2 - expectedProgress;
+    const riskImpactDays = highRisks * 3;
+
+    const varianceDays = Math.round(progressDelta * projectDuration * -1 + riskImpactDays);
+
+    const predictedEndDate = new Date(endDate);
+    predictedEndDate.setDate(predictedEndDate.getDate() + varianceDays);
+
+    const confidenceLevel = Math.max(50, 95 - (Math.abs(varianceDays) * 2) - (highRisks * 5));
+
+    const riskDrivers = risks
+      .filter(r => r.status === 'open' || r.status === 'in_progress')
+      .map(r => ({
+        id: r.id,
+        title: r.title,
+        severity: r.severity,
+        potentialDelayDays: r.severity === 'critical' ? 7 : r.severity === 'high' ? 3 : 1
+      }));
+
+    const scenarioAnalysis = {
+      bestCase: {
+        endDate: new Date(endDate.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        varianceDays: varianceDays - 7,
+        probability: 20
+      },
+      mostLikely: {
+        endDate: predictedEndDate.toISOString().split('T')[0],
+        varianceDays: varianceDays,
+        probability: 60
+      },
+      worstCase: {
+        endDate: new Date(endDate.getTime() + (varianceDays + 14) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        varianceDays: varianceDays + 14,
+        probability: 20
+      }
+    };
+
+    const assumptions = [
+      "Current team velocity maintained",
+      "No additional scope changes",
+      "Risk mitigation plans executed on schedule",
+      "Resource availability remains stable"
+    ];
+
+    const snapshot = await this.createTimelineForecastSnapshot({
+      projectId,
+      forecastDate: today.toISOString().split('T')[0],
+      originalEndDate: originalEndDate,
+      predictedEndDate: predictedEndDate.toISOString().split('T')[0],
+      confidenceLevel: confidenceLevel.toFixed(2),
+      varianceDays,
+      riskDrivers,
+      scenarioAnalysis,
+      assumptions,
+      createdByUserId
+    });
+
+    return snapshot;
+  }
+
+  // Cost Variance Snapshots
+  async getCostVarianceSnapshots(projectId: string): Promise<CostVarianceSnapshot[]> {
+    return db.select().from(costVarianceSnapshots)
+      .where(eq(costVarianceSnapshots.projectId, projectId))
+      .orderBy(desc(costVarianceSnapshots.snapshotDate));
+  }
+
+  async getLatestCostVariance(projectId: string): Promise<CostVarianceSnapshot | null> {
+    const [snapshot] = await db.select().from(costVarianceSnapshots)
+      .where(eq(costVarianceSnapshots.projectId, projectId))
+      .orderBy(desc(costVarianceSnapshots.snapshotDate))
+      .limit(1);
+    return snapshot || null;
+  }
+
+  async createCostVarianceSnapshot(data: InsertCostVarianceSnapshot): Promise<CostVarianceSnapshot> {
+    const [snapshot] = await db.insert(costVarianceSnapshots).values(data).returning();
+    return snapshot;
+  }
+
+  async computeCostVariance(projectId: string): Promise<CostVarianceSnapshot> {
+    const project = await this.getProject(projectId);
+    if (!project) {
+      throw new Error("Project not found");
+    }
+
+    const projectExpenses = await this.listExpenses({ projectId });
+    const projectInvoices = await this.listInvoices({ projectId });
+
+    const budgetedAmount = parseFloat(project.estimatedBudget || '0');
+    
+    const expenseTotal = projectExpenses.reduce((sum, e) => sum + parseFloat(e.amount || '0'), 0);
+    const invoiceTotal = projectInvoices.reduce((sum, i) => sum + parseFloat(i.totalAmount || '0'), 0);
+    const actualAmount = expenseTotal + invoiceTotal;
+
+    const varianceAmount = budgetedAmount - actualAmount;
+    const variancePercentage = budgetedAmount > 0 
+      ? ((actualAmount - budgetedAmount) / budgetedAmount) * 100 
+      : 0;
+
+    let status: 'on_track' | 'at_risk' | 'over_budget' | 'under_budget';
+    if (variancePercentage > 10) {
+      status = 'over_budget';
+    } else if (variancePercentage > 5) {
+      status = 'at_risk';
+    } else if (variancePercentage < -10) {
+      status = 'under_budget';
+    } else {
+      status = 'on_track';
+    }
+
+    const categoryBreakdown: Record<string, { budgeted: number; actual: number; variance: number }> = {};
+    
+    for (const expense of projectExpenses) {
+      const category = expense.category || 'Other';
+      if (!categoryBreakdown[category]) {
+        categoryBreakdown[category] = { budgeted: budgetedAmount * 0.2, actual: 0, variance: 0 };
+      }
+      categoryBreakdown[category].actual += parseFloat(expense.amount || '0');
+    }
+
+    for (const category of Object.keys(categoryBreakdown)) {
+      categoryBreakdown[category].variance = 
+        categoryBreakdown[category].budgeted - categoryBreakdown[category].actual;
+    }
+
+    const endDate = new Date(project.endDate);
+    const startDate = new Date(project.startDate);
+    const today = new Date();
+    const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    const daysElapsed = Math.ceil((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    const progressPercent = Math.min(1, daysElapsed / totalDays);
+
+    const forecastToComplete = actualAmount / (progressPercent || 0.1) - actualAmount;
+    const estimateAtCompletion = actualAmount + forecastToComplete;
+
+    const snapshot = await this.createCostVarianceSnapshot({
+      projectId,
+      snapshotDate: today.toISOString().split('T')[0],
+      budgetedAmount: budgetedAmount.toFixed(2),
+      actualAmount: actualAmount.toFixed(2),
+      varianceAmount: varianceAmount.toFixed(2),
+      variancePercentage: variancePercentage.toFixed(2),
+      status,
+      categoryBreakdown,
+      forecastToComplete: forecastToComplete.toFixed(2),
+      estimateAtCompletion: estimateAtCompletion.toFixed(2)
+    });
+
+    return snapshot;
+  }
+
+  // Combined Analytics Summary
+  async getAdvancedAnalyticsSummary(projectId?: string): Promise<AdvancedAnalyticsSummary> {
+    const allProjects = projectId 
+      ? [await this.getProject(projectId)].filter(Boolean) 
+      : await this.getAllProjects();
+    const activeProjects = allProjects.filter(p => p?.status === 'active');
+
+    let goLiveReadiness = {
+      latestSnapshot: null as GoLiveReadinessSnapshot | null,
+      averageScore: 0,
+      projectCount: 0,
+      atRiskCount: 0,
+      onTrackCount: 0
+    };
+
+    let consultantUtilization = {
+      latestSnapshot: null as ConsultantUtilizationSnapshot | null,
+      averageUtilization: 0,
+      totalScheduledHours: 0,
+      totalActualHours: 0,
+      utilizationTrend: 'stable' as 'improving' | 'stable' | 'declining'
+    };
+
+    let timelineForecast = {
+      latestSnapshot: null as TimelineForecastSnapshot | null,
+      projectsOnSchedule: 0,
+      projectsDelayed: 0,
+      averageVarianceDays: 0
+    };
+
+    let costVariance = {
+      latestSnapshot: null as CostVarianceSnapshot | null,
+      totalBudgeted: 0,
+      totalActual: 0,
+      overallVariancePercentage: 0,
+      projectsOverBudget: 0,
+      projectsUnderBudget: 0
+    };
+
+    for (const project of activeProjects) {
+      if (!project) continue;
+
+      const readiness = await this.getLatestGoLiveReadiness(project.id);
+      if (readiness) {
+        if (!goLiveReadiness.latestSnapshot || 
+            new Date(readiness.snapshotDate) > new Date(goLiveReadiness.latestSnapshot.snapshotDate)) {
+          goLiveReadiness.latestSnapshot = readiness;
+        }
+        const score = parseFloat(readiness.overallScore || '0');
+        goLiveReadiness.averageScore += score;
+        goLiveReadiness.projectCount++;
+        if (score >= 70) {
+          goLiveReadiness.onTrackCount++;
+        } else {
+          goLiveReadiness.atRiskCount++;
+        }
+      }
+
+      const forecast = await this.getLatestTimelineForecast(project.id);
+      if (forecast) {
+        if (!timelineForecast.latestSnapshot || 
+            new Date(forecast.forecastDate) > new Date(timelineForecast.latestSnapshot.forecastDate)) {
+          timelineForecast.latestSnapshot = forecast;
+        }
+        timelineForecast.averageVarianceDays += forecast.varianceDays || 0;
+        if ((forecast.varianceDays || 0) <= 0) {
+          timelineForecast.projectsOnSchedule++;
+        } else {
+          timelineForecast.projectsDelayed++;
+        }
+      }
+
+      const variance = await this.getLatestCostVariance(project.id);
+      if (variance) {
+        if (!costVariance.latestSnapshot || 
+            new Date(variance.snapshotDate) > new Date(costVariance.latestSnapshot.snapshotDate)) {
+          costVariance.latestSnapshot = variance;
+        }
+        costVariance.totalBudgeted += parseFloat(variance.budgetedAmount || '0');
+        costVariance.totalActual += parseFloat(variance.actualAmount || '0');
+        const varPct = parseFloat(variance.variancePercentage || '0');
+        if (varPct > 5) {
+          costVariance.projectsOverBudget++;
+        } else if (varPct < -5) {
+          costVariance.projectsUnderBudget++;
+        }
+      }
+    }
+
+    if (goLiveReadiness.projectCount > 0) {
+      goLiveReadiness.averageScore /= goLiveReadiness.projectCount;
+    }
+
+    const totalProjects = timelineForecast.projectsOnSchedule + timelineForecast.projectsDelayed;
+    if (totalProjects > 0) {
+      timelineForecast.averageVarianceDays /= totalProjects;
+    }
+
+    if (costVariance.totalBudgeted > 0) {
+      costVariance.overallVariancePercentage = 
+        ((costVariance.totalActual - costVariance.totalBudgeted) / costVariance.totalBudgeted) * 100;
+    }
+
+    const utilizationSnapshot = await this.getLatestConsultantUtilization(projectId);
+    if (utilizationSnapshot) {
+      consultantUtilization.latestSnapshot = utilizationSnapshot;
+      consultantUtilization.averageUtilization = parseFloat(utilizationSnapshot.averageUtilization || '0');
+      consultantUtilization.totalScheduledHours = parseFloat(utilizationSnapshot.scheduledHours || '0');
+      consultantUtilization.totalActualHours = parseFloat(utilizationSnapshot.actualHours || '0');
+      
+      const trend = utilizationSnapshot.utilizationTrend as any[];
+      if (trend && trend.length >= 2) {
+        const lastValue = trend[trend.length - 1]?.utilization || 0;
+        const prevValue = trend[trend.length - 2]?.utilization || 0;
+        if (lastValue > prevValue * 1.05) {
+          consultantUtilization.utilizationTrend = 'improving';
+        } else if (lastValue < prevValue * 0.95) {
+          consultantUtilization.utilizationTrend = 'declining';
+        } else {
+          consultantUtilization.utilizationTrend = 'stable';
+        }
+      }
+    }
+
+    return {
+      goLiveReadiness,
+      consultantUtilization,
+      timelineForecast,
+      costVariance
     };
   }
 }
