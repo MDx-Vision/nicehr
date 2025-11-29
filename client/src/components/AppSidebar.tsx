@@ -59,6 +59,7 @@ import {
   Gauge,
   KeyRound,
   UserPlus,
+  Link2,
   type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -114,6 +115,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   FileBarChart,
   Gauge,
   KeyRound,
+  Link2,
 };
 
 function getRoleBadge(roleLevel: string, isLeadership: boolean) {

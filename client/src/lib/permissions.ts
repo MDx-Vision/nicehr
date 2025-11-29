@@ -8,7 +8,7 @@ export interface NavigationItem {
   title: string;
   url: string;
   icon: string;
-  category: 'overview' | 'operations' | 'support' | 'scheduling' | 'training' | 'travel' | 'finance' | 'quality' | 'communication' | 'admin';
+  category: 'overview' | 'operations' | 'support' | 'scheduling' | 'training' | 'travel' | 'finance' | 'quality' | 'communication' | 'integrations' | 'admin';
   roles: UserRoleLevel[];
   requiresProjectContext?: boolean;
   requiredPermission?: string;
@@ -67,6 +67,9 @@ export const NAVIGATION_CONFIG: NavigationItem[] = [
   { title: "My Documents", url: "/my-documents", icon: "FileText", category: "communication", roles: ["consultant"] },
   { title: "Search", url: "/search", icon: "Search", category: "communication", roles: ["admin", "hospital_leadership"] },
   
+  { title: "Integrations Hub", url: "/integrations", icon: "Link2", category: "integrations", roles: ["admin"], requiredPermission: "admin:manage" },
+  { title: "EHR Monitoring", url: "/ehr-monitoring", icon: "Activity", category: "integrations", roles: ["admin"], requiredPermission: "admin:manage" },
+  
   { title: "Role Management", url: "/role-management", icon: "KeyRound", category: "admin", roles: ["admin"], requiredPermission: "rbac:manage" },
   { title: "Skills Verification", url: "/skills-verification", icon: "ClipboardCheck", category: "admin", roles: ["admin"] },
 ];
@@ -81,6 +84,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   finance: "Finance",
   quality: "Quality & Compliance",
   communication: "Communication",
+  integrations: "Integrations",
   admin: "Administration",
 };
 
@@ -94,6 +98,7 @@ export const CATEGORY_ORDER = [
   "finance",
   "quality",
   "communication",
+  "integrations",
   "admin",
 ];
 
