@@ -3408,9 +3408,17 @@ export async function registerRoutes(
   app.get('/api/timesheets', isAuthenticated, requireAnyPermission('timesheets:view_all', 'timesheets:view_own'), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      
+      const hasViewAllPermission = await storage.hasPermission(userId, 'timesheets:view_all');
+      
+      if (hasViewAllPermission) {
+        const timesheets = await storage.getAllTimesheets();
+        return res.json(timesheets);
+      }
+      
       const consultant = await storage.getConsultantByUserId(userId);
       if (!consultant) {
-        return res.status(404).json({ message: "Consultant profile not found" });
+        return res.json([]);
       }
       const timesheets = await storage.getTimesheetsByConsultant(consultant.id);
       res.json(timesheets);
@@ -7425,7 +7433,7 @@ export async function registerRoutes(
       const filters = {
         consultantId: req.query.consultantId as string | undefined,
         projectId: req.query.projectId as string | undefined,
-        period: req.query.period as string | undefined,
+        periodStart: req.query.periodStart as string | undefined,
       };
       const scorecards = await storage.listConsultantScorecards(filters);
       res.json(scorecards);
@@ -7459,7 +7467,7 @@ export async function registerRoutes(
           activityType: 'create',
           resourceType: 'consultant_scorecard',
           resourceId: scorecard.id,
-          resourceName: `Scorecard for ${validated.period}`,
+          resourceName: `Scorecard for ${validated.periodStart}`,
           description: 'Created consultant scorecard',
         }, req);
       }
@@ -7484,7 +7492,7 @@ export async function registerRoutes(
           activityType: 'update',
           resourceType: 'consultant_scorecard',
           resourceId: scorecard.id,
-          resourceName: `Scorecard for ${scorecard.period}`,
+          resourceName: `Scorecard for ${scorecard.periodStart}`,
           description: 'Updated consultant scorecard',
         }, req);
       }
@@ -7502,7 +7510,7 @@ export async function registerRoutes(
       const scorecardId = req.params.id;
       
       const scorecard = await storage.getConsultantScorecard(scorecardId);
-      const scorecardName = scorecard ? `Scorecard for ${scorecard.period}` : scorecardId;
+      const scorecardName = scorecard ? `Scorecard for ${scorecard.periodStart}` : scorecardId;
       
       await storage.deleteConsultantScorecard(scorecardId);
       
@@ -10101,19 +10109,20 @@ export async function registerRoutes(
   // Scheduled Report creation for Report Builder
   app.post('/api/reports/schedule', isAuthenticated, async (req: any, res) => {
     try {
-      const { reportId, schedule, recipients, format } = req.body;
+      const { savedReportId, schedule, recipients, exportFormat, name } = req.body;
       
-      if (!reportId || !schedule) {
-        return res.status(400).json({ message: "Report ID and schedule are required" });
+      if (!savedReportId || !schedule) {
+        return res.status(400).json({ message: "Saved report ID and schedule are required" });
       }
 
       const scheduledReport = await storage.createScheduledReport({
-        reportId,
+        savedReportId,
+        userId: req.user.claims.sub,
+        name: name || `Scheduled Report ${Date.now()}`,
         schedule,
         recipients: recipients || [],
-        format: format || 'pdf',
+        exportFormat: exportFormat || 'pdf',
         isActive: true,
-        createdBy: req.user.claims.sub,
       });
 
       res.status(201).json(scheduledReport);
@@ -10572,12 +10581,19 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Questionnaire not found" });
       }
       
-      const newStatus = action === 'verify' ? 'verified' : 'rejected';
+      if (action === 'verify') {
+        const updated = await storage.updateConsultantQuestionnaire(questionnaireId, {
+          status: 'verified',
+          verifiedAt: new Date(),
+          verifiedBy: userId,
+        });
+        res.json(updated);
+        return;
+      }
       
       const updated = await storage.updateConsultantQuestionnaire(questionnaireId, {
-        status: newStatus,
-        verifiedAt: new Date(),
-        verifiedBy: userId,
+        status: 'draft',
+        additionalNotes: notes || 'Questionnaire rejected - please revise and resubmit',
       });
       
       res.json(updated);

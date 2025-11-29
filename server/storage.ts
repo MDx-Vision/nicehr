@@ -708,6 +708,7 @@ export interface IStorage {
   createTimesheet(data: InsertTimesheet): Promise<Timesheet>;
   getTimesheetById(id: string): Promise<TimesheetWithDetails | undefined>;
   getTimesheetsByConsultant(consultantId: string): Promise<TimesheetWithDetails[]>;
+  getAllTimesheets(): Promise<TimesheetWithDetails[]>;
   getTimesheetsByProject(projectId: string): Promise<TimesheetWithDetails[]>;
   getPendingTimesheets(): Promise<TimesheetWithDetails[]>;
   updateTimesheet(id: string, data: Partial<InsertTimesheet>): Promise<Timesheet | undefined>;
@@ -4086,6 +4087,16 @@ export class DatabaseStorage implements IStorage {
     return Promise.all(results.map((ts) => this.buildTimesheetWithDetails(ts)));
   }
 
+  async getAllTimesheets(): Promise<TimesheetWithDetails[]> {
+    const results = await db
+      .select()
+      .from(timesheets)
+      .orderBy(desc(timesheets.weekStartDate))
+      .limit(100);
+
+    return Promise.all(results.map((ts) => this.buildTimesheetWithDetails(ts)));
+  }
+
   async getTimesheetsByProject(projectId: string): Promise<TimesheetWithDetails[]> {
     const results = await db
       .select()
@@ -5740,7 +5751,7 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(mileageRates)
-      .orderBy(desc(mileageRates.effectiveDate));
+      .orderBy(desc(mileageRates.effectiveTo));
   }
 
   async getMileageRate(id: string): Promise<MileageRate | undefined> {
@@ -5823,7 +5834,7 @@ export class DatabaseStorage implements IStorage {
       .update(expenses)
       .set({
         status: "approved",
-        reviewedById: reviewerId,
+        reviewedBy: reviewerId,
         reviewedAt: new Date(),
         updatedAt: new Date(),
       })
@@ -5837,9 +5848,9 @@ export class DatabaseStorage implements IStorage {
       .update(expenses)
       .set({
         status: "rejected",
-        reviewedById: reviewerId,
+        reviewedBy: reviewerId,
         reviewedAt: new Date(),
-        rejectionReason: reason || null,
+        reviewNotes: reason || null,
         updatedAt: new Date(),
       })
       .where(eq(expenses.id, id))
@@ -5862,14 +5873,14 @@ export class DatabaseStorage implements IStorage {
       .where(eq(expenses.status, "submitted"));
 
     const totalAmountResult = await db
-      .select({ sum: sql<string>`COALESCE(SUM(${expenses.totalAmount}), 0)` })
+      .select({ sum: sql<string>`COALESCE(SUM(${expenses.amount}), 0)` })
       .from(expenses);
 
     const byCategoryResults = await db
       .select({
         category: expenses.category,
         count: sql<number>`count(*)`,
-        amount: sql<string>`COALESCE(SUM(${expenses.totalAmount}), 0)`,
+        amount: sql<string>`COALESCE(SUM(${expenses.amount}), 0)`,
       })
       .from(expenses)
       .groupBy(expenses.category);
@@ -5878,7 +5889,7 @@ export class DatabaseStorage implements IStorage {
       .select({
         status: expenses.status,
         count: sql<number>`count(*)`,
-        amount: sql<string>`COALESCE(SUM(${expenses.totalAmount}), 0)`,
+        amount: sql<string>`COALESCE(SUM(${expenses.amount}), 0)`,
       })
       .from(expenses)
       .groupBy(expenses.status);
@@ -5913,8 +5924,8 @@ export class DatabaseStorage implements IStorage {
     }
 
     let reviewerData: ExpenseWithDetails["reviewer"] = null;
-    if (expense.reviewedById) {
-      const reviewer = await this.getUser(expense.reviewedById);
+    if (expense.reviewedBy) {
+      const reviewer = await this.getUser(expense.reviewedBy);
       if (reviewer) {
         reviewerData = {
           id: reviewer.id,
@@ -6016,7 +6027,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async generateInvoiceFromTimesheet(timesheetId: string, templateId?: string): Promise<Invoice | undefined> {
-    const timesheet = await this.getTimesheet(timesheetId);
+    const timesheet = await this.getTimesheetById(timesheetId);
     if (!timesheet) return undefined;
 
     const consultant = await this.getConsultant(timesheet.consultantId);
@@ -6025,7 +6036,7 @@ export class DatabaseStorage implements IStorage {
     const project = timesheet.projectId ? await this.getProject(timesheet.projectId) : null;
     const payRate = await this.getCurrentPayRate(timesheet.consultantId);
     const hourlyRate = payRate?.hourlyRate || "0";
-    const totalHours = timesheet.totalHours || "0";
+    const totalHours = String(timesheet.totalHours || "0");
     const subtotal = (parseFloat(totalHours) * parseFloat(hourlyRate)).toFixed(2);
 
     const invoiceNumber = `INV-${Date.now()}`;
@@ -6055,7 +6066,6 @@ export class DatabaseStorage implements IStorage {
       quantity: totalHours,
       unitPrice: hourlyRate,
       amount: subtotal,
-      itemType: "labor",
     });
 
     return invoice;
@@ -6141,12 +6151,12 @@ export class DatabaseStorage implements IStorage {
         .select()
         .from(payRates)
         .where(eq(payRates.consultantId, consultantId))
-        .orderBy(desc(payRates.effectiveDate));
+        .orderBy(desc(payRates.effectiveFrom));
     }
     return await db
       .select()
       .from(payRates)
-      .orderBy(desc(payRates.effectiveDate));
+      .orderBy(desc(payRates.effectiveFrom));
   }
 
   async getPayRate(id: string): Promise<PayRate | undefined> {
@@ -6177,10 +6187,10 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(payRates.consultantId, consultantId),
           eq(payRates.isActive, true),
-          lte(payRates.effectiveDate, today)
+          lte(payRates.effectiveFrom, today)
         )
       )
-      .orderBy(desc(payRates.effectiveDate))
+      .orderBy(desc(payRates.effectiveFrom))
       .limit(1);
     return results[0];
   }
@@ -6315,7 +6325,7 @@ export class DatabaseStorage implements IStorage {
 
     let timesheetData: PayrollEntryWithDetails["timesheet"] = null;
     if (entry.timesheetId) {
-      const timesheet = await this.getTimesheet(entry.timesheetId);
+      const timesheet = await this.getTimesheetById(entry.timesheetId);
       if (timesheet) {
         timesheetData = {
           id: timesheet.id,
@@ -6385,7 +6395,7 @@ export class DatabaseStorage implements IStorage {
       .from(payrollBatches)
       .where(or(
         eq(payrollBatches.status, "draft"),
-        eq(payrollBatches.status, "submitted"),
+        eq(payrollBatches.status, "processing"),
         eq(payrollBatches.status, "approved")
       ));
 
@@ -6462,11 +6472,12 @@ export class DatabaseStorage implements IStorage {
     const original = await db.select().from(budgetScenarios).where(eq(budgetScenarios.id, id));
     if (!original[0]) return undefined;
 
-    const { id: _, createdAt, updatedAt, ...rest } = original[0];
+    const { id: _, createdAt, updatedAt, assumptions, ...rest } = original[0];
     const clonedScenario = await this.createBudgetScenario({
       ...rest,
       name: newName,
       isBaseline: false,
+      assumptions: assumptions as Record<string, unknown> | null,
     });
 
     const originalMetrics = await this.listScenarioMetrics(id);
@@ -7133,11 +7144,11 @@ export class DatabaseStorage implements IStorage {
     return this.buildConsultantScorecardWithDetails(results[0]);
   }
 
-  async listConsultantScorecards(filters?: { consultantId?: string; projectId?: string; period?: string }): Promise<ConsultantScorecardWithDetails[]> {
+  async listConsultantScorecards(filters?: { consultantId?: string; projectId?: string; periodStart?: string }): Promise<ConsultantScorecardWithDetails[]> {
     const conditions: any[] = [];
     if (filters?.consultantId) conditions.push(eq(consultantScorecards.consultantId, filters.consultantId));
     if (filters?.projectId) conditions.push(eq(consultantScorecards.projectId, filters.projectId));
-    if (filters?.period) conditions.push(eq(consultantScorecards.period, filters.period));
+    if (filters?.periodStart) conditions.push(eq(consultantScorecards.periodStart, filters.periodStart));
 
     const results = conditions.length > 0
       ? await db.select().from(consultantScorecards).where(and(...conditions)).orderBy(desc(consultantScorecards.createdAt))
