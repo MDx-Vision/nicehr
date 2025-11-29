@@ -5994,3 +5994,633 @@ export interface DashboardAnalytics {
     critical: number;
   };
 }
+
+// ============================================
+// PHASE 18: INTEGRATION & AUTOMATION TABLES
+// ============================================
+
+// Integration Provider Enum
+export const integrationProviderEnum = pgEnum("integration_provider", [
+  "google_calendar", "outlook_calendar", "ical",
+  "adp", "workday", "paychex", "gusto",
+  "epic", "cerner", "meditech", "allscripts"
+]);
+
+export const integrationStatusEnum = pgEnum("integration_status", [
+  "connected", "disconnected", "error", "pending", "expired"
+]);
+
+export const syncStatusEnum = pgEnum("sync_status", [
+  "pending", "in_progress", "completed", "failed", "partial"
+]);
+
+export const syncDirectionEnum = pgEnum("sync_direction", [
+  "import", "export", "bidirectional"
+]);
+
+// Integration Connections - Stores connected external services
+export const integrationConnections = pgTable("integration_connections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  provider: integrationProviderEnum("provider").notNull(),
+  category: varchar("category").notNull(), // calendar, payroll, ehr
+  status: integrationStatusEnum("status").default("pending").notNull(),
+  configuration: jsonb("configuration"), // Provider-specific settings
+  credentials: jsonb("credentials"), // Encrypted OAuth tokens or API keys (for demo, stored as mock)
+  lastSyncAt: timestamp("last_sync_at"),
+  lastSyncStatus: syncStatusEnum("last_sync_status"),
+  syncFrequency: varchar("sync_frequency").default("manual"), // manual, hourly, daily, weekly
+  isActive: boolean("is_active").default(true).notNull(),
+  connectedByUserId: varchar("connected_by_user_id").notNull(),
+  connectedAt: timestamp("connected_at").defaultNow(),
+  expiresAt: timestamp("expires_at"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_integration_connections_provider").on(table.provider),
+  index("idx_integration_connections_category").on(table.category),
+  index("idx_integration_connections_status").on(table.status),
+]);
+
+export const insertIntegrationConnectionSchema = createInsertSchema(integrationConnections).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertIntegrationConnection = z.infer<typeof insertIntegrationConnectionSchema>;
+export type IntegrationConnection = typeof integrationConnections.$inferSelect;
+
+// Sync Jobs - Individual sync operations
+export const syncJobs = pgTable("sync_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  connectionId: varchar("connection_id").notNull().references(() => integrationConnections.id),
+  direction: syncDirectionEnum("direction").notNull(),
+  status: syncStatusEnum("status").default("pending").notNull(),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  recordsProcessed: integer("records_processed").default(0),
+  recordsSucceeded: integer("records_succeeded").default(0),
+  recordsFailed: integer("records_failed").default(0),
+  errorLog: jsonb("error_log"),
+  metadata: jsonb("metadata"), // Job-specific data
+  triggeredByUserId: varchar("triggered_by_user_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_sync_jobs_connection").on(table.connectionId),
+  index("idx_sync_jobs_status").on(table.status),
+]);
+
+export const insertSyncJobSchema = createInsertSchema(syncJobs).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertSyncJob = z.infer<typeof insertSyncJobSchema>;
+export type SyncJob = typeof syncJobs.$inferSelect;
+
+// Sync Events - Detailed log of synced items
+export const syncEvents = pgTable("sync_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  syncJobId: varchar("sync_job_id").notNull().references(() => syncJobs.id),
+  eventType: varchar("event_type").notNull(), // created, updated, deleted, skipped, error
+  resourceType: varchar("resource_type").notNull(), // schedule, availability, timesheet, payroll_entry
+  resourceId: varchar("resource_id"),
+  externalId: varchar("external_id"), // ID in external system
+  details: jsonb("details"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_sync_events_job").on(table.syncJobId),
+  index("idx_sync_events_type").on(table.eventType),
+]);
+
+export const insertSyncEventSchema = createInsertSchema(syncEvents).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertSyncEvent = z.infer<typeof insertSyncEventSchema>;
+export type SyncEvent = typeof syncEvents.$inferSelect;
+
+// Calendar Sync Settings - Per-user calendar sync preferences
+export const calendarSyncSettings = pgTable("calendar_sync_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  connectionId: varchar("connection_id").notNull().references(() => integrationConnections.id),
+  syncSchedules: boolean("sync_schedules").default(true),
+  syncAvailability: boolean("sync_availability").default(true),
+  syncTimeOff: boolean("sync_time_off").default(true),
+  syncTraining: boolean("sync_training").default(false),
+  calendarId: varchar("calendar_id"), // External calendar ID
+  colorCoding: jsonb("color_coding"), // Event type to color mapping
+  reminderMinutes: integer("reminder_minutes").default(30),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_calendar_sync_user").on(table.userId),
+  index("idx_calendar_sync_connection").on(table.connectionId),
+]);
+
+export const insertCalendarSyncSettingsSchema = createInsertSchema(calendarSyncSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertCalendarSyncSettings = z.infer<typeof insertCalendarSyncSettingsSchema>;
+export type CalendarSyncSettings = typeof calendarSyncSettings.$inferSelect;
+
+// ============================================
+// EHR SYSTEM MONITORING TABLES
+// ============================================
+
+export const ehrSystemStatusEnum = pgEnum("ehr_system_status", [
+  "operational", "degraded", "partial_outage", "major_outage", "maintenance"
+]);
+
+export const ehrIncidentSeverityEnum = pgEnum("ehr_incident_severity", [
+  "critical", "major", "minor", "informational"
+]);
+
+// EHR Systems - Connected EHR systems to monitor
+export const ehrSystems = pgTable("ehr_systems", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  vendor: varchar("vendor").notNull(), // Epic, Cerner, Meditech, etc.
+  version: varchar("version"),
+  hospitalId: varchar("hospital_id").references(() => hospitals.id),
+  environment: varchar("environment").default("production"), // production, staging, training
+  status: ehrSystemStatusEnum("status").default("operational").notNull(),
+  baseUrl: varchar("base_url"),
+  healthCheckEndpoint: varchar("health_check_endpoint"),
+  lastHealthCheck: timestamp("last_health_check"),
+  uptimePercent: decimal("uptime_percent", { precision: 5, scale: 2 }),
+  avgResponseTime: integer("avg_response_time"), // in milliseconds
+  isMonitored: boolean("is_monitored").default(true).notNull(),
+  alertThresholds: jsonb("alert_thresholds"), // Response time, error rate thresholds
+  notificationChannels: text("notification_channels").array(), // Email, Slack, etc.
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_ehr_systems_hospital").on(table.hospitalId),
+  index("idx_ehr_systems_vendor").on(table.vendor),
+  index("idx_ehr_systems_status").on(table.status),
+]);
+
+export const insertEhrSystemSchema = createInsertSchema(ehrSystems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertEhrSystem = z.infer<typeof insertEhrSystemSchema>;
+export type EhrSystem = typeof ehrSystems.$inferSelect;
+
+// EHR Status Metrics - Time-series health metrics
+export const ehrStatusMetrics = pgTable("ehr_status_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ehrSystemId: varchar("ehr_system_id").notNull().references(() => ehrSystems.id),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  status: ehrSystemStatusEnum("status").notNull(),
+  responseTime: integer("response_time"), // milliseconds
+  errorRate: decimal("error_rate", { precision: 5, scale: 2 }),
+  activeUsers: integer("active_users"),
+  transactionsPerMinute: integer("transactions_per_minute"),
+  cpuUsage: decimal("cpu_usage", { precision: 5, scale: 2 }),
+  memoryUsage: decimal("memory_usage", { precision: 5, scale: 2 }),
+  diskUsage: decimal("disk_usage", { precision: 5, scale: 2 }),
+  details: jsonb("details"),
+}, (table) => [
+  index("idx_ehr_metrics_system").on(table.ehrSystemId),
+  index("idx_ehr_metrics_timestamp").on(table.timestamp),
+]);
+
+export const insertEhrStatusMetricSchema = createInsertSchema(ehrStatusMetrics).omit({
+  id: true,
+});
+export type InsertEhrStatusMetric = z.infer<typeof insertEhrStatusMetricSchema>;
+export type EhrStatusMetric = typeof ehrStatusMetrics.$inferSelect;
+
+// EHR Incidents - Outages and issues
+export const ehrIncidents = pgTable("ehr_incidents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ehrSystemId: varchar("ehr_system_id").notNull().references(() => ehrSystems.id),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  severity: ehrIncidentSeverityEnum("severity").notNull(),
+  status: varchar("status").default("investigating").notNull(), // investigating, identified, monitoring, resolved
+  impactedModules: text("impacted_modules").array(),
+  affectedUsers: integer("affected_users"),
+  startedAt: timestamp("started_at").notNull(),
+  identifiedAt: timestamp("identified_at"),
+  resolvedAt: timestamp("resolved_at"),
+  resolution: text("resolution"),
+  rootCause: text("root_cause"),
+  preventiveMeasures: text("preventive_measures"),
+  reportedByUserId: varchar("reported_by_user_id"),
+  assignedToUserId: varchar("assigned_to_user_id"),
+  notificationsSent: boolean("notifications_sent").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_ehr_incidents_system").on(table.ehrSystemId),
+  index("idx_ehr_incidents_severity").on(table.severity),
+  index("idx_ehr_incidents_status").on(table.status),
+]);
+
+export const insertEhrIncidentSchema = createInsertSchema(ehrIncidents).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertEhrIncident = z.infer<typeof insertEhrIncidentSchema>;
+export type EhrIncident = typeof ehrIncidents.$inferSelect;
+
+// EHR Incident Updates - Timeline of updates
+export const ehrIncidentUpdates = pgTable("ehr_incident_updates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  incidentId: varchar("incident_id").notNull().references(() => ehrIncidents.id),
+  status: varchar("status").notNull(),
+  message: text("message").notNull(),
+  postedByUserId: varchar("posted_by_user_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_ehr_incident_updates_incident").on(table.incidentId),
+]);
+
+export const insertEhrIncidentUpdateSchema = createInsertSchema(ehrIncidentUpdates).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertEhrIncidentUpdate = z.infer<typeof insertEhrIncidentUpdateSchema>;
+export type EhrIncidentUpdate = typeof ehrIncidentUpdates.$inferSelect;
+
+// ============================================
+// PAYROLL SYNC TABLES
+// ============================================
+
+export const payrollSyncStatusEnum = pgEnum("payroll_sync_status", [
+  "pending", "processing", "completed", "failed", "partial"
+]);
+
+// Payroll Sync Profiles - Configuration for payroll exports
+export const payrollSyncProfiles = pgTable("payroll_sync_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  connectionId: varchar("connection_id").references(() => integrationConnections.id),
+  exportFormat: varchar("export_format").default("csv").notNull(), // csv, xml, api
+  fieldMappings: jsonb("field_mappings"), // Map NICEHR fields to external system fields
+  includeOvertime: boolean("include_overtime").default(true),
+  includeBonuses: boolean("include_bonuses").default(true),
+  includeDeductions: boolean("include_deductions").default(true),
+  autoExportSchedule: varchar("auto_export_schedule"), // cron expression
+  lastExportAt: timestamp("last_export_at"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdByUserId: varchar("created_by_user_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_payroll_sync_profiles_connection").on(table.connectionId),
+]);
+
+export const insertPayrollSyncProfileSchema = createInsertSchema(payrollSyncProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertPayrollSyncProfile = z.infer<typeof insertPayrollSyncProfileSchema>;
+export type PayrollSyncProfile = typeof payrollSyncProfiles.$inferSelect;
+
+// Payroll Export Jobs - Individual export operations
+export const payrollExportJobs = pgTable("payroll_export_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  profileId: varchar("profile_id").notNull().references(() => payrollSyncProfiles.id),
+  batchId: varchar("batch_id").references(() => payrollBatches.id),
+  status: payrollSyncStatusEnum("status").default("pending").notNull(),
+  exportFormat: varchar("export_format").notNull(),
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  recordCount: integer("record_count").default(0),
+  totalAmount: decimal("total_amount", { precision: 12, scale: 2 }),
+  filePath: varchar("file_path"),
+  fileName: varchar("file_name"),
+  fileSize: integer("file_size"),
+  errorMessage: text("error_message"),
+  exportedByUserId: varchar("exported_by_user_id").notNull(),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  downloadedAt: timestamp("downloaded_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_payroll_export_jobs_profile").on(table.profileId),
+  index("idx_payroll_export_jobs_batch").on(table.batchId),
+  index("idx_payroll_export_jobs_status").on(table.status),
+]);
+
+export const insertPayrollExportJobSchema = createInsertSchema(payrollExportJobs).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertPayrollExportJob = z.infer<typeof insertPayrollExportJobSchema>;
+export type PayrollExportJob = typeof payrollExportJobs.$inferSelect;
+
+// ============================================
+// AUTOMATED ESCALATION TABLES
+// ============================================
+
+// Note: escalationTriggerTypeEnum already defined earlier in schema
+
+export const escalationActionTypeEnum = pgEnum("escalation_action_type", [
+  "notify_email", "notify_slack", "notify_sms", "assign_user", "change_priority", "create_incident"
+]);
+
+// Escalation Triggers - Enhanced automation rules
+export const escalationTriggers = pgTable("escalation_triggers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ruleId: varchar("rule_id").notNull().references(() => escalationRules.id),
+  name: varchar("name").notNull(),
+  triggerType: varchar("trigger_type").notNull(), // time_based, priority_change, sla_breach, inactivity, volume_spike, manual
+  conditions: jsonb("conditions").notNull(), // Trigger conditions
+  actions: jsonb("actions").notNull(), // Actions to take
+  cooldownMinutes: integer("cooldown_minutes").default(60), // Prevent repeated triggers
+  maxTriggersPerHour: integer("max_triggers_per_hour").default(5),
+  isActive: boolean("is_active").default(true).notNull(),
+  lastTriggeredAt: timestamp("last_triggered_at"),
+  triggerCount: integer("trigger_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_escalation_triggers_rule").on(table.ruleId),
+  index("idx_escalation_triggers_type").on(table.triggerType),
+]);
+
+export const insertEscalationTriggerSchema = createInsertSchema(escalationTriggers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertEscalationTrigger = z.infer<typeof insertEscalationTriggerSchema>;
+export type EscalationTrigger = typeof escalationTriggers.$inferSelect;
+
+// Escalation Events - Log of triggered escalations
+export const escalationEvents = pgTable("escalation_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  triggerId: varchar("trigger_id").notNull().references(() => escalationTriggers.id),
+  ticketId: varchar("ticket_id").references(() => supportTickets.id),
+  incidentId: varchar("incident_id").references(() => incidents.id),
+  triggerReason: text("trigger_reason").notNull(),
+  actionsTaken: jsonb("actions_taken"),
+  notificationsSent: jsonb("notifications_sent"),
+  previousPriority: varchar("previous_priority"),
+  newPriority: varchar("new_priority"),
+  previousAssignee: varchar("previous_assignee"),
+  newAssignee: varchar("new_assignee"),
+  wasSuccessful: boolean("was_successful").default(true),
+  errorMessage: text("error_message"),
+  acknowledgedByUserId: varchar("acknowledged_by_user_id"),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_escalation_events_trigger").on(table.triggerId),
+  index("idx_escalation_events_ticket").on(table.ticketId),
+  index("idx_escalation_events_incident").on(table.incidentId),
+]);
+
+export const insertEscalationEventSchema = createInsertSchema(escalationEvents).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertEscalationEvent = z.infer<typeof insertEscalationEventSchema>;
+export type EscalationEvent = typeof escalationEvents.$inferSelect;
+
+// Notification Queue - Pending notifications from automations
+export const notificationQueue = pgTable("notification_queue", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: varchar("type").notNull(), // email, slack, sms, in_app
+  recipientUserId: varchar("recipient_user_id"),
+  recipientEmail: varchar("recipient_email"),
+  recipientPhone: varchar("recipient_phone"),
+  subject: varchar("subject"),
+  message: text("message").notNull(),
+  priority: varchar("priority").default("normal"), // urgent, high, normal, low
+  sourceType: varchar("source_type"), // escalation, system_alert, scheduled
+  sourceId: varchar("source_id"),
+  status: varchar("status").default("pending"), // pending, sent, failed, cancelled
+  scheduledFor: timestamp("scheduled_for"),
+  sentAt: timestamp("sent_at"),
+  failedAt: timestamp("failed_at"),
+  retryCount: integer("retry_count").default(0),
+  errorMessage: text("error_message"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_notification_queue_status").on(table.status),
+  index("idx_notification_queue_recipient").on(table.recipientUserId),
+  index("idx_notification_queue_scheduled").on(table.scheduledFor),
+]);
+
+export const insertNotificationQueueSchema = createInsertSchema(notificationQueue).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertNotificationQueue = z.infer<typeof insertNotificationQueueSchema>;
+export type NotificationQueueItem = typeof notificationQueue.$inferSelect;
+
+// Automation Workflow Templates - Reusable workflow definitions
+export const automationWorkflows = pgTable("automation_workflows", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  category: varchar("category").notNull(), // escalation, notification, data_sync, compliance
+  triggerEvent: varchar("trigger_event").notNull(), // ticket_created, sla_warning, compliance_due, etc.
+  conditions: jsonb("conditions"),
+  actions: jsonb("actions").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  executionCount: integer("execution_count").default(0),
+  lastExecutedAt: timestamp("last_executed_at"),
+  createdByUserId: varchar("created_by_user_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_automation_workflows_category").on(table.category),
+  index("idx_automation_workflows_trigger").on(table.triggerEvent),
+]);
+
+export const insertAutomationWorkflowSchema = createInsertSchema(automationWorkflows).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertAutomationWorkflow = z.infer<typeof insertAutomationWorkflowSchema>;
+export type AutomationWorkflow = typeof automationWorkflows.$inferSelect;
+
+// Workflow Executions - Log of workflow runs
+export const workflowExecutions = pgTable("workflow_executions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workflowId: varchar("workflow_id").notNull().references(() => automationWorkflows.id),
+  triggerData: jsonb("trigger_data"),
+  status: varchar("status").default("pending"), // pending, running, completed, failed
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  actionsExecuted: jsonb("actions_executed"),
+  results: jsonb("results"),
+  errorMessage: text("error_message"),
+  triggeredByUserId: varchar("triggered_by_user_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_workflow_executions_workflow").on(table.workflowId),
+  index("idx_workflow_executions_status").on(table.status),
+]);
+
+export const insertWorkflowExecutionSchema = createInsertSchema(workflowExecutions).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertWorkflowExecution = z.infer<typeof insertWorkflowExecutionSchema>;
+export type WorkflowExecution = typeof workflowExecutions.$inferSelect;
+
+// ============================================
+// PHASE 18 EXTENDED TYPES
+// ============================================
+
+export interface IntegrationConnectionWithDetails extends IntegrationConnection {
+  connectedBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+  };
+  syncJobCount: number;
+  lastSyncJob: SyncJob | null;
+}
+
+export interface SyncJobWithDetails extends SyncJob {
+  connection: IntegrationConnection;
+  triggeredBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+  eventCount: number;
+}
+
+export interface EhrSystemWithDetails extends EhrSystem {
+  hospital: Hospital | null;
+  recentMetrics: EhrStatusMetric[];
+  activeIncidents: EhrIncident[];
+  incidentCount: number;
+}
+
+export interface EhrIncidentWithDetails extends EhrIncident {
+  ehrSystem: EhrSystem;
+  reportedBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+  assignedTo: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+  updates: EhrIncidentUpdate[];
+}
+
+export interface PayrollSyncProfileWithDetails extends PayrollSyncProfile {
+  connection: IntegrationConnection | null;
+  createdBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  };
+  recentExports: PayrollExportJob[];
+}
+
+export interface PayrollExportJobWithDetails extends PayrollExportJob {
+  profile: PayrollSyncProfile;
+  batch: {
+    id: string;
+    name: string;
+    periodStart: string;
+    periodEnd: string;
+  } | null;
+  exportedBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  };
+}
+
+export interface EscalationTriggerWithDetails extends EscalationTrigger {
+  rule: {
+    id: string;
+    name: string;
+    priority: string;
+  };
+  recentEvents: EscalationEvent[];
+}
+
+export interface EscalationEventWithDetails extends EscalationEvent {
+  trigger: {
+    id: string;
+    name: string;
+    triggerType: string;
+  };
+  ticket: SupportTicket | null;
+  incident: Incident | null;
+  acknowledgedBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+}
+
+export interface AutomationWorkflowWithDetails extends AutomationWorkflow {
+  createdBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  };
+  recentExecutions: WorkflowExecution[];
+}
+
+export interface IntegrationAnalytics {
+  totalConnections: number;
+  activeConnections: number;
+  connectionsByProvider: Array<{
+    provider: string;
+    count: number;
+    status: string;
+  }>;
+  syncJobsToday: number;
+  syncJobsSuccessRate: number;
+  recentSyncJobs: SyncJobWithDetails[];
+}
+
+export interface EhrMonitoringAnalytics {
+  totalSystems: number;
+  operationalSystems: number;
+  degradedSystems: number;
+  systemsWithIncidents: number;
+  averageUptime: number;
+  averageResponseTime: number;
+  activeIncidents: EhrIncidentWithDetails[];
+  systemsByVendor: Array<{
+    vendor: string;
+    count: number;
+    avgUptime: number;
+  }>;
+}
+
+export interface EscalationAnalytics {
+  totalTriggers: number;
+  activeTriggers: number;
+  eventsToday: number;
+  eventsThisWeek: number;
+  eventsByType: Array<{
+    type: string;
+    count: number;
+  }>;
+  averageResponseTime: number;
+  acknowledgementRate: number;
+  recentEvents: EscalationEventWithDetails[];
+}
