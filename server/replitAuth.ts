@@ -143,6 +143,12 @@ async function checkInvitationAccess(email: string, userId: string): Promise<Inv
     return { allowed: true };
   }
   
+  // Development mode bypass: auto-provision new users for testing
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[DEV MODE] Auto-provisioning access for: ${email}`);
+    return { allowed: true };
+  }
+  
   return { 
     allowed: false, 
     reason: 'NICEHR is invitation-only. You need an invitation from an administrator to access this platform.' 
@@ -160,6 +166,9 @@ async function upsertUser(claims: any, invitationId?: string) {
     if (existingUser?.accessStatus === 'active') {
       accessStatus = 'active';
     } else if (invitationId) {
+      accessStatus = 'active';
+    } else if (process.env.NODE_ENV === 'development') {
+      // Auto-activate users in development mode for testing
       accessStatus = 'active';
     }
     
