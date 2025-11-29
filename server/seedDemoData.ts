@@ -28,6 +28,19 @@ import {
   timesheetEntries,
   expenses,
   notifications,
+  integrationConnections,
+  syncJobs,
+  syncEvents,
+  ehrSystems,
+  ehrStatusMetrics,
+  ehrIncidents,
+  payrollSyncProfiles,
+  payrollExportJobs,
+  escalationRules,
+  escalationTriggers,
+  escalationEvents,
+  automationWorkflows,
+  workflowExecutions,
 } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 
@@ -620,6 +633,645 @@ const demoCourses = [
   },
 ];
 
+// Integration Hub - Connections Demo Data (matching actual schema)
+const demoIntegrationConnections = [
+  {
+    id: "int-conn-1",
+    name: "Mercy Regional - Google Calendar",
+    provider: "google_calendar" as const,
+    category: "calendar",
+    status: "connected" as const,
+    configuration: { calendarId: "primary", syncFrequency: "hourly" },
+    credentials: { clientId: "mock-client-id", refreshToken: "mock-refresh-token" },
+    lastSyncAt: new Date("2024-11-29T08:00:00Z"),
+    lastSyncStatus: "completed" as const,
+    syncFrequency: "hourly",
+    isActive: true,
+    connectedByUserId: "demo-admin",
+    connectedAt: new Date("2024-10-01T10:00:00Z"),
+  },
+  {
+    id: "int-conn-2",
+    name: "Mercy Regional - Outlook Calendar",
+    provider: "outlook_calendar" as const,
+    category: "calendar",
+    status: "connected" as const,
+    configuration: { tenantId: "mock-tenant" },
+    credentials: { accessToken: "mock-access-token" },
+    lastSyncAt: new Date("2024-11-29T07:45:00Z"),
+    lastSyncStatus: "completed" as const,
+    syncFrequency: "daily",
+    isActive: true,
+    connectedByUserId: "demo-admin",
+    connectedAt: new Date("2024-10-05T14:00:00Z"),
+  },
+  {
+    id: "int-conn-3",
+    name: "St. Luke's - ADP Payroll",
+    provider: "adp" as const,
+    category: "payroll",
+    status: "connected" as const,
+    configuration: { companyCode: "STLUKES" },
+    credentials: { apiKey: "mock-adp-key" },
+    lastSyncAt: new Date("2024-11-28T22:00:00Z"),
+    lastSyncStatus: "completed" as const,
+    syncFrequency: "weekly",
+    isActive: true,
+    connectedByUserId: "demo-admin",
+    connectedAt: new Date("2024-09-15T09:00:00Z"),
+  },
+  {
+    id: "int-conn-4",
+    name: "Pacific NW - Workday HR",
+    provider: "workday" as const,
+    category: "payroll",
+    status: "error" as const,
+    configuration: { tenantUrl: "pnw.workday.com" },
+    credentials: { username: "api-user" },
+    lastSyncAt: new Date("2024-11-27T12:00:00Z"),
+    lastSyncStatus: "failed" as const,
+    syncFrequency: "daily",
+    isActive: true,
+    connectedByUserId: "demo-admin",
+    connectedAt: new Date("2024-08-20T11:00:00Z"),
+    errorMessage: "Authentication token expired. Please reconnect.",
+  },
+  {
+    id: "int-conn-5",
+    name: "Mercy Regional - Epic FHIR",
+    provider: "epic" as const,
+    category: "ehr",
+    status: "connected" as const,
+    configuration: { baseUrl: "https://fhir.mercy.org" },
+    credentials: { clientId: "nicehr-client" },
+    lastSyncAt: new Date("2024-11-29T09:00:00Z"),
+    lastSyncStatus: "completed" as const,
+    syncFrequency: "hourly",
+    isActive: true,
+    connectedByUserId: "demo-admin",
+    connectedAt: new Date("2024-07-01T08:00:00Z"),
+  },
+];
+
+// Sync Jobs Demo Data (needed for Sync Events)
+const demoSyncJobs = [
+  {
+    id: "sync-job-1",
+    connectionId: "int-conn-1",
+    direction: "import" as const,
+    status: "completed" as const,
+    startedAt: new Date("2024-11-29T08:00:00Z"),
+    completedAt: new Date("2024-11-29T08:00:32Z"),
+    recordsProcessed: 45,
+    recordsSucceeded: 45,
+    recordsFailed: 0,
+    triggeredByUserId: "demo-admin",
+  },
+  {
+    id: "sync-job-2",
+    connectionId: "int-conn-3",
+    direction: "export" as const,
+    status: "partial" as const,
+    startedAt: new Date("2024-11-28T22:00:00Z"),
+    completedAt: new Date("2024-11-28T22:02:15Z"),
+    recordsProcessed: 150,
+    recordsSucceeded: 147,
+    recordsFailed: 3,
+    errorLog: [{ recordId: "rec-1", error: "Invalid format" }],
+    triggeredByUserId: "demo-admin",
+  },
+  {
+    id: "sync-job-3",
+    connectionId: "int-conn-4",
+    direction: "bidirectional" as const,
+    status: "failed" as const,
+    startedAt: new Date("2024-11-27T12:00:00Z"),
+    completedAt: new Date("2024-11-27T12:00:05Z"),
+    recordsProcessed: 0,
+    recordsSucceeded: 0,
+    recordsFailed: 0,
+    errorLog: [{ error: "Authentication failed" }],
+    triggeredByUserId: "demo-admin",
+  },
+  {
+    id: "sync-job-4",
+    connectionId: "int-conn-5",
+    direction: "import" as const,
+    status: "completed" as const,
+    startedAt: new Date("2024-11-29T09:00:00Z"),
+    completedAt: new Date("2024-11-29T09:01:45Z"),
+    recordsProcessed: 892,
+    recordsSucceeded: 892,
+    recordsFailed: 0,
+    triggeredByUserId: "demo-admin",
+  },
+];
+
+// Sync Events Demo Data (matching actual schema)
+const demoSyncEvents = [
+  {
+    id: "sync-evt-1",
+    syncJobId: "sync-job-1",
+    eventType: "created",
+    resourceType: "schedule",
+    resourceId: "schedule-001",
+    externalId: "gcal-evt-123",
+    details: { summary: "Mercy Regional Shift" },
+  },
+  {
+    id: "sync-evt-2",
+    syncJobId: "sync-job-1",
+    eventType: "updated",
+    resourceType: "schedule",
+    resourceId: "schedule-002",
+    externalId: "gcal-evt-124",
+    details: { summary: "Training Session Updated" },
+  },
+  {
+    id: "sync-evt-3",
+    syncJobId: "sync-job-2",
+    eventType: "created",
+    resourceType: "payroll_entry",
+    resourceId: "payroll-001",
+    externalId: "adp-ent-456",
+    details: { employeeName: "John Consultant" },
+  },
+  {
+    id: "sync-evt-4",
+    syncJobId: "sync-job-2",
+    eventType: "error",
+    resourceType: "payroll_entry",
+    resourceId: "payroll-002",
+    errorMessage: "Invalid tax ID format",
+    details: { employeeName: "Jane Consultant" },
+  },
+  {
+    id: "sync-evt-5",
+    syncJobId: "sync-job-4",
+    eventType: "created",
+    resourceType: "patient_data",
+    resourceId: "patient-001",
+    externalId: "epic-pt-789",
+    details: { dataType: "encounter" },
+  },
+];
+
+// EHR Systems Demo Data (matching actual schema)
+const demoEhrSystems = [
+  {
+    id: "ehr-1",
+    name: "Mercy Regional Epic Production",
+    vendor: "Epic",
+    version: "2024.2",
+    hospitalId: "hospital-1",
+    environment: "production",
+    status: "operational" as const,
+    baseUrl: "https://epic.mercy-regional.org",
+    healthCheckEndpoint: "/api/health",
+    lastHealthCheck: new Date("2024-11-29T09:30:00Z"),
+    uptimePercent: "99.98",
+    avgResponseTime: 145,
+    isMonitored: true,
+    alertThresholds: { responseTime: 500, errorRate: 1.0 },
+    notificationChannels: ["email", "slack"],
+  },
+  {
+    id: "ehr-2",
+    name: "Mercy Regional Epic Training",
+    vendor: "Epic",
+    version: "2024.2",
+    hospitalId: "hospital-1",
+    environment: "training",
+    status: "operational" as const,
+    baseUrl: "https://epic-train.mercy-regional.org",
+    healthCheckEndpoint: "/api/health",
+    lastHealthCheck: new Date("2024-11-29T09:30:00Z"),
+    uptimePercent: "100.00",
+    avgResponseTime: 98,
+    isMonitored: true,
+    alertThresholds: { responseTime: 1000, errorRate: 5.0 },
+    notificationChannels: ["email"],
+  },
+  {
+    id: "ehr-3",
+    name: "St. Luke's Cerner Production",
+    vendor: "Cerner",
+    version: "2024.1",
+    hospitalId: "hospital-2",
+    environment: "production",
+    status: "degraded" as const,
+    baseUrl: "https://cerner.stlukes.org",
+    healthCheckEndpoint: "/api/health",
+    lastHealthCheck: new Date("2024-11-29T09:28:00Z"),
+    uptimePercent: "97.50",
+    avgResponseTime: 890,
+    isMonitored: true,
+    alertThresholds: { responseTime: 500, errorRate: 1.0 },
+    notificationChannels: ["email", "slack", "sms"],
+  },
+  {
+    id: "ehr-4",
+    name: "St. Luke's Cerner Test",
+    vendor: "Cerner",
+    version: "2024.2",
+    hospitalId: "hospital-2",
+    environment: "staging",
+    status: "operational" as const,
+    baseUrl: "https://cerner-test.stlukes.org",
+    healthCheckEndpoint: "/api/health",
+    lastHealthCheck: new Date("2024-11-29T09:30:00Z"),
+    uptimePercent: "99.95",
+    avgResponseTime: 110,
+    isMonitored: true,
+    alertThresholds: { responseTime: 1000, errorRate: 5.0 },
+    notificationChannels: ["email"],
+  },
+  {
+    id: "ehr-5",
+    name: "Pacific NW Epic Production",
+    vendor: "Epic",
+    version: "2024.1",
+    hospitalId: "hospital-3",
+    environment: "production",
+    status: "maintenance" as const,
+    baseUrl: "https://epic.pnwhealth.org",
+    healthCheckEndpoint: "/api/health",
+    lastHealthCheck: new Date("2024-11-29T09:15:00Z"),
+    uptimePercent: "95.00",
+    avgResponseTime: 0,
+    isMonitored: true,
+    alertThresholds: { responseTime: 500, errorRate: 1.0 },
+    notificationChannels: ["email", "slack"],
+  },
+];
+
+// EHR Status Metrics Demo Data (matching actual schema)
+const demoEhrMetrics = [
+  { id: "metric-1", ehrSystemId: "ehr-1", timestamp: new Date("2024-11-29T09:00:00Z"), status: "operational" as const, responseTime: 145, errorRate: "0.01", activeUsers: 342, transactionsPerMinute: 1250 },
+  { id: "metric-2", ehrSystemId: "ehr-1", timestamp: new Date("2024-11-29T09:30:00Z"), status: "operational" as const, responseTime: 152, errorRate: "0.02", activeUsers: 338, transactionsPerMinute: 1180 },
+  { id: "metric-3", ehrSystemId: "ehr-2", timestamp: new Date("2024-11-29T09:00:00Z"), status: "operational" as const, responseTime: 98, errorRate: "0.00", activeUsers: 45, transactionsPerMinute: 180 },
+  { id: "metric-4", ehrSystemId: "ehr-3", timestamp: new Date("2024-11-29T09:00:00Z"), status: "degraded" as const, responseTime: 890, errorRate: "2.50", activeUsers: 512, transactionsPerMinute: 2100 },
+  { id: "metric-5", ehrSystemId: "ehr-4", timestamp: new Date("2024-11-29T09:00:00Z"), status: "operational" as const, responseTime: 110, errorRate: "0.05", activeUsers: 28, transactionsPerMinute: 95 },
+  { id: "metric-6", ehrSystemId: "ehr-5", timestamp: new Date("2024-11-29T09:00:00Z"), status: "maintenance" as const, responseTime: 0, errorRate: "0.00", activeUsers: 0, transactionsPerMinute: 0 },
+];
+
+// EHR Incidents Demo Data (matching actual schema)
+const demoEhrIncidents = [
+  {
+    id: "incident-1",
+    ehrSystemId: "ehr-3",
+    title: "High Response Time - Cerner Production",
+    description: "Response times elevated above 500ms threshold. Database query optimization in progress.",
+    severity: "major" as const,
+    status: "investigating",
+    startedAt: new Date("2024-11-29T08:45:00Z"),
+    identifiedAt: new Date("2024-11-29T08:52:00Z"),
+    impactedModules: ["Orders", "Documentation"],
+    affectedUsers: 150,
+    reportedByUserId: "demo-admin",
+    notificationsSent: true,
+  },
+  {
+    id: "incident-2",
+    ehrSystemId: "ehr-5",
+    title: "Scheduled Maintenance - Epic Production",
+    description: "Scheduled system maintenance window for version upgrade to Epic 2024.3",
+    severity: "informational" as const,
+    status: "monitoring",
+    startedAt: new Date("2024-11-29T06:00:00Z"),
+    identifiedAt: new Date("2024-11-29T06:00:00Z"),
+    impactedModules: ["All"],
+    affectedUsers: 0,
+    reportedByUserId: "demo-admin",
+    notificationsSent: true,
+  },
+  {
+    id: "incident-3",
+    ehrSystemId: "ehr-1",
+    title: "Brief Authentication Delay",
+    description: "Users experienced 2-second delays during login authentication. Issue automatically resolved.",
+    severity: "minor" as const,
+    status: "resolved",
+    startedAt: new Date("2024-11-28T14:30:00Z"),
+    identifiedAt: new Date("2024-11-28T14:35:00Z"),
+    resolvedAt: new Date("2024-11-28T14:42:00Z"),
+    resolution: "Cache refresh resolved the authentication delay. Monitoring for recurrence.",
+    rootCause: "Cache invalidation issue after maintenance window",
+    impactedModules: ["Authentication"],
+    affectedUsers: 45,
+    reportedByUserId: "demo-admin",
+    notificationsSent: true,
+  },
+];
+
+// Payroll Sync Profiles Demo Data (matching actual schema)
+const demoPayrollProfiles = [
+  {
+    id: "payroll-1",
+    name: "Mercy Regional ADP Export",
+    connectionId: "int-conn-3",
+    exportFormat: "csv",
+    fieldMappings: { employeeId: "consultant_id", hours: "total_hours", rate: "pay_rate" },
+    includeOvertime: true,
+    includeBonuses: true,
+    includeDeductions: true,
+    autoExportSchedule: "0 2 * * 1",
+    lastExportAt: new Date("2024-11-25T02:00:00Z"),
+    isActive: true,
+    createdByUserId: "demo-admin",
+  },
+  {
+    id: "payroll-2",
+    name: "St. Luke's Paychex Export",
+    exportFormat: "xml",
+    fieldMappings: { employeeId: "emp_number", hours: "worked_hours", rate: "hourly_rate" },
+    includeOvertime: true,
+    includeBonuses: false,
+    includeDeductions: true,
+    autoExportSchedule: "0 3 * * 1",
+    lastExportAt: new Date("2024-11-25T03:00:00Z"),
+    isActive: true,
+    createdByUserId: "demo-admin",
+  },
+  {
+    id: "payroll-3",
+    name: "Pacific NW Workday Export",
+    connectionId: "int-conn-4",
+    exportFormat: "api",
+    fieldMappings: { employeeId: "worker_id", hours: "time_worked", rate: "compensation" },
+    includeOvertime: true,
+    includeBonuses: true,
+    includeDeductions: true,
+    autoExportSchedule: "0 1 * * 1",
+    lastExportAt: new Date("2024-11-18T01:00:00Z"),
+    isActive: false,
+    createdByUserId: "demo-admin",
+  },
+];
+
+// Payroll Export Jobs Demo Data (matching actual schema)
+const demoPayrollJobs = [
+  {
+    id: "pay-job-1",
+    profileId: "payroll-1",
+    status: "completed" as const,
+    exportFormat: "csv",
+    periodStart: "2024-11-11",
+    periodEnd: "2024-11-24",
+    recordCount: 24,
+    totalAmount: "84500.00",
+    fileName: "payroll_export_2024-11-24.csv",
+    fileSize: 15234,
+    exportedByUserId: "demo-admin",
+    startedAt: new Date("2024-11-25T02:00:00Z"),
+    completedAt: new Date("2024-11-25T02:15:00Z"),
+  },
+  {
+    id: "pay-job-2",
+    profileId: "payroll-2",
+    status: "completed" as const,
+    exportFormat: "xml",
+    periodStart: "2024-11-11",
+    periodEnd: "2024-11-24",
+    recordCount: 18,
+    totalAmount: "67200.00",
+    fileName: "payroll_export_2024-11-24.xml",
+    fileSize: 28456,
+    errorMessage: "1 record skipped due to missing tax ID",
+    exportedByUserId: "demo-admin",
+    startedAt: new Date("2024-11-25T03:00:00Z"),
+    completedAt: new Date("2024-11-25T03:22:00Z"),
+  },
+  {
+    id: "pay-job-3",
+    profileId: "payroll-1",
+    status: "completed" as const,
+    exportFormat: "csv",
+    periodStart: "2024-10-28",
+    periodEnd: "2024-11-10",
+    recordCount: 22,
+    totalAmount: "78900.00",
+    fileName: "payroll_export_2024-11-10.csv",
+    fileSize: 14123,
+    exportedByUserId: "demo-admin",
+    startedAt: new Date("2024-11-11T02:00:00Z"),
+    completedAt: new Date("2024-11-11T02:18:00Z"),
+  },
+];
+
+// Escalation Rules Demo Data (using existing table from schema)
+const demoEscalationRules = [
+  {
+    id: "esc-rule-1",
+    projectId: "project-1",
+    name: "Critical Ticket Auto-Escalation",
+    description: "Automatically escalate critical support tickets that are unacknowledged for 30 minutes",
+    triggerType: "sla_breach" as const,
+    conditions: { priority: "critical", maxAgeMinutes: 30, status: "open" },
+    actions: { notifyRoles: ["project_manager", "admin"], escalateLevel: 2, sendSms: true },
+    escalationLevel: 2,
+    notificationChannels: ["email", "sms", "in_app"],
+    isActive: true,
+    createdByUserId: "demo-admin",
+  },
+  {
+    id: "esc-rule-2",
+    projectId: "project-1",
+    name: "High Priority Ticket Escalation",
+    description: "Escalate high priority tickets after 2 hours without resolution",
+    triggerType: "time_based" as const,
+    conditions: { priority: "high", maxAgeMinutes: 120, status: ["open", "in_progress"] },
+    actions: { notifyRoles: ["project_manager"], escalateLevel: 1, sendSms: false },
+    escalationLevel: 1,
+    notificationChannels: ["email", "in_app"],
+    isActive: true,
+    createdByUserId: "demo-admin",
+  },
+  {
+    id: "esc-rule-3",
+    projectId: "project-2",
+    name: "EHR System Downtime Alert",
+    description: "Immediate escalation when EHR system shows critical status for more than 5 minutes",
+    triggerType: "priority_based" as const,
+    conditions: { systemType: "ehr", status: "critical", durationMinutes: 5 },
+    actions: { notifyRoles: ["admin", "hospital_it", "project_manager"], escalateLevel: 3, sendSms: true },
+    escalationLevel: 3,
+    notificationChannels: ["email", "sms", "in_app"],
+    isActive: true,
+    createdByUserId: "demo-admin",
+  },
+];
+
+// Escalation Triggers Demo Data (matching actual schema)
+const demoEscalationTriggers = [
+  {
+    id: "trigger-1",
+    ruleId: "esc-rule-1",
+    name: "30-Minute SLA Breach Trigger",
+    triggerType: "time_based",
+    conditions: { maxAgeMinutes: 30, priority: "critical" },
+    actions: [{ type: "notify_email", recipients: ["admin@nicehr.com"] }],
+    cooldownMinutes: 60,
+    maxTriggersPerHour: 5,
+    isActive: true,
+    lastTriggeredAt: new Date("2024-11-29T07:15:00Z"),
+    triggerCount: 3,
+  },
+  {
+    id: "trigger-2",
+    ruleId: "esc-rule-2",
+    name: "2-Hour Response Trigger",
+    triggerType: "time_based",
+    conditions: { maxAgeMinutes: 120, priority: "high" },
+    actions: [{ type: "notify_email", recipients: ["pm@nicehr.com"] }],
+    cooldownMinutes: 30,
+    maxTriggersPerHour: 3,
+    isActive: true,
+    lastTriggeredAt: new Date("2024-11-28T14:00:00Z"),
+    triggerCount: 7,
+  },
+  {
+    id: "trigger-3",
+    ruleId: "esc-rule-3",
+    name: "EHR Critical Alert Trigger",
+    triggerType: "sla_breach",
+    conditions: { systemType: "ehr", status: "critical" },
+    actions: [{ type: "notify_sms", recipients: ["+15551234567"] }, { type: "create_incident" }],
+    cooldownMinutes: 15,
+    maxTriggersPerHour: 10,
+    isActive: true,
+    lastTriggeredAt: new Date("2024-11-27T16:30:00Z"),
+    triggerCount: 2,
+  },
+];
+
+// Escalation Events Demo Data (matching actual schema)
+const demoEscalationEvents = [
+  {
+    id: "esc-evt-1",
+    triggerId: "trigger-1",
+    triggerReason: "Critical ticket exceeded 30-minute SLA threshold",
+    actionsTaken: [{ type: "email", status: "sent", recipient: "admin@nicehr.com" }],
+    notificationsSent: { email: 2, sms: 1 },
+    previousPriority: "high",
+    newPriority: "critical",
+    wasSuccessful: true,
+    acknowledgedByUserId: "demo-admin",
+    acknowledgedAt: new Date("2024-11-29T07:22:00Z"),
+  },
+  {
+    id: "esc-evt-2",
+    triggerId: "trigger-2",
+    triggerReason: "High priority ticket response time exceeded 2 hours",
+    actionsTaken: [{ type: "email", status: "sent", recipient: "pm@nicehr.com" }],
+    notificationsSent: { email: 1 },
+    wasSuccessful: true,
+    acknowledgedByUserId: "demo-admin",
+    acknowledgedAt: new Date("2024-11-28T14:45:00Z"),
+  },
+  {
+    id: "esc-evt-3",
+    triggerId: "trigger-3",
+    triggerReason: "EHR system critical status detected for 5+ minutes",
+    actionsTaken: [{ type: "sms", status: "sent" }, { type: "incident", status: "created" }],
+    notificationsSent: { sms: 3, email: 2 },
+    wasSuccessful: true,
+    acknowledgedByUserId: "demo-admin",
+    acknowledgedAt: new Date("2024-11-27T16:35:00Z"),
+  },
+];
+
+// Automation Workflows Demo Data (matching actual schema)
+const demoAutomationWorkflows = [
+  {
+    id: "auto-wf-1",
+    name: "Ticket SLA Escalation Workflow",
+    description: "Automatically escalate tickets when SLA is breached",
+    category: "escalation",
+    triggerEvent: "ticket_sla_warning",
+    conditions: { priority: ["critical", "high"], timeRemaining: 15 },
+    actions: [{ type: "notify_email", template: "sla_warning" }, { type: "assign_user", role: "supervisor" }],
+    isActive: true,
+    executionCount: 45,
+    lastExecutedAt: new Date("2024-11-29T07:15:00Z"),
+    createdByUserId: "demo-admin",
+  },
+  {
+    id: "auto-wf-2",
+    name: "Compliance Due Notification",
+    description: "Notify managers when compliance items are due within 7 days",
+    category: "compliance",
+    triggerEvent: "compliance_due",
+    conditions: { daysUntilDue: 7 },
+    actions: [{ type: "notify_email", template: "compliance_reminder" }],
+    isActive: true,
+    executionCount: 128,
+    lastExecutedAt: new Date("2024-11-28T09:00:00Z"),
+    createdByUserId: "demo-admin",
+  },
+  {
+    id: "auto-wf-3",
+    name: "Daily Sync Workflow",
+    description: "Automatically sync data with external systems daily",
+    category: "data_sync",
+    triggerEvent: "scheduled",
+    conditions: { schedule: "0 2 * * *" },
+    actions: [{ type: "sync_calendar" }, { type: "sync_payroll" }],
+    isActive: true,
+    executionCount: 89,
+    lastExecutedAt: new Date("2024-11-29T02:00:00Z"),
+    createdByUserId: "demo-admin",
+  },
+];
+
+// Workflow Executions Demo Data (matching actual schema)
+const demoWorkflowExecutions = [
+  {
+    id: "wf-exec-1",
+    workflowId: "auto-wf-1",
+    triggerData: { ticketId: "ticket-1", priority: "critical", timeRemaining: 10 },
+    status: "completed",
+    startedAt: new Date("2024-11-29T07:15:00Z"),
+    completedAt: new Date("2024-11-29T07:15:05Z"),
+    actionsExecuted: [{ action: "notify_email", status: "success" }, { action: "assign_user", status: "success" }],
+    results: { emailsSent: 2, usersAssigned: 1 },
+    triggeredByUserId: "demo-admin",
+  },
+  {
+    id: "wf-exec-2",
+    workflowId: "auto-wf-2",
+    triggerData: { complianceItemId: "comp-1", daysUntilDue: 5 },
+    status: "completed",
+    startedAt: new Date("2024-11-28T09:00:00Z"),
+    completedAt: new Date("2024-11-28T09:00:03Z"),
+    actionsExecuted: [{ action: "notify_email", status: "success" }],
+    results: { emailsSent: 3 },
+    triggeredByUserId: "demo-admin",
+  },
+  {
+    id: "wf-exec-3",
+    workflowId: "auto-wf-3",
+    triggerData: { scheduledTime: "2024-11-29T02:00:00Z" },
+    status: "completed",
+    startedAt: new Date("2024-11-29T02:00:00Z"),
+    completedAt: new Date("2024-11-29T02:05:30Z"),
+    actionsExecuted: [{ action: "sync_calendar", status: "success" }, { action: "sync_payroll", status: "success" }],
+    results: { calendarEventsSync: 45, payrollRecordsSync: 22 },
+    triggeredByUserId: "demo-admin",
+  },
+  {
+    id: "wf-exec-4",
+    workflowId: "auto-wf-1",
+    triggerData: { ticketId: "ticket-2", priority: "high", timeRemaining: 12 },
+    status: "failed",
+    startedAt: new Date("2024-11-26T09:15:00Z"),
+    completedAt: new Date("2024-11-26T09:15:02Z"),
+    actionsExecuted: [{ action: "notify_email", status: "failed", error: "SMTP timeout" }],
+    errorMessage: "Email delivery failed: SMTP connection timeout",
+    triggeredByUserId: "demo-admin",
+  },
+];
+
 export async function seedDemoData() {
   console.log("Starting demo data seeding...");
 
@@ -719,6 +1371,71 @@ export async function seedDemoData() {
     console.log("Seeding training courses...");
     for (const course of demoCourses) {
       await db.insert(courses).values(course).onConflictDoNothing();
+    }
+
+    console.log("Seeding integration connections...");
+    for (const conn of demoIntegrationConnections) {
+      await db.insert(integrationConnections).values(conn).onConflictDoNothing();
+    }
+
+    console.log("Seeding sync jobs...");
+    for (const job of demoSyncJobs) {
+      await db.insert(syncJobs).values(job).onConflictDoNothing();
+    }
+
+    console.log("Seeding sync events...");
+    for (const evt of demoSyncEvents) {
+      await db.insert(syncEvents).values(evt).onConflictDoNothing();
+    }
+
+    console.log("Seeding EHR systems...");
+    for (const sys of demoEhrSystems) {
+      await db.insert(ehrSystems).values(sys).onConflictDoNothing();
+    }
+
+    console.log("Seeding EHR metrics...");
+    for (const metric of demoEhrMetrics) {
+      await db.insert(ehrStatusMetrics).values(metric).onConflictDoNothing();
+    }
+
+    console.log("Seeding EHR incidents...");
+    for (const incident of demoEhrIncidents) {
+      await db.insert(ehrIncidents).values(incident).onConflictDoNothing();
+    }
+
+    console.log("Seeding payroll profiles...");
+    for (const profile of demoPayrollProfiles) {
+      await db.insert(payrollSyncProfiles).values(profile).onConflictDoNothing();
+    }
+
+    console.log("Seeding payroll jobs...");
+    for (const job of demoPayrollJobs) {
+      await db.insert(payrollExportJobs).values(job).onConflictDoNothing();
+    }
+
+    console.log("Seeding escalation rules...");
+    for (const rule of demoEscalationRules) {
+      await db.insert(escalationRules).values(rule).onConflictDoNothing();
+    }
+
+    console.log("Seeding escalation triggers...");
+    for (const trigger of demoEscalationTriggers) {
+      await db.insert(escalationTriggers).values(trigger).onConflictDoNothing();
+    }
+
+    console.log("Seeding escalation events...");
+    for (const evt of demoEscalationEvents) {
+      await db.insert(escalationEvents).values(evt).onConflictDoNothing();
+    }
+
+    console.log("Seeding automation workflows...");
+    for (const workflow of demoAutomationWorkflows) {
+      await db.insert(automationWorkflows).values(workflow).onConflictDoNothing();
+    }
+
+    console.log("Seeding workflow executions...");
+    for (const exec of demoWorkflowExecutions) {
+      await db.insert(workflowExecutions).values(exec).onConflictDoNothing();
     }
 
     console.log("Demo data seeding completed successfully!");
