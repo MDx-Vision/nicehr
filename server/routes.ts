@@ -32,6 +32,7 @@ import {
   insertProjectMilestoneSchema,
   insertPhaseDeliverableSchema,
   insertProjectRiskSchema,
+  insertPhaseStepSchema,
   insertTeamRoleTemplateSchema,
   insertProjectTeamAssignmentSchema,
   insertOnboardingTaskSchema,
@@ -2779,6 +2780,123 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error deleting risk:", error);
       res.status(500).json({ message: "Failed to delete risk" });
+    }
+  });
+
+  // Phase Steps routes
+  app.get('/api/phases/:phaseId/steps', isAuthenticated, async (req, res) => {
+    try {
+      const steps = await storage.getPhaseSteps(req.params.phaseId);
+      res.json(steps);
+    } catch (error) {
+      console.error("Error fetching phase steps:", error);
+      res.status(500).json({ message: "Failed to fetch phase steps" });
+    }
+  });
+
+  app.post('/api/phases/:phaseId/steps', isAuthenticated, async (req: any, res) => {
+    try {
+      const stepData = insertPhaseStepSchema.parse({
+        ...req.body,
+        phaseId: req.params.phaseId,
+      });
+      const step = await storage.createPhaseStep(stepData);
+      await logActivity(req.user.claims.sub, {
+        activityType: 'create',
+        resourceType: 'phase_step',
+        resourceId: step.id,
+        resourceName: step.title,
+        description: `Created phase step: ${step.title}`,
+      }, req);
+      res.status(201).json(step);
+    } catch (error) {
+      console.error("Error creating phase step:", error);
+      res.status(500).json({ message: "Failed to create phase step" });
+    }
+  });
+
+  app.post('/api/phases/:phaseId/steps/bulk', isAuthenticated, async (req: any, res) => {
+    try {
+      const stepsData = (req.body.steps as any[]).map((step) =>
+        insertPhaseStepSchema.parse({
+          ...step,
+          phaseId: req.params.phaseId,
+        })
+      );
+      const steps = await storage.bulkCreatePhaseSteps(stepsData);
+      await logActivity(req.user.claims.sub, {
+        activityType: 'create',
+        resourceType: 'phase_step',
+        description: `Created ${steps.length} phase steps`,
+      }, req);
+      res.status(201).json(steps);
+    } catch (error) {
+      console.error("Error bulk creating phase steps:", error);
+      res.status(500).json({ message: "Failed to create phase steps" });
+    }
+  });
+
+  app.get('/api/steps/:id', isAuthenticated, async (req, res) => {
+    try {
+      const step = await storage.getPhaseStep(req.params.id);
+      if (!step) {
+        return res.status(404).json({ message: "Step not found" });
+      }
+      res.json(step);
+    } catch (error) {
+      console.error("Error fetching step:", error);
+      res.status(500).json({ message: "Failed to fetch step" });
+    }
+  });
+
+  app.patch('/api/steps/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const updateData = insertPhaseStepSchema.partial().parse(req.body);
+      const step = await storage.updatePhaseStep(req.params.id, updateData);
+      if (!step) {
+        return res.status(404).json({ message: "Step not found" });
+      }
+      await logActivity(req.user.claims.sub, {
+        activityType: 'update',
+        resourceType: 'phase_step',
+        resourceId: req.params.id,
+        resourceName: step.title,
+        description: `Updated phase step: ${step.title}`,
+      }, req);
+      res.json(step);
+    } catch (error) {
+      console.error("Error updating step:", error);
+      res.status(500).json({ message: "Failed to update step" });
+    }
+  });
+
+  app.delete('/api/steps/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const deleted = await storage.deletePhaseStep(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Step not found" });
+      }
+      await logActivity(req.user.claims.sub, {
+        activityType: 'delete',
+        resourceType: 'phase_step',
+        resourceId: req.params.id,
+        description: `Deleted phase step`,
+      }, req);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting step:", error);
+      res.status(500).json({ message: "Failed to delete step" });
+    }
+  });
+
+  // Phase progress calculation endpoint
+  app.get('/api/phases/:phaseId/progress', isAuthenticated, async (req, res) => {
+    try {
+      const progress = await storage.calculatePhaseProgress(req.params.phaseId);
+      res.json({ phaseId: req.params.phaseId, calculatedProgress: progress });
+    } catch (error) {
+      console.error("Error calculating phase progress:", error);
+      res.status(500).json({ message: "Failed to calculate phase progress" });
     }
   });
 

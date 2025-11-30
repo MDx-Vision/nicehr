@@ -3629,9 +3629,9 @@ export class DatabaseStorage implements IStorage {
 
   async updatePhaseStep(id: string, step: Partial<InsertPhaseStep>): Promise<PhaseStep | undefined> {
     const updateData: any = { ...step, updatedAt: new Date() };
-    if (step.status === "completed" && !step.completedAt) {
-      updateData.completedAt = new Date();
-      updateData.isCompleted = true;
+    if (step.status === "completed") {
+      updateData.completionPercentage = 100;
+      updateData.actualEndDate = new Date().toISOString().split('T')[0];
     }
     const results = await db
       .update(phaseSteps)
@@ -3657,7 +3657,7 @@ export class DatabaseStorage implements IStorage {
     const steps = await this.getPhaseSteps(phaseId);
     if (steps.length === 0) return 0;
     
-    const completedSteps = steps.filter(s => s.isCompleted).length;
+    const completedSteps = steps.filter(s => s.status === "completed").length;
     const deliverables = await this.getPhaseDeliverables(phaseId);
     const approvedDeliverables = deliverables.filter(d => d.isApproved).length;
     
