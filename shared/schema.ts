@@ -1606,6 +1606,9 @@ export const projectPhasesRelations = relations(projectPhases, ({ one, many }) =
   }),
   tasks: many(projectTasks),
   deliverables: many(phaseDeliverables),
+  steps: many(phaseSteps),
+  risks: many(projectRisks),
+  milestones: many(projectMilestones),
 }));
 
 // Project Tasks - Tasks within each phase
@@ -1679,10 +1682,11 @@ export const projectMilestonesRelations = relations(projectMilestones, ({ one })
   }),
 }));
 
-// Phase Deliverables - Documents/outputs per phase
+// Phase Deliverables - Documents/outputs per phase or step
 export const phaseDeliverables = pgTable("phase_deliverables", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   phaseId: varchar("phase_id").references(() => projectPhases.id).notNull(),
+  stepId: varchar("step_id"),
   title: varchar("title").notNull(),
   description: text("description"),
   fileUrl: varchar("file_url"),
@@ -1752,6 +1756,43 @@ export const projectRisksRelations = relations(projectRisks, ({ one }) => ({
     fields: [projectRisks.createdBy],
     references: [users.id],
   }),
+}));
+
+// Phase Step Status Enum
+export const phaseStepStatusEnum = pgEnum("phase_step_status", ["not_started", "in_progress", "completed", "blocked", "skipped"]);
+
+// Phase Steps - Numbered activities within each phase (e.g., Phase 1 Step 1: Stakeholder Engagement)
+export const phaseSteps = pgTable("phase_steps", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  phaseId: varchar("phase_id").references(() => projectPhases.id).notNull(),
+  stepNumber: integer("step_number").notNull(),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  keyActivities: text("key_activities").array(),
+  expectedDeliverables: text("expected_deliverables").array(),
+  timelineWeeks: varchar("timeline_weeks"),
+  status: phaseStepStatusEnum("status").default("not_started").notNull(),
+  assignedTo: varchar("assigned_to").references(() => users.id),
+  plannedStartDate: date("planned_start_date"),
+  plannedEndDate: date("planned_end_date"),
+  actualStartDate: date("actual_start_date"),
+  actualEndDate: date("actual_end_date"),
+  completionPercentage: integer("completion_percentage").default(0),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const phaseStepsRelations = relations(phaseSteps, ({ one, many }) => ({
+  phase: one(projectPhases, {
+    fields: [phaseSteps.phaseId],
+    references: [projectPhases.id],
+  }),
+  assignee: one(users, {
+    fields: [phaseSteps.assignedTo],
+    references: [users.id],
+  }),
+  deliverables: many(phaseDeliverables),
 }));
 
 // Team Role Templates - Predefined roles for NICEHR and Hospital teams
@@ -1864,6 +1905,12 @@ export const insertProjectRiskSchema = createInsertSchema(projectRisks).omit({
   updatedAt: true,
 });
 
+export const insertPhaseStepSchema = createInsertSchema(phaseSteps).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertTeamRoleTemplateSchema = createInsertSchema(teamRoleTemplates).omit({
   id: true,
   createdAt: true,
@@ -1900,6 +1947,9 @@ export type InsertPhaseDeliverable = z.infer<typeof insertPhaseDeliverableSchema
 export type ProjectRisk = typeof projectRisks.$inferSelect;
 export type InsertProjectRisk = z.infer<typeof insertProjectRiskSchema>;
 
+export type PhaseStep = typeof phaseSteps.$inferSelect;
+export type InsertPhaseStep = z.infer<typeof insertPhaseStepSchema>;
+
 export type TeamRoleTemplate = typeof teamRoleTemplates.$inferSelect;
 export type InsertTeamRoleTemplate = z.infer<typeof insertTeamRoleTemplateSchema>;
 
@@ -1910,6 +1960,15 @@ export type OnboardingTask = typeof onboardingTasks.$inferSelect;
 export type InsertOnboardingTask = z.infer<typeof insertOnboardingTaskSchema>;
 
 // Extended types for API responses
+export interface ProjectPhaseWithDetails extends ProjectPhase {
+  tasks: ProjectTask[];
+  deliverables: PhaseDeliverable[];
+  steps: PhaseStep[];
+  risks: ProjectRisk[];
+  milestones: ProjectMilestone[];
+  calculatedProgress: number;
+}
+
 export interface ProjectPhaseWithTasks extends ProjectPhase {
   tasks: ProjectTask[];
   deliverables: PhaseDeliverable[];
