@@ -4,7 +4,7 @@ hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["python311Packages.openpyxl", "python311Packages.python-docx", "xlsx2csv", "pandoc"]
+packages = ["python311Packages.openpyxl", "python311Packages.python-docx", "xlsx2csv", "pandoc", "glib", "nss", "nspr", "atk", "cups", "libdrm", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "xorg.libxcb", "xorg.libX11", "mesa", "expat", "libxkbcommon", "alsa-lib", "at-spi2-atk", "gtk3", "pango", "cairo", "gdk-pixbuf", "dbus"]
 
 [deployment]
 deploymentTarget = "autoscale"
@@ -14,6 +14,11 @@ run = ["npm", "run", "start"]
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 34279
+externalPort = 8000
+exposeLocalhost = true
 
 [[ports]]
 localPort = 34591
@@ -44,16 +49,16 @@ localPort = 41859
 externalPort = 6800
 
 [[ports]]
+localPort = 42475
+externalPort = 8080
+
+[[ports]]
 localPort = 43139
 externalPort = 3003
 
 [[ports]]
 localPort = 43635
 externalPort = 6000
-
-[[ports]]
-localPort = 44077
-externalPort = 8000
 
 [[ports]]
 localPort = 44899
