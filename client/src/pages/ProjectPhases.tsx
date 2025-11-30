@@ -1193,18 +1193,50 @@ function StepsTab({ projectId, phases }: { projectId: string; phases: ProjectPha
                     </div>
                   </div>
                   {step.keyActivities && step.keyActivities.length > 0 && (
-                    <div className="ml-11">
-                      <p className="text-xs font-medium text-muted-foreground mb-1">Key Activities:</p>
-                      <ul className="text-sm text-muted-foreground list-disc list-inside">
-                        {step.keyActivities.map((activity, idx) => (
-                          <li key={idx}>{activity}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {step.completionPercentage != null && step.completionPercentage > 0 && (
-                    <div className="ml-11">
-                      <Progress value={step.completionPercentage} className="h-1" />
+                    <div className="ml-11 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-medium text-muted-foreground">Key Activities:</p>
+                        <span className="text-xs text-muted-foreground">
+                          {step.completedActivities?.length || 0} of {step.keyActivities.length} completed
+                        </span>
+                      </div>
+                      <div className="space-y-1">
+                        {step.keyActivities.map((activity, idx) => {
+                          const isCompleted = step.completedActivities?.includes(idx) || false;
+                          return (
+                            <button
+                              key={idx}
+                              onClick={() => {
+                                const currentCompleted = step.completedActivities || [];
+                                const newCompleted = isCompleted
+                                  ? currentCompleted.filter((i: number) => i !== idx)
+                                  : [...currentCompleted, idx];
+                                updateStepMutation.mutate({ 
+                                  id: step.id, 
+                                  data: { completedActivities: newCompleted } 
+                                });
+                              }}
+                              className="flex items-center gap-2 w-full text-left group hover-elevate p-1 rounded"
+                              data-testid={`checkbox-activity-${step.id}-${idx}`}
+                            >
+                              <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors
+                                ${isCompleted 
+                                  ? "bg-green-500 border-green-500" 
+                                  : "border-muted-foreground/50 group-hover:border-primary"}`}
+                              >
+                                {isCompleted && <CheckCircle2 className="w-3 h-3 text-white" />}
+                              </div>
+                              <span className={`text-sm ${isCompleted ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                                {activity}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <Progress 
+                        value={((step.completedActivities?.length || 0) / step.keyActivities.length) * 100} 
+                        className="h-1" 
+                      />
                     </div>
                   )}
                 </div>
