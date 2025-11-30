@@ -25,7 +25,13 @@ NICEHR is a comprehensive healthcare consultant management platform designed for
 ### Core Features & Design Decisions
 - **Role-Based Access Control (RBAC):** Granular permissions (44 across 15 domains), 4 base roles, 11 implementation-specific roles, custom role creation, permission-based navigation, API middleware for enforcement, project context filtering.
 - **11-Phase EHR Implementation Methodology:** The platform is structured around a predefined 11-phase project lifecycle for EHR implementations, from planning to transition, with visual progress tracking.
-- **Project & Hospital Management:** CRUD for hospitals, project lifecycle management, risk registers, milestone tracking, consultant-project assignments.
+- **Project & Hospital Management:** CRUD for hospitals, project lifecycle management, risk registers, milestone tracking, consultant-project assignments, RACI responsibility matrix.
+- **Phase Management System:** Detailed 11-phase project tracking with:
+  - **Phase Steps:** Granular task breakdown within each phase with status tracking (not_started, in_progress, completed, skipped, blocked), completion percentages, key activities, expected deliverables, and timeline estimates.
+  - **Phase Deliverables:** Required and optional deliverables per phase/step with submission tracking, approval workflows, and file attachments.
+  - **Phase Risks:** Risk register per phase with probability/impact assessment, mitigation plans, contingency strategies, and status tracking (identified, mitigating, resolved, accepted).
+  - **Phase Milestones:** Key milestone tracking with due dates and completion status.
+  - **RACI Matrix:** Team responsibility assignments (Responsible, Accountable, Consulted, Informed) per phase with role-based permission controls.
 - **Consultant Management:** Detailed profiles, EMR system badges/certifications, advanced search, document uploads, structured onboarding workflows.
 - **Operational Tools:** Timesheets with approval, consultant availability, shift scheduling, command center dashboard, support ticket system, EOD reports, digital sign-in/out, shift handoff notes.
 - **Training & Competency:** Training portal, competency assessments, login labs for EMR, knowledge base.
@@ -40,12 +46,34 @@ NICEHR is a comprehensive healthcare consultant management platform designed for
 ### Database Schema Highlights
 - **RBAC Tables:** `roles`, `permissions`, `role_permissions`, `user_role_assignments`
 - **Core Tables:** `users`, `hospitals`, `projects`, `consultants`
+- **Phase Management:** `project_phases`, `phase_steps`, `phase_deliverables`, `phase_risks`, `project_milestones`, `raci_assignments`
 - **Operations:** `timesheets`, `support_tickets`, `eod_reports`, `schedules`
 - **Training:** `training_modules`, `assessments`, `competency_records`
 - **Financial:** `expenses`, `invoices`, `payroll_batches`, `pay_rates`
 - **Quality:** `consultant_scorecards`, `pulse_surveys`, `incident_reports`
 - **Analytics:** `go_live_readiness_snapshots`, `consultant_utilization_snapshots`, `timeline_forecast_snapshots`, `cost_variance_snapshots`
 - **Skills/Personal:** `consultant_questionnaires`, `skill_categories`, `skill_items`, `consultant_skills`, `consultant_ehr_experience`, `consultant_certifications`, `skill_verifications`
+
+### Key API Endpoints for Phase Management
+- `GET/POST /api/phases/:phaseId/steps` - List and create phase steps
+- `GET/PATCH/DELETE /api/steps/:id` - Read, update, delete individual steps
+- `GET/POST /api/phases/:phaseId/deliverables` - List and create phase deliverables
+- `GET/PATCH/DELETE /api/deliverables/:id` - Read, update, delete individual deliverables
+- `GET/POST /api/phases/:phaseId/risks` - List and create phase risks
+- `GET/PATCH/DELETE /api/risks/:id` - Read, update, delete individual risks
+- `GET/POST /api/phases/:phaseId/milestones` - List and create phase milestones
+- `GET/PATCH/DELETE /api/milestones/:id` - Read, update, delete individual milestones
+- `GET/POST /api/projects/:projectId/raci` - List and manage RACI assignments
+
+### Demo Data Seeding
+Run `npx tsx server/seedDemoData.ts` to populate the database with comprehensive demo data including:
+- 2 hospitals with units and modules
+- 3 projects at various stages
+- 11 phases per project with steps, deliverables, risks, and milestones
+- RACI matrix assignments
+- C-Suite staff and consultants
+- Training courses and integration connections
+- Advanced analytics snapshots
 
 ## External Dependencies
 - **Replit Auth:** User authentication via OpenID Connect

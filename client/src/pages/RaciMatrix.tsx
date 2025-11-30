@@ -26,9 +26,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/use-permissions";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Grid3X3, Users, Layers, X, Info } from "lucide-react";
+import { Grid3X3, Users, Layers, X, Info, Lock } from "lucide-react";
 import type {
   Project,
   ProjectPhase,
@@ -271,6 +273,7 @@ interface RaciCellProps {
   userName: string;
   assignment: RaciAssignment | undefined;
   projectId: string;
+  canEdit: boolean;
 }
 
 function RaciCell({
@@ -280,6 +283,7 @@ function RaciCell({
   userName,
   assignment,
   projectId,
+  canEdit,
 }: RaciCellProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
@@ -349,6 +353,32 @@ function RaciCell({
     updateMutation.isPending ||
     deleteMutation.isPending;
 
+  if (!canEdit) {
+    return (
+      <div className="flex items-center justify-center p-1">
+        {assignment ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <Badge
+                  className={`${RACI_CONFIG[assignment.role as RaciRole].color} font-bold text-sm min-w-[28px] justify-center`}
+                  data-testid={`badge-raci-${assignment.role}`}
+                >
+                  {RACI_CONFIG[assignment.role as RaciRole].short}
+                </Badge>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{RACI_CONFIG[assignment.role as RaciRole].label}: {userName}</p>
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <span className="text-muted-foreground/30">-</span>
+        )}
+      </div>
+    );
+  }
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -376,6 +406,9 @@ function RaciCell({
 export default function RaciMatrix() {
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
+  
+  const canEditRaci = hasPermission("projects:raci_manage");
 
   const { data: projects, isLoading: projectsLoading } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
@@ -466,9 +499,17 @@ export default function RaciMatrix() {
                 <CardTitle className="flex items-center gap-2">
                   <Layers className="w-5 h-5" />
                   {selectedProject?.name} - RACI Matrix
+                  {!canEditRaci && (
+                    <Badge variant="outline" className="ml-2 text-muted-foreground">
+                      <Lock className="w-3 h-3 mr-1" />
+                      Read Only
+                    </Badge>
+                  )}
                 </CardTitle>
                 <CardDescription>
-                  Click on any cell to assign or edit RACI roles for team members
+                  {canEditRaci 
+                    ? "Click on any cell to assign or edit RACI roles for team members"
+                    : "View RACI role assignments for team members (editing requires permission)"}
                 </CardDescription>
               </div>
               <RaciLegend />
@@ -543,6 +584,7 @@ export default function RaciMatrix() {
                               userName={getTeamMemberName(member)}
                               assignment={getAssignment(phase.id, member.user.id)}
                               projectId={selectedProjectId}
+                              canEdit={canEditRaci}
                             />
                           </TableCell>
                         ))}
