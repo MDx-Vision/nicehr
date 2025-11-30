@@ -110,23 +110,23 @@ The platform includes Cypress for end-to-end testing with a dual authentication 
 - Use `{ force: true }` for clicks when modals cause `pointer-events: none`
 
 ### CI/CD with GitHub Actions
-The project includes a GitHub Actions workflow (`.github/workflows/ci.yml`) that:
+The project includes GitHub Actions workflows for continuous integration:
 
-**Triggers:**
-- On push to `main` branch
-- On pull requests to `main` branch
+**Quality Gate (`.github/workflows/main.yml`):**
+- Triggers on push to `main` or pull requests to `main`
+- Acts as an unbreakable quality gate - build fails if any Cypress test fails
+- Steps:
+  1. Checks out code
+  2. Sets up Node.js 20 with npm caching
+  3. Installs dependencies (`npm ci`)
+  4. Sets up PostgreSQL service and seeds test data
+  5. Builds application
+  6. Runs Cypress E2E tests using `cypress-io/github-action`
+  7. Uploads screenshots/videos as artifacts on failure
 
-**Test Job:**
-1. Sets up PostgreSQL service container
-2. Installs Node.js 20 and dependencies
-3. Runs database migrations and seeds test data
-4. Executes Cypress E2E tests using `cypress-io/github-action`
-5. Uploads screenshots/videos as artifacts on failure
-
-**Deploy Job:**
-- Only runs on push to `main` (not PRs)
-- Only proceeds if the test job passes
-- Placeholder for Replit deployment integration
+**CI Pipeline (`.github/workflows/ci.yml`):**
+- Extended workflow with deployment job
+- Deploy job only runs after tests pass and only on push to `main`
 
 ## External Dependencies
 - **Replit Auth:** User authentication via OpenID Connect
