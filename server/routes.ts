@@ -175,17 +175,25 @@ export async function registerRoutes(
         return res.status(401).json({ message: "Invalid email or password" });
       }
       
-      // Set up session with user claims similar to OIDC
-      req.session.user = {
+      // Create user object similar to OIDC format with a far-future expiration
+      const sessionUser = {
         claims: {
           sub: user.id,
           email: user.email,
           first_name: user.firstName,
           last_name: user.lastName,
-        }
+        },
+        expires_at: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), // 1 week from now
       };
       
-      res.json({ success: true, user });
+      // Use Passport's req.login to properly authenticate the session
+      req.login(sessionUser, (err: any) => {
+        if (err) {
+          console.error("Login error:", err);
+          return res.status(500).json({ message: "Login failed" });
+        }
+        res.json({ success: true, user });
+      });
     } catch (error) {
       console.error("Login error:", error);
       res.status(500).json({ message: "Login failed" });

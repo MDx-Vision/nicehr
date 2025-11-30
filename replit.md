@@ -75,6 +75,36 @@ Run `npx tsx server/seedDemoData.ts` to populate the database with comprehensive
 - Training courses and integration connections
 - Advanced analytics snapshots
 
+## Testing
+
+### E2E Testing with Cypress
+The platform includes Cypress for end-to-end testing with a dual authentication system:
+
+**Setup:**
+1. Run `npx tsx seed.ts` to seed test data (creates test user with email `test@example.com`)
+2. Run `npx cypress run` to execute all E2E tests
+3. Run `npx cypress open` for interactive test development
+
+**Test Authentication:**
+- Production uses OIDC (Replit Auth) for secure login
+- Development/Testing uses traditional email/password login (`POST /api/auth/login`)
+- Test credentials: `test@example.com` / `password123` (admin role)
+- Session cookies are set with `secure: false` in development for HTTP compatibility
+
+**Test Files:**
+- `cypress/e2e/create_item.cy.js` - Hospital and project creation workflows
+- `cypress/support/e2e.js` - Test configuration (ignores WebSocket errors)
+- `seed.ts` - Database seeding for test data
+
+**Important Test Data Attributes:**
+- Interactive elements use `data-testid` attributes for reliable selection
+- Pattern: `input-*`, `button-*`, `select-*`, `text-*`
+- Examples: `input-hospital-name`, `button-submit-project`, `select-hospital`
+
+**Radix UI Components:**
+- Select components require special handling with `cy.get('[role="listbox"]')` and `cy.get('[role="option"]')`
+- Use `{ force: true }` for clicks when modals cause `pointer-events: none`
+
 ## External Dependencies
 - **Replit Auth:** User authentication via OpenID Connect
 - **PostgreSQL:** Relational database (Neon-backed)
@@ -87,3 +117,4 @@ Run `npx tsx server/seedDemoData.ts` to populate the database with comprehensive
 - **Wouter:** Lightweight React router
 - **WebSocket (ws):** Real-time communication library
 - **react-signature-canvas:** Digital signature capture
+- **Cypress:** End-to-end testing framework
