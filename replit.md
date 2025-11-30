@@ -109,6 +109,25 @@ The platform includes Cypress for end-to-end testing with a dual authentication 
 - Select components require special handling with `cy.get('[role="listbox"]')` and `cy.get('[role="option"]')`
 - Use `{ force: true }` for clicks when modals cause `pointer-events: none`
 
+### CI/CD with GitHub Actions
+The project includes a GitHub Actions workflow (`.github/workflows/ci.yml`) that:
+
+**Triggers:**
+- On push to `main` branch
+- On pull requests to `main` branch
+
+**Test Job:**
+1. Sets up PostgreSQL service container
+2. Installs Node.js 20 and dependencies
+3. Runs database migrations and seeds test data
+4. Executes Cypress E2E tests using `cypress-io/github-action`
+5. Uploads screenshots/videos as artifacts on failure
+
+**Deploy Job:**
+- Only runs on push to `main` (not PRs)
+- Only proceeds if the test job passes
+- Placeholder for Replit deployment integration
+
 ## External Dependencies
 - **Replit Auth:** User authentication via OpenID Connect
 - **PostgreSQL:** Relational database (Neon-backed)
