@@ -95,6 +95,7 @@ The platform includes Cypress for end-to-end testing with a dual authentication 
 - `cypress/e2e/login.cy.js` - Login authentication workflow
 - `cypress/e2e/create_item.cy.js` - Hospital and project creation workflows
 - `cypress/e2e/update_delete.cy.js` - Project update and delete workflows
+- `cypress/e2e/error_handling.cy.js` - Login error handling and validation
 - `cypress/support/e2e.js` - Test configuration (ignores WebSocket errors)
 - `seed.ts` - Database seeding for test data
 
