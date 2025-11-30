@@ -27,6 +27,7 @@ import {
   projectMilestones,
   phaseDeliverables,
   projectRisks,
+  phaseSteps,
   teamRoleTemplates,
   projectTeamAssignments,
   onboardingTasks,
@@ -123,6 +124,8 @@ import {
   type InsertPhaseDeliverable,
   type ProjectRisk,
   type InsertProjectRisk,
+  type PhaseStep,
+  type InsertPhaseStep,
   type TeamRoleTemplate,
   type InsertTeamRoleTemplate,
   type ProjectTeamAssignment,
@@ -708,6 +711,15 @@ export interface IStorage {
   createProjectRisk(risk: InsertProjectRisk): Promise<ProjectRisk>;
   updateProjectRisk(id: string, risk: Partial<InsertProjectRisk>): Promise<ProjectRisk | undefined>;
   deleteProjectRisk(id: string): Promise<boolean>;
+
+  // Phase Step operations
+  getPhaseSteps(phaseId: string): Promise<PhaseStep[]>;
+  getPhaseStep(id: string): Promise<PhaseStep | undefined>;
+  createPhaseStep(step: InsertPhaseStep): Promise<PhaseStep>;
+  updatePhaseStep(id: string, step: Partial<InsertPhaseStep>): Promise<PhaseStep | undefined>;
+  deletePhaseStep(id: string): Promise<boolean>;
+  bulkCreatePhaseSteps(steps: InsertPhaseStep[]): Promise<PhaseStep[]>;
+  calculatePhaseProgress(phaseId: string): Promise<number>;
 
   // Team Role Template operations
   getAllTeamRoleTemplates(): Promise<TeamRoleTemplate[]>;
@@ -3594,6 +3606,66 @@ export class DatabaseStorage implements IStorage {
   async deleteProjectRisk(id: string): Promise<boolean> {
     const results = await db.delete(projectRisks).where(eq(projectRisks.id, id)).returning();
     return results.length > 0;
+  }
+
+  // Phase Step operations
+  async getPhaseSteps(phaseId: string): Promise<PhaseStep[]> {
+    return await db
+      .select()
+      .from(phaseSteps)
+      .where(eq(phaseSteps.phaseId, phaseId))
+      .orderBy(asc(phaseSteps.stepNumber));
+  }
+
+  async getPhaseStep(id: string): Promise<PhaseStep | undefined> {
+    const results = await db.select().from(phaseSteps).where(eq(phaseSteps.id, id));
+    return results[0];
+  }
+
+  async createPhaseStep(step: InsertPhaseStep): Promise<PhaseStep> {
+    const results = await db.insert(phaseSteps).values(step).returning();
+    return results[0];
+  }
+
+  async updatePhaseStep(id: string, step: Partial<InsertPhaseStep>): Promise<PhaseStep | undefined> {
+    const updateData: any = { ...step, updatedAt: new Date() };
+    if (step.status === "completed" && !step.completedAt) {
+      updateData.completedAt = new Date();
+      updateData.isCompleted = true;
+    }
+    const results = await db
+      .update(phaseSteps)
+      .set(updateData)
+      .where(eq(phaseSteps.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deletePhaseStep(id: string): Promise<boolean> {
+    const results = await db.delete(phaseSteps).where(eq(phaseSteps.id, id)).returning();
+    return results.length > 0;
+  }
+
+  async bulkCreatePhaseSteps(steps: InsertPhaseStep[]): Promise<PhaseStep[]> {
+    if (steps.length === 0) return [];
+    const results = await db.insert(phaseSteps).values(steps).returning();
+    return results;
+  }
+
+  // Calculate phase progress automatically based on steps
+  async calculatePhaseProgress(phaseId: string): Promise<number> {
+    const steps = await this.getPhaseSteps(phaseId);
+    if (steps.length === 0) return 0;
+    
+    const completedSteps = steps.filter(s => s.isCompleted).length;
+    const deliverables = await this.getPhaseDeliverables(phaseId);
+    const approvedDeliverables = deliverables.filter(d => d.isApproved).length;
+    
+    // Weight: steps count for 60%, deliverables count for 40%
+    const stepProgress = steps.length > 0 ? (completedSteps / steps.length) * 60 : 0;
+    const deliverableProgress = deliverables.length > 0 ? (approvedDeliverables / deliverables.length) * 40 : 0;
+    
+    return Math.round(stepProgress + deliverableProgress);
   }
 
   // Team Role Template operations
