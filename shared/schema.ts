@@ -1769,6 +1769,7 @@ export const phaseSteps = pgTable("phase_steps", {
   title: varchar("title").notNull(),
   description: text("description"),
   keyActivities: text("key_activities").array(),
+  completedActivities: integer("completed_activities").array(),
   expectedDeliverables: text("expected_deliverables").array(),
   timelineWeeks: varchar("timeline_weeks"),
   status: phaseStepStatusEnum("status").default("not_started").notNull(),
