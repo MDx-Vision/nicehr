@@ -112,17 +112,25 @@ The platform includes Cypress for end-to-end testing with a dual authentication 
 ### CI/CD with GitHub Actions
 The project includes GitHub Actions workflows for continuous integration:
 
-**Quality Gate (`.github/workflows/main.yml`):**
-- Triggers on push to `main` or pull requests to `main`
-- Acts as an unbreakable quality gate - build fails if any Cypress test fails
+**E2E Testing CI (`.github/workflows/main.yml`):**
+- Workflow name: "E2E Testing CI"
+- Triggers: Push to `main` branch OR pull requests targeting `main`
+- Uses `cypress-io/github-action@v6` for reliable test execution
+- Runs `npm run test:e2e` command
+- **Build fails if any Cypress test fails** (unbreakable quality gate)
 - Steps:
-  1. Checks out code
-  2. Sets up Node.js 20 with npm caching
-  3. Installs dependencies (`npm ci`)
-  4. Sets up PostgreSQL service and seeds test data
-  5. Builds application
-  6. Runs Cypress E2E tests using `cypress-io/github-action`
-  7. Uploads screenshots/videos as artifacts on failure
+  1. Checkout code (`actions/checkout@v4`)
+  2. Setup Node.js 20 with npm caching
+  3. Install dependencies and setup PostgreSQL database
+  4. Run database migrations (`npm run db:push`) and seed test data
+  5. Build application (`npm run build`)
+  6. Start server and run Cypress E2E tests
+  7. Upload screenshots (on failure) and videos (always) as artifacts
+
+**Required package.json script:**
+```json
+"test:e2e": "cypress run --browser electron --headless"
+```
 
 **CI Pipeline (`.github/workflows/ci.yml`):**
 - Extended workflow with deployment job
