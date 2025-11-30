@@ -29,9 +29,12 @@ import {
   Pencil,
   ArrowLeft,
   ClipboardList,
-  Milestone
+  Milestone,
+  ListChecks,
+  FileText,
+  Activity
 } from "lucide-react";
-import type { Project, ProjectPhase, ProjectTask, ProjectMilestone, ProjectRisk } from "@shared/schema";
+import type { Project, ProjectPhase, ProjectTask, ProjectMilestone, ProjectRisk, PhaseStep } from "@shared/schema";
 
 const EHR_PHASES = [
   { phase: 1, name: "Assessment", description: "Current state analysis and gap identification" },
@@ -512,6 +515,10 @@ export default function ProjectPhases() {
                 <ClipboardList className="w-4 h-4 mr-2" />
                 All Phases
               </TabsTrigger>
+              <TabsTrigger value="steps" data-testid="tab-steps">
+                <ListChecks className="w-4 h-4 mr-2" />
+                Steps
+              </TabsTrigger>
               <TabsTrigger value="milestones" data-testid="tab-milestones">
                 <Milestone className="w-4 h-4 mr-2" />
                 Milestones
@@ -541,6 +548,10 @@ export default function ProjectPhases() {
                   ))}
                 </div>
               )}
+            </TabsContent>
+
+            <TabsContent value="steps" className="mt-4">
+              <StepsTab projectId={selectedProject} phases={phases || []} />
             </TabsContent>
 
             <TabsContent value="milestones" className="mt-4">
@@ -1002,5 +1013,258 @@ function RisksTab({ projectId }: { projectId: string }) {
         </DialogContent>
       </Dialog>
     </Card>
+  );
+}
+
+function StepsTab({ projectId, phases }: { projectId: string; phases: ProjectPhase[] }) {
+  const { toast } = useToast();
+  const [selectedPhase, setSelectedPhase] = useState<string>("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const { data: steps, isLoading } = useQuery<PhaseStep[]>({
+    queryKey: ["/api/phases", selectedPhase, "steps"],
+    enabled: !!selectedPhase,
+  });
+
+  const { data: calculatedProgress } = useQuery<{ phaseId: string; calculatedProgress: number }>({
+    queryKey: ["/api/phases", selectedPhase, "progress"],
+    enabled: !!selectedPhase,
+  });
+
+  const createStepMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("POST", `/api/phases/${selectedPhase}/steps`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/phases", selectedPhase, "steps"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/phases", selectedPhase, "progress"] });
+      toast({ title: "Step created successfully" });
+      setIsDialogOpen(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to create step", variant: "destructive" });
+    },
+  });
+
+  const updateStepMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      return await apiRequest("PATCH", `/api/steps/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/phases", selectedPhase, "steps"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/phases", selectedPhase, "progress"] });
+      toast({ title: "Step updated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update step", variant: "destructive" });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const stepNumber = steps?.length ? Math.max(...steps.map(s => s.stepNumber)) + 1 : 1;
+    createStepMutation.mutate({
+      title: formData.get("title"),
+      description: formData.get("description") || null,
+      stepNumber,
+      timelineWeeks: formData.get("timelineWeeks") || null,
+      status: "not_started",
+    });
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "completed":
+        return <Badge variant="default" className="bg-green-500">Completed</Badge>;
+      case "in_progress":
+        return <Badge variant="default" className="bg-blue-500">In Progress</Badge>;
+      case "blocked":
+        return <Badge variant="destructive">Blocked</Badge>;
+      case "skipped":
+        return <Badge variant="secondary">Skipped</Badge>;
+      default:
+        return <Badge variant="outline">Not Started</Badge>;
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ListChecks className="w-5 h-5" />
+            Phase Steps
+          </CardTitle>
+          <CardDescription>View and manage implementation steps for each phase</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-4">
+            <Select value={selectedPhase} onValueChange={setSelectedPhase}>
+              <SelectTrigger className="max-w-md" data-testid="select-phase-for-steps">
+                <SelectValue placeholder="Select a phase to view steps" />
+              </SelectTrigger>
+              <SelectContent>
+                {phases.map((phase) => (
+                  <SelectItem key={phase.id} value={phase.id}>
+                    Phase {phase.phaseNumber}: {phase.phaseName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedPhase && (
+              <Button onClick={() => setIsDialogOpen(true)} data-testid="button-add-step">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Step
+              </Button>
+            )}
+          </div>
+
+          {selectedPhase && calculatedProgress && (
+            <div className="bg-muted p-4 rounded-lg space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium flex items-center gap-2">
+                  <Activity className="w-4 h-4" />
+                  Calculated Progress
+                </span>
+                <span className="text-lg font-bold">{calculatedProgress.calculatedProgress}%</span>
+              </div>
+              <Progress value={calculatedProgress.calculatedProgress} className="h-2" />
+              <p className="text-xs text-muted-foreground">
+                Based on completed steps (60%) and approved deliverables (40%)
+              </p>
+            </div>
+          )}
+
+          {selectedPhase && isLoading && (
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-24" />
+              ))}
+            </div>
+          )}
+
+          {selectedPhase && steps && steps.length > 0 && (
+            <div className="space-y-3">
+              {steps.map((step) => (
+                <div 
+                  key={step.id} 
+                  className="p-4 rounded-lg border space-y-3"
+                  data-testid={`step-item-${step.id}`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0
+                        ${step.status === "completed" ? "bg-green-500 text-white" : 
+                          step.status === "in_progress" ? "bg-blue-500 text-white" : 
+                          "bg-muted text-muted-foreground"}`}>
+                        {step.stepNumber}
+                      </div>
+                      <div>
+                        <p className="font-medium">{step.title}</p>
+                        {step.description && (
+                          <p className="text-sm text-muted-foreground mt-1">{step.description}</p>
+                        )}
+                        {step.timelineWeeks && (
+                          <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            Timeline: {step.timelineWeeks}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {getStatusBadge(step.status)}
+                      <Select 
+                        value={step.status}
+                        onValueChange={(value) => updateStepMutation.mutate({ id: step.id, data: { status: value } })}
+                      >
+                        <SelectTrigger className="w-32" data-testid={`select-step-status-${step.id}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="not_started">Not Started</SelectItem>
+                          <SelectItem value="in_progress">In Progress</SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
+                          <SelectItem value="blocked">Blocked</SelectItem>
+                          <SelectItem value="skipped">Skipped</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  {step.keyActivities && step.keyActivities.length > 0 && (
+                    <div className="ml-11">
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Key Activities:</p>
+                      <ul className="text-sm text-muted-foreground list-disc list-inside">
+                        {step.keyActivities.map((activity, idx) => (
+                          <li key={idx}>{activity}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {step.completionPercentage != null && step.completionPercentage > 0 && (
+                    <div className="ml-11">
+                      <Progress value={step.completionPercentage} className="h-1" />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {selectedPhase && steps && steps.length === 0 && !isLoading && (
+            <p className="text-center text-muted-foreground py-8">
+              No steps defined for this phase yet. Add steps to track implementation progress.
+            </p>
+          )}
+
+          {!selectedPhase && phases.length > 0 && (
+            <p className="text-center text-muted-foreground py-8">
+              Select a phase above to view and manage its implementation steps.
+            </p>
+          )}
+
+          {phases.length === 0 && (
+            <p className="text-center text-muted-foreground py-8">
+              No phases found. Initialize phases for this project first.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Step</DialogTitle>
+            <DialogDescription>Create a new implementation step for this phase</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Step Title *</Label>
+              <Input id="title" name="title" required data-testid="input-step-title" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea id="description" name="description" data-testid="input-step-description" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="timelineWeeks">Timeline (weeks)</Label>
+              <Input 
+                id="timelineWeeks" 
+                name="timelineWeeks" 
+                placeholder="e.g., 2-3 weeks"
+                data-testid="input-step-timeline" 
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={createStepMutation.isPending} data-testid="button-submit-step">
+                Create Step
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
