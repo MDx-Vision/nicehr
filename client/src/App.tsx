@@ -72,6 +72,7 @@ import IntegrationsHub from "@/pages/integrations-hub";
 import EhrMonitoring from "@/pages/ehr-monitoring";
 import AdvancedAnalytics from "@/pages/AdvancedAnalytics";
 import RaciMatrix from "@/pages/RaciMatrix";
+import Login from "@/pages/Login";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -182,6 +183,7 @@ function AccessDeniedPage({ title, description }: { title: string; description: 
 function Router() {
   return (
     <Switch>
+      <Route path="/login" component={Login} />
       <Route path="/" component={() => <ProtectedRoute component={Dashboard} />} />
       <Route path="/hospitals" component={() => <ProtectedRoute component={Hospitals} />} />
       <Route path="/consultants" component={() => <ProtectedRoute component={Consultants} />} />

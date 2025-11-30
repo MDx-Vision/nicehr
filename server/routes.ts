@@ -156,6 +156,42 @@ export async function registerRoutes(
     }
   });
 
+  // Traditional email/password login for testing
+  app.post('/api/auth/login', async (req: any, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+      
+      // For testing purposes, accept password123 for any existing user
+      if (password !== "password123") {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      
+      // Set up session with user claims similar to OIDC
+      req.session.user = {
+        claims: {
+          sub: user.id,
+          email: user.email,
+          first_name: user.firstName,
+          last_name: user.lastName,
+        }
+      };
+      
+      res.json({ success: true, user });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
   // Update user profile
   app.put('/api/users/:id', isAuthenticated, async (req: any, res) => {
     try {
