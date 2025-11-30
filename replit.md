@@ -91,22 +91,54 @@ The platform includes Cypress for end-to-end testing with a dual authentication 
 - Test credentials: `test@example.com` / `password123` (admin role)
 - Session cookies are set with `secure: false` in development for HTTP compatibility
 
-**Test Files:**
-- `cypress/e2e/login.cy.js` - Login authentication workflow
-- `cypress/e2e/create_item.cy.js` - Hospital and project creation workflows
-- `cypress/e2e/update_delete.cy.js` - Project update and delete workflows
-- `cypress/e2e/error_handling.cy.js` - Login error handling and validation
-- `cypress/e2e/navigation.cy.js` - Dashboard navigation and browser back button
-- `cypress/support/e2e.js` - Test configuration (ignores WebSocket errors)
+**Test Files (18 total):**
+
+| File | Module | Coverage |
+|------|--------|----------|
+| `01-authentication.cy.js` | Authentication | Login, logout, session, RBAC |
+| `02-hospitals.cy.js` | Hospital Management | CRUD, units, associated projects |
+| `03-projects.cy.js` | Projects & 11-Phase Workflow | Projects, phases, steps, deliverables, risks, milestones, RACI |
+| `04-consultants.cy.js` | Consultant Management | Profiles, certifications, skills, onboarding |
+| `05-time-attendance.cy.js` | Time & Attendance | Timesheets, schedules, EOD reports, handoffs |
+| `06-training-competency.cy.js` | Training & Competency | Training portal, assessments, login labs, knowledge base |
+| `07-support-tickets.cy.js` | Support Tickets | CRUD, status workflow, SLA tracking |
+| `08-financial.cy.js` | Financial Management | Expenses, invoices, payroll, budgets |
+| `09-travel.cy.js` | Travel Management | Bookings, preferences, itineraries, approvals |
+| `10-quality-compliance.cy.js` | Quality & Compliance | Scorecards, surveys, NPS, incidents, HIPAA |
+| `11-communication.cy.js` | Communication | Real-time chat, digital signatures, notifications |
+| `12-analytics-reporting.cy.js` | Analytics & Reporting | Dashboards, reports, ROI analysis |
+| `13-admin-rbac-integrations.cy.js` | Administration | Users, roles, integrations, gamification |
+| `login.cy.js` | Basic Login | Simple login test |
+| `create_item.cy.js` | Basic CRUD | Hospital and project creation |
+| `update_delete.cy.js` | Basic CRUD | Update and delete workflows |
+| `error_handling.cy.js` | Error Handling | Login error validation |
+| `navigation.cy.js` | Navigation | Dashboard navigation, browser back |
+
+**Support Files:**
+- `cypress/support/commands.js` - Custom reusable commands (login, selectOption, fillField, etc.)
+- `cypress/support/e2e.js` - Test configuration (WebSocket error handling, timeouts, viewport)
 - `seed.ts` - Database seeding for test data
+
+**Custom Cypress Commands:**
+| Command | Description | Usage |
+|---------|-------------|-------|
+| `cy.login(email, password)` | Login via UI | `cy.login()` |
+| `cy.loginViaApi(email, password)` | Login via API (faster) | `cy.loginViaApi()` |
+| `cy.navigateTo(module)` | Navigate to module | `cy.navigateTo('projects')` |
+| `cy.selectOption(selector, text)` | Select Radix UI option | `cy.selectOption('[data-testid="select"]', 'Option')` |
+| `cy.fillField(testId, value)` | Fill form field | `cy.fillField('input-name', 'Value')` |
+| `cy.clickButton(testId)` | Click button | `cy.clickButton('button-submit')` |
+| `cy.tableRowExists(text)` | Assert table row exists | `cy.tableRowExists('Project Name')` |
+| `cy.openModal(buttonTestId)` | Open modal dialog | `cy.openModal('button-create')` |
+| `cy.assertToast(message)` | Assert toast message | `cy.assertToast('Success')` |
 
 **Important Test Data Attributes:**
 - Interactive elements use `data-testid` attributes for reliable selection
-- Pattern: `input-*`, `button-*`, `select-*`, `text-*`
+- Pattern: `input-*`, `button-*`, `select-*`, `checkbox-*`, `tab-*`, `filter-*`
 - Examples: `input-hospital-name`, `button-submit-project`, `select-hospital`
 
 **Radix UI Components:**
-- Select components require special handling with `cy.get('[role="listbox"]')` and `cy.get('[role="option"]')`
+- Use `cy.selectOption()` custom command for Radix Select components
 - Use `{ force: true }` for clicks when modals cause `pointer-events: none`
 
 ### CI/CD with GitHub Actions

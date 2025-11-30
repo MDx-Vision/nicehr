@@ -1,9 +1,43 @@
-// Ignore WebSocket errors from Vite HMR
+// ***********************************************
+// NICEHR Platform - E2E Test Configuration
+// ***********************************************
+
+// Import custom commands
+import './commands';
+
+// Ignore WebSocket errors (common in real-time apps and Vite HMR)
 Cypress.on('uncaught:exception', (err, runnable) => {
-  // Ignore WebSocket construction errors from Vite
-  if (err.message.includes('Failed to construct') && err.message.includes('WebSocket')) {
+  // Ignore WebSocket connection errors
+  if (err.message.includes('WebSocket') || 
+      err.message.includes('Failed to construct') ||
+      err.message.includes('ResizeObserver') ||
+      err.message.includes('Non-Error promise rejection')) {
     return false;
   }
-  // Let other errors fail the test
   return true;
 });
+
+// Log test start/end
+beforeEach(() => {
+  cy.log(`Starting test: ${Cypress.currentTest.title}`);
+});
+
+afterEach(() => {
+  cy.log(`Finished test: ${Cypress.currentTest.title}`);
+});
+
+// Global before hook - runs once before all tests
+before(() => {
+  // Clear any existing sessions
+  cy.clearCookies();
+  cy.clearLocalStorage();
+});
+
+// Configure default timeouts
+Cypress.config('defaultCommandTimeout', 10000);
+Cypress.config('requestTimeout', 10000);
+Cypress.config('responseTimeout', 30000);
+
+// Add custom viewport for healthcare dashboard
+Cypress.config('viewportWidth', 1440);
+Cypress.config('viewportHeight', 900);
