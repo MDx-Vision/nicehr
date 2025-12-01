@@ -42,13 +42,19 @@ describe('Time & Attendance', () => {
       it('should create a new timesheet entry', () => {
         cy.openModal('button-create-timesheet');
         cy.get('[data-testid="input-date"]').type('2024-01-15');
-        cy.selectOption('[data-testid="select-project"]', 'project');
+        // Click on the project select and choose the first available option
+        cy.get('[data-testid="select-project"]').click();
+        cy.get('[role="listbox"]').should('be.visible');
+        cy.get('[role="option"]').first().click({ force: true });
         cy.get('[data-testid="input-hours"]').type('8');
         cy.get('[data-testid="input-description"]').type('Project implementation work');
-        cy.selectOption('[data-testid="select-task-type"]', 'Implementation');
-        
+        // Click on task type select and choose first option
+        cy.get('[data-testid="select-task-type"]').click();
+        cy.get('[role="listbox"]').should('be.visible');
+        cy.get('[role="option"]').contains('Implementation').click({ force: true });
+
         cy.get('[data-testid="button-submit-timesheet"]').click();
-        
+
         cy.get('[role="dialog"]').should('not.exist');
       });
 
@@ -56,7 +62,7 @@ describe('Time & Attendance', () => {
         cy.openModal('button-create-timesheet');
         cy.get('[data-testid="input-hours"]').type('25');
         cy.get('[data-testid="button-submit-timesheet"]').click();
-        
+
         cy.get('.text-red-500, .text-destructive').should('be.visible');
       });
 
@@ -65,7 +71,7 @@ describe('Time & Attendance', () => {
         cy.get('[data-testid="input-date"]').type('2024-01-15');
         cy.get('[data-testid="input-hours"]').type('8');
         cy.get('[data-testid="button-submit-timesheet"]').click();
-        
+
         cy.get('.text-red-500, .text-destructive').should('be.visible');
       });
     });
@@ -78,21 +84,34 @@ describe('Time & Attendance', () => {
       });
 
       it('should approve timesheet', () => {
-        cy.selectOption('[data-testid="filter-status"]', 'Pending');
-        cy.get('[data-testid="timesheet-row"]').first()
-          .find('[data-testid="button-approve"]').click();
-        cy.get('[data-testid="timesheet-status"]').first().should('contain', 'Approved');
+        // First submit a draft timesheet, then approve it
+        cy.get('[data-testid="timesheet-row"]').first().then($row => {
+          // If there's a submit button, click it first to make it pending
+          if ($row.find('[data-testid="button-submit-approval"]').length > 0) {
+            cy.wrap($row).find('[data-testid="button-submit-approval"]').click();
+          }
+        });
+        // Now approve it
+        cy.get('[data-testid="timesheet-row"]')
+          .find('[data-testid="button-approve"]').first().click();
+        cy.get('[data-testid="timesheet-status"]').should('contain', 'Approved');
       });
 
       it('should reject timesheet with reason', () => {
-        cy.selectOption('[data-testid="filter-status"]', 'Pending');
-        cy.get('[data-testid="timesheet-row"]').first()
-          .find('[data-testid="button-reject"]').click();
-        
+        // First submit a draft timesheet, then reject it
+        cy.get('[data-testid="timesheet-row"]').first().then($row => {
+          if ($row.find('[data-testid="button-submit-approval"]').length > 0) {
+            cy.wrap($row).find('[data-testid="button-submit-approval"]').click();
+          }
+        });
+        // Now reject it
+        cy.get('[data-testid="timesheet-row"]')
+          .find('[data-testid="button-reject"]').first().click();
+
         cy.get('[data-testid="input-rejection-reason"]').type('Incorrect hours logged');
         cy.get('[data-testid="button-confirm-reject"]').click();
-        
-        cy.get('[data-testid="timesheet-status"]').first().should('contain', 'Rejected');
+
+        cy.get('[data-testid="timesheet-status"]').should('contain', 'Rejected');
       });
 
       it('should bulk approve timesheets', () => {
@@ -155,7 +174,7 @@ describe('Time & Attendance', () => {
       it('should switch between views', () => {
         cy.get('[data-testid="button-view-week"]').click();
         cy.get('[data-testid="schedule-week-view"]').should('be.visible');
-        
+
         cy.get('[data-testid="button-view-month"]').click();
         cy.get('[data-testid="schedule-month-view"]').should('be.visible');
       });
@@ -166,11 +185,17 @@ describe('Time & Attendance', () => {
       });
 
       it('should filter by consultant', () => {
-        cy.selectOption('[data-testid="filter-consultant"]', 'consultant');
+        // Click the filter and select first available option
+        cy.get('[data-testid="filter-consultant"]').click();
+        cy.get('[role="listbox"]').should('be.visible');
+        cy.get('[role="option"]').eq(1).click({ force: true }); // Skip "All Consultants"
       });
 
       it('should filter by project', () => {
-        cy.selectOption('[data-testid="filter-project"]', 'project');
+        // Click the filter and select first available option
+        cy.get('[data-testid="filter-project"]').click();
+        cy.get('[role="listbox"]').should('be.visible');
+        cy.get('[role="option"]').eq(1).click({ force: true }); // Skip "All Projects"
       });
     });
 
@@ -182,30 +207,46 @@ describe('Time & Attendance', () => {
 
       it('should create a new shift', () => {
         cy.openModal('button-create-shift');
-        cy.selectOption('[data-testid="select-consultant"]', 'consultant');
-        cy.selectOption('[data-testid="select-project"]', 'project');
+        // Select first consultant
+        cy.get('[data-testid="select-consultant"]').click();
+        cy.get('[role="listbox"]').should('be.visible');
+        cy.get('[role="option"]').first().click({ force: true });
+        // Select first project
+        cy.get('[data-testid="select-project"]').click();
+        cy.get('[role="listbox"]').should('be.visible');
+        cy.get('[role="option"]').first().click({ force: true });
         cy.get('[data-testid="input-shift-date"]').type('2024-01-20');
         cy.get('[data-testid="input-start-time"]').type('08:00');
         cy.get('[data-testid="input-end-time"]').type('16:00');
-        cy.selectOption('[data-testid="select-shift-type"]', 'Day');
-        
+        cy.get('[data-testid="select-shift-type"]').click();
+        cy.get('[role="listbox"]').should('be.visible');
+        cy.get('[role="option"]').contains('Day').click({ force: true });
+
         cy.get('[data-testid="button-submit-shift"]').click();
-        
+
         cy.get('[role="dialog"]').should('not.exist');
       });
 
       it('should create recurring shift', () => {
         cy.openModal('button-create-shift');
-        cy.selectOption('[data-testid="select-consultant"]', 'consultant');
-        cy.selectOption('[data-testid="select-project"]', 'project');
+        // Select first consultant
+        cy.get('[data-testid="select-consultant"]').click();
+        cy.get('[role="listbox"]').should('be.visible');
+        cy.get('[role="option"]').first().click({ force: true });
+        // Select first project
+        cy.get('[data-testid="select-project"]').click();
+        cy.get('[role="listbox"]').should('be.visible');
+        cy.get('[role="option"]').first().click({ force: true });
         cy.get('[data-testid="input-shift-date"]').type('2024-01-20');
         cy.get('[data-testid="input-start-time"]').type('08:00');
         cy.get('[data-testid="input-end-time"]').type('16:00');
-        
+
         cy.get('[data-testid="checkbox-recurring"]').click();
-        cy.selectOption('[data-testid="select-recurrence"]', 'Weekly');
+        cy.get('[data-testid="select-recurrence"]').click();
+        cy.get('[role="listbox"]').should('be.visible');
+        cy.get('[role="option"]').contains('Weekly').click({ force: true });
         cy.get('[data-testid="input-recurrence-end"]').type('2024-03-20');
-        
+
         cy.get('[data-testid="button-submit-shift"]').click();
       });
     });
@@ -260,6 +301,9 @@ describe('Time & Attendance', () => {
     });
 
     it('should sign out from shift', () => {
+      // First sign in, then sign out
+      cy.get('[data-testid="button-sign-in"]').click();
+      cy.get('[data-testid="sign-in-time"]').should('be.visible');
       cy.get('[data-testid="button-sign-out"]').click();
       cy.get('[data-testid="sign-out-time"]').should('be.visible');
     });

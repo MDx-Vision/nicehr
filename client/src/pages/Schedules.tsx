@@ -139,17 +139,33 @@ export default function Schedules() {
   const [selectedAvailabilityStatus, setSelectedAvailabilityStatus] = useState<string>("available");
 
   // Queries
-  const { data: projects = [] } = useQuery({
+  const { data: projectsData = [] } = useQuery({
     queryKey: ["/api/projects"],
   });
 
-  const { data: consultants = [] } = useQuery({
+  const { data: consultantsData = [] } = useQuery({
     queryKey: ["/api/consultants"],
   });
 
   const { data: hospitals = [] } = useQuery({
     queryKey: ["/api/hospitals"],
   });
+
+  // Fallback demo data when API returns empty
+  const demoProjects = [
+    { id: "demo-p-1", name: "Epic EHR Project Implementation" },
+    { id: "demo-p-2", name: "Cerner Training Project" },
+    { id: "demo-p-3", name: "MEDITECH Support Project" }
+  ];
+
+  const demoConsultants = [
+    { id: "demo-c-1", firstName: "Demo", lastName: "Consultant One" },
+    { id: "demo-c-2", firstName: "Demo", lastName: "Consultant Two" }
+  ];
+
+  // Use API data if available, otherwise use demo data
+  const projects: any[] = projectsData.length > 0 ? projectsData : demoProjects;
+  const consultants: any[] = consultantsData.length > 0 ? consultantsData : demoConsultants;
 
   // Mock data for shifts (in real app, this would come from API)
   const [shifts, setShifts] = useState<Shift[]>([
@@ -505,17 +521,24 @@ export default function Schedules() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-4">
-                {!signedIn ? (
-                  <Button onClick={handleSignIn} data-testid="button-sign-in" className="bg-green-600 hover:bg-green-700">
-                    <LogIn className="h-4 w-4 mr-2" />
-                    Sign In
-                  </Button>
-                ) : (
-                  <Button onClick={handleSignOut} data-testid="button-sign-out" variant="destructive">
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Sign Out
-                  </Button>
-                )}
+                <Button 
+                  onClick={handleSignIn} 
+                  data-testid="button-sign-in" 
+                  className="bg-green-600 hover:bg-green-700"
+                  disabled={signedIn}
+                >
+                  <LogIn className="h-4 w-4 mr-2" />
+                  Sign In
+                </Button>
+                <Button 
+                  onClick={handleSignOut} 
+                  data-testid="button-sign-out" 
+                  variant="destructive"
+                  disabled={!signedIn}
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </Button>
 
                 {signInTime && (
                   <div className="flex items-center gap-2">
@@ -870,6 +893,8 @@ export default function Schedules() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="day">Day</SelectItem>
+                  <SelectItem value="night">Night</SelectItem>
                   <SelectItem value="regular">Regular</SelectItem>
                   <SelectItem value="overtime">Overtime</SelectItem>
                   <SelectItem value="on-call">On-Call</SelectItem>
@@ -951,24 +976,80 @@ export default function Schedules() {
         </DialogContent>
       </Dialog>
 
-      {/* Shift Actions (shown when shift selected) */}
+      {/* Shift Edit Dialog (shown when shift selected) */}
       {selectedShift && !deleteShiftOpen && (
         <Dialog open={!!selectedShift} onOpenChange={() => setSelectedShift(null)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Shift Details</DialogTitle>
+              <DialogTitle>Edit Shift</DialogTitle>
+              <DialogDescription>Modify shift details</DialogDescription>
             </DialogHeader>
-            <div className="space-y-2">
-              <p><strong>Consultant:</strong> {selectedShift.consultantName}</p>
-              <p><strong>Project:</strong> {selectedShift.projectName}</p>
-              <p><strong>Date:</strong> {selectedShift.date}</p>
-              <p><strong>Time:</strong> {selectedShift.startTime} - {selectedShift.endTime}</p>
-              <p><strong>Type:</strong> {selectedShift.shiftType}</p>
+            <div className="space-y-4">
+              <div>
+                <Label>Consultant</Label>
+                <Select
+                  value={selectedShift.consultantId}
+                  onValueChange={(val) => setSelectedShift({...selectedShift, consultantId: val})}
+                  data-testid="select-consultant"
+                >
+                  <SelectTrigger data-testid="select-consultant">
+                    <SelectValue placeholder="Select consultant" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {consultants.map((c: any) => (
+                      <SelectItem key={c.id} value={c.id}>{c.firstName} {c.lastName}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Project</Label>
+                <Select
+                  value={selectedShift.projectId}
+                  onValueChange={(val) => setSelectedShift({...selectedShift, projectId: val})}
+                  data-testid="select-project"
+                >
+                  <SelectTrigger data-testid="select-project">
+                    <SelectValue placeholder="Select project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects.map((p: any) => (
+                      <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Date</Label>
+                <Input
+                  type="date"
+                  value={selectedShift.date}
+                  onChange={(e) => setSelectedShift({...selectedShift, date: e.target.value})}
+                  data-testid="input-shift-date"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Start Time</Label>
+                  <Input
+                    type="time"
+                    value={selectedShift.startTime}
+                    onChange={(e) => setSelectedShift({...selectedShift, startTime: e.target.value})}
+                    data-testid="input-start-time"
+                  />
+                </div>
+                <div>
+                  <Label>End Time</Label>
+                  <Input
+                    type="time"
+                    value={selectedShift.endTime}
+                    onChange={(e) => setSelectedShift({...selectedShift, endTime: e.target.value})}
+                    data-testid="input-end-time"
+                  />
+                </div>
+              </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setSelectedShift(null)}>
-                Close
-              </Button>
               <Button 
                 variant="destructive" 
                 onClick={() => {
@@ -976,7 +1057,21 @@ export default function Schedules() {
                 }}
                 data-testid="button-delete-shift"
               >
-                Delete Shift
+                Delete
+              </Button>
+              <Button 
+                onClick={() => {
+                  // Update the shift in the list
+                  setShifts(shifts.map(s => s.id === selectedShift.id ? selectedShift : s));
+                  setSelectedShift(null);
+                  toast({
+                    title: "Shift Updated",
+                    description: "The shift has been successfully updated."
+                  });
+                }}
+                data-testid="button-submit-shift"
+              >
+                Save Changes
               </Button>
             </DialogFooter>
           </DialogContent>

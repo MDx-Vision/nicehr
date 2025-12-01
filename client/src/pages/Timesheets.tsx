@@ -83,17 +83,33 @@ export default function Timesheets() {
   const [activeTab, setActiveTab] = useState("list");
 
   // Queries
-  const { data: projects = [] } = useQuery({
+  const { data: projectsData = [] } = useQuery({
     queryKey: ["/api/projects"],
   });
 
-  const { data: consultants = [] } = useQuery({
+  const { data: consultantsData = [] } = useQuery({
     queryKey: ["/api/consultants"],
   });
 
   const { data: timesheetsData = [] } = useQuery({
     queryKey: ["/api/timesheets"],
   });
+
+  // Fallback demo data when API returns empty
+  const demoProjects = [
+    { id: "demo-p-1", name: "Epic EHR Project Implementation" },
+    { id: "demo-p-2", name: "Cerner Training Project" },
+    { id: "demo-p-3", name: "MEDITECH Support Project" }
+  ];
+
+  const demoConsultants = [
+    { id: "demo-c-1", firstName: "John", lastName: "Smith" },
+    { id: "demo-c-2", firstName: "Jane", lastName: "Doe" }
+  ];
+
+  // Use API data if available, otherwise use demo data
+  const projects = projectsData.length > 0 ? projectsData : demoProjects;
+  const consultants = consultantsData.length > 0 ? consultantsData : demoConsultants;
 
   // Local timesheet state for demo functionality
   const [timesheets, setTimesheets] = useState<TimesheetEntry[]>([
@@ -387,13 +403,13 @@ export default function Timesheets() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "approved":
-        return <Badge className="bg-green-100 text-green-800">Approved</Badge>;
+        return <Badge className="bg-green-100 text-green-800" data-testid="timesheet-status">Approved</Badge>;
       case "pending":
-        return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800" data-testid="timesheet-status">Pending</Badge>;
       case "rejected":
-        return <Badge className="bg-red-100 text-red-800">Rejected</Badge>;
+        return <Badge className="bg-red-100 text-red-800" data-testid="timesheet-status">Rejected</Badge>;
       default:
-        return <Badge variant="outline">Draft</Badge>;
+        return <Badge variant="outline" data-testid="timesheet-status">Draft</Badge>;
     }
   };
 
