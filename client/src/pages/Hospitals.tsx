@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Building2, MapPin, Phone, Mail, Globe, Pencil, Trash2 } from "lucide-react";
+import { Plus, Building2, MapPin, Phone, Mail, Globe, Pencil, Trash2, Search } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import type { Hospital } from "@shared/schema";
 import { useForm } from "react-hook-form";
@@ -54,10 +54,19 @@ export default function Hospitals() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingHospital, setEditingHospital] = useState<Hospital | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const { data: hospitals, isLoading } = useQuery<Hospital[]>({
     queryKey: ["/api/hospitals"],
   });
+
+  // Filter hospitals based on search term
+  const filteredHospitals = hospitals?.filter((hospital) =>
+    hospital.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    hospital.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    hospital.state?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    hospital.emrSystem?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const form = useForm<HospitalFormValues>({
     resolver: zodResolver(hospitalFormSchema),
@@ -162,12 +171,12 @@ export default function Hospitals() {
         {isAdmin && (
           <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
-              <Button data-testid="button-add-hospital">
+              <Button data-testid="button-create-hospital">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Hospital
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="modal-create-hospital">
               <DialogHeader>
                 <DialogTitle>{editingHospital ? "Edit Hospital" : "Add Hospital"}</DialogTitle>
                 <DialogDescription>
@@ -333,8 +342,22 @@ export default function Hospitals() {
         )}
       </div>
 
+      {/* Search Input */}
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+          <Input
+            placeholder="Search hospitals..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+            data-testid="input-search"
+          />
+        </div>
+      </div>
+
       {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" data-testid="hospitals-list">
           {[1, 2, 3].map((i) => (
             <Card key={i}>
               <CardHeader>
@@ -348,15 +371,15 @@ export default function Hospitals() {
             </Card>
           ))}
         </div>
-      ) : hospitals && hospitals.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {hospitals.map((hospital) => (
-            <Card key={hospital.id} className="hover-elevate" data-testid={`card-hospital-${hospital.id}`}>
+      ) : filteredHospitals && filteredHospitals.length > 0 ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" data-testid="hospitals-list">
+          {filteredHospitals.map((hospital) => (
+            <Card key={hospital.id} className="hover-elevate" data-testid="hospital-card">
               <CardHeader>
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <Building2 className="w-5 h-5 text-primary" />
-                    <CardTitle className="text-lg">{hospital.name}</CardTitle>
+                    <CardTitle className="text-lg" data-testid="hospital-name">{hospital.name}</CardTitle>
                   </div>
                   <Badge variant={hospital.isActive ? "default" : "secondary"}>
                     {hospital.isActive ? "Active" : "Inactive"}
@@ -396,7 +419,7 @@ export default function Hospitals() {
                       size="sm"
                       variant="outline"
                       onClick={() => handleEdit(hospital)}
-                      data-testid={`button-edit-hospital-${hospital.id}`}
+                      data-testid="button-edit-hospital"
                     >
                       <Pencil className="w-4 h-4 mr-1" />
                       Edit
@@ -406,7 +429,7 @@ export default function Hospitals() {
                       variant="outline"
                       onClick={() => deleteMutation.mutate(hospital.id)}
                       disabled={deleteMutation.isPending}
-                      data-testid={`button-delete-hospital-${hospital.id}`}
+                      data-testid="button-delete-hospital"
                     >
                       <Trash2 className="w-4 h-4 mr-1" />
                       Delete
@@ -418,13 +441,13 @@ export default function Hospitals() {
           ))}
         </div>
       ) : (
-        <Card>
+        <Card data-testid="hospitals-empty">
           <CardContent className="py-10 text-center">
             <Building2 className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No hospitals yet</h3>
             <p className="text-muted-foreground mb-4">Get started by adding your first hospital.</p>
             {isAdmin && (
-              <Button onClick={() => setIsDialogOpen(true)} data-testid="button-add-first-hospital">
+              <Button onClick={() => setIsDialogOpen(true)} data-testid="button-create-hospital">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Hospital
               </Button>

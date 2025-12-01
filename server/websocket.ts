@@ -298,5 +298,5 @@ export function getOnlineUsers(channelId: string): string[] {
       onlineUsers.push(client.userId);
     }
   });
-  return [...new Set(onlineUsers)];
+  return Array.from(new Set(onlineUsers));
 }

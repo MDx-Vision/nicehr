@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Plus, FolderKanban, Calendar, Users, Building2, DollarSign, Pencil, Trash2 } from "lucide-react";
+import { Plus, FolderKanban, Calendar, Users, Building2, DollarSign, Pencil, Trash2, Search } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -51,6 +51,7 @@ export default function Projects() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   const { data: projects, isLoading } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
@@ -156,13 +157,19 @@ export default function Projects() {
     }
   };
 
-  const filteredProjects = projects?.filter(
-    (project) => !statusFilter || project.status === statusFilter
-  );
-
   const getHospitalName = (hospitalId: string) => {
     return hospitals?.find((h) => h.id === hospitalId)?.name || "Unknown";
   };
+
+  // Filter projects based on status and search term
+  const filteredProjects = projects?.filter((project) => {
+    const matchesStatus = !statusFilter || statusFilter === "all" || project.status === statusFilter;
+    const matchesSearch = !searchTerm || 
+      project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      getHospitalName(project.hospitalId).toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
 
   const formatCurrency = (value: string | null) => {
     if (!value) return "-";
@@ -182,7 +189,7 @@ export default function Projects() {
           <p className="text-muted-foreground">Manage hospital go-live projects</p>
         </div>
         <div className="flex items-center gap-4">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={setStatusFilter} data-testid="filter-status">
             <SelectTrigger className="w-[150px]" data-testid="select-status-filter">
               <SelectValue placeholder="All Status" />
             </SelectTrigger>
@@ -197,12 +204,12 @@ export default function Projects() {
           {isAdmin && (
             <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
               <DialogTrigger asChild>
-                <Button data-testid="button-add-project">
+                <Button data-testid="button-create-project">
                   <Plus className="w-4 h-4 mr-2" />
                   New Project
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-lg">
+              <DialogContent className="max-w-lg" data-testid="modal-create-project">
                 <DialogHeader>
                   <DialogTitle>{editingProject ? "Edit Project" : "Create Project"}</DialogTitle>
                   <DialogDescription>
@@ -338,8 +345,22 @@ export default function Projects() {
         </div>
       </div>
 
+      {/* Search Input */}
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+          <Input
+            placeholder="Search projects..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+            data-testid="input-search"
+          />
+        </div>
+      </div>
+
       {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" data-testid="projects-list">
           {[1, 2, 3].map((i) => (
             <Card key={i}>
               <CardHeader>
@@ -354,19 +375,19 @@ export default function Projects() {
           ))}
         </div>
       ) : filteredProjects && filteredProjects.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" data-testid="projects-list">
           {filteredProjects.map((project) => (
-            <Card key={project.id} className="hover-elevate" data-testid={`card-project-${project.id}`}>
+            <Card key={project.id} className="hover-elevate" data-testid="project-card">
               <CardHeader>
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <CardTitle className="text-lg">{project.name}</CardTitle>
+                    <CardTitle className="text-lg" data-testid="project-name">{project.name}</CardTitle>
                     <CardDescription className="flex items-center gap-1">
                       <Building2 className="w-3 h-3" />
                       {getHospitalName(project.hospitalId)}
                     </CardDescription>
                   </div>
-                  <Badge variant={getStatusColor(project.status) as any} className="capitalize">
+                  <Badge variant={getStatusColor(project.status) as any} className="capitalize" data-testid="project-status">
                     {project.status}
                   </Badge>
                 </div>
@@ -412,7 +433,7 @@ export default function Projects() {
                     size="sm"
                     variant="outline"
                     onClick={() => handleEdit(project)}
-                    data-testid={`button-edit-project-${project.id}`}
+                    data-testid="button-edit-project"
                   >
                     <Pencil className="w-4 h-4 mr-1" />
                     Edit
@@ -422,7 +443,7 @@ export default function Projects() {
                     variant="outline"
                     onClick={() => deleteMutation.mutate(project.id)}
                     disabled={deleteMutation.isPending}
-                    data-testid={`button-delete-project-${project.id}`}
+                    data-testid="button-delete-project"
                   >
                     <Trash2 className="w-4 h-4 mr-1" />
                     Delete
@@ -433,13 +454,13 @@ export default function Projects() {
           ))}
         </div>
       ) : (
-        <Card>
+        <Card data-testid="projects-empty">
           <CardContent className="py-10 text-center">
             <FolderKanban className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No projects yet</h3>
             <p className="text-muted-foreground mb-4">Get started by creating your first project.</p>
             {isAdmin && (
-              <Button onClick={() => setIsDialogOpen(true)} data-testid="button-add-first-project">
+              <Button onClick={() => setIsDialogOpen(true)} data-testid="button-create-project">
                 <Plus className="w-4 h-4 mr-2" />
                 Create Project
               </Button>

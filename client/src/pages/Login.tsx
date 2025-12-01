@@ -7,13 +7,16 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Login() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: { email: string; password: string }) => {
@@ -21,6 +24,7 @@ export default function Login() {
       return response.json();
     },
     onSuccess: (data) => {
+      setErrorMessage(null);
       toast({
         title: "Login successful",
         description: `Welcome, ${data.user?.email || email}`,
@@ -28,9 +32,11 @@ export default function Login() {
       window.location.href = "/";
     },
     onError: (error: Error) => {
+      const message = error.message || "Invalid email or password";
+      setErrorMessage(message);
       toast({
         title: "Login failed",
-        description: error.message || "Invalid email or password",
+        description: message,
         variant: "destructive",
       });
     },
@@ -38,6 +44,7 @@ export default function Login() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
     loginMutation.mutate({ email, password });
   };
 
@@ -50,6 +57,13 @@ export default function Login() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {errorMessage && (
+              <Alert variant="destructive" role="alert" data-testid="error-message">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{errorMessage}</AlertDescription>
+              </Alert>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -63,19 +77,38 @@ export default function Login() {
                 data-testid="input-email"
               />
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                data-testid="input-password"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  data-testid="input-password"
+                  className="pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowPassword(!showPassword)}
+                  data-testid="toggle-password-visibility"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </Button>
+              </div>
             </div>
+
             <Button
               type="submit"
               className="w-full"
