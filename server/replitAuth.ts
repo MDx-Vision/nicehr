@@ -190,6 +190,31 @@ async function upsertUser(claims: any, invitationId?: string) {
 }
 
 export async function setupAuth(app: Express) {
+  // Skip full auth setup in CI environment
+  if (process.env.CI === 'true') {
+    console.log('[CI MODE] Skipping Replit auth, using mock session');
+    app.set("trust proxy", 1);
+    app.use(session({
+      secret: 'ci-test-secret',
+      resave: false,
+      saveUninitialized: false,
+      cookie: { secure: false }
+    }));
+    app.use(passport.initialize());
+    app.use(passport.session());
+    app.use((req, res, next) => {
+      (req as any).user = {
+        claims: { sub: 'ci-test-user', email: 'test@example.com', first_name: 'Test', last_name: 'User' },
+        expires_at: Math.floor(Date.now() / 1000) + 3600
+      };
+      req.isAuthenticated = () => true;
+      next();
+    });
+    passport.serializeUser((user: Express.User, cb) => cb(null, user));
+    passport.deserializeUser((user: Express.User, cb) => cb(null, user));
+    return;
+  }
+
   app.set("trust proxy", 1);
   app.use(getSession());
   app.use(passport.initialize());
