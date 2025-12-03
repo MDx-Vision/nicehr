@@ -135,6 +135,21 @@ export async function registerRoutes(
   } catch (error) {
     console.error("Error seeding RBAC:", error);
   }
+  // Seed test user in CI mode
+  if (process.env.CI === "true") {
+    try {
+      await storage.upsertUser({
+        id: "ci-test-user",
+        email: "test@example.com",
+        firstName: "Test",
+        lastName: "User",
+        role: "admin",
+      });
+      console.log("[CI MODE] Test user seeded successfully");
+    } catch (error) {
+      console.error("[CI MODE] Error seeding test user:", error);
+    }
+  }
 
   // Seed skills questionnaire data at startup
   try {
