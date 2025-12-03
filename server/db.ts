@@ -1,4 +1,7 @@
+import { createRequire } from 'module';
 import * as schema from "@shared/schema";
+
+const require = createRequire(import.meta.url);
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -9,18 +12,19 @@ if (!process.env.DATABASE_URL) {
 let db: any;
 let pool: any;
 
-// Use standard pg in CI, Neon serverless otherwise
 if (process.env.CI === 'true') {
+  // CI mode: use standard pg
   console.log('[CI MODE] Using standard PostgreSQL connection');
   const pg = require('pg');
   const { drizzle } = require('drizzle-orm/node-postgres');
   pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
   db = drizzle(pool, { schema });
 } else {
+  // Normal mode: use Neon serverless
   const { Pool, neonConfig } = require('@neondatabase/serverless');
   const { drizzle } = require('drizzle-orm/neon-serverless');
   const ws = require('ws');
-  neonConfig.webSocketConstructor = ws;
+  neonConfig.webSocketConstructor = ws.default;
   pool = new Pool({ connectionString: process.env.DATABASE_URL });
   db = drizzle({ client: pool, schema });
 }
