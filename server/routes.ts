@@ -194,7 +194,75 @@ export async function registerRoutes(
         });
         console.log("[CI MODE] Test project seeded successfully");
       }
+      // 5. Seed test expense
+      const expenses = await storage.getExpenses();
+      if (expenses.length === 0) {
+        await storage.createExpense({
+          consultantId: "ci-test-consultant",
+          projectId: "ci-test-project",
+          category: "travel",
+          amount: "245.00",
+          description: "Test expense for CI",
+          expenseDate: new Date().toISOString().split("T")[0],
+          status: "pending",
+        });
+        console.log("[CI MODE] Test expense seeded successfully");
+      }
 
+      // 6. Seed test support ticket
+      const tickets = await storage.getSupportTickets();
+      if (tickets.length === 0) {
+        await storage.createSupportTicket({
+          projectId: "ci-test-project",
+          reportedBy: "ci-test-user",
+          title: "CI Test Ticket",
+          description: "Test support ticket for CI",
+          priority: "medium",
+          status: "open",
+          category: "technical",
+        });
+        console.log("[CI MODE] Test support ticket seeded successfully");
+      }
+
+      // 7. Seed test chat channel
+      const channels = await storage.getChatChannels();
+      if (channels.length === 0) {
+        await storage.createChatChannel({
+          name: "CI Test Channel",
+          type: "project",
+          projectId: "ci-test-project",
+          createdBy: "ci-test-user",
+        });
+        console.log("[CI MODE] Test chat channel seeded successfully");
+      }
+
+      // 8. Seed test travel booking
+      const bookings = await storage.getTravelBookings();
+      if (bookings.length === 0) {
+        await storage.createTravelBooking({
+          consultantId: "ci-test-consultant",
+          projectId: "ci-test-project",
+          bookingType: "flight",
+          status: "confirmed",
+          departureDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+          returnDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+          estimatedCost: "500.00",
+        });
+        console.log("[CI MODE] Test travel booking seeded successfully");
+      }
+
+      // 9. Seed test timesheet
+      const timesheets = await storage.getTimesheets();
+      if (timesheets.length === 0) {
+        await storage.createTimesheet({
+          consultantId: "ci-test-consultant",
+          projectId: "ci-test-project",
+          weekStartDate: new Date().toISOString().split("T")[0],
+          status: "draft",
+          totalHours: "40.00",
+        });
+        console.log("[CI MODE] Test timesheet seeded successfully");
+      }
     } catch (error) {
       console.error("[CI MODE] Error seeding test data:", error);
     }
