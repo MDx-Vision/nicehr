@@ -135,9 +135,10 @@ export async function registerRoutes(
   } catch (error) {
     console.error("Error seeding RBAC:", error);
   }
-  // Seed test user in CI mode
+  // Seed test data in CI mode
   if (process.env.CI === "true") {
     try {
+      // 1. Seed test user
       await storage.upsertUser({
         id: "ci-test-user",
         email: "test@example.com",
@@ -146,8 +147,56 @@ export async function registerRoutes(
         role: "admin",
       });
       console.log("[CI MODE] Test user seeded successfully");
+
+      // 2. Seed test hospital
+      const existingHospital = await storage.getHospital("ci-test-hospital");
+      if (!existingHospital) {
+        await storage.createHospital({
+          id: "ci-test-hospital",
+          name: "CI Test Hospital",
+          location: "Test City, TC",
+          contactEmail: "hospital@example.com",
+          contactPhone: "555-0100",
+          status: "active",
+        });
+        console.log("[CI MODE] Test hospital seeded successfully");
+      }
+
+      // 3. Seed test consultant
+      const existingConsultant = await storage.getConsultant("ci-test-consultant");
+      if (!existingConsultant) {
+        await storage.createConsultant({
+          id: "ci-test-consultant",
+          userId: "ci-test-user",
+          firstName: "Test",
+          lastName: "Consultant",
+          email: "consultant@example.com",
+          phone: "555-0101",
+          specialty: "General",
+          status: "active",
+          availabilityStatus: "available",
+          hourlyRate: "150.00",
+        });
+        console.log("[CI MODE] Test consultant seeded successfully");
+      }
+
+      // 4. Seed test project
+      const existingProject = await storage.getProject("ci-test-project");
+      if (!existingProject) {
+        await storage.createProject({
+          id: "ci-test-project",
+          hospitalId: "ci-test-hospital",
+          name: "CI Test Project",
+          description: "Test project for CI environment",
+          status: "active",
+          startDate: new Date().toISOString().split('T')[0],
+          endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        });
+        console.log("[CI MODE] Test project seeded successfully");
+      }
+
     } catch (error) {
-      console.error("[CI MODE] Error seeding test user:", error);
+      console.error("[CI MODE] Error seeding test data:", error);
     }
   }
 
