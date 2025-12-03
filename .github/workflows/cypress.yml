@@ -6,16 +6,28 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      test_spec:
-        description: 'Test spec to run (e.g., cypress/e2e/07-support-tickets.cy.js)'
-        required: false
-        default: 'cypress/e2e/**/*.cy.js'
 
 jobs:
   cypress-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        spec:
+          - "cypress/e2e/01-authentication.cy.js"
+          - "cypress/e2e/02-hospitals.cy.js"
+          - "cypress/e2e/03-projects.cy.js"
+          - "cypress/e2e/04-consultants.cy.js"
+          - "cypress/e2e/05-time-attendance.cy.js"
+          - "cypress/e2e/06-training-competency.cy.js"
+          - "cypress/e2e/08-financial.cy.js"
+          - "cypress/e2e/09-travel.cy.js"
+          - "cypress/e2e/10-quality-compliance.cy.js"
+          - "cypress/e2e/11-communication.cy.js"
+          - "cypress/e2e/12-analytics-reporting.cy.js"
+          - "cypress/e2e/13-admin-rbac-integrations.cy.js"
+          - "cypress/e2e/error_handling.cy.js,cypress/e2e/login.cy.js,cypress/e2e/navigation.cy.js,cypress/e2e/update_delete.cy.js,cypress/e2e/create_item.cy.js"
 
     services:
       postgres:
@@ -57,7 +69,7 @@ jobs:
         run: |
           npm run dev &
           npx wait-on http://localhost:5000 --timeout 120000
-          npx cypress run --spec "${{ github.event.inputs.test_spec || 'cypress/e2e/**/*.cy.js' }}" --headless
+          npx cypress run --spec "${{ matrix.spec }}" --headless
         env:
           CI: true
           DATABASE_URL: postgresql://testuser:testpass@localhost:5432/nicehr_test
@@ -67,7 +79,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: cypress-screenshots
+          name: cypress-screenshots-${{ strategy.job-index }}
           path: cypress/screenshots
           retention-days: 7
 
@@ -75,6 +87,6 @@ jobs:
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: cypress-videos
+          name: cypress-videos-${{ strategy.job-index }}
           path: cypress/videos
           retention-days: 7
