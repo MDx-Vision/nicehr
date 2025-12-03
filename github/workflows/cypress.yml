@@ -9,6 +9,24 @@ on:
 jobs:
   cypress:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        spec:
+          - "cypress/e2e/01-authentication.cy.js"
+          - "cypress/e2e/02-hospitals.cy.js"
+          - "cypress/e2e/03-projects.cy.js"
+          - "cypress/e2e/04-consultants.cy.js"
+          - "cypress/e2e/05-time-attendance.cy.js"
+          - "cypress/e2e/06-training-competency.cy.js"
+          - "cypress/e2e/08-financial.cy.js"
+          - "cypress/e2e/09-travel.cy.js"
+          - "cypress/e2e/10-quality-compliance.cy.js"
+          - "cypress/e2e/11-communication.cy.js"
+          - "cypress/e2e/12-analytics-reporting.cy.js"
+          - "cypress/e2e/13-admin-rbac-integrations.cy.js"
+          - "cypress/e2e/error_handling.cy.js,cypress/e2e/login.cy.js,cypress/e2e/navigation.cy.js,cypress/e2e/update_delete.cy.js,cypress/e2e/create_item.cy.js"
     
     services:
       postgres:
@@ -54,7 +72,7 @@ jobs:
         run: npx wait-on http://localhost:5000 --timeout 60000
       
       - name: Run Cypress tests
-        run: npx cypress run
+        run: npx cypress run --spec "${{ matrix.spec }}"
         env:
           CYPRESS_BASE_URL: http://localhost:5000
       
@@ -62,5 +80,5 @@ jobs:
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: cypress-screenshots
+          name: cypress-screenshots-${{ strategy.job-index }}
           path: cypress/screenshots
