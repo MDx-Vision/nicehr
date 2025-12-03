@@ -17,6 +17,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: nicehr_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -36,10 +51,11 @@ jobs:
       - name: Start server and run tests
         run: |
           npm run dev &
-          npx wait-on http://localhost:5000 --timeout 60000
+          npx wait-on http://localhost:5000 --timeout 120000
           npx cypress run --spec "${{ github.event.inputs.test_spec || 'cypress/e2e/**/*.cy.js' }}" --headless
         env:
           CI: true
+          DATABASE_URL: postgresql://testuser:testpass@localhost:5432/nicehr_test
 
       - name: Upload screenshots on failure
         uses: actions/upload-artifact@v4
