@@ -90,9 +90,9 @@ describe('Hospital Management', () => {
 
   describe('Hospital Search', () => {
     it('should filter hospitals when typing in search', () => {
-      cy.get('[data-testid="input-search"]').type('Mercy');
+      cy.get('[data-testid="input-search"]').type('CI Test');
       cy.get('[data-testid="hospital-card"]').each($card => {
-        cy.wrap($card).should('contain.text', 'Mercy');
+        cy.wrap($card).should('contain.text', 'CI Test');
       });
     });
 
