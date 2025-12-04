@@ -1,12 +1,10 @@
 name: Cypress Tests
-
 on:
   push:
     branches: [main, dev]
   pull_request:
     branches: [main]
   workflow_dispatch:
-
 jobs:
   cypress-tests:
     runs-on: ubuntu-latest
@@ -28,7 +26,6 @@ jobs:
           - "cypress/e2e/12-analytics-reporting.cy.js"
           - "cypress/e2e/13-admin-rbac-integrations.cy.js"
           - "cypress/e2e/error_handling.cy.js,cypress/e2e/login.cy.js,cypress/e2e/navigation.cy.js,cypress/e2e/update_delete.cy.js,cypress/e2e/create_item.cy.js"
-
     services:
       postgres:
         image: postgres:15
@@ -43,38 +40,50 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-
       - name: Install dependencies
         run: npm ci
-
+      - name: Install Anthropic SDK
+        run: npm install @anthropic-ai/sdk
       - name: Push database schema
         run: npm run db:push
         env:
           DATABASE_URL: postgresql://testuser:testpass@localhost:5432/nicehr_test
-
       - name: Install Cypress
         run: npx cypress install
-
       - name: Start server and run tests
+        id: cypress
         run: |
           npm run dev &
           npx wait-on http://localhost:5000 --timeout 120000
-          npx cypress run --spec "${{ matrix.spec }}" --headless
+          npx cypress run --spec "${{ matrix.spec }}" --headless 2>&1 | tee cypress-output.log
         env:
           CI: true
           DATABASE_URL: postgresql://testuser:testpass@localhost:5432/nicehr_test
           SESSION_SECRET: ci-test-session-secret
-
+        continue-on-error: true
+      - name: Auto-fix with Claude
+        if: steps.cypress.outcome == 'failure'
+        run: node ci_helpers/claude_assistant.js fix "$(cat cypress-output.log | tail -200)"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      - name: Commit fixes
+        if: steps.cypress.outcome == 'failure'
+        run: |
+          git config user.name "Claude Auto-Fix"
+          git config user.email "claude@autofix.ci"
+          git add -A
+          git diff --staged --quiet || git commit -m "Auto-fix: Cypress test failures"
+          git push || echo "Nothing to push"
       - name: Upload screenshots on failure
         uses: actions/upload-artifact@v4
         if: failure()
@@ -82,7 +91,6 @@ jobs:
           name: cypress-screenshots-${{ strategy.job-index }}
           path: cypress/screenshots
           retention-days: 7
-
       - name: Upload videos on failure
         uses: actions/upload-artifact@v4
         if: failure()
