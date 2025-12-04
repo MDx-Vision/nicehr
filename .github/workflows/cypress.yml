@@ -73,7 +73,7 @@ jobs:
         continue-on-error: true
       - name: Auto-fix with Claude
         if: steps.cypress.outcome == 'failure'
-        run: node ci_helpers/claude_assistant.js fix "$(cat cypress-output.log | tail -200)"
+        run: node ci_helpers/claude_assistant.cjs fix "$(cat cypress-output.log | tail -200)"
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       - name: Commit fixes
