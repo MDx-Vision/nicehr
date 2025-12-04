@@ -4,7 +4,13 @@ import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Loader2, Eye, EyeOff, AlertCircle } from "lucide-react";
@@ -52,13 +58,21 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl" data-testid="text-login-title">Sign In</CardTitle>
-          <CardDescription>Enter your credentials to access your account</CardDescription>
+          <CardTitle className="text-2xl" data-testid="text-login-title">
+            Sign In
+          </CardTitle>
+          <CardDescription>
+            Enter your credentials to access your account
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {errorMessage && (
-              <Alert variant="destructive" role="alert" data-testid="error-message">
+              <Alert
+                variant="destructive"
+                role="alert"
+                data-testid="error-message"
+              >
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{errorMessage}</AlertDescription>
               </Alert>

@@ -226,30 +226,35 @@ export async function setupAuth(app: Express) {
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
     verified: passport.AuthenticateCallback
   ) => {
-    const claims = tokens.claims();
-    if (!claims) {
-      return verified(new Error('No claims found in token'), undefined);
+    try {
+      const claims = tokens.claims();
+      if (!claims) {
+        return verified(new Error('No claims found in token'), undefined);
+      }
+      
+      const email = claims["email"] as string | undefined;
+      const userId = claims["sub"] as string | undefined;
+      
+      if (!email || !userId) {
+        return verified(new Error('Email or user ID not found in claims'), undefined);
+      }
+      
+      const accessCheck = await checkInvitationAccess(email, userId);
+      
+      if (!accessCheck.allowed) {
+        return verified(new Error(accessCheck.reason || 'Access denied'), undefined);
+      }
+      
+      const user: any = {};
+      updateUserSession(user, tokens);
+      user.invitationId = accessCheck.invitationId;
+      
+      await upsertUser(claims, accessCheck.invitationId);
+      verified(null, user);
+    } catch (error) {
+      console.error("Auth verification error:", error);
+      return verified(new Error('Authentication service temporarily unavailable. Please try again.'), undefined);
     }
-    
-    const email = claims["email"] as string | undefined;
-    const userId = claims["sub"] as string | undefined;
-    
-    if (!email || !userId) {
-      return verified(new Error('Email or user ID not found in claims'), undefined);
-    }
-    
-    const accessCheck = await checkInvitationAccess(email, userId);
-    
-    if (!accessCheck.allowed) {
-      return verified(new Error(accessCheck.reason || 'Access denied'), undefined);
-    }
-    
-    const user: any = {};
-    updateUserSession(user, tokens);
-    user.invitationId = accessCheck.invitationId;
-    
-    await upsertUser(claims, accessCheck.invitationId);
-    verified(null, user);
   };
 
   const registeredStrategies = new Set<string>();

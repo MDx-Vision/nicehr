@@ -12,21 +12,17 @@ if (!process.env.DATABASE_URL) {
 let db: any;
 let pool: any;
 
-if (process.env.CI === 'true') {
-  // CI mode: use standard pg
-  console.log('[CI MODE] Using standard PostgreSQL connection');
-  const pg = require('pg');
-  const { drizzle } = require('drizzle-orm/node-postgres');
-  pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
-  db = drizzle(pool, { schema });
-} else {
-  // Normal mode: use Neon serverless
-  const { Pool, neonConfig } = require('@neondatabase/serverless');
-  const { drizzle } = require('drizzle-orm/neon-serverless');
-  const ws = require('ws');
-  neonConfig.webSocketConstructor = ws.default;
-  pool = new Pool({ connectionString: process.env.DATABASE_URL });
-  db = drizzle({ client: pool, schema });
-}
+// Use standard pg driver for better connection stability
+// Neon serverless WebSocket can be unreliable
+console.log('[DB] Using standard PostgreSQL connection');
+const pg = require('pg');
+const { drizzle } = require('drizzle-orm/node-postgres');
+pool = new pg.Pool({ 
+  connectionString: process.env.DATABASE_URL,
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+});
+db = drizzle(pool, { schema });
 
 export { pool, db };
