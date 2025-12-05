@@ -88,12 +88,13 @@ jobs:
           
       - name: Commit auto-generated tests and fixes
         run: |
-         git config user.name "Claude Auto-Fix"
+          git config user.name "Claude Auto-Fix"
           git config user.email "claude@autofix.ci"
-          rm -rf cypress-output.log cypress/screenshots cypress/videos || true
+          git stash --include-untracked || true
+          git pull --rebase origin main || true
+          git stash pop || true
           git add cypress/e2e/*.cy.js ci_helpers/ server/ || true
           git diff --staged --quiet || git commit -m "Auto: Generate tests and fixes"
-          git pull --rebase origin main || true
           git push || echo "Nothing to push"
           
       - name: Upload screenshots on failure
