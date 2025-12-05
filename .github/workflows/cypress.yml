@@ -90,7 +90,7 @@ jobs:
         run: |
           git config user.name "Claude Auto-Fix"
           git config user.email "claude@autofix.ci"
-          git add -A
+          git add cypress/e2e/*.cy.js ci_helpers/ server/ || true
           git diff --staged --quiet || git commit -m "Auto: Generate tests and fixes" 
           git pull --rebase origin main || true
           git push || echo "Nothing to push"
