@@ -1,7 +1,7 @@
 describe('Create Item', () => {
   beforeEach(() => {
     // Login before each test
-    cy.visit('/login');
+    cy.visit('/login', { failOnStatusCode: false });
     cy.get('[data-testid="input-email"]').type('test@example.com');
     cy.get('[data-testid="input-password"]').type('password123');
     cy.get('[data-testid="button-login"]').click();

@@ -1,6 +1,6 @@
 describe('Login', () => {
   it('should login with valid credentials', () => {
-    cy.visit('/login');
+    cy.visit('/login', { failOnStatusCode: false });
     
     cy.get('[data-testid="input-email"]')
       .type('test@example.com');

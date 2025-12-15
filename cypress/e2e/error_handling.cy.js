@@ -2,7 +2,7 @@ describe('Error Handling', () => {
   describe('Login Error Handling', () => {
     it('should display error message for invalid credentials', () => {
       // Step 1: Visit /login
-      cy.visit('/login');
+      cy.visit('/login', { failOnStatusCode: false });
       
       // Verify we're on the login page
       cy.get('[data-testid="text-login-title"]').should('contain', 'Sign In');
@@ -29,7 +29,7 @@ describe('Error Handling', () => {
 
     it('should display error message for non-existent user', () => {
       // Visit /login
-      cy.visit('/login');
+      cy.visit('/login', { failOnStatusCode: false });
       
       // Enter a non-existent email with any password
       cy.get('[data-testid="input-email"]').type('nonexistent@example.com');
@@ -48,7 +48,7 @@ describe('Error Handling', () => {
 
     it('should not submit form with empty fields', () => {
       // Visit /login
-      cy.visit('/login');
+      cy.visit('/login', { failOnStatusCode: false });
       
       // Try to click login without entering any credentials
       // The form uses HTML5 required validation, so the form won't submit

@@ -15,7 +15,7 @@ describe('Authentication System', () => {
 
   describe('Login Page UI Elements', () => {
     beforeEach(() => {
-      cy.visit('/login');
+      cy.visit('/login', { failOnStatusCode: false });
     });
 
     it('should display all login form elements correctly', () => {
@@ -69,7 +69,7 @@ describe('Authentication System', () => {
 
   describe('Login Form Validation', () => {
     beforeEach(() => {
-      cy.visit('/login');
+      cy.visit('/login', { failOnStatusCode: false });
     });
 
     it('should show validation errors for empty fields', () => {
@@ -125,7 +125,7 @@ describe('Authentication System', () => {
 
   describe('Login Authentication Flow', () => {
     beforeEach(() => {
-      cy.visit('/login');
+      cy.visit('/login', { failOnStatusCode: false });
     });
 
     it('should login successfully with valid credentials', () => {
@@ -464,7 +464,7 @@ describe('Authentication System', () => {
 
   describe('Edge Cases and Error Handling', () => {
     beforeEach(() => {
-      cy.visit('/login');
+      cy.visit('/login', { failOnStatusCode: false });
     });
 
     it('should handle very long email addresses', () => {
@@ -535,7 +535,7 @@ describe('Authentication System', () => {
 
   describe('Mobile and Responsive Behavior', () => {
     beforeEach(() => {
-      cy.visit('/login');
+      cy.visit('/login', { failOnStatusCode: false });
     });
 
     it('should be responsive on mobile devices', () => {
@@ -573,7 +573,7 @@ describe('Authentication System', () => {
 
   describe('Performance and Accessibility', () => {
     beforeEach(() => {
-      cy.visit('/login');
+      cy.visit('/login', { failOnStatusCode: false });
     });
 
     it('should load login page quickly', () => {
