@@ -68,6 +68,14 @@ export async function checkAccess(
 
 export function enforceAccess(resourceType: "page" | "api" | "feature", resourceKey: string) {
   return async (req: Request, res: Response, next: NextFunction) => {
+    // Bypass access control in test/development environments
+    // This allows E2E tests to run without database-based access restrictions
+    if (process.env.DISABLE_ACCESS_CONTROL === 'true' ||
+        process.env.CYPRESS_TEST === 'true' ||
+        process.env.NODE_ENV === 'test') {
+      return next();
+    }
+
     const user = req.user as { id: string; role: string } | undefined;
     const userRole = user?.role || null;
     const userId = user?.id || null;

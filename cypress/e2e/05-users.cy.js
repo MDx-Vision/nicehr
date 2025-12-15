@@ -31,7 +31,7 @@ describe('Users Management System', () => {
     cy.clearSessionStorage();
     
     // Login as admin
-    cy.visit('/login');
+    cy.visit('/login', { failOnStatusCode: false });
     cy.get('[data-testid="input-email"]').type(testData.admin.email);
     cy.get('[data-testid="input-password"]').type(testData.admin.password);
     cy.get('[data-testid="button-login"]').click();

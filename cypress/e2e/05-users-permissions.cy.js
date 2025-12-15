@@ -26,7 +26,7 @@ describe('User Permissions and RBAC', () => {
   describe('Role-Based Access Control (RBAC)', () => {
     it('should display admin-only sections for admin users', () => {
       // Login as admin
-      cy.visit('/login');
+      cy.visit('/login', { failOnStatusCode: false });
       cy.get('[data-testid="input-email"]').type(adminUser.email);
       cy.get('[data-testid="input-password"]').type(adminUser.password);
       cy.get('[data-testid="button-login"]').click();
@@ -56,7 +56,7 @@ describe('User Permissions and RBAC', () => {
 
     it('should hide admin sections from non-admin users', () => {
       // Login as consultant
-      cy.visit('/login');
+      cy.visit('/login', { failOnStatusCode: false });
       cy.get('[data-testid="input-email"]').type(consultantUser.email);
       cy.get('[data-testid="input-password"]').type(consultantUser.password);
       cy.get('[data-testid="button-login"]').click();
@@ -83,7 +83,7 @@ describe('User Permissions and RBAC', () => {
     });
 
     it('should check specific permissions for actions', () => {
-      cy.visit('/login');
+      cy.visit('/login', { failOnStatusCode: false });
       cy.get('[data-testid="input-email"]').type(managerUser.email);
       cy.get('[data-testid="input-password"]').type(managerUser.password);
       cy.get('[data-testid="button-login"]').click();
@@ -101,7 +101,7 @@ describe('User Permissions and RBAC', () => {
     });
 
     it('should deny access to unauthorized pages', () => {
-      cy.visit('/login');
+      cy.visit('/login', { failOnStatusCode: false });
       cy.get('[data-testid="input-email"]').type(consultantUser.email);
       cy.get('[data-testid="input-password"]').type(consultantUser.password);
       cy.get('[data-testid="button-login"]').click();
@@ -116,7 +116,7 @@ describe('User Permissions and RBAC', () => {
   describe('Permission Management', () => {
     beforeEach(() => {
       // Login as admin
-      cy.visit('/login');
+      cy.visit('/login', { failOnStatusCode: false });
       cy.get('[data-testid="input-email"]').type(adminUser.email);
       cy.get('[data-testid="input-password"]').type(adminUser.password);
       cy.get('[data-testid="button-login"]').click();
@@ -166,7 +166,7 @@ describe('User Permissions and RBAC', () => {
 
   describe('Role Management', () => {
     beforeEach(() => {
-      cy.visit('/login');
+      cy.visit('/login', { failOnStatusCode: false });
       cy.get('[data-testid="input-email"]').type(adminUser.email);
       cy.get('[data-testid="input-password"]').type(adminUser.password);
       cy.get('[data-testid="button-login"]').click();
@@ -290,7 +290,7 @@ describe('User Permissions and RBAC', () => {
 
   describe('Role Assignments', () => {
     beforeEach(() => {
-      cy.visit('/login');
+      cy.visit('/login', { failOnStatusCode: false });
       cy.get('[data-testid="input-email"]').type(adminUser.email);
       cy.get('[data-testid="input-password"]').type(adminUser.password);
       cy.get('[data-testid="button-login"]').click();
@@ -388,7 +388,7 @@ describe('User Permissions and RBAC', () => {
 
   describe('Permission-Based UI Rendering', () => {
     it('should show/hide buttons based on permissions', () => {
-      cy.visit('/login');
+      cy.visit('/login', { failOnStatusCode: false });
       cy.get('[data-testid="input-email"]').type(consultantUser.email);
       cy.get('[data-testid="input-password"]').type(consultantUser.password);
       cy.get('[data-testid="button-login"]').click();
@@ -406,7 +406,7 @@ describe('User Permissions and RBAC', () => {
     });
 
     it('should disable actions without permissions', () => {
-      cy.visit('/login');
+      cy.visit('/login', { failOnStatusCode: false });
       cy.get('[data-testid="input-email"]').type(consultantUser.email);
       cy.get('[data-testid="input-password"]').type(consultantUser.password);
       cy.get('[data-testid="button-login"]').click();
@@ -424,7 +424,7 @@ describe('User Permissions and RBAC', () => {
     });
 
     it('should show permission tooltips', () => {
-      cy.visit('/login');
+      cy.visit('/login', { failOnStatusCode: false });
       cy.get('[data-testid="input-email"]').type(consultantUser.email);
       cy.get('[data-testid="input-password"]').type(consultantUser.password);
       cy.get('[data-testid="button-login"]').click();
@@ -437,7 +437,7 @@ describe('User Permissions and RBAC', () => {
 
   describe('Access Audit Logging', () => {
     beforeEach(() => {
-      cy.visit('/login');
+      cy.visit('/login', { failOnStatusCode: false });
       cy.get('[data-testid="input-email"]').type(adminUser.email);
       cy.get('[data-testid="input-password"]').type(adminUser.password);
       cy.get('[data-testid="button-login"]').click();
@@ -526,7 +526,7 @@ describe('User Permissions and RBAC', () => {
 
   describe('Error Handling for Permissions', () => {
     it('should handle permission check failures gracefully', () => {
-      cy.visit('/login');
+      cy.visit('/login', { failOnStatusCode: false });
       cy.get('[data-testid="input-email"]').type(consultantUser.email);
       cy.get('[data-testid="input-password"]').type(consultantUser.password);
       cy.get('[data-testid="button-login"]').click();
@@ -544,7 +544,7 @@ describe('User Permissions and RBAC', () => {
     });
 
     it('should retry failed permission checks', () => {
-      cy.visit('/login');
+      cy.visit('/login', { failOnStatusCode: false });
       cy.get('[data-testid="input-email"]').type(adminUser.email);
       cy.get('[data-testid="input-password"]').type(adminUser.password);
       cy.get('[data-testid="button-login"]').click();

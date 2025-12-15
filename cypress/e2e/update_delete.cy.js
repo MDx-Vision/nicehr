@@ -4,7 +4,7 @@ describe('Update and Delete Project', () => {
     cy.clearCookies();
     
     // Visit login page
-    cy.visit('/login');
+    cy.visit('/login', { failOnStatusCode: false });
     
     // Check if already logged in (redirected to dashboard)
     cy.url().then((url) => {

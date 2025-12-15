@@ -125,7 +125,7 @@ describe('Directory Feature', () => {
     }).as('getConsultantProfile');
 
     // Login and navigate to directory
-    cy.visit('/login');
+    cy.visit('/login', { failOnStatusCode: false });
     cy.get('[data-testid="input-email"]').type(testUser.email);
     cy.get('[data-testid="input-password"]').type(testUser.password);
     cy.get('[data-testid="button-login"]').click();

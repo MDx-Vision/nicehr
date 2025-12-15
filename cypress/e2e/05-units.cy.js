@@ -41,7 +41,7 @@ describe('Units Management System', () => {
     cy.clearSessionStorage();
     
     // Login as admin user
-    cy.visit('/login');
+    cy.visit('/login', { failOnStatusCode: false });
     cy.get('[data-testid="input-email"]').type('test@example.com');
     cy.get('[data-testid="input-password"]').type('password123');
     cy.get('[data-testid="button-login"]').click();

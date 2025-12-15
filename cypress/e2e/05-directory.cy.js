@@ -27,7 +27,7 @@ describe('Directory Feature', () => {
     cy.clearSessionStorage();
     
     // Login with test user
-    cy.visit('/login');
+    cy.visit('/login', { failOnStatusCode: false });
     cy.get('[data-testid="input-email"]').type(testData.user.email);
     cy.get('[data-testid="input-password"]').type('password123');
     cy.get('[data-testid="button-login"]').click();

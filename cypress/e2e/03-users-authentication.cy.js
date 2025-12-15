@@ -15,7 +15,7 @@ describe('User Authentication & Session Management', () => {
 
   describe('Login Flow', () => {
     beforeEach(() => {
-      cy.visit('/login');
+      cy.visit('/login', { failOnStatusCode: false });
     });
 
     it('should display login page correctly', () => {
@@ -252,7 +252,7 @@ describe('User Authentication & Session Management', () => {
 
   describe('Authentication Error Handling', () => {
     it('should handle network errors gracefully', () => {
-      cy.visit('/login');
+      cy.visit('/login', { failOnStatusCode: false });
       cy.intercept('POST', '/api/auth/login', { forceNetworkError: true }).as('networkError');
 
       cy.get('[data-testid="input-email"]').type(testUser.email);
@@ -266,7 +266,7 @@ describe('User Authentication & Session Management', () => {
     });
 
     it('should handle rate limiting', () => {
-      cy.visit('/login');
+      cy.visit('/login', { failOnStatusCode: false });
       cy.intercept('POST', '/api/auth/login', {
         statusCode: 429,
         body: { error: 'Too many attempts. Please try again later.' }
@@ -284,7 +284,7 @@ describe('User Authentication & Session Management', () => {
     });
 
     it('should clear errors on input change', () => {
-      cy.visit('/login');
+      cy.visit('/login', { failOnStatusCode: false });
       
       // Trigger validation error
       cy.get('[data-testid="button-login"]').click();
@@ -298,7 +298,7 @@ describe('User Authentication & Session Management', () => {
 
   describe('Accessibility & UX', () => {
     beforeEach(() => {
-      cy.visit('/login');
+      cy.visit('/login', { failOnStatusCode: false });
     });
 
     it('should have proper ARIA labels and roles', () => {

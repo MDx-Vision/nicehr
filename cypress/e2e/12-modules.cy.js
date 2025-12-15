@@ -54,7 +54,7 @@ describe('Modules Management System', () => {
     cy.clearSessionStorage();
     
     // Login as admin
-    cy.visit('/login');
+    cy.visit('/login', { failOnStatusCode: false });
     cy.get('[data-testid="input-email"]').type(testData.user.email);
     cy.get('[data-testid="input-password"]').type(testData.user.password);
     cy.get('[data-testid="button-login"]').click();

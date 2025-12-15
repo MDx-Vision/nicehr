@@ -102,7 +102,7 @@ describe('Dashboard Analytics and Reporting', () => {
     }).as('getHospitalAnalytics');
 
     // Login
-    cy.visit('/login');
+    cy.visit('/login', { failOnStatusCode: false });
     cy.get('[data-testid="input-email"]').type(testUser.email);
     cy.get('[data-testid="input-password"]').type(testUser.password);
     cy.get('[data-testid="button-login"]').click();

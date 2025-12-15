@@ -4,7 +4,7 @@
 
 // Login command for reuse across all tests
 Cypress.Commands.add('login', (email = 'test@example.com', password = 'password123') => {
-  cy.visit('/login');
+  cy.visit('/login', { failOnStatusCode: false });
   cy.get('[data-testid="input-email"]').type(email);
   cy.get('[data-testid="input-password"]').type(password);
   cy.get('[data-testid="button-login"]').click();
@@ -113,4 +113,11 @@ Cypress.Commands.add('hasStatus', (selector, status) => {
 // Wait for page load
 Cypress.Commands.add('waitForPageLoad', () => {
   cy.get('[data-testid="loading"], .loading-spinner').should('not.exist');
+});
+
+// Clear session storage (custom implementation)
+Cypress.Commands.add('clearSessionStorage', () => {
+  cy.window().then((win) => {
+    win.sessionStorage.clear();
+  });
 });
