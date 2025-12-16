@@ -1,11 +1,11 @@
 It looks like this is your first time using Cypress: 15.7.0
 
-[16:28:57]  Verifying Cypress can run /home/runner/.cache/Cypress/15.7.0/Cypress [started]
-[16:29:02]  Verifying Cypress can run /home/runner/.cache/Cypress/15.7.0/Cypress [COMPLETED]
+[16:59:44]  Verifying Cypress can run /home/runner/.cache/Cypress/15.7.0/Cypress [started]
+[16:59:50]  Verifying Cypress can run /home/runner/.cache/Cypress/15.7.0/Cypress [COMPLETED]
 
 Opening Cypress...
 
-DevTools listening on ws://127.0.0.1:40261/devtools/browser/30c738b1-61d7-4870-81ff-dfb7f98c9be0
+DevTools listening on ws://127.0.0.1:42375/devtools/browser/116445cf-9831-4ffb-8321-2cab89f15223
 
 tput: No value for $TERM and no -T specified
 [90m====================================================================================================[39m
@@ -16,100 +16,101 @@ tput: No value for $TERM and no -T specified
 [90m  │[39m [90mCypress:[39m        15.7.0                                                                         [90m│[39m
 [90m  │[39m [90mBrowser:[39m        Electron 138 [90m(headless)[39m                                                        [90m│[39m
 [90m  │[39m [90mNode Version:[39m   [0mv20.19.6 [90m(/opt/hostedtoolcache/node/20.19.6/x64/bin/node)[39m[0m                      [90m│[39m
-[90m  │[39m [90mSpecs:[39m          [0m1 found (05-time-attendance.cy.js)[0m                                             [90m│[39m
-[90m  │[39m [90mSearched:[39m       [0mcypress/e2e/05-time-attendance.cy.js[0m                                           [90m│[39m
+[90m  │[39m [90mSpecs:[39m          [0m1 found (03-projects.cy.js)[0m                                                    [90m│[39m
+[90m  │[39m [90mSearched:[39m       [0mcypress/e2e/03-projects.cy.js[0m                                                  [90m│[39m
 [90m  └[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m┘[39m
 
 
 [90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m
                                                                                                     
-  Running:  [90m05-time-attendance.cy.js[39m                                                        [90m(1 of 1)[39m
+  Running:  [90m03-projects.cy.js[39m                                                               [90m(1 of 1)[39m
 
 [0m[0m
-[0m  Time & Attendance[0m
-[0m    Timesheets[0m
-[0m      Timesheet List[0m
-      [32m  ✓[0m[90m should display timesheets list[0m[90m (4597ms)[0m
-      [32m  ✓[0m[90m should filter by date range[0m[90m (2608ms)[0m
-      [32m  ✓[0m[90m should filter by status[0m[90m (1858ms)[0m
-      [32m  ✓[0m[90m should filter by consultant[0m[90m (1614ms)[0m
-[0m      Create Timesheet Entry[0m
-      [32m  ✓[0m[90m should open timesheet entry modal[0m[90m (2431ms)[0m
-      [32m  ✓[0m[90m should create a new timesheet entry[0m[90m (5620ms)[0m
-      [32m  ✓[0m[90m should validate hours field[0m[90m (3298ms)[0m
-      [32m  ✓[0m[90m should require project selection[0m[90m (3320ms)[0m
-[0m      Timesheet Approval Workflow[0m
-      [32m  ✓[0m[90m should submit timesheet for approval[0m[90m (2425ms)[0m
-      [32m  ✓[0m[90m should approve timesheet[0m[90m (2682ms)[0m
-      [32m  ✓[0m[90m should reject timesheet with reason[0m[90m (2766ms)[0m
-      [32m  ✓[0m[90m should bulk approve timesheets[0m[90m (1901ms)[0m
-[0m      Edit & Delete Timesheet[0m
-      [32m  ✓[0m[90m should edit timesheet entry[0m[90m (1832ms)[0m
-      [32m  ✓[0m[90m should delete timesheet entry[0m[90m (1566ms)[0m
-      [32m  ✓[0m[90m should not allow editing approved timesheets[0m[90m (1952ms)[0m
-[0m      Timesheet Summary[0m
-      [32m  ✓[0m[90m should show weekly summary[0m[90m (1792ms)[0m
-      [32m  ✓[0m[90m should show project breakdown[0m[90m (2046ms)[0m
-      [32m  ✓[0m[90m should export timesheet data[0m[90m (2196ms)[0m
-[0m    Schedules[0m
-[0m      Schedule View[0m
-      [32m  ✓[0m[90m should display schedule calendar[0m[90m (1505ms)[0m
-      [32m  ✓[0m[90m should switch between views[0m[90m (1811ms)[0m
-      [32m  ✓[0m[90m should navigate between dates[0m[90m (1710ms)[0m
-      [32m  ✓[0m[90m should filter by consultant[0m[90m (1915ms)[0m
-      [32m  ✓[0m[90m should filter by project[0m[90m (1830ms)[0m
-[0m      Create Shift[0m
-      [32m  ✓[0m[90m should open create shift modal[0m[90m (1685ms)[0m
-      [32m  ✓[0m[90m should create a new shift[0m[90m (3486ms)[0m
-      [32m  ✓[0m[90m should create recurring shift[0m[90m (3752ms)[0m
-[0m      Edit & Delete Shift[0m
-      [32m  ✓[0m[90m should edit shift[0m[90m (2157ms)[0m
-      [32m  ✓[0m[90m should delete shift[0m[90m (1988ms)[0m
-[0m      Consultant Availability[0m
-      [32m  ✓[0m[90m should view consultant availability[0m[90m (1646ms)[0m
-      [32m  ✓[0m[90m should set availability[0m[90m (2041ms)[0m
-      [32m  ✓[0m[90m should set time-off request[0m[90m (2806ms)[0m
-[0m    Digital Sign-In/Out[0m
-    [32m  ✓[0m[90m should sign in for shift[0m[90m (1714ms)[0m
-    [32m  ✓[0m[90m should sign out from shift[0m[90m (2177ms)[0m
-    [32m  ✓[0m[90m should show sign-in history[0m[90m (1630ms)[0m
-[0m    EOD Reports[0m
-    [32m  ✓[0m[90m should display EOD reports list[0m[90m (1559ms)[0m
-    [32m  ✓[0m[90m should create EOD report[0m[90m (3531ms)[0m
-    [32m  ✓[0m[90m should view EOD report details[0m[90m (1834ms)[0m
-[0m    Shift Handoff Notes[0m
-    [32m  ✓[0m[90m should display handoff notes[0m[90m (1801ms)[0m
-    [32m  ✓[0m[90m should create handoff note[0m[90m (3216ms)[0m
-    [32m  ✓[0m[90m should acknowledge handoff note[0m[90m (1825ms)[0m
+[0m  Project Management[0m
+[0m    Project List View[0m
+    [32m  ✓[0m[90m should display projects list[0m[90m (7633ms)[0m
+    [32m  ✓[0m[90m should show project cards[0m[90m (4956ms)[0m
+    [32m  ✓[0m[90m should show project status indicators[0m[90m (4698ms)[0m
+    [32m  ✓[0m[90m should have search functionality[0m[90m (5971ms)[0m
+    [32m  ✓[0m[90m should filter projects by search term[0m[90m (6277ms)[0m
+    [32m  ✓[0m[90m should have status filter[0m[90m (5857ms)[0m
+[0m    Create Project[0m
+    [32m  ✓[0m[90m should open create project modal[0m[90m (5185ms)[0m
+    [32m  ✓[0m[90m should display all form fields in create modal[0m[90m (3901ms)[0m
+    [32m  ✓[0m[90m should show validation errors for required fields[0m[90m (4142ms)[0m
+[0m    Edit Project[0m
+    [32m  ✓[0m[90m should open edit project modal[0m[90m (3917ms)[0m
+    [31m  1) should update project information[0m
+[0m    Delete Project[0m
+    [32m  ✓[0m[90m should delete a project[0m[90m (4163ms)[0m
+[0m    Project Search[0m
+    [32m  ✓[0m[90m should filter projects when typing in search[0m[90m (3871ms)[0m
+    [31m  2) should show all projects when search is cleared[0m
 
 
-[92m [0m[32m 40 passing[0m[90m (2m)[0m
+[92m [0m[32m 12 passing[0m[90m (1m)[0m
+[31m  2 failing[0m
+
+[0m  1) Project Management
+       Edit Project
+         should update project information:
+[0m[31m     AssertionError: Timed out retrying after 10000ms: Expected <div#radix-:r5:.fixed.left-[50%].top-[50%].z-50.grid.w-full.translate-x-[-50%].translate-y-[-50%].gap-4.border.bg-background.p-6.shadow-lg.duration-200.data-[state=open]:animate-in.data-[state=closed]:animate-out.data-[state=closed]:fade-out-0.data-[state=open]:fade-in-0.data-[state=closed]:zoom-out-95.data-[state=open]:zoom-in-95.data-[state=closed]:slide-out-to-left-1/2.data-[state=closed]:slide-out-to-top-[48%].data-[state=open]:slide-in-from-left-1/2.data-[state=open]:slide-in-from-top-[48%].sm:rounded-lg.max-w-lg> not to exist in the DOM, but it was continuously found.[0m[90m
+      at Context.eval (webpack://rest-express/./cypress/e2e/03-projects.cy.js:79:53)
+[0m
+[0m  2) Project Management
+       Project Search
+         should show all projects when search is cleared:
+[0m[31m     AssertionError: Timed out retrying after 10000ms: Expected to find element: `[data-testid="project-card"]`, but never found it.[0m[90m
+      at Context.eval (webpack://rest-express/./cypress/e2e/03-projects.cy.js:105:9)
+[0m
 
 
-[32m  ([4m[1mResults[22m[24m)[39m
+
+[31m  ([4m[1mResults[22m[24m)[39m
 
 [90m  ┌[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m┐[39m
-[90m  │[39m [90mTests:[39m        [32m40[39m                                                                               [90m│[39m
-[90m  │[39m [90mPassing:[39m      [32m40[39m                                                                               [90m│[39m
-[90m  │[39m [90mFailing:[39m      [32m0[39m                                                                                [90m│[39m
-[90m  │[39m [90mPending:[39m      [32m0[39m                                                                                [90m│[39m
-[90m  │[39m [90mSkipped:[39m      [32m0[39m                                                                                [90m│[39m
-[90m  │[39m [90mScreenshots:[39m  [32m0[39m                                                                                [90m│[39m
-[90m  │[39m [90mVideo:[39m        [32mfalse[39m                                                                            [90m│[39m
-[90m  │[39m [90mDuration:[39m     [32m1 minute, 39 seconds[39m                                                             [90m│[39m
-[90m  │[39m [90mSpec Ran:[39m     [32m[32m05-time-attendance.cy.js[32m[39m                                                         [90m│[39m
+[90m  │[39m [90mTests:[39m        [31m14[39m                                                                               [90m│[39m
+[90m  │[39m [90mPassing:[39m      [31m12[39m                                                                               [90m│[39m
+[90m  │[39m [90mFailing:[39m      [31m2[39m                                                                                [90m│[39m
+[90m  │[39m [90mPending:[39m      [31m0[39m                                                                                [90m│[39m
+[90m  │[39m [90mSkipped:[39m      [31m0[39m                                                                                [90m│[39m
+[90m  │[39m [90mScreenshots:[39m  [31m2[39m                                                                                [90m│[39m
+[90m  │[39m [90mVideo:[39m        [31mfalse[39m                                                                            [90m│[39m
+[90m  │[39m [90mDuration:[39m     [31m1 minute, 29 seconds[39m                                                             [90m│[39m
+[90m  │[39m [90mSpec Ran:[39m     [31m[31m03-projects.cy.js[31m[39m                                                                [90m│[39m
 [90m  └[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m┘[39m
 
 
+[33m  ([4m[1mScreenshots[22m[24m)[39m
+
+[90m [39m -  [0m/home/runner/work/nicehr/nicehr/cypress/screenshots/03-projects.cy.js/Project Ma[0m     [90m[90m(1280x720)[90m[39m
+[90m [39m    [0mnagement -- Edit Project -- should update project information (failed).png[0m                     
+[90m [39m -  [0m/home/runner/work/nicehr/nicehr/cypress/screenshots/03-projects.cy.js/Project Ma[0m     [90m[90m(1280x720)[90m[39m
+[90m [39m    [0mnagement -- Project Search -- should show all projects when search is cleared (f[0m               
+[90m [39m    [0mailed).png[0m                                                                                     
+
+
+tput: No value for $TERM and no -T specified
 [90m====================================================================================================[39m
 
 [0m  ([4m[1mRun Finished[22m[24m)[0m
-tput: No value for $TERM and no -T specified
 
 
 [90m   [39m    [90mSpec[39m                                              [90mTests[39m  [90mPassing[39m  [90mFailing[39m  [90mPending[39m  [90mSkipped[39m [90m [39m
 [90m  ┌[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m┐[39m
-[90m  │[39m [32m✔[39m  [0m05-time-attendance.cy.js[0m                 [90m01:39[39m       [0m40[0m       [32m40[39m        [90m-[39m        [90m-[39m        [90m-[39m [90m│[39m
+[90m  │[39m [31m✖[39m  [0m03-projects.cy.js[0m                        [90m01:29[39m       [0m14[0m       [32m12[39m        [31m2[39m        [90m-[39m        [90m-[39m [90m│[39m
 [90m  └[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m┘[39m
-[90m   [39m [32m✔[39m  [32mAll specs passed![39m                        [90m01:39[39m       [0m40[0m       [32m40[39m        [90m-[39m        [90m-[39m        [90m-[39m [90m [39m
+[90m   [39m [31m✖[39m  [31m1 of 1 failed (100%)[39m                     [90m01:29[39m       [0m14[0m       [32m12[39m        [31m2[39m        [90m-[39m        [90m-[39m [90m [39m
 
+tput: No value for $TERM and no -T specified
+[90m----------------------------------------------------------------------------------------------------[39m
+
+  Debug faster with full visibility.
+
+  Record to Cypress Cloud and get instant access to full test details and replays.
+  Inspect the DOM, network events, and console logs exactly as they ran in CI.
+
+  >> [36mhttps://on.cypress.io/cloud-get-started[39m
+
+[90m----------------------------------------------------------------------------------------------------[39m
+tput: No value for $TERM and no -T specified
