@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* LIGHT MODE - Professional Healthcare Theme */
+/* LIGHT MODE - Apple-Inspired Design System */
 :root {
   --button-outline: rgba(0,0,0, .10);
   --badge-outline: rgba(0,0,0, .05);
@@ -12,56 +12,71 @@
   --elevate-1: rgba(0,0,0, .03);
   --elevate-2: rgba(0,0,0, .08);
 
-  --background: 210 20% 98%;
-  --foreground: 222 47% 11%;
+  /* Apple Color Palette - Light Mode */
+  --background: 0 0% 98%;              /* #FAFAFA - Near-white, warm */
+  --foreground: 240 5% 12%;            /* #1D1D1F - Apple's signature dark gray */
 
-  --border: 214 20% 90%;
+  --border: 240 6% 90%;                /* #E5E5E7 - Subtle, barely there */
 
-  --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
-  --card-border: 214 20% 90%;
+  --card: 0 0% 100%;                   /* #FFFFFF - Pure white cards */
+  --card-foreground: 240 5% 12%;
+  --card-border: 240 6% 90%;
 
-  --sidebar: 210 25% 97%;
-  --sidebar-foreground: 222 47% 11%;
-  --sidebar-border: 214 20% 90%;
-  --sidebar-primary: 199 89% 48%;
+  --sidebar: 0 0% 98%;
+  --sidebar-foreground: 240 5% 12%;
+  --sidebar-border: 240 6% 90%;
+  --sidebar-primary: 211 100% 45%;     /* #0071E3 - Apple blue */
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 199 89% 95%;
-  --sidebar-accent-foreground: 199 89% 32%;
-  --sidebar-ring: 199 89% 48%;
+  --sidebar-accent: 211 100% 96%;
+  --sidebar-accent-foreground: 211 100% 35%;
+  --sidebar-ring: 211 100% 45%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
-  --popover-border: 214 20% 90%;
+  --popover-foreground: 240 5% 12%;
+  --popover-border: 240 6% 90%;
 
-  --primary: 199 89% 48%;
+  --primary: 211 100% 45%;             /* #0071E3 - Apple blue - trust, action */
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 210 14% 93%;
-  --secondary-foreground: 222 47% 11%;
+  --secondary: 240 5% 96%;
+  --secondary-foreground: 240 5% 12%;
 
-  --muted: 210 14% 96%;
-  --muted-foreground: 215 16% 47%;
+  --muted: 240 5% 96%;
+  --muted-foreground: 240 3% 53%;      /* #86868B - Secondary text */
 
-  --accent: 199 89% 95%;
-  --accent-foreground: 199 89% 32%;
+  --accent: 211 100% 96%;
+  --accent-foreground: 211 100% 35%;
 
-  --destructive: 0 84% 60%;
+  --success: 142 69% 49%;              /* #34C759 - Apple green */
+  --success-foreground: 0 0% 100%;
+
+  --warning: 35 100% 50%;              /* #FF9500 - Apple orange */
+  --warning-foreground: 0 0% 100%;
+
+  --destructive: 4 100% 59%;           /* #FF3B30 - Apple red */
   --destructive-foreground: 0 0% 100%;
 
-  --input: 214 20% 85%;
-  --ring: 199 89% 48%;
-  
-  --chart-1: 199 89% 48%;
-  --chart-2: 152 76% 36%;
-  --chart-3: 43 96% 56%;
-  --chart-4: 280 65% 60%;
-  --chart-5: 0 84% 60%;
+  --input: 240 6% 90%;
+  --ring: 211 100% 45%;
 
-  --font-sans: 'Inter', sans-serif;
+  --chart-1: 211 100% 45%;
+  --chart-2: 142 69% 49%;
+  --chart-3: 35 100% 50%;
+  --chart-4: 280 65% 60%;
+  --chart-5: 4 100% 59%;
+
+  /* Apple Typography */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
   --font-serif: Georgia, serif;
-  --font-mono: 'JetBrains Mono', monospace;
-  --radius: .5rem;
+  --font-mono: 'SF Mono', 'JetBrains Mono', monospace;
+
+  /* Apple Radius Scale */
+  --radius: 0.5rem;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  /* Apple Shadows - Light Mode (minimal) */
   --shadow-2xs: 0px 1px 2px 0px rgba(0, 0, 0, 0.03);
   --shadow-xs: 0px 1px 2px 0px rgba(0, 0, 0, 0.05);
   --shadow-sm: 0px 1px 3px 0px rgba(0, 0, 0, 0.05), 0px 1px 2px -1px rgba(0, 0, 0, 0.05);
@@ -72,6 +87,10 @@
   --shadow-2xl: 0px 25px 50px -12px rgba(0, 0, 0, 0.15);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
+
+  /* Apple Motion */
+  --ease-out: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-in-out: cubic-bezier(0.42, 0, 0.58, 1);
 
   --sidebar-primary-border: hsl(var(--sidebar-primary));
   --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
@@ -95,6 +114,7 @@
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 }
 
+/* DARK MODE - Apple-Inspired Design System */
 .dark {
   --button-outline: rgba(255,255,255, .10);
   --badge-outline: rgba(255,255,255, .05);
@@ -104,51 +124,58 @@
   --elevate-1: rgba(255,255,255, .04);
   --elevate-2: rgba(255,255,255, .09);
 
-  --background: 222 47% 8%;
-  --foreground: 210 20% 98%;
+  /* Apple Color Palette - Dark Mode */
+  --background: 0 0% 0%;               /* #000000 - True black for OLED */
+  --foreground: 240 20% 97%;           /* #F5F5F7 - Off-white text */
 
-  --border: 217 33% 17%;
+  --border: 240 3% 22%;                /* #38383A - Subtle separation */
 
-  --card: 222 47% 11%;
-  --card-foreground: 210 20% 98%;
-  --card-border: 217 33% 17%;
+  --card: 240 5% 11%;                  /* #1C1C1E - Elevated surface */
+  --card-foreground: 240 20% 97%;
+  --card-border: 240 3% 22%;
 
-  --sidebar: 222 47% 9%;
-  --sidebar-foreground: 210 20% 98%;
-  --sidebar-border: 217 33% 17%;
-  --sidebar-primary: 199 89% 48%;
+  --sidebar: 240 5% 6%;
+  --sidebar-foreground: 240 20% 97%;
+  --sidebar-border: 240 3% 22%;
+  --sidebar-primary: 211 100% 52%;     /* #0A84FF - Vibrant blue for dark */
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 199 89% 15%;
-  --sidebar-accent-foreground: 199 89% 70%;
-  --sidebar-ring: 199 89% 48%;
+  --sidebar-accent: 211 100% 20%;
+  --sidebar-accent-foreground: 211 100% 70%;
+  --sidebar-ring: 211 100% 52%;
 
-  --popover: 222 47% 11%;
-  --popover-foreground: 210 20% 98%;
-  --popover-border: 217 33% 17%;
+  --popover: 240 5% 11%;
+  --popover-foreground: 240 20% 97%;
+  --popover-border: 240 3% 22%;
 
-  --primary: 199 89% 48%;
+  --primary: 211 100% 52%;             /* #0A84FF - Vibrant blue for dark */
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 217 33% 17%;
-  --secondary-foreground: 210 20% 98%;
+  --secondary: 240 3% 22%;
+  --secondary-foreground: 240 20% 97%;
 
-  --muted: 217 33% 17%;
-  --muted-foreground: 215 16% 57%;
+  --muted: 240 3% 22%;
+  --muted-foreground: 240 3% 56%;      /* #8E8E93 - Secondary text */
 
-  --accent: 199 89% 20%;
-  --accent-foreground: 199 89% 80%;
+  --accent: 211 100% 20%;
+  --accent-foreground: 211 100% 70%;
 
-  --destructive: 0 72% 51%;
+  --success: 135 67% 51%;              /* #30D158 - Apple green for dark */
+  --success-foreground: 0 0% 100%;
+
+  --warning: 37 100% 52%;              /* #FF9F0A - Apple orange for dark */
+  --warning-foreground: 0 0% 100%;
+
+  --destructive: 4 100% 61%;           /* #FF453A - Apple red for dark */
   --destructive-foreground: 0 0% 100%;
 
-  --input: 217 33% 25%;
-  --ring: 199 89% 48%;
-  
-  --chart-1: 199 89% 48%;
-  --chart-2: 152 76% 46%;
-  --chart-3: 43 96% 56%;
+  --input: 240 3% 25%;
+  --ring: 211 100% 52%;
+
+  --chart-1: 211 100% 52%;
+  --chart-2: 135 67% 51%;
+  --chart-3: 37 100% 52%;
   --chart-4: 280 65% 60%;
-  --chart-5: 0 84% 60%;
+  --chart-5: 4 100% 61%;
 
   --shadow-2xs: 0px 1px 2px 0px rgba(0, 0, 0, 0.2);
   --shadow-xs: 0px 1px 2px 0px rgba(0, 0, 0, 0.3);
@@ -167,6 +194,9 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    font-feature-settings: "kern" 1, "liga" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
@@ -238,5 +268,41 @@
   .border.active-elevate-2:not(.no-active-interaction-elevate)::after,
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
     inset: -1px;
+  }
+
+  /* Apple Typography Utilities */
+  .apple-title {
+    font-size: 34px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+
+  .apple-headline {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+
+  .apple-body {
+    font-size: 15px;
+    font-weight: 400;
+    letter-spacing: 0;
+    line-height: 1.5;
+  }
+
+  .apple-caption {
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 0;
+    line-height: 1.4;
+  }
+
+  .apple-label {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    line-height: 1.3;
   }
 }
