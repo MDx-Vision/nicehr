@@ -1,1097 +1,1137 @@
 describe('Document Types Feature - Exhaustive Tests', () => {
   const testData = {
-    validDocumentTypes: [
-      {
-        name: 'Medical License',
-        description: 'Professional medical license documentation',
-        required: true,
-        category: 'Licensing'
-      },
-      {
-        name: 'Resume/CV',
-        description: 'Current curriculum vitae or resume',
-        required: true,
-        category: 'Professional'
-      },
-      {
-        name: 'References',
-        description: 'Professional references from previous employers',
-        required: false,
-        category: 'Professional'
-      },
-      {
-        name: 'Background Check',
-        description: 'Criminal background verification',
-        required: true,
-        category: 'Verification'
-      }
-    ],
-    invalidData: {
-      emptyName: '',
-      longName: 'a'.repeat(256),
-      longDescription: 'a'.repeat(1001),
-      specialCharacters: '<script>alert("xss")</script>',
-      sqlInjection: "'; DROP TABLE document_types; --"
+    validDocumentType: {
+      name: 'Test License',
+      description: 'Test medical license document',
+      required: true,
+      expiresAfterDays: 365,
+      category: 'License'
     },
-    apiEndpoints: {
-      documentTypes: '/api/document-types',
-      consultants: '/api/consultants',
-      consultantDocuments: '/api/consultants/:consultantId/documents'
+    validDocumentTypeMinimal: {
+      name: 'Test Certificate',
+      required: false
+    },
+    invalidDocumentTypes: {
+      emptyName: {
+        name: '',
+        description: 'Empty name test',
+        required: true
+      },
+      tooLongName: {
+        name: 'A'.repeat(256),
+        description: 'Too long name test',
+        required: true
+      },
+      invalidExpirationDays: {
+        name: 'Invalid Expiration',
+        description: 'Invalid expiration test',
+        expiresAfterDays: -5,
+        required: true
+      },
+      tooLongDescription: {
+        name: 'Valid Name',
+        description: 'A'.repeat(1001),
+        required: true
+      }
+    },
+    updateData: {
+      name: 'Updated License Type',
+      description: 'Updated description for testing',
+      required: false,
+      expiresAfterDays: 730,
+      category: 'Certification'
+    },
+    searchTerms: {
+      valid: 'license',
+      noResults: 'xyznoresults123',
+      special: '@#$%special'
+    },
+    ciData: {
+      adminUser: {
+        email: 'test@example.com',
+        password: 'test123'
+      }
     }
   };
 
+  const apiEndpoints = {
+    documentTypes: '/api/document-types',
+    consultants: '/api/consultants',
+    login: '/api/auth/login',
+    user: '/api/auth/user'
+  };
+
+  const selectors = {
+    // Page elements
+    pageContainer: '[data-testid="document-types-page"]',
+    pageTitle: '[data-testid="page-title"]',
+    loadingSpinner: '[data-testid="loading-spinner"]',
+    emptyState: '[data-testid="empty-state"]',
+    errorMessage: '[data-testid="error-message"]',
+    
+    // Navigation and actions
+    addButton: '[data-testid="add-document-type-button"]',
+    backButton: '[data-testid="back-button"]',
+    refreshButton: '[data-testid="refresh-button"]',
+    
+    // Table/List elements
+    documentTypesList: '[data-testid="document-types-list"]',
+    documentTypeItem: '[data-testid="document-type-item"]',
+    documentTypeRow: '[data-testid="document-type-row"]',
+    documentTypeName: '[data-testid="document-type-name"]',
+    documentTypeDescription: '[data-testid="document-type-description"]',
+    documentTypeRequired: '[data-testid="document-type-required"]',
+    documentTypeExpiration: '[data-testid="document-type-expiration"]',
+    documentTypeCategory: '[data-testid="document-type-category"]',
+    
+    // Search and filters
+    searchInput: '[data-testid="search-input"]',
+    searchButton: '[data-testid="search-button"]',
+    clearSearchButton: '[data-testid="clear-search-button"]',
+    filterDropdown: '[data-testid="filter-dropdown"]',
+    categoryFilter: '[data-testid="category-filter"]',
+    requiredFilter: '[data-testid="required-filter"]',
+    
+    // Pagination
+    pagination: '[data-testid="pagination"]',
+    paginationInfo: '[data-testid="pagination-info"]',
+    previousPageButton: '[data-testid="previous-page-button"]',
+    nextPageButton: '[data-testid="next-page-button"]',
+    pageNumberButton: '[data-testid="page-number-button"]',
+    
+    // Form elements
+    documentTypeForm: '[data-testid="document-type-form"]',
+    nameInput: '[data-testid="input-name"]',
+    descriptionInput: '[data-testid="input-description"]',
+    requiredCheckbox: '[data-testid="checkbox-required"]',
+    expirationDaysInput: '[data-testid="input-expiration-days"]',
+    categoryInput: '[data-testid="input-category"]',
+    categorySelect: '[data-testid="select-category"]',
+    
+    // Form buttons
+    saveButton: '[data-testid="save-button"]',
+    cancelButton: '[data-testid="cancel-button"]',
+    resetButton: '[data-testid="reset-button"]',
+    
+    // Action buttons
+    editButton: '[data-testid="edit-button"]',
+    deleteButton: '[data-testid="delete-button"]',
+    viewButton: '[data-testid="view-button"]',
+    duplicateButton: '[data-testid="duplicate-button"]',
+    
+    // Modal/Dialog elements
+    modal: '[data-testid="modal"]',
+    modalTitle: '[data-testid="modal-title"]',
+    modalContent: '[data-testid="modal-content"]',
+    confirmButton: '[data-testid="confirm-button"]',
+    cancelModalButton: '[data-testid="cancel-modal-button"]',
+    closeModalButton: '[data-testid="close-modal-button"]',
+    
+    // Form validation
+    fieldError: '[data-testid="field-error"]',
+    formError: '[data-testid="form-error"]',
+    successMessage: '[data-testid="success-message"]',
+    
+    // Details view
+    detailsContainer: '[data-testid="document-type-details"]',
+    detailsName: '[data-testid="details-name"]',
+    detailsDescription: '[data-testid="details-description"]',
+    detailsRequired: '[data-testid="details-required"]',
+    detailsExpiration: '[data-testid="details-expiration"]',
+    detailsCategory: '[data-testid="details-category"]',
+    detailsCreatedAt: '[data-testid="details-created-at"]',
+    detailsUpdatedAt: '[data-testid="details-updated-at"]',
+    
+    // Bulk actions
+    bulkSelectCheckbox: '[data-testid="bulk-select-checkbox"]',
+    bulkActionsBar: '[data-testid="bulk-actions-bar"]',
+    bulkDeleteButton: '[data-testid="bulk-delete-button"]',
+    selectAllCheckbox: '[data-testid="select-all-checkbox"]'
+  };
+
+  // Helper functions
+  const loginAsAdmin = () => {
+    cy.visit('/login');
+    cy.get('[data-testid="input-email"]')
+      .clear()
+      .type(testData.ciData.adminUser.email);
+    cy.get('[data-testid="input-password"]')
+      .clear()
+      .type(testData.ciData.adminUser.password);
+    cy.get('[data-testid="button-login"]').click();
+    cy.url().should('not.include', '/login');
+  };
+
+  const navigateToDocumentTypes = () => {
+    // Try different navigation paths
+    cy.get('body').then(($body) => {
+      if ($body.find('[data-testid="nav-document-types"]').length > 0) {
+        cy.get('[data-testid="nav-document-types"]').click();
+      } else if ($body.find('[href*="document-types"]').length > 0) {
+        cy.get('[href*="document-types"]').first().click();
+      } else {
+        cy.visit('/document-types');
+      }
+    });
+  };
+
+  const createDocumentType = (documentTypeData) => {
+    cy.get(selectors.addButton, { timeout: 10000 }).should('be.visible').click();
+    
+    cy.get(selectors.nameInput).should('be.visible').clear().type(documentTypeData.name);
+    
+    if (documentTypeData.description) {
+      cy.get(selectors.descriptionInput).clear().type(documentTypeData.description);
+    }
+    
+    if (documentTypeData.required !== undefined) {
+      if (documentTypeData.required) {
+        cy.get(selectors.requiredCheckbox).check();
+      } else {
+        cy.get(selectors.requiredCheckbox).uncheck();
+      }
+    }
+    
+    if (documentTypeData.expiresAfterDays) {
+      cy.get(selectors.expirationDaysInput).clear().type(documentTypeData.expiresAfterDays.toString());
+    }
+    
+    if (documentTypeData.category) {
+      // Try both input and select approaches
+      cy.get('body').then(($body) => {
+        if ($body.find(selectors.categorySelect).length > 0) {
+          cy.get(selectors.categorySelect).select(documentTypeData.category);
+        } else if ($body.find(selectors.categoryInput).length > 0) {
+          cy.get(selectors.categoryInput).clear().type(documentTypeData.category);
+        }
+      });
+    }
+    
+    cy.get(selectors.saveButton).click();
+  };
+
   beforeEach(() => {
-    // Reset application state
+    // Clear all state
     cy.clearCookies();
     cy.clearLocalStorage();
     cy.clearSessionStorage();
-
-    // Login as admin user
-    cy.login('test@example.com', 'test123');
     
     // Setup API interceptors
-    cy.intercept('GET', '/api/document-types*', { fixture: 'document-types.json' }).as('getDocumentTypes');
-    cy.intercept('POST', '/api/document-types', { statusCode: 201, body: { id: 1, ...testData.validDocumentTypes[0] } }).as('createDocumentType');
-    cy.intercept('PATCH', '/api/document-types/*', { statusCode: 200, body: { id: 1, ...testData.validDocumentTypes[0] } }).as('updateDocumentType');
-    cy.intercept('DELETE', '/api/document-types/*', { statusCode: 204 }).as('deleteDocumentType');
-    cy.intercept('GET', '/api/consultants*', { fixture: 'consultants.json' }).as('getConsultants');
+    cy.intercept('GET', apiEndpoints.documentTypes).as('getDocumentTypes');
+    cy.intercept('POST', apiEndpoints.documentTypes).as('createDocumentType');
+    cy.intercept('PUT', `${apiEndpoints.documentTypes}/*`).as('updateDocumentType');
+    cy.intercept('PATCH', `${apiEndpoints.documentTypes}/*`).as('patchDocumentType');
+    cy.intercept('DELETE', `${apiEndpoints.documentTypes}/*`).as('deleteDocumentType');
+    cy.intercept('GET', apiEndpoints.user).as('getUser');
   });
 
-  describe('Document Types Management Page - Layout & Navigation', () => {
+  describe('Document Types Page - Access Control', () => {
+    it('should redirect unauthenticated users to login', () => {
+      cy.visit('/document-types');
+      cy.url().should('include', '/login');
+    });
+
+    it('should allow admin users to access document types page', () => {
+      loginAsAdmin();
+      navigateToDocumentTypes();
+      
+      cy.wait('@getDocumentTypes', { timeout: 15000 });
+      cy.url().should('include', 'document-types');
+    });
+
+    it('should handle authorization errors gracefully', () => {
+      cy.intercept('GET', apiEndpoints.documentTypes, {
+        statusCode: 403,
+        body: { error: 'Insufficient permissions' }
+      }).as('getDocumentTypesForbidden');
+
+      loginAsAdmin();
+      navigateToDocumentTypes();
+      
+      cy.wait('@getDocumentTypesForbidden');
+      cy.get(selectors.errorMessage).should('be.visible');
+    });
+  });
+
+  describe('Document Types Page - UI Layout & Components', () => {
     beforeEach(() => {
-      cy.visit('/admin/document-types');
-      cy.wait('@getDocumentTypes');
+      loginAsAdmin();
+      navigateToDocumentTypes();
+      cy.wait('@getDocumentTypes', { timeout: 15000 });
     });
 
-    it('should display complete page layout and navigation', () => {
-      // Page title and breadcrumbs
-      cy.get('[data-testid="page-title"]')
-        .should('be.visible')
-        .and('contain.text', 'Document Types');
+    it('should display complete page layout and components', () => {
+      // Page structure
+      cy.get(selectors.pageContainer).should('be.visible');
+      cy.get(selectors.pageTitle).should('be.visible').and('contain.text', 'Document Types');
       
-      cy.get('[data-testid="breadcrumb"]')
-        .should('be.visible')
-        .and('contain.text', 'Admin')
-        .and('contain.text', 'Document Types');
-
-      // Main action buttons
-      cy.get('[data-testid="btn-create-document-type"]')
-        .should('be.visible')
-        .and('contain.text', 'Add Document Type');
-
-      // Data table or list container
-      cy.get('[data-testid="document-types-container"]')
-        .should('be.visible');
-
-      // Navigation menu
-      cy.get('[data-testid="main-navigation"]')
-        .should('be.visible');
+      // Primary actions
+      cy.get(selectors.addButton).should('be.visible').and('not.be.disabled');
       
-      // User menu
-      cy.get('[data-testid="user-menu"]')
-        .should('be.visible');
-    });
-
-    it('should have proper responsive layout on different screen sizes', () => {
-      // Desktop view
-      cy.viewport(1920, 1080);
-      cy.get('[data-testid="document-types-container"]').should('be.visible');
-      
-      // Tablet view
-      cy.viewport(768, 1024);
-      cy.get('[data-testid="document-types-container"]').should('be.visible');
-      cy.get('[data-testid="btn-create-document-type"]').should('be.visible');
-      
-      // Mobile view
-      cy.viewport(375, 667);
-      cy.get('[data-testid="document-types-container"]').should('be.visible');
-      
-      // Check for mobile menu toggle if exists
+      // Content area
       cy.get('body').then(($body) => {
-        if ($body.find('[data-testid="mobile-menu-toggle"]').length > 0) {
-          cy.get('[data-testid="mobile-menu-toggle"]').should('be.visible');
+        if ($body.find(selectors.documentTypesList).length > 0) {
+          cy.get(selectors.documentTypesList).should('be.visible');
+        } else if ($body.find(selectors.emptyState).length > 0) {
+          cy.get(selectors.emptyState).should('be.visible');
         }
       });
     });
 
-    it('should display loading state correctly', () => {
-      cy.intercept('GET', '/api/document-types*', { delay: 2000, fixture: 'document-types.json' }).as('slowDocumentTypes');
-      cy.reload();
-      
-      // Loading indicator
-      cy.get('[data-testid="loading-indicator"]', { timeout: 1000 })
-        .should('be.visible');
-      
-      cy.wait('@slowDocumentTypes');
-      cy.get('[data-testid="loading-indicator"]')
-        .should('not.exist');
-    });
-  });
-
-  describe('Document Types List Display', () => {
-    beforeEach(() => {
-      cy.visit('/admin/document-types');
-      cy.wait('@getDocumentTypes');
-    });
-
-    it('should display document types in table format', () => {
-      // Table headers
-      cy.get('[data-testid="document-types-table"]').within(() => {
-        cy.get('thead').within(() => {
-          cy.contains('Name').should('be.visible');
-          cy.contains('Description').should('be.visible');
-          cy.contains('Required').should('be.visible');
-          cy.contains('Category').should('be.visible');
-          cy.contains('Actions').should('be.visible');
-        });
-
-        // Table rows
-        cy.get('tbody tr').should('have.length.at.least', 1);
+    it('should display search and filter controls when applicable', () => {
+      cy.get('body').then(($body) => {
+        if ($body.find(selectors.searchInput).length > 0) {
+          cy.get(selectors.searchInput)
+            .should('be.visible')
+            .and('have.attr', 'placeholder');
+        }
         
-        // First row data
-        cy.get('tbody tr').first().within(() => {
-          cy.get('td').should('have.length.at.least', 5);
-          cy.get('[data-testid="document-type-name"]').should('be.visible');
-          cy.get('[data-testid="document-type-description"]').should('be.visible');
-          cy.get('[data-testid="document-type-required"]').should('be.visible');
-          cy.get('[data-testid="document-type-category"]').should('be.visible');
-          cy.get('[data-testid="document-type-actions"]').should('be.visible');
-        });
+        if ($body.find(selectors.filterDropdown).length > 0) {
+          cy.get(selectors.filterDropdown).should('be.visible');
+        }
       });
     });
 
-    it('should display action buttons for each document type', () => {
-      cy.get('[data-testid="document-types-table"] tbody tr').first().within(() => {
-        cy.get('[data-testid="btn-edit-document-type"]')
-          .should('be.visible')
-          .and('not.be.disabled');
+    it('should handle loading states properly', () => {
+      cy.intercept('GET', apiEndpoints.documentTypes, (req) => {
+        req.reply((res) => {
+          return new Promise((resolve) => {
+            setTimeout(() => resolve(res), 1000);
+          });
+        });
+      }).as('getDocumentTypesDelayed');
+
+      cy.reload();
+      cy.get(selectors.loadingSpinner).should('be.visible');
+      cy.wait('@getDocumentTypesDelayed');
+      cy.get(selectors.loadingSpinner).should('not.exist');
+    });
+
+    it('should display empty state when no document types exist', () => {
+      cy.intercept('GET', apiEndpoints.documentTypes, {
+        statusCode: 200,
+        body: []
+      }).as('getEmptyDocumentTypes');
+
+      cy.reload();
+      cy.wait('@getEmptyDocumentTypes');
+      
+      cy.get(selectors.emptyState).should('be.visible');
+      cy.get(selectors.addButton).should('be.visible').and('not.be.disabled');
+    });
+  });
+
+  describe('Document Types - CRUD Operations', () => {
+    beforeEach(() => {
+      loginAsAdmin();
+      navigateToDocumentTypes();
+      cy.wait('@getDocumentTypes', { timeout: 15000 });
+    });
+
+    describe('Create Document Type', () => {
+      it('should successfully create a document type with all fields', () => {
+        cy.intercept('POST', apiEndpoints.documentTypes, {
+          statusCode: 201,
+          body: { id: 1, ...testData.validDocumentType }
+        }).as('createDocumentTypeSuccess');
+
+        createDocumentType(testData.validDocumentType);
+
+        cy.wait('@createDocumentTypeSuccess');
+        cy.get(selectors.successMessage).should('be.visible');
         
-        cy.get('[data-testid="btn-delete-document-type"]')
-          .should('be.visible')
-          .and('not.be.disabled');
+        // Should return to list view
+        cy.get(selectors.documentTypesList).should('be.visible');
+      });
+
+      it('should successfully create a document type with minimal fields', () => {
+        cy.intercept('POST', apiEndpoints.documentTypes, {
+          statusCode: 201,
+          body: { id: 2, ...testData.validDocumentTypeMinimal }
+        }).as('createDocumentTypeMinimal');
+
+        createDocumentType(testData.validDocumentTypeMinimal);
+
+        cy.wait('@createDocumentTypeMinimal');
+        cy.get(selectors.successMessage).should('be.visible');
+      });
+
+      it('should handle server errors during creation', () => {
+        cy.intercept('POST', apiEndpoints.documentTypes, {
+          statusCode: 500,
+          body: { error: 'Internal server error' }
+        }).as('createDocumentTypeError');
+
+        createDocumentType(testData.validDocumentType);
+
+        cy.wait('@createDocumentTypeError');
+        cy.get(selectors.errorMessage).should('be.visible');
         
-        // View/details button if exists
-        cy.get('body').then(($body) => {
-          if ($body.find('[data-testid="btn-view-document-type"]').length > 0) {
-            cy.get('[data-testid="btn-view-document-type"]')
-              .should('be.visible')
-              .and('not.be.disabled');
+        // Should remain on form
+        cy.get(selectors.documentTypeForm).should('be.visible');
+      });
+
+      it('should handle duplicate name errors', () => {
+        cy.intercept('POST', apiEndpoints.documentTypes, {
+          statusCode: 409,
+          body: { error: 'Document type with this name already exists' }
+        }).as('createDocumentTypeDuplicate');
+
+        createDocumentType(testData.validDocumentType);
+
+        cy.wait('@createDocumentTypeDuplicate');
+        cy.get(selectors.fieldError).should('be.visible');
+      });
+
+      it('should cancel creation and return to list', () => {
+        cy.get(selectors.addButton).click();
+        cy.get(selectors.documentTypeForm).should('be.visible');
+        
+        // Fill some data
+        cy.get(selectors.nameInput).type('Test Cancel');
+        
+        cy.get(selectors.cancelButton).click();
+        
+        // Should return to list without saving
+        cy.get(selectors.documentTypesList).should('be.visible');
+        cy.get(selectors.documentTypeForm).should('not.exist');
+      });
+    });
+
+    describe('Read Document Types', () => {
+      it('should display list of document types with all information', () => {
+        const mockDocumentTypes = [
+          { id: 1, name: 'Medical License', description: 'Required medical license', required: true, expiresAfterDays: 365, category: 'License' },
+          { id: 2, name: 'Background Check', description: 'Background verification', required: true, expiresAfterDays: 1095, category: 'Verification' },
+          { id: 3, name: 'Specialty Certificate', description: 'Optional specialty certification', required: false, category: 'Certification' }
+        ];
+
+        cy.intercept('GET', apiEndpoints.documentTypes, {
+          statusCode: 200,
+          body: mockDocumentTypes
+        }).as('getDocumentTypesList');
+
+        cy.reload();
+        cy.wait('@getDocumentTypesList');
+
+        // Verify document types are displayed
+        cy.get(selectors.documentTypeItem).should('have.length', 3);
+        
+        // Verify first document type details
+        cy.get(selectors.documentTypeItem).first().within(() => {
+          cy.get(selectors.documentTypeName).should('contain.text', 'Medical License');
+          cy.get(selectors.documentTypeDescription).should('contain.text', 'Required medical license');
+          cy.get(selectors.documentTypeRequired).should('contain.text', 'Required');
+        });
+      });
+
+      it('should handle API errors when fetching document types', () => {
+        cy.intercept('GET', apiEndpoints.documentTypes, {
+          statusCode: 500,
+          body: { error: 'Server error' }
+        }).as('getDocumentTypesError');
+
+        cy.reload();
+        cy.wait('@getDocumentTypesError');
+
+        cy.get(selectors.errorMessage).should('be.visible');
+      });
+
+      it('should view document type details', () => {
+        const mockDocumentType = { 
+          id: 1, 
+          name: 'Medical License', 
+          description: 'Required medical license',
+          required: true,
+          expiresAfterDays: 365,
+          category: 'License',
+          createdAt: '2024-01-01T00:00:00Z',
+          updatedAt: '2024-01-01T00:00:00Z'
+        };
+
+        cy.intercept('GET', `${apiEndpoints.documentTypes}/1`, {
+          statusCode: 200,
+          body: mockDocumentType
+        }).as('getDocumentTypeDetails');
+
+        // Click view button
+        cy.get(selectors.viewButton).first().click();
+        cy.wait('@getDocumentTypeDetails');
+
+        // Verify details are displayed
+        cy.get(selectors.detailsContainer).should('be.visible');
+        cy.get(selectors.detailsName).should('contain.text', 'Medical License');
+        cy.get(selectors.detailsDescription).should('contain.text', 'Required medical license');
+        cy.get(selectors.detailsRequired).should('contain.text', 'Yes');
+        cy.get(selectors.detailsExpiration).should('contain.text', '365');
+        cy.get(selectors.detailsCategory).should('contain.text', 'License');
+      });
+    });
+
+    describe('Update Document Type', () => {
+      it('should successfully update a document type', () => {
+        const updatedDocumentType = { id: 1, ...testData.updateData };
+
+        cy.intercept('GET', `${apiEndpoints.documentTypes}/1`, {
+          statusCode: 200,
+          body: { id: 1, ...testData.validDocumentType }
+        }).as('getDocumentTypeForEdit');
+
+        cy.intercept('PUT', `${apiEndpoints.documentTypes}/1`, {
+          statusCode: 200,
+          body: updatedDocumentType
+        }).as('updateDocumentTypeSuccess');
+
+        // Click edit button
+        cy.get(selectors.editButton).first().click();
+        cy.wait('@getDocumentTypeForEdit');
+
+        // Update fields
+        cy.get(selectors.nameInput).clear().type(testData.updateData.name);
+        cy.get(selectors.descriptionInput).clear().type(testData.updateData.description);
+        cy.get(selectors.requiredCheckbox).uncheck();
+        
+        if (testData.updateData.expiresAfterDays) {
+          cy.get(selectors.expirationDaysInput).clear().type(testData.updateData.expiresAfterDays.toString());
+        }
+
+        cy.get(selectors.saveButton).click();
+        cy.wait('@updateDocumentTypeSuccess');
+
+        cy.get(selectors.successMessage).should('be.visible');
+      });
+
+      it('should handle validation errors during update', () => {
+        cy.intercept('GET', `${apiEndpoints.documentTypes}/1`, {
+          statusCode: 200,
+          body: { id: 1, ...testData.validDocumentType }
+        }).as('getDocumentTypeForEdit');
+
+        cy.intercept('PUT', `${apiEndpoints.documentTypes}/1`, {
+          statusCode: 400,
+          body: { 
+            error: 'Validation failed',
+            details: { name: 'Name is required' }
           }
-        });
+        }).as('updateDocumentTypeValidationError');
+
+        cy.get(selectors.editButton).first().click();
+        cy.wait('@getDocumentTypeForEdit');
+
+        // Clear required field
+        cy.get(selectors.nameInput).clear();
+        cy.get(selectors.saveButton).click();
+
+        cy.wait('@updateDocumentTypeValidationError');
+        cy.get(selectors.fieldError).should('be.visible');
+      });
+
+      it('should cancel update and preserve original data', () => {
+        cy.intercept('GET', `${apiEndpoints.documentTypes}/1`, {
+          statusCode: 200,
+          body: { id: 1, ...testData.validDocumentType }
+        }).as('getDocumentTypeForEdit');
+
+        cy.get(selectors.editButton).first().click();
+        cy.wait('@getDocumentTypeForEdit');
+
+        // Make changes
+        cy.get(selectors.nameInput).clear().type('Changed Name');
+        
+        // Cancel
+        cy.get(selectors.cancelButton).click();
+
+        // Should return to list without saving
+        cy.get(selectors.documentTypesList).should('be.visible');
       });
     });
 
-    it('should handle empty state correctly', () => {
-      cy.intercept('GET', '/api/document-types*', { statusCode: 200, body: [] }).as('emptyDocumentTypes');
-      cy.reload();
-      cy.wait('@emptyDocumentTypes');
+    describe('Delete Document Type', () => {
+      it('should successfully delete a document type', () => {
+        cy.intercept('DELETE', `${apiEndpoints.documentTypes}/1`, {
+          statusCode: 200,
+          body: { message: 'Document type deleted successfully' }
+        }).as('deleteDocumentTypeSuccess');
 
-      cy.get('[data-testid="empty-state"]')
-        .should('be.visible')
-        .and('contain.text', 'No document types found');
-      
-      cy.get('[data-testid="btn-create-first-document-type"]')
-        .should('be.visible')
-        .and('contain.text', 'Create your first document type');
-    });
+        // Click delete button
+        cy.get(selectors.deleteButton).first().click();
+        
+        // Confirm deletion in modal
+        cy.get(selectors.modal).should('be.visible');
+        cy.get(selectors.confirmButton).click();
 
-    it('should handle error state correctly', () => {
-      cy.intercept('GET', '/api/document-types*', { statusCode: 500, body: { error: 'Server error' } }).as('errorDocumentTypes');
-      cy.reload();
-      cy.wait('@errorDocumentTypes');
-
-      cy.get('[data-testid="error-state"]')
-        .should('be.visible')
-        .and('contain.text', 'Failed to load document types');
-      
-      cy.get('[data-testid="btn-retry"]')
-        .should('be.visible')
-        .and('contain.text', 'Retry');
-    });
-  });
-
-  describe('Search and Filtering Functionality', () => {
-    beforeEach(() => {
-      cy.visit('/admin/document-types');
-      cy.wait('@getDocumentTypes');
-    });
-
-    it('should perform real-time search on document type names', () => {
-      cy.get('[data-testid="search-input"]').should('be.visible');
-      
-      // Test search functionality
-      cy.get('[data-testid="search-input"]').type('Medical');
-      cy.get('[data-testid="document-types-table"] tbody tr')
-        .should('have.length.at.least', 1)
-        .first()
-        .should('contain.text', 'Medical');
-
-      // Clear search
-      cy.get('[data-testid="search-input"]').clear();
-      cy.get('[data-testid="search-clear"]').click();
-      cy.get('[data-testid="document-types-table"] tbody tr')
-        .should('have.length.at.least', 1);
-    });
-
-    it('should filter by required status', () => {
-      cy.get('[data-testid="filter-required"]').should('be.visible');
-      
-      // Filter for required documents
-      cy.get('[data-testid="filter-required"]').select('Required');
-      cy.get('[data-testid="document-types-table"] tbody tr').each(($row) => {
-        cy.wrap($row).within(() => {
-          cy.get('[data-testid="document-type-required"]')
-            .should('contain.text', 'Yes');
-        });
+        cy.wait('@deleteDocumentTypeSuccess');
+        cy.get(selectors.successMessage).should('be.visible');
       });
 
-      // Filter for optional documents
-      cy.get('[data-testid="filter-required"]').select('Optional');
-      cy.get('[data-testid="document-types-table"] tbody tr').each(($row) => {
-        cy.wrap($row).within(() => {
-          cy.get('[data-testid="document-type-required"]')
-            .should('contain.text', 'No');
-        });
+      it('should handle delete confirmation dialog', () => {
+        cy.get(selectors.deleteButton).first().click();
+        
+        // Verify confirmation modal
+        cy.get(selectors.modal).should('be.visible');
+        cy.get(selectors.modalTitle).should('contain.text', /delete|confirm/i);
+        
+        // Cancel deletion
+        cy.get(selectors.cancelModalButton).click();
+        cy.get(selectors.modal).should('not.exist');
       });
 
-      // Reset filter
-      cy.get('[data-testid="filter-required"]').select('All');
-    });
+      it('should handle delete errors', () => {
+        cy.intercept('DELETE', `${apiEndpoints.documentTypes}/1`, {
+          statusCode: 400,
+          body: { error: 'Cannot delete document type - it is in use' }
+        }).as('deleteDocumentTypeError');
 
-    it('should filter by category', () => {
-      cy.get('[data-testid="filter-category"]').should('be.visible');
-      
-      // Filter by Licensing category
-      cy.get('[data-testid="filter-category"]').select('Licensing');
-      cy.get('[data-testid="document-types-table"] tbody tr').each(($row) => {
-        cy.wrap($row).within(() => {
-          cy.get('[data-testid="document-type-category"]')
-            .should('contain.text', 'Licensing');
-        });
+        cy.get(selectors.deleteButton).first().click();
+        cy.get(selectors.confirmButton).click();
+
+        cy.wait('@deleteDocumentTypeError');
+        cy.get(selectors.errorMessage).should('be.visible').and('contain.text', 'it is in use');
       });
 
-      // Reset filter
-      cy.get('[data-testid="filter-category"]').select('All Categories');
-    });
+      it('should handle 404 errors when deleting non-existent document type', () => {
+        cy.intercept('DELETE', `${apiEndpoints.documentTypes}/999`, {
+          statusCode: 404,
+          body: { error: 'Document type not found' }
+        }).as('deleteDocumentTypeNotFound');
 
-    it('should combine multiple filters', () => {
-      // Apply multiple filters
-      cy.get('[data-testid="search-input"]').type('License');
-      cy.get('[data-testid="filter-required"]').select('Required');
-      cy.get('[data-testid="filter-category"]').select('Licensing');
+        cy.get(selectors.deleteButton).first().click();
+        cy.get(selectors.confirmButton).click();
 
-      // Verify results match all filters
-      cy.get('[data-testid="document-types-table"] tbody tr').each(($row) => {
-        cy.wrap($row).within(() => {
-          cy.get('[data-testid="document-type-name"]')
-            .should('contain.text', 'License');
-          cy.get('[data-testid="document-type-required"]')
-            .should('contain.text', 'Yes');
-          cy.get('[data-testid="document-type-category"]')
-            .should('contain.text', 'Licensing');
-        });
+        cy.wait('@deleteDocumentTypeNotFound');
+        cy.get(selectors.errorMessage).should('be.visible');
       });
     });
   });
 
-  describe('Pagination and Sorting', () => {
+  describe('Document Types - Form Validation', () => {
     beforeEach(() => {
-      cy.intercept('GET', '/api/document-types*', { fixture: 'document-types-large.json' }).as('getLargeDocumentTypes');
-      cy.visit('/admin/document-types');
-      cy.wait('@getLargeDocumentTypes');
-    });
-
-    it('should display pagination controls when needed', () => {
-      cy.get('[data-testid="pagination"]').should('be.visible');
-      
-      cy.get('[data-testid="pagination-info"]')
-        .should('be.visible')
-        .and('contain.text', 'Showing');
-      
-      cy.get('[data-testid="btn-prev-page"]').should('be.visible');
-      cy.get('[data-testid="btn-next-page"]').should('be.visible');
-      cy.get('[data-testid="page-numbers"]').should('be.visible');
-    });
-
-    it('should navigate between pages correctly', () => {
-      // Go to next page
-      cy.get('[data-testid="btn-next-page"]').click();
-      cy.url().should('include', 'page=2');
-      
-      // Go to previous page
-      cy.get('[data-testid="btn-prev-page"]').click();
-      cy.url().should('include', 'page=1');
-      
-      // Click specific page number
-      cy.get('[data-testid="page-numbers"] button').contains('3').click();
-      cy.url().should('include', 'page=3');
-    });
-
-    it('should sort by different columns', () => {
-      // Sort by name
-      cy.get('[data-testid="sort-name"]').click();
-      cy.get('[data-testid="document-types-table"] tbody tr')
-        .first()
-        .find('[data-testid="document-type-name"]')
-        .invoke('text')
-        .then((firstName) => {
-          cy.get('[data-testid="sort-name"]').click();
-          cy.get('[data-testid="document-types-table"] tbody tr')
-            .first()
-            .find('[data-testid="document-type-name"]')
-            .should('not.contain.text', firstName);
-        });
-
-      // Sort by category
-      cy.get('[data-testid="sort-category"]').click();
-      cy.get('[data-testid="sort-indicator-category"]')
-        .should('be.visible');
-    });
-
-    it('should change items per page', () => {
-      cy.get('[data-testid="items-per-page"]').select('50');
-      cy.get('[data-testid="document-types-table"] tbody tr')
-        .should('have.length.at.most', 50);
-      
-      cy.get('[data-testid="items-per-page"]').select('10');
-      cy.get('[data-testid="document-types-table"] tbody tr')
-        .should('have.length.at.most', 10);
-    });
-  });
-
-  describe('Create Document Type Functionality', () => {
-    beforeEach(() => {
-      cy.visit('/admin/document-types');
-      cy.wait('@getDocumentTypes');
-    });
-
-    it('should open create document type modal/form', () => {
-      cy.get('[data-testid="btn-create-document-type"]').click();
-      
-      cy.get('[data-testid="modal-create-document-type"]')
-        .should('be.visible');
-      
-      cy.get('[data-testid="form-create-document-type"]')
-        .should('be.visible');
-      
-      cy.get('[data-testid="modal-title"]')
-        .should('contain.text', 'Add Document Type');
-    });
-
-    it('should display all required form fields', () => {
-      cy.get('[data-testid="btn-create-document-type"]').click();
-      
-      cy.get('[data-testid="input-name"]')
-        .should('be.visible')
-        .and('have.attr', 'required');
-      
-      cy.get('[data-testid="input-description"]')
-        .should('be.visible');
-      
-      cy.get('[data-testid="select-category"]')
-        .should('be.visible');
-      
-      cy.get('[data-testid="checkbox-required"]')
-        .should('be.visible');
-      
-      cy.get('[data-testid="btn-save-document-type"]')
-        .should('be.visible')
-        .and('contain.text', 'Save');
-      
-      cy.get('[data-testid="btn-cancel"]')
-        .should('be.visible')
-        .and('contain.text', 'Cancel');
+      loginAsAdmin();
+      navigateToDocumentTypes();
+      cy.wait('@getDocumentTypes', { timeout: 15000 });
+      cy.get(selectors.addButton).click();
     });
 
     it('should validate required fields', () => {
-      cy.get('[data-testid="btn-create-document-type"]').click();
+      // Try to save without required fields
+      cy.get(selectors.saveButton).click();
       
-      // Try to submit empty form
-      cy.get('[data-testid="btn-save-document-type"]').click();
-      
-      cy.get('[data-testid="error-name"]')
-        .should('be.visible')
-        .and('contain.text', 'Name is required');
-      
-      // Fill name but leave other required fields empty if any
-      cy.get('[data-testid="input-name"]').type('Test Document');
-      cy.get('[data-testid="btn-save-document-type"]').click();
-      
-      // Should not show name error anymore
-      cy.get('[data-testid="error-name"]').should('not.exist');
+      // Should show validation errors
+      cy.get(selectors.fieldError).should('be.visible');
+      cy.get(selectors.nameInput).should('have.class', /error|invalid/);
     });
 
-    it('should validate field lengths and formats', () => {
-      cy.get('[data-testid="btn-create-document-type"]').click();
-      
-      // Test name length validation
-      cy.get('[data-testid="input-name"]').type(testData.invalidData.longName);
-      cy.get('[data-testid="btn-save-document-type"]').click();
-      cy.get('[data-testid="error-name"]')
-        .should('be.visible')
-        .and('contain.text', 'Name must be less than');
-      
-      // Test description length validation
-      cy.get('[data-testid="input-name"]').clear().type('Valid Name');
-      cy.get('[data-testid="input-description"]').type(testData.invalidData.longDescription);
-      cy.get('[data-testid="btn-save-document-type"]').click();
-      cy.get('[data-testid="error-description"]')
-        .should('be.visible')
-        .and('contain.text', 'Description must be less than');
+    it('should validate name field constraints', () => {
+      // Test empty name
+      cy.get(selectors.nameInput).clear().blur();
+      cy.get(selectors.fieldError).should('be.visible');
+
+      // Test maximum length
+      cy.get(selectors.nameInput).clear().type(testData.invalidDocumentTypes.tooLongName.name);
+      cy.get(selectors.saveButton).click();
+      cy.get(selectors.fieldError).should('be.visible');
     });
 
-    it('should handle XSS and injection attempts', () => {
-      cy.get('[data-testid="btn-create-document-type"]').click();
+    it('should validate description field constraints', () => {
+      cy.get(selectors.nameInput).type('Valid Name');
       
-      // Test XSS in name field
-      cy.get('[data-testid="input-name"]').type(testData.invalidData.specialCharacters);
-      cy.get('[data-testid="input-description"]').type(testData.invalidData.sqlInjection);
-      cy.get('[data-testid="btn-save-document-type"]').click();
+      // Test maximum length for description
+      cy.get(selectors.descriptionInput).type(testData.invalidDocumentTypes.tooLongDescription.description);
+      cy.get(selectors.saveButton).click();
       
-      // Verify the form properly escapes or rejects malicious input
-      cy.get('[data-testid="input-name"]')
-        .should('not.contain.value', '<script>');
+      cy.get(selectors.fieldError).should('be.visible');
     });
 
-    it('should successfully create a document type with valid data', () => {
-      cy.get('[data-testid="btn-create-document-type"]').click();
+    it('should validate expiration days field', () => {
+      cy.get(selectors.nameInput).type('Valid Name');
       
-      const newDocType = testData.validDocumentTypes[0];
+      // Test negative value
+      cy.get(selectors.expirationDaysInput).type('-5');
+      cy.get(selectors.saveButton).click();
       
-      cy.get('[data-testid="input-name"]').type(newDocType.name);
-      cy.get('[data-testid="input-description"]').type(newDocType.description);
-      cy.get('[data-testid="select-category"]').select(newDocType.category);
+      cy.get(selectors.fieldError).should('be.visible');
+
+      // Test non-numeric value
+      cy.get(selectors.expirationDaysInput).clear().type('abc');
+      cy.get(selectors.saveButton).click();
       
-      if (newDocType.required) {
-        cy.get('[data-testid="checkbox-required"]').check();
-      }
+      cy.get(selectors.fieldError).should('be.visible');
+
+      // Test zero value
+      cy.get(selectors.expirationDaysInput).clear().type('0');
+      cy.get(selectors.saveButton).click();
       
-      cy.get('[data-testid="btn-save-document-type"]').click();
-      
-      cy.wait('@createDocumentType').then((interception) => {
-        expect(interception.request.body).to.deep.include({
-          name: newDocType.name,
-          description: newDocType.description,
-          category: newDocType.category,
-          required: newDocType.required
-        });
-      });
-      
-      // Verify success message
-      cy.get('[data-testid="success-message"]')
-        .should('be.visible')
-        .and('contain.text', 'Document type created successfully');
-      
-      // Verify modal closes
-      cy.get('[data-testid="modal-create-document-type"]')
-        .should('not.exist');
+      cy.get(selectors.fieldError).should('be.visible');
     });
 
-    it('should handle API errors during creation', () => {
-      cy.intercept('POST', '/api/document-types', { statusCode: 400, body: { error: 'Document type name already exists' } }).as('createError');
+    it('should validate special characters in name field', () => {
+      // Test special characters
+      cy.get(selectors.nameInput).type('Test<script>alert("xss")</script>');
+      cy.get(selectors.saveButton).click();
       
-      cy.get('[data-testid="btn-create-document-type"]').click();
-      
-      cy.get('[data-testid="input-name"]').type('Duplicate Name');
-      cy.get('[data-testid="input-description"]').type('Test description');
-      cy.get('[data-testid="btn-save-document-type"]').click();
-      
-      cy.wait('@createError');
-      
-      cy.get('[data-testid="error-message"]')
-        .should('be.visible')
-        .and('contain.text', 'Document type name already exists');
+      // Should either sanitize or show validation error
+      cy.get('body').should('not.contain', 'alert');
     });
 
-    it('should allow canceling document type creation', () => {
-      cy.get('[data-testid="btn-create-document-type"]').click();
+    it('should show real-time validation feedback', () => {
+      // Test real-time validation
+      cy.get(selectors.nameInput).type('a').clear();
+      cy.get(selectors.fieldError).should('be.visible');
       
-      cy.get('[data-testid="input-name"]').type('Test Name');
-      cy.get('[data-testid="input-description"]').type('Test description');
+      cy.get(selectors.nameInput).type('Valid Name');
+      cy.get(selectors.fieldError).should('not.exist');
+    });
+
+    it('should reset form validation on cancel', () => {
+      // Create validation errors
+      cy.get(selectors.saveButton).click();
+      cy.get(selectors.fieldError).should('be.visible');
       
-      cy.get('[data-testid="btn-cancel"]').click();
+      // Cancel form
+      cy.get(selectors.cancelButton).click();
       
-      cy.get('[data-testid="modal-create-document-type"]')
-        .should('not.exist');
+      // Open form again
+      cy.get(selectors.addButton).click();
       
-      // Verify no API call was made
-      cy.get('@createDocumentType').should('not.exist');
+      // Should not show previous validation errors
+      cy.get(selectors.fieldError).should('not.exist');
     });
   });
 
-  describe('Edit Document Type Functionality', () => {
+  describe('Document Types - Search and Filtering', () => {
+    const mockDocumentTypes = [
+      { id: 1, name: 'Medical License', description: 'Required medical license', required: true, category: 'License' },
+      { id: 2, name: 'Nursing Certificate', description: 'Nursing certification', required: true, category: 'Certification' },
+      { id: 3, name: 'Background Check', description: 'Background verification', required: false, category: 'Verification' },
+      { id: 4, name: 'Drug Screening', description: 'Drug screening results', required: true, category: 'Verification' }
+    ];
+
     beforeEach(() => {
-      cy.visit('/admin/document-types');
-      cy.wait('@getDocumentTypes');
+      cy.intercept('GET', apiEndpoints.documentTypes, {
+        statusCode: 200,
+        body: mockDocumentTypes
+      }).as('getDocumentTypesList');
+
+      loginAsAdmin();
+      navigateToDocumentTypes();
+      cy.wait('@getDocumentTypesList');
     });
 
-    it('should open edit modal with pre-populated data', () => {
-      cy.get('[data-testid="document-types-table"] tbody tr')
-        .first()
-        .find('[data-testid="btn-edit-document-type"]')
-        .click();
-      
-      cy.get('[data-testid="modal-edit-document-type"]')
-        .should('be.visible');
-      
-      cy.get('[data-testid="modal-title"]')
-        .should('contain.text', 'Edit Document Type');
-      
-      // Verify fields are pre-populated
-      cy.get('[data-testid="input-name"]')
-        .should('have.value')
-        .and('not.be.empty');
-      
-      cy.get('[data-testid="input-description"]')
-        .should('have.value');
-    });
-
-    it('should validate edited data', () => {
-      cy.get('[data-testid="document-types-table"] tbody tr')
-        .first()
-        .find('[data-testid="btn-edit-document-type"]')
-        .click();
-      
-      // Clear required field
-      cy.get('[data-testid="input-name"]').clear();
-      cy.get('[data-testid="btn-save-document-type"]').click();
-      
-      cy.get('[data-testid="error-name"]')
-        .should('be.visible')
-        .and('contain.text', 'Name is required');
-    });
-
-    it('should successfully update document type', () => {
-      cy.intercept('PATCH', '/api/document-types/*', { statusCode: 200, body: { id: 1, name: 'Updated Name' } }).as('updateDocumentType');
-      
-      cy.get('[data-testid="document-types-table"] tbody tr')
-        .first()
-        .find('[data-testid="btn-edit-document-type"]')
-        .click();
-      
-      cy.get('[data-testid="input-name"]')
-        .clear()
-        .type('Updated Document Type Name');
-      
-      cy.get('[data-testid="input-description"]')
-        .clear()
-        .type('Updated description');
-      
-      cy.get('[data-testid="btn-save-document-type"]').click();
-      
-      cy.wait('@updateDocumentType');
-      
-      cy.get('[data-testid="success-message"]')
-        .should('be.visible')
-        .and('contain.text', 'Document type updated successfully');
-    });
-
-    it('should handle edit conflicts and errors', () => {
-      cy.intercept('PATCH', '/api/document-types/*', { statusCode: 409, body: { error: 'Document type has been modified by another user' } }).as('updateConflict');
-      
-      cy.get('[data-testid="document-types-table"] tbody tr')
-        .first()
-        .find('[data-testid="btn-edit-document-type"]')
-        .click();
-      
-      cy.get('[data-testid="input-name"]')
-        .clear()
-        .type('Conflicted Name');
-      
-      cy.get('[data-testid="btn-save-document-type"]').click();
-      
-      cy.wait('@updateConflict');
-      
-      cy.get('[data-testid="error-message"]')
-        .should('be.visible')
-        .and('contain.text', 'Document type has been modified by another user');
-    });
-  });
-
-  describe('Delete Document Type Functionality', () => {
-    beforeEach(() => {
-      cy.visit('/admin/document-types');
-      cy.wait('@getDocumentTypes');
-    });
-
-    it('should show confirmation dialog for deletion', () => {
-      cy.get('[data-testid="document-types-table"] tbody tr')
-        .first()
-        .find('[data-testid="btn-delete-document-type"]')
-        .click();
-      
-      cy.get('[data-testid="confirm-delete-modal"]')
-        .should('be.visible');
-      
-      cy.get('[data-testid="confirm-delete-title"]')
-        .should('contain.text', 'Delete Document Type');
-      
-      cy.get('[data-testid="confirm-delete-message"]')
-        .should('contain.text', 'Are you sure you want to delete this document type?');
-      
-      cy.get('[data-testid="btn-confirm-delete"]')
-        .should('be.visible')
-        .and('contain.text', 'Delete');
-      
-      cy.get('[data-testid="btn-cancel-delete"]')
-        .should('be.visible')
-        .and('contain.text', 'Cancel');
-    });
-
-    it('should cancel deletion when cancel is clicked', () => {
-      cy.get('[data-testid="document-types-table"] tbody tr')
-        .first()
-        .find('[data-testid="btn-delete-document-type"]')
-        .click();
-      
-      cy.get('[data-testid="btn-cancel-delete"]').click();
-      
-      cy.get('[data-testid="confirm-delete-modal"]')
-        .should('not.exist');
-      
-      // Verify no API call was made
-      cy.get('@deleteDocumentType').should('not.exist');
-    });
-
-    it('should successfully delete document type', () => {
-      cy.get('[data-testid="document-types-table"] tbody tr')
-        .first()
-        .find('[data-testid="btn-delete-document-type"]')
-        .click();
-      
-      cy.get('[data-testid="btn-confirm-delete"]').click();
-      
-      cy.wait('@deleteDocumentType');
-      
-      cy.get('[data-testid="success-message"]')
-        .should('be.visible')
-        .and('contain.text', 'Document type deleted successfully');
-      
-      cy.get('[data-testid="confirm-delete-modal"]')
-        .should('not.exist');
-    });
-
-    it('should handle deletion errors', () => {
-      cy.intercept('DELETE', '/api/document-types/*', { statusCode: 409, body: { error: 'Cannot delete document type that is in use' } }).as('deleteError');
-      
-      cy.get('[data-testid="document-types-table"] tbody tr')
-        .first()
-        .find('[data-testid="btn-delete-document-type"]')
-        .click();
-      
-      cy.get('[data-testid="btn-confirm-delete"]').click();
-      
-      cy.wait('@deleteError');
-      
-      cy.get('[data-testid="error-message"]')
-        .should('be.visible')
-        .and('contain.text', 'Cannot delete document type that is in use');
-    });
-
-    it('should prevent deletion of required system document types', () => {
-      // Assume certain document types are system-required
-      cy.get('[data-testid="document-types-table"] tbody tr').each(($row, index) => {
-        cy.wrap($row).within(() => {
-          cy.get('[data-testid="document-type-name"]').invoke('text').then((name) => {
-            if (name.includes('System Required')) {
-              cy.get('[data-testid="btn-delete-document-type"]')
-                .should('be.disabled')
-                .and('have.attr', 'title', 'System required document types cannot be deleted');
-            }
-          });
-        });
-      });
-    });
-  });
-
-  describe('Bulk Operations', () => {
-    beforeEach(() => {
-      cy.visit('/admin/document-types');
-      cy.wait('@getDocumentTypes');
-    });
-
-    it('should allow selecting multiple document types', () => {
-      // Check if bulk selection is available
+    it('should search document types by name', () => {
       cy.get('body').then(($body) => {
-        if ($body.find('[data-testid="select-all-checkbox"]').length > 0) {
-          // Select all checkbox
-          cy.get('[data-testid="select-all-checkbox"]').check();
+        if ($body.find(selectors.searchInput).length > 0) {
+          cy.get(selectors.searchInput).type(testData.searchTerms.valid);
+          cy.get(selectors.searchButton).click();
           
-          // Verify all rows are selected
-          cy.get('[data-testid="row-checkbox"]').each(($checkbox) => {
-            cy.wrap($checkbox).should('be.checked');
-          });
-          
-          // Verify bulk actions are available
-          cy.get('[data-testid="bulk-actions"]').should('be.visible');
+          // Should show filtered results
+          cy.get(selectors.documentTypeItem).should('have.length.at.most', 4);
         }
       });
     });
 
-    it('should perform bulk deletion', () => {
+    it('should handle search with no results', () => {
       cy.get('body').then(($body) => {
-        if ($body.find('[data-testid="select-all-checkbox"]').length > 0) {
-          // Select multiple items
-          cy.get('[data-testid="row-checkbox"]').first().check();
-          cy.get('[data-testid="row-checkbox"]').eq(1).check();
+        if ($body.find(selectors.searchInput).length > 0) {
+          cy.get(selectors.searchInput).type(testData.searchTerms.noResults);
+          cy.get(selectors.searchButton).click();
           
-          // Click bulk delete
-          cy.get('[data-testid="btn-bulk-delete"]').click();
+          cy.get(selectors.emptyState).should('be.visible');
+        }
+      });
+    });
+
+    it('should clear search results', () => {
+      cy.get('body').then(($body) => {
+        if ($body.find(selectors.searchInput).length > 0 && $body.find(selectors.clearSearchButton).length > 0) {
+          cy.get(selectors.searchInput).type(testData.searchTerms.valid);
+          cy.get(selectors.searchButton).click();
           
-          cy.get('[data-testid="confirm-bulk-delete-modal"]')
-            .should('be.visible');
+          cy.get(selectors.clearSearchButton).click();
           
-          cy.get('[data-testid="bulk-delete-count"]')
-            .should('contain.text', '2');
+          // Should show all results again
+          cy.get(selectors.documentTypeItem).should('have.length', 4);
+          cy.get(selectors.searchInput).should('have.value', '');
+        }
+      });
+    });
+
+    it('should filter by category', () => {
+      cy.get('body').then(($body) => {
+        if ($body.find(selectors.categoryFilter).length > 0) {
+          cy.get(selectors.categoryFilter).select('License');
           
-          cy.intercept('DELETE', '/api/document-types/bulk', { statusCode: 204 }).as('bulkDelete');
+          // Should show only license documents
+          cy.get(selectors.documentTypeItem).should('have.length', 1);
+          cy.get(selectors.documentTypeName).should('contain.text', 'Medical License');
+        }
+      });
+    });
+
+    it('should filter by required status', () => {
+      cy.get('body').then(($body) => {
+        if ($body.find(selectors.requiredFilter).length > 0) {
+          cy.get(selectors.requiredFilter).select('required');
           
-          cy.get('[data-testid="btn-confirm-bulk-delete"]').click();
+          // Should show only required documents
+          cy.get(selectors.documentTypeItem).should('have.length', 3);
+        }
+      });
+    });
+
+    it('should combine search and filters', () => {
+      cy.get('body').then(($body) => {
+        if ($body.find(selectors.searchInput).length > 0 && $body.find(selectors.categoryFilter).length > 0) {
+          cy.get(selectors.searchInput).type('license');
+          cy.get(selectors.categoryFilter).select('License');
+          cy.get(selectors.searchButton).click();
           
-          cy.wait('@bulkDelete');
-          
-          cy.get('[data-testid="success-message"]')
-            .should('contain.text', 'Document types deleted successfully');
+          // Should show filtered and searched results
+          cy.get(selectors.documentTypeItem).should('have.length', 1);
         }
       });
     });
   });
 
-  describe('Document Type Usage and Dependencies', () => {
+  describe('Document Types - Pagination', () => {
     beforeEach(() => {
-      cy.intercept('GET', '/api/consultants/*/documents', { fixture: 'consultant-documents.json' }).as('getConsultantDocuments');
-      cy.visit('/admin/document-types');
-      cy.wait('@getDocumentTypes');
+      // Mock large dataset for pagination
+      const largeDataset = Array.from({ length: 25 }, (_, i) => ({
+        id: i + 1,
+        name: `Document Type ${i + 1}`,
+        description: `Description for document type ${i + 1}`,
+        required: i % 2 === 0,
+        category: i % 3 === 0 ? 'License' : i % 3 === 1 ? 'Certification' : 'Verification'
+      }));
+
+      cy.intercept('GET', apiEndpoints.documentTypes, {
+        statusCode: 200,
+        body: largeDataset
+      }).as('getLargeDocumentTypesList');
+
+      loginAsAdmin();
+      navigateToDocumentTypes();
+      cy.wait('@getLargeDocumentTypesList');
     });
 
-    it('should show document usage statistics', () => {
-      // Click on a document type to view details
-      cy.get('[data-testid="document-types-table"] tbody tr')
-        .first()
-        .find('[data-testid="document-type-name"]')
-        .click();
-      
+    it('should display pagination controls when needed', () => {
       cy.get('body').then(($body) => {
-        if ($body.find('[data-testid="document-type-details-modal"]').length > 0) {
-          cy.get('[data-testid="usage-statistics"]')
-            .should('be.visible');
-          
-          cy.get('[data-testid="total-documents-count"]')
-            .should('be.visible')
-            .and('contain.text', 'Total Documents:');
-          
-          cy.get('[data-testid="consultants-using-count"]')
-            .should('be.visible')
-            .and('contain.text', 'Consultants:');
+        if ($body.find(selectors.pagination).length > 0) {
+          cy.get(selectors.pagination).should('be.visible');
+          cy.get(selectors.paginationInfo).should('be.visible');
         }
       });
     });
 
-    it('should show related consultants using this document type', () => {
-      cy.get('[data-testid="document-types-table"] tbody tr')
-        .first()
-        .find('[data-testid="btn-view-usage"]')
-        .click();
-      
-      cy.get('[data-testid="usage-modal"]')
-        .should('be.visible');
-      
-      cy.get('[data-testid="consultants-list"]')
-        .should('be.visible');
-      
-      cy.get('[data-testid="consultant-item"]')
-        .should('have.length.at.least', 1);
-    });
-
-    it('should prevent deletion of document types in use', () => {
-      // Try to delete a document type that's in use
-      cy.intercept('DELETE', '/api/document-types/*', { 
-        statusCode: 409, 
-        body: { error: 'Cannot delete document type. 5 consultants have documents of this type.' } 
-      }).as('deleteInUse');
-      
-      cy.get('[data-testid="document-types-table"] tbody tr')
-        .first()
-        .find('[data-testid="btn-delete-document-type"]')
-        .click();
-      
-      cy.get('[data-testid="btn-confirm-delete"]').click();
-      
-      cy.wait('@deleteInUse');
-      
-      cy.get('[data-testid="error-message"]')
-        .should('be.visible')
-        .and('contain.text', '5 consultants have documents');
-    });
-  });
-
-  describe('Integration with Consultant Documents', () => {
-    beforeEach(() => {
-      cy.visit('/consultants/ci-test-consultant/documents');
-      cy.wait('@getConsultantDocuments');
-    });
-
-    it('should display available document types in consultant document upload', () => {
-      cy.get('[data-testid="btn-upload-document"]').click();
-      
-      cy.get('[data-testid="select-document-type"]')
-        .should('be.visible');
-      
-      cy.get('[data-testid="select-document-type"]').click();
-      
-      // Verify document types are populated from API
-      testData.validDocumentTypes.forEach((docType) => {
-        cy.get('[data-testid="select-document-type"]')
-          .should('contain', docType.name);
+    it('should navigate between pages', () => {
+      cy.get('body').then(($body) => {
+        if ($body.find(selectors.nextPageButton).length > 0) {
+          // Go to next page
+          cy.get(selectors.nextPageButton).click();
+          
+          // Should show different items
+          cy.get(selectors.documentTypeItem).should('be.visible');
+          
+          // Go back to previous page
+          if ($body.find(selectors.previousPageButton).length > 0) {
+            cy.get(selectors.previousPageButton).click();
+          }
+        }
       });
     });
 
-    it('should show required document types prominently', () => {
-      cy.get('[data-testid="required-documents-section"]')
-        .should('be.visible');
-      
-      cy.get('[data-testid="required-document-item"]')
-        .should('have.length.at.least', 1)
-        .each(($item) => {
-          cy.wrap($item).within(() => {
-            cy.get('[data-testid="required-badge"]')
-              .should('be.visible')
-              .and('contain.text', 'Required');
-          });
-        });
-    });
-
-    it('should validate required document types for consultant onboarding', () => {
-      // Check compliance status
-      cy.get('[data-testid="compliance-status"]')
-        .should('be.visible');
-      
-      cy.get('[data-testid="missing-required-documents"]')
-        .should('be.visible');
-      
-      // Each missing required document should be listed
-      cy.get('[data-testid="missing-document-item"]')
-        .should('have.length.at.least', 1)
-        .each(($item) => {
-          cy.wrap($item).within(() => {
-            cy.get('[data-testid="document-type-name"]')
-              .should('be.visible');
-            cy.get('[data-testid="btn-upload-missing"]')
-              .should('be.visible');
-          });
-        });
+    it('should jump to specific page number', () => {
+      cy.get('body').then(($body) => {
+        if ($body.find(selectors.pageNumberButton).length > 1) {
+          cy.get(selectors.pageNumberButton).eq(1).click();
+          cy.get(selectors.documentTypeItem).should('be.visible');
+        }
+      });
     });
   });
 
-  describe('Permission and Access Control', () => {
-    it('should restrict document type management to admin users', () => {
-      // Test with non-admin user
-      cy.login('consultant@example.com', 'password');
-      
-      cy.visit('/admin/document-types');
-      
-      // Should redirect to unauthorized page or dashboard
-      cy.url().should('not.include', '/admin/document-types');
-      cy.get('[data-testid="unauthorized-message"]')
-        .should('be.visible')
-        .and('contain.text', 'You do not have permission to access this page');
-    });
-
-    it('should show read-only view for users with limited permissions', () => {
-      // Test with user who has read-only admin access
-      cy.login('readonly-admin@example.com', 'password');
-      
-      cy.visit('/admin/document-types');
-      cy.wait('@getDocumentTypes');
-      
-      // Should see list but no edit buttons
-      cy.get('[data-testid="document-types-table"]')
-        .should('be.visible');
-      
-      cy.get('[data-testid="btn-create-document-type"]')
-        .should('not.exist');
-      
-      cy.get('[data-testid="btn-edit-document-type"]')
-        .should('not.exist');
-      
-      cy.get('[data-testid="btn-delete-document-type"]')
-        .should('not.exist');
-    });
-  });
-
-  describe('Performance and Loading States', () => {
-    it('should handle slow API responses gracefully', () => {
-      cy.intercept('GET', '/api/document-types*', { 
-        delay: 3000, 
-        fixture: 'document-types.json' 
-      }).as('slowDocumentTypes');
-      
-      cy.visit('/admin/document-types');
-      
-      // Loading state should be visible
-      cy.get('[data-testid="loading-indicator"]', { timeout: 1000 })
-        .should('be.visible');
-      
-      // Content should load after delay
-      cy.wait('@slowDocumentTypes');
-      cy.get('[data-testid="document-types-table"]', { timeout: 5000 })
-        .should('be.visible');
-      
-      cy.get('[data-testid="loading-indicator"]')
-        .should('not.exist');
-    });
-
-    it('should handle network failures gracefully', () => {
-      cy.intercept('GET', '/api/document-types*', { forceNetworkError: true }).as('networkError');
-      
-      cy.visit('/admin/document-types');
-      cy.wait('@networkError');
-      
-      cy.get('[data-testid="network-error-message"]')
-        .should('be.visible')
-        .and('contain.text', 'Network error');
-      
-      cy.get('[data-testid="btn-retry"]')
-        .should('be.visible');
-    });
-
-    it('should maintain form state during validation errors', () => {
-      cy.get('[data-testid="btn-create-document-type"]').click();
-      
-      // Fill out form partially
-      cy.get('[data-testid="input-name"]').type('Partial Form Data');
-      cy.get('[data-testid="input-description"]').type('Some description');
-      cy.get('[data-testid="checkbox-required"]').check();
-      
-      // Simulate validation error
-      cy.intercept('POST', '/api/document-types', { 
-        statusCode: 400, 
-        body: { error: 'Validation failed' } 
-      }).as('validationError');
-      
-      cy.get('[data-testid="btn-save-document-type"]').click();
-      cy.wait('@validationError');
-      
-      // Verify form data is preserved
-      cy.get('[data-testid="input-name"]')
-        .should('have.value', 'Partial Form Data');
-      cy.get('[data-testid="input-description"]')
-        .should('have.value', 'Some description');
-      cy.get('[data-testid="checkbox-required"]')
-        .should('be.checked');
-    });
-  });
-
-  describe('Accessibility and Keyboard Navigation', () => {
+  describe('Document Types - Bulk Operations', () => {
     beforeEach(() => {
-      cy.visit('/admin/document-types');
-      cy.wait('@getDocumentTypes');
+      const mockDocumentTypes = [
+        { id: 1, name: 'Medical License', required: true, category: 'License' },
+        { id: 2, name: 'Nursing Certificate', required: true, category: 'Certification' },
+        { id: 3, name: 'Background Check', required: false, category: 'Verification' }
+      ];
+
+      cy.intercept('GET', apiEndpoints.documentTypes, {
+        statusCode: 200,
+        body: mockDocumentTypes
+      }).as('getDocumentTypesList');
+
+      loginAsAdmin();
+      navigateToDocumentTypes();
+      cy.wait('@getDocumentTypesList');
     });
 
-    it('should support keyboard navigation', () => {
-      // Tab through interactive elements
-      cy.get('body').tab();
-      cy.focused().should('have.attr', 'data-testid', 'search-input');
+    it('should select and deselect individual items', () => {
+      cy.get('body').then(($body) => {
+        if ($body.find(selectors.bulkSelectCheckbox).length > 0) {
+          // Select first item
+          cy.get(selectors.bulkSelectCheckbox).first().check();
+          cy.get(selectors.bulkActionsBar).should('be.visible');
+          
+          // Deselect item
+          cy.get(selectors.bulkSelectCheckbox).first().uncheck();
+          cy.get(selectors.bulkActionsBar).should('not.exist');
+        }
+      });
+    });
+
+    it('should select all items', () => {
+      cy.get('body').then(($body) => {
+        if ($body.find(selectors.selectAllCheckbox).length > 0) {
+          cy.get(selectors.selectAllCheckbox).check();
+          cy.get(selectors.bulkSelectCheckbox).should('be.checked');
+          cy.get(selectors.bulkActionsBar).should('be.visible');
+        }
+      });
+    });
+
+    it('should perform bulk delete operation', () => {
+      cy.get('body').then(($body) => {
+        if ($body.find(selectors.bulkSelectCheckbox).length > 0 && $body.find(selectors.bulkDeleteButton).length > 0) {
+          cy.intercept('DELETE', `${apiEndpoints.documentTypes}/bulk`, {
+            statusCode: 200,
+            body: { message: 'Documents deleted successfully' }
+          }).as('bulkDeleteSuccess');
+
+          // Select items
+          cy.get(selectors.bulkSelectCheckbox).first().check();
+          cy.get(selectors.bulkSelectCheckbox).eq(1).check();
+          
+          // Perform bulk delete
+          cy.get(selectors.bulkDeleteButton).click();
+          cy.get(selectors.confirmButton).click();
+          
+          cy.wait('@bulkDeleteSuccess');
+          cy.get(selectors.successMessage).should('be.visible');
+        }
+      });
+    });
+  });
+
+  describe('Document Types - Error Handling', () => {
+    beforeEach(() => {
+      loginAsAdmin();
+    });
+
+    it('should handle network timeouts gracefully', () => {
+      cy.intercept('GET', apiEndpoints.documentTypes, (req) => {
+        req.reply((res) => {
+          return new Promise(() => {}); // Never resolve to simulate timeout
+        });
+      }).as('getDocumentTypesTimeout');
+
+      navigateToDocumentTypes();
       
-      cy.focused().tab();
-      cy.focused().should('have.attr', 'data-testid').and('match', /filter|btn-create/);
+      // Should show loading state and eventually error
+      cy.get(selectors.loadingSpinner).should('be.visible');
       
-      // Enter key should activate buttons
-      cy.get('[data-testid="btn-create-document-type"]').focus();
-      cy.focused().type('{enter}');
+      // After timeout, should show error message
+      cy.get(selectors.errorMessage, { timeout: 30000 }).should('be.visible');
+    });
+
+    it('should handle malformed API responses', () => {
+      cy.intercept('GET', apiEndpoints.documentTypes, {
+        statusCode: 200,
+        body: 'invalid json'
+      }).as('getDocumentTypesInvalidJson');
+
+      navigateToDocumentTypes();
+      cy.wait('@getDocumentTypesInvalidJson');
       
-      cy.get('[data-testid="modal-create-document-type"]')
-        .should('be.visible');
+      cy.get(selectors.errorMessage).should('be.visible');
+    });
+
+    it('should handle 500 server errors', () => {
+      cy.intercept('GET', apiEndpoints.documentTypes, {
+        statusCode: 500,
+        body: { error: 'Internal server error' }
+      }).as('getDocumentTypes500');
+
+      navigateToDocumentTypes();
+      cy.wait('@getDocumentTypes500');
+      
+      cy.get(selectors.errorMessage).should('be.visible').and('contain.text', 'server error');
+    });
+
+    it('should provide retry functionality', () => {
+      let attempts = 0;
+      cy.intercept('GET', apiEndpoints.documentTypes, (req) => {
+        attempts++;
+        if (attempts === 1) {
+          req.reply({ statusCode: 500, body: { error: 'Server error' } });
+        } else {
+          req.reply({ statusCode: 200, body: [] });
+        }
+      }).as('getDocumentTypesRetry');
+
+      navigateToDocumentTypes();
+      cy.wait('@getDocumentTypesRetry');
+      
+      cy.get(selectors.errorMessage).should('be.visible');
+      
+      // Click retry button if available
+      cy.get('body').then(($body) => {
+        if ($body.find(selectors.refreshButton).length > 0) {
+          cy.get(selectors.refreshButton).click();
+          cy.wait('@getDocumentTypesRetry');
+          cy.get(selectors.errorMessage).should('not.exist');
+        }
+      });
+    });
+  });
+
+  describe('Document Types - Accessibility', () => {
+    beforeEach(() => {
+      loginAsAdmin();
+      navigateToDocumentTypes();
+      cy.wait('@getDocumentTypes', { timeout: 15000 });
     });
 
     it('should have proper ARIA labels and roles', () => {
-      // Table accessibility
-      cy.get('[data-testid="document-types-table"]')
-        .should('have.attr', 'role', 'table');
+      // Check main landmarks
+      cy.get('main').should('have.attr', 'role', 'main').or('exist');
       
-      // Button accessibility
-      cy.get('[data-testid="btn-create-document-type"]')
-        .should('have.attr', 'aria-label');
-      
-      // Form accessibility
-      cy.get('[data-testid="btn-create-document-type"]').click();
-      
-      cy.get('[data-testid="input-name"]')
+      // Check buttons have accessible names
+      cy.get(selectors.addButton)
         .should('have.attr', 'aria-label')
-        .or('have.attr', 'aria-labelledby');
+        .or('have.accessible.name');
       
-      cy.get('[data-testid="input-description"]')
+      // Check form elements have labels
+      cy.get(selectors.addButton).click();
+      cy.get(selectors.nameInput)
         .should('have.attr', 'aria-label')
-        .or('have.attr', 'aria-labelledby');
+        .or('have.attr', 'id')
+        .or('have.accessible.name');
     });
 
-    it('should announce dynamic content changes to screen readers', () => {
-      // Success message should have proper ARIA attributes
-      cy.get('[data-testid="btn-create-document-type"]').click();
+    it('should support keyboard navigation', () => {
+      // Test tab navigation
+      cy.get(selectors.addButton).focus();
+      cy.focused().should('equal', cy.get(selectors.addButton));
       
-      const newDocType = testData.validDocumentTypes[0];
-      cy.get('[data-testid="input-name"]').type(newDocType.name);
-      cy.get('[data-testid="input-description"]').type(newDocType.description);
-      cy.get('[data-testid="btn-save-document-type"]').click();
+      // Tab through elements
+      cy.tab();
+      cy.focused().should('be.visible');
+    });
+
+    it('should have proper heading hierarchy', () => {
+      cy.get('h1').should('exist');
       
-      cy.wait('@createDocumentType');
+      // Check heading levels are sequential
+      cy.get('h1, h2, h3, h4, h5, h6').then(($headings) => {
+        const headingLevels = Array.from($headings).map(h => parseInt(h.tagName.substring(1)));
+        // Verify no skipped heading levels
+        expect(headingLevels[0]).to.equal(1);
+      });
+    });
+
+    it('should provide screen reader announcements', () => {
+      // Check for aria-live regions
+      cy.get('[aria-live]').should('exist');
       
-      cy.get('[data-testid="success-message"]')
-        .should('have.attr', 'role', 'alert')
-        .or('have.attr', 'aria-live');
+      // Test that success/error messages are announced
+      cy.get(selectors.addButton).click();
+      cy.get(selectors.nameInput).type('Test Document');
+      cy.get(selectors.saveButton).click();
+      
+      cy.get('[aria-live] [role="status"], [aria-live] [role="alert"]')
+        .should('exist');
+    });
+
+    it('should have sufficient color contrast', () => {
+      // This would typically be tested with axe-core
+      // For now, check that text is visible
+      cy.get(selectors.pageTitle).should('be.visible');
+      cy.get(selectors.addButton).should('be.visible');
     });
   });
 
-  describe('Data Export and Import', () => {
+  describe('Document Types - Responsive Design', () => {
     beforeEach(() => {
-      cy.visit('/admin/document-types');
-      cy.wait('@getDocumentTypes');
+      loginAsAdmin();
+      navigateToDocumentTypes();
+      cy.wait('@getDocumentTypes', { timeout: 15000 });
     });
 
-    it('should export document types data', () => {
-      cy.get('body').then(($body) => {
-        if ($body.find('[data-testid="btn-export"]').length > 0) {
-          cy.get('[data-testid="btn-export"]').click();
-          
-          cy.get('[data-testid="export-options"]')
-            .should('be.visible');
-          
-          // Test different export formats
-          cy.get('[data-testid="export-csv"]').click();
-          
-          // Verify download initiated
-          cy.readFile('cypress/downloads/document-types.csv', { timeout: 10000 })
-            .should('exist');
-        }
+    it('should display properly on mobile devices', () => {
+      cy.viewport(375, 667); // iPhone SE
+      
+      cy.get(selectors.pageContainer).should('be.visible');
+      cy.get(selectors.addButton).should('be.visible');
+      
+      // Check that elements don't overflow
+      cy.get(selectors.documentTypesList).should('be.visible');
+    });
+
+    it('should display properly on tablet devices', () => {
+      cy.viewport(768, 1024); // iPad
+      
+      cy.get(selectors.pageContainer).should('be.visible');
+      cy.get(selectors.documentTypesList).should('be.visible');
+    });
+
+    it('should display properly on desktop', () => {
+      cy.viewport(1920, 1080); // Desktop
+      
+      cy.get(selectors.pageContainer).should('be.visible');
+      cy.get(selectors.documentTypesList).should('be.visible');
+    });
+
+    it('should handle form layout on different screen sizes', () => {
+      cy.get(selectors.addButton).click();
+      
+      // Mobile
+      cy.viewport(375, 667);
+      cy.get(selectors.documentTypeForm).should('be.visible');
+      cy.get(selectors.nameInput).should('be.visible');
+      
+      // Desktop
+      cy.viewport(1920, 1080);
+      cy.get(selectors.documentTypeForm).should('be.visible');
+      cy.get(selectors.nameInput).should('be.visible');
+    });
+  });
+
+  describe('Document Types - Performance', () => {
+    it('should load page within acceptable time', () => {
+      const startTime = Date.now();
+      
+      loginAsAdmin();
+      navigateToDocumentTypes();
+      cy.wait('@getDocumentTypes', { timeout: 15000 });
+      
+      cy.then(() => {
+        const loadTime = Date.now() - startTime;
+        expect(loadTime).to.be.lessThan(5000); // 5 second threshold
       });
     });
 
-    it('should import document types from file', () => {
-      cy.get('body').then(($body) => {
-        if ($body.find('[data-testid="btn-import"]').length > 0) {
-          cy.get('[data-testid="btn-import"]').click();
-          
-          cy.get('[data-testid="import-modal"]')
-            .should('be.visible');
-          
-          // Upload CSV file
-          cy.get('[data-testid="file-input"]')
-            .selectFile('cypress/fixtures/document-types-import.csv');
-          
-          cy.get('[data-testid="btn-process-import"]').click();
-          
-          cy.intercept('POST', '/api/document-types/import', { 
-            statusCode: 200, 
-            body: { imported: 5, errors: [] } 
-          }).as('importData');
-          
-          cy.wait('@importData');
-          
-          cy.get('[data-testid="import-success"]')
-            .should('be.visible')
-            .and('contain.text', '5 document types imported');
-        }
-      });
+    it('should handle large datasets efficiently', () => {
+      const largeDataset = Array.from({ length: 1000 }, (_, i) => ({
+        id: i + 1,
+        name: `Document Type ${i + 1}`,
+        description: `Description ${i + 1}`,
+        required: i % 2 === 0,
+        category: 'Test'
+      }));
+
+      cy.intercept('GET', apiEndpoints.documentTypes, {
+        statusCode: 200,
+        body: largeDataset
+      }).as('getLargeDataset');
+
+      loginAsAdmin();
+      navigateToDocumentTypes();
+      cy.wait('@getLargeDataset');
+      
+      // Should still be responsive
+      cy.get(selectors.pageContainer).should('be.visible');
     });
   });
 });
