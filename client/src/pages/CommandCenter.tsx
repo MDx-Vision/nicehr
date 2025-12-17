@@ -1238,7 +1238,7 @@ export default function CommandCenter() {
             </SelectTrigger>
             <SelectContent>
               {projectsLoading ? (
-                <SelectItem value="loading" disabled>Loading...</SelectItem>
+                <SelectItem value="loading" disabled>Just a moment...</SelectItem>
               ) : projects && projects.length > 0 ? (
                 projects.map((project) => (
                   <SelectItem key={project.id} value={project.id}>

@@ -740,7 +740,7 @@ function AddMetricDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Go Back</Button>
           <Button 
             onClick={handleSubmit} 
             disabled={createMutation.isPending}
@@ -897,7 +897,7 @@ function EditMetricDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Go Back</Button>
           <Button 
             onClick={handleSubmit} 
             disabled={updateMutation.isPending}
@@ -1221,7 +1221,7 @@ function CreateScenarioDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Go Back</Button>
           <Button 
             onClick={handleSubmit} 
             disabled={createMutation.isPending}
@@ -1620,20 +1620,20 @@ export default function BudgetModeling() {
       <Dialog open={!!showDeleteDialog} onOpenChange={(open) => !open && setShowDeleteDialog(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Scenario</DialogTitle>
+            <DialogTitle>Remove Scenario</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this scenario? This action cannot be undone.
+              Are you sure you want to remove this scenario? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(null)}>Cancel</Button>
-            <Button 
+            <Button variant="outline" onClick={() => setShowDeleteDialog(null)}>Go Back</Button>
+            <Button
               variant="destructive"
               onClick={() => showDeleteDialog && deleteMutation.mutate(showDeleteDialog)}
               disabled={deleteMutation.isPending}
               data-testid="button-confirm-delete"
             >
-              Delete Scenario
+              Remove Scenario
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -838,7 +838,7 @@ function MilestonesTab({ projectId }: { projectId: string }) {
               <Input id="dueDate" name="dueDate" type="date" required data-testid="input-milestone-due-date" />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Go Back</Button>
               <Button type="submit" disabled={createMutation.isPending} data-testid="button-submit-milestone">
                 Create
               </Button>
@@ -1004,7 +1004,7 @@ function RisksTab({ projectId }: { projectId: string }) {
               <Textarea id="mitigation" name="mitigation" placeholder="How will this risk be mitigated?" data-testid="input-risk-mitigation" />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Go Back</Button>
               <Button type="submit" disabled={createMutation.isPending} data-testid="button-submit-risk">
                 Add Risk
               </Button>
@@ -1289,7 +1289,7 @@ function StepsTab({ projectId, phases }: { projectId: string; phases: ProjectPha
               />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Go Back</Button>
               <Button type="submit" disabled={createStepMutation.isPending} data-testid="button-submit-step">
                 Create Step
               </Button>

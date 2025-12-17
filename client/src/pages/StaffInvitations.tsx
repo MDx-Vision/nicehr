@@ -464,7 +464,7 @@ export default function StaffInvitations() {
                                         </AlertDialogDescription>
                                       </AlertDialogHeader>
                                       <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogCancel>Go Back</AlertDialogCancel>
                                         <AlertDialogAction
                                           onClick={() => revokeMutation.mutate({ id: invitation.id })}
                                           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
@@ -497,11 +497,11 @@ export default function StaffInvitations() {
                                       </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogCancel>Go Back</AlertDialogCancel>
                                       <AlertDialogAction
-                                        onClick={() => revokeMutation.mutate({ 
-                                          id: invitation.id, 
-                                          reason: 'Access revoked by administrator' 
+                                        onClick={() => revokeMutation.mutate({
+                                          id: invitation.id,
+                                          reason: 'Access revoked by administrator'
                                         })}
                                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                       >

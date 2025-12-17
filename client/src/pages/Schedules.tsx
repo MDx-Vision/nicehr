@@ -956,21 +956,21 @@ export default function Schedules() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Shift Modal */}
+      {/* Remove Shift Modal */}
       <Dialog open={deleteShiftOpen} onOpenChange={setDeleteShiftOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Shift</DialogTitle>
+            <DialogTitle>Remove Shift</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this shift? This action cannot be undone.
+              Are you sure you want to remove this shift? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteShiftOpen(false)}>
-              Cancel
+              Go Back
             </Button>
             <Button variant="destructive" onClick={handleDeleteShift} data-testid="button-confirm-delete">
-              Delete
+              Remove
             </Button>
           </DialogFooter>
         </DialogContent>

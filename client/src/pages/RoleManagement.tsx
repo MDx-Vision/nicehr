@@ -94,7 +94,7 @@ interface UserWithAssignments extends User {
 }
 
 const DOMAIN_LABELS: Record<string, string> = {
-  dashboard: "Dashboard",
+  dashboard: "Overview",
   projects: "Projects",
   consultants: "Consultants",
   hospitals: "Hospitals",
@@ -424,7 +424,7 @@ export default function RoleManagement() {
           </TabsTrigger>
           <TabsTrigger value="assignments" data-testid="tab-assignments">
             <Users className="w-4 h-4 mr-2" />
-            User Assignments
+            People Assignments
           </TabsTrigger>
         </TabsList>
 
@@ -640,9 +640,9 @@ export default function RoleManagement() {
           <div className="grid gap-6 md:grid-cols-[350px_1fr]">
             <Card>
               <CardHeader>
-                <CardTitle>Users</CardTitle>
+                <CardTitle>People</CardTitle>
                 <CardDescription>
-                  Search and select a user to manage their role assignments
+                  Search and select a person to manage their role assignments
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -695,7 +695,7 @@ export default function RoleManagement() {
                   )}
                   {filteredUsers?.length === 0 && (
                     <div className="text-center text-muted-foreground py-4 text-sm">
-                      No users found
+                      No people found
                     </div>
                   )}
                 </div>
@@ -708,8 +708,8 @@ export default function RoleManagement() {
                   <CardTitle>Role Assignments</CardTitle>
                   <CardDescription>
                     {selectedUserId
-                      ? "Manage role assignments for the selected user"
-                      : "Select a user to view their role assignments"}
+                      ? "Manage role assignments for the selected person"
+                      : "Select a person to view their role assignments"}
                   </CardDescription>
                 </div>
                 {selectedUserId && (
@@ -726,7 +726,7 @@ export default function RoleManagement() {
                 {!selectedUserId ? (
                   <div className="text-center text-muted-foreground py-12">
                     <Users className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                    <p>Select a user from the list to manage their role assignments</p>
+                    <p>Select a person from the list to manage their role assignments</p>
                   </div>
                 ) : assignmentsLoading ? (
                   <div className="space-y-2">
@@ -886,7 +886,7 @@ export default function RoleManagement() {
                 resetForm();
               }}
             >
-              Cancel
+              Go Back
             </Button>
             <Button
               onClick={handleCreateRole}
@@ -945,7 +945,7 @@ export default function RoleManagement() {
                 resetForm();
               }}
             >
-              Cancel
+              Go Back
             </Button>
             <Button
               onClick={handleUpdateRole}
@@ -1036,7 +1036,7 @@ export default function RoleManagement() {
                 setSelectedPermissions(new Set());
               }}
             >
-  Cancel
+              Go Back
             </Button>
             <Button
               onClick={handleSavePermissions}
@@ -1052,20 +1052,20 @@ export default function RoleManagement() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Role</AlertDialogTitle>
+            <AlertDialogTitle>Remove Role</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete the role "{selectedRole?.displayName}"? 
+              Are you sure you want to remove the role "{selectedRole?.displayName}"?
               This action cannot be undone and will remove all user assignments for this role.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Go Back</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => selectedRole && deleteRoleMutation.mutate(selectedRole.id)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               data-testid="button-confirm-delete-role"
             >
-              {deleteRoleMutation.isPending ? "Deleting..." : "Delete"}
+              {deleteRoleMutation.isPending ? "Removing..." : "Remove"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1145,7 +1145,7 @@ export default function RoleManagement() {
                 setAssignmentFormData({ roleId: "", projectId: "", hospitalId: "" });
               }}
             >
-              Cancel
+              Go Back
             </Button>
             <Button
               onClick={() => {
@@ -1176,7 +1176,7 @@ export default function RoleManagement() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Go Back</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (!selectedAssignment || !selectedUserId) return;

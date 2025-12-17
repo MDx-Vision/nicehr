@@ -226,7 +226,7 @@ export function AppSidebar() {
                 >
                   <Link href="/account">
                     <UserCog className="w-4 h-4" />
-                    <span>Account Settings</span>
+                    <span>Account Preferences</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -259,7 +259,7 @@ export function AppSidebar() {
                   >
                     <Link href="/settings">
                       <Settings className="w-4 h-4" />
-                      <span>Settings</span>
+                      <span>Preferences</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

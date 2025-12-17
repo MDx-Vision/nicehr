@@ -505,20 +505,20 @@ export default function AccessControl() {
                               </AlertDialogTrigger>
                               <AlertDialogContent>
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Access Rule</AlertDialogTitle>
+                                  <AlertDialogTitle>Remove Access Rule</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Are you sure you want to delete "{rule.name}"? This
+                                    Are you sure you want to remove "{rule.name}"? This
                                     action cannot be undone.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogCancel>Go Back</AlertDialogCancel>
                                   <AlertDialogAction
                                     onClick={() => deleteMutation.mutate(rule.id)}
                                     className="bg-destructive text-destructive-foreground hover-elevate"
                                     data-testid="button-confirm-delete"
                                   >
-                                    Delete
+                                    Remove
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>

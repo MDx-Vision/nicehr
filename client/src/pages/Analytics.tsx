@@ -176,7 +176,7 @@ function PlatformDashboard({ data }: { data: PlatformAnalytics }) {
 
       <div className="grid gap-4 md:grid-cols-2">
         <PieChartCard
-          title="Users by Role"
+          title="People by Role"
           data={[
             { name: "Admin", value: data.usersByRole.admin },
             { name: "Hospital Staff", value: data.usersByRole.hospital_staff },
@@ -221,7 +221,7 @@ function PlatformDashboard({ data }: { data: PlatformAnalytics }) {
                   {data.documentCompliance.approved} of {data.documentCompliance.total} documents approved
                 </p>
                 <p className="text-sm font-medium">
-                  {data.overview.totalUsers} total users
+                  {data.overview.totalUsers} total people
                 </p>
               </div>
             </div>

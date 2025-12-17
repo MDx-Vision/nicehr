@@ -73,12 +73,12 @@ const activityColors: Record<string, string> = {
 };
 
 const activityLabels: Record<string, string> = {
-  login: "Login",
-  logout: "Logout",
+  login: "Sign In",
+  logout: "Sign Out",
   page_view: "Page View",
   create: "Created",
   update: "Updated",
-  delete: "Deleted",
+  delete: "Removed",
   upload: "Uploaded",
   download: "Downloaded",
   approve: "Approved",
@@ -199,7 +199,7 @@ export default function ActivityLog() {
                 <SelectValue placeholder="Filter by User" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Users</SelectItem>
+                <SelectItem value="all">All People</SelectItem>
                 {uniqueUsers.map(user => (
                   <SelectItem key={user.id} value={user.id}>
                     {user.name}
