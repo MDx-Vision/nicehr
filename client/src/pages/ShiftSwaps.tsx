@@ -280,7 +280,7 @@ function SwapRequestCard({
           )}
 
           <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-confirm-cancel">Cancel</AlertDialogCancel>
+            <AlertDialogCancel data-testid="button-confirm-cancel">Go Back</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmAction}
               className={confirmAction === "reject" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}

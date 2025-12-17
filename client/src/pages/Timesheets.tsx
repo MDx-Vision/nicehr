@@ -882,21 +882,21 @@ export default function Timesheets() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Remove Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Timesheet Entry</DialogTitle>
+            <DialogTitle>Remove Timesheet Entry</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this timesheet entry? This action cannot be undone.
+              Are you sure you want to remove this timesheet entry? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-              Cancel
+              Go Back
             </Button>
             <Button variant="destructive" onClick={handleDeleteTimesheet} data-testid="button-confirm-delete">
-              Delete
+              Remove
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -921,7 +921,7 @@ export default function Timesheets() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>
-              Cancel
+              Go Back
             </Button>
             <Button variant="destructive" onClick={handleReject} data-testid="button-confirm-reject">
               Reject

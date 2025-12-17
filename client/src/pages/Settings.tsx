@@ -87,7 +87,7 @@ export default function Settings() {
   if (!isAdmin) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">Settings</h1>
+        <h1 className="text-3xl font-bold">Preferences</h1>
         <Card>
           <CardContent className="py-10 text-center">
             <Shield className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
@@ -104,7 +104,7 @@ export default function Settings() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold" data-testid="text-settings-title">Settings</h1>
+        <h1 className="text-3xl font-bold" data-testid="text-settings-title">Preferences</h1>
         <p className="text-muted-foreground">
           Configure platform settings and document types
         </p>

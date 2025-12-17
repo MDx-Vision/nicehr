@@ -160,11 +160,11 @@ export default function AccountSettings() {
   if (error || !settings) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">Account Settings</h1>
+        <h1 className="text-3xl font-bold">Account Preferences</h1>
         <Card>
           <CardContent className="py-10 text-center">
             <AlertTriangle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Unable to Load Settings</h3>
+            <h3 className="text-lg font-semibold mb-2">Unable to Load Preferences</h3>
             <p className="text-muted-foreground">
               There was an error loading your account settings. Please try again.
             </p>
@@ -179,7 +179,7 @@ export default function AccountSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold" data-testid="text-account-title">Account Settings</h1>
+        <h1 className="text-3xl font-bold" data-testid="text-account-title">Account Preferences</h1>
         <p className="text-muted-foreground">
           Manage your account preferences, privacy, and notifications
         </p>
@@ -264,7 +264,7 @@ export default function AccountSettings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Eye className="w-5 h-5" />
-              Privacy Settings
+              Privacy Preferences
             </CardTitle>
             <CardDescription>
               Control who can see your profile and information
@@ -431,7 +431,7 @@ export default function AccountSettings() {
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel data-testid="button-cancel-confirm">Cancel</AlertDialogCancel>
+                      <AlertDialogCancel data-testid="button-cancel-confirm">Go Back</AlertDialogCancel>
                       <AlertDialogAction
                         onClick={() => requestDeletionMutation.mutate()}
                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"

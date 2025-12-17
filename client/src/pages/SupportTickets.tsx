@@ -859,7 +859,7 @@ export default function SupportTickets() {
               data-testid="input-resolution"
             />
             <DialogFooter>
-              <Button variant="outline" onClick={() => setCloseModalOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setCloseModalOpen(false)}>Go Back</Button>
               <Button onClick={handleCloseTicket} data-testid="button-confirm-close">Close Ticket</Button>
             </DialogFooter>
           </DialogContent>
@@ -879,7 +879,7 @@ export default function SupportTickets() {
               data-testid="input-escalation-reason"
             />
             <DialogFooter>
-              <Button variant="outline" onClick={() => setEscalateModalOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setEscalateModalOpen(false)}>Go Back</Button>
               <Button onClick={handleEscalate} data-testid="button-confirm-escalate">Escalate</Button>
             </DialogFooter>
           </DialogContent>
@@ -898,22 +898,22 @@ export default function SupportTickets() {
               data-testid="input-tag"
             />
             <DialogFooter>
-              <Button variant="outline" onClick={() => setAddTagModalOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setAddTagModalOpen(false)}>Go Back</Button>
               <Button onClick={handleAddTag} data-testid="button-save-tag">Add Tag</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Delete Comment Modal */}
+        {/* Remove Comment Modal */}
         <Dialog open={deleteCommentModalOpen} onOpenChange={setDeleteCommentModalOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Delete Comment</DialogTitle>
-              <DialogDescription>Are you sure you want to delete this comment?</DialogDescription>
+              <DialogTitle>Remove Comment</DialogTitle>
+              <DialogDescription>Are you sure you want to remove this comment?</DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteCommentModalOpen(false)}>Cancel</Button>
-              <Button variant="destructive" onClick={() => handleDeleteComment(ticketComments[0]?.id)} data-testid="button-confirm-delete">Delete</Button>
+              <Button variant="outline" onClick={() => setDeleteCommentModalOpen(false)}>Go Back</Button>
+              <Button variant="destructive" onClick={() => handleDeleteComment(ticketComments[0]?.id)} data-testid="button-confirm-delete">Remove</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -1268,7 +1268,7 @@ export default function SupportTickets() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateModalOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setCreateModalOpen(false)}>Go Back</Button>
             <Button onClick={handleCreateTicket} data-testid="button-submit-ticket">Submit Ticket</Button>
           </DialogFooter>
         </DialogContent>
@@ -1291,7 +1291,7 @@ export default function SupportTickets() {
             </SelectContent>
           </Select>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setExportModalOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setExportModalOpen(false)}>Go Back</Button>
             <Button onClick={handleExport} data-testid="button-download">Download</Button>
           </DialogFooter>
         </DialogContent>
@@ -1315,7 +1315,7 @@ export default function SupportTickets() {
             </SelectContent>
           </Select>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setBulkAssignModalOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setBulkAssignModalOpen(false)}>Go Back</Button>
             <Button onClick={handleBulkAssign} data-testid="button-confirm-bulk">Assign</Button>
           </DialogFooter>
         </DialogContent>
@@ -1340,7 +1340,7 @@ export default function SupportTickets() {
             </SelectContent>
           </Select>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setBulkStatusModalOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setBulkStatusModalOpen(false)}>Go Back</Button>
             <Button onClick={handleBulkStatus} data-testid="button-confirm-bulk">Update</Button>
           </DialogFooter>
         </DialogContent>
@@ -1354,7 +1354,7 @@ export default function SupportTickets() {
             <DialogDescription>Close {selectedTickets.length} tickets?</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setBulkCloseModalOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setBulkCloseModalOpen(false)}>Go Back</Button>
             <Button onClick={handleBulkClose} data-testid="button-confirm-bulk">Close All</Button>
           </DialogFooter>
         </DialogContent>

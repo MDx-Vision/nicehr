@@ -87,12 +87,10 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           
       - name: Commit auto-generated tests and fixes
+        if: github.ref == 'refs/heads/main'
         run: |
           git config user.name "Claude Auto-Fix"
           git config user.email "claude@autofix.ci"
-          git stash --include-untracked || true
-          git pull --rebase origin main || true
-          git stash pop || true
           git add cypress/e2e/*.cy.js ci_helpers/ server/ || true
           git diff --staged --quiet || git commit -m "Auto: Generate tests and fixes"
           git push || echo "Nothing to push"

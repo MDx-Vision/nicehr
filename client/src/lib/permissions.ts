@@ -15,7 +15,7 @@ export interface NavigationItem {
 }
 
 export const NAVIGATION_CONFIG: NavigationItem[] = [
-  { title: "Dashboard", url: "/", icon: "LayoutDashboard", category: "overview", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"], requiredPermission: "dashboard:view" },
+  { title: "Overview", url: "/", icon: "LayoutDashboard", category: "overview", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"], requiredPermission: "dashboard:view" },
   { title: "Analytics", url: "/analytics", icon: "LineChart", category: "overview", roles: ["admin", "hospital_leadership"], requiredPermission: "reports:view" },
   { title: "Executive Dashboard", url: "/executive-dashboard", icon: "Gauge", category: "overview", roles: ["admin", "hospital_leadership"], requiredPermission: "reports:view" },
   { title: "Report Builder", url: "/report-builder", icon: "FileBarChart", category: "overview", roles: ["admin", "hospital_leadership"], requiredPermission: "reports:create" },

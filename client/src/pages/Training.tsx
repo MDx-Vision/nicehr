@@ -822,7 +822,7 @@ export default function Training() {
               <DialogDescription>Are you sure you want to end this lab session?</DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setEndLabOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setEndLabOpen(false)}>Go Back</Button>
               <Button onClick={handleEndLab} data-testid="button-confirm">End Lab</Button>
             </DialogFooter>
           </DialogContent>
@@ -1466,7 +1466,7 @@ export default function Training() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateModuleOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setCreateModuleOpen(false)}>Go Back</Button>
             <Button onClick={handleCreateModule} data-testid="button-submit-module">Create Module</Button>
           </DialogFooter>
         </DialogContent>
@@ -1512,7 +1512,7 @@ export default function Training() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddContentOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setAddContentOpen(false)}>Go Back</Button>
             <Button onClick={handleAddContent} data-testid="button-submit-content">Add Content</Button>
           </DialogFooter>
         </DialogContent>
@@ -1621,7 +1621,7 @@ export default function Training() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateAssessmentOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setCreateAssessmentOpen(false)}>Go Back</Button>
             <Button onClick={handleCreateAssessment} data-testid="button-submit-assessment">Create Assessment</Button>
           </DialogFooter>
         </DialogContent>
@@ -1703,7 +1703,7 @@ export default function Training() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddQuestionOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setAddQuestionOpen(false)}>Go Back</Button>
             <Button onClick={handleAddQuestion} data-testid="button-submit-question">Add Question</Button>
           </DialogFooter>
         </DialogContent>
@@ -1789,7 +1789,7 @@ export default function Training() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateArticleOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setCreateArticleOpen(false)}>Go Back</Button>
             <Button onClick={handleCreateArticle} data-testid="button-submit-article">Create Article</Button>
           </DialogFooter>
         </DialogContent>
@@ -1821,7 +1821,7 @@ export default function Training() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setUpdateLevelOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setUpdateLevelOpen(false)}>Go Back</Button>
             <Button onClick={handleUpdateLevel} data-testid="button-save-level">Save Level</Button>
           </DialogFooter>
         </DialogContent>

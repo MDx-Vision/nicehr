@@ -1048,7 +1048,7 @@ export default function ReportBuilder() {
             </CardHeader>
             <CardContent>
               {isLoadingSaved ? (
-                <div className="text-center py-8 text-muted-foreground">Loading...</div>
+                <div className="text-center py-8 text-muted-foreground">Just a moment...</div>
               ) : savedReports.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -1130,7 +1130,7 @@ export default function ReportBuilder() {
             </CardHeader>
             <CardContent>
               {isLoadingTemplates ? (
-                <div className="text-center py-8 text-muted-foreground">Loading...</div>
+                <div className="text-center py-8 text-muted-foreground">Just a moment...</div>
               ) : templates.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <LayoutGrid className="h-12 w-12 mx-auto mb-4 opacity-50" />
