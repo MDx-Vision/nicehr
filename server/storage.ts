@@ -760,6 +760,7 @@ export interface IStorage {
 
   // Support Ticket operations
   getSupportTickets(projectId: string): Promise<SupportTicket[]>;
+  getAllSupportTickets(): Promise<SupportTicket[]>;
   getSupportTicket(id: string): Promise<SupportTicket | undefined>;
   getOpenTickets(projectId: string): Promise<SupportTicketWithDetails[]>;
   createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket>;
@@ -4016,6 +4017,13 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(supportTickets)
       .where(eq(supportTickets.projectId, projectId))
+      .orderBy(desc(supportTickets.createdAt));
+  }
+
+  async getAllSupportTickets(): Promise<SupportTicket[]> {
+    return await db
+      .select()
+      .from(supportTickets)
       .orderBy(desc(supportTickets.createdAt));
   }
 

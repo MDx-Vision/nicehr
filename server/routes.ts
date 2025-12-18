@@ -11975,6 +11975,66 @@ export async function registerRoutes(
     }
   });
 
+  // ============================================
+  // NOTIFICATION COUNTS ROUTE
+  // ============================================
+
+  // Get notification badge counts for sidebar
+  app.get('/api/notifications/counts', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const userRole = req.user?.claims?.metadata?.role || 'consultant';
+
+      // Initialize counts
+      const counts: Record<string, number> = {};
+
+      // Get pending shift swap requests (for admins and consultants)
+      if (userRole === 'admin' || userRole === 'consultant') {
+        const pendingSwaps = await storage.getPendingSwapRequests();
+        if (userRole === 'admin') {
+          counts['shift-swaps'] = pendingSwaps.length;
+        } else {
+          // For consultants, show swaps relevant to them
+          const consultant = await storage.getConsultantByUserId(userId);
+          if (consultant) {
+            counts['shift-swaps'] = pendingSwaps.filter(
+              s => s.requesterId === consultant.id || s.targetConsultantId === consultant.id
+            ).length;
+          }
+        }
+      }
+
+      // Get open support tickets
+      const allTickets = await storage.getAllSupportTickets();
+      const openTickets = allTickets.filter(t => t.status === 'open' || t.status === 'in_progress');
+      if (userRole === 'admin') {
+        counts['tickets'] = openTickets.length;
+      } else {
+        // For non-admins, count tickets they created or are assigned to
+        counts['tickets'] = openTickets.filter(
+          t => t.reportedBy === userId || t.assignedTo === userId
+        ).length;
+      }
+
+      // Get pending invitations (admin only)
+      if (userRole === 'admin') {
+        const pendingInvitations = await storage.getInvitationsByStatus('pending');
+        counts['invitations'] = pendingInvitations.length;
+      }
+
+      // Get pending timesheets needing approval (for admins/leadership)
+      if (userRole === 'admin' || userRole === 'hospital_leadership') {
+        const timesheets = await storage.getAllTimesheets();
+        counts['timesheets'] = timesheets.filter(t => t.status === 'submitted').length;
+      }
+
+      res.json(counts);
+    } catch (error) {
+      console.error("Error fetching notification counts:", error);
+      res.status(500).json({ message: "Failed to fetch notification counts" });
+    }
+  });
+
   // Setup WebSocket server for real-time chat
   const { setupWebSocket } = await import('./websocket');
   setupWebSocket(httpServer);
