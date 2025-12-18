@@ -72,6 +72,7 @@ import {
   HeadphonesIcon,
   PieChart,
   Command,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -87,7 +88,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   GraduationCap, Book, Monitor, Ticket, FileCheck, AlertTriangle, DollarSign,
   Receipt, Banknote, TrendingUp, Plane, Luggage, Bus, Target, Award, ShieldCheck,
   FileSignature, MessageCircle, UserCheck, FileBarChart, Gauge, KeyRound, Link2,
-  Star, Briefcase, HeadphonesIcon, PieChart,
+  Star, Briefcase, HeadphonesIcon, PieChart, Sparkles,
 };
 
 // Simplified navigation structure
@@ -138,6 +139,7 @@ const NAV_GROUPS: NavGroup[] = [
       { id: "timesheets", title: "Timesheets", url: "/timesheets", icon: "Clock", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
       { id: "availability", title: "Availability", url: "/availability", icon: "CalendarDays", roles: ["admin", "consultant"] },
       { id: "shift-swaps", title: "Shift Swaps", url: "/shift-swaps", icon: "ArrowLeftRight", roles: ["admin", "hospital_staff", "consultant"] },
+      { id: "auto-scheduling", title: "Auto-Scheduling", url: "/auto-scheduling", icon: "Sparkles", roles: ["admin", "hospital_leadership"] },
     ],
   },
   {

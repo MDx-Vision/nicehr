@@ -72,6 +72,7 @@ import IntegrationsHub from "@/pages/integrations-hub";
 import EhrMonitoring from "@/pages/ehr-monitoring";
 import AdvancedAnalytics from "@/pages/AdvancedAnalytics";
 import RaciMatrix from "@/pages/RaciMatrix";
+import AutoScheduling from "@/pages/AutoScheduling";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/not-found";
 
@@ -240,6 +241,7 @@ function Router() {
       <Route path="/ehr-monitoring" component={() => <ProtectedRoute component={EhrMonitoring} requiredRoles={["admin"]} />} />
       <Route path="/advanced-analytics" component={() => <ProtectedRoute component={AdvancedAnalytics} requiredRoles={["admin"]} />} />
       <Route path="/raci-matrix" component={() => <ProtectedRoute component={RaciMatrix} />} />
+      <Route path="/auto-scheduling" component={() => <ProtectedRoute component={AutoScheduling} />} />
       <Route path="/access-denied" component={AccessDenied} />
       <Route component={NotFound} />
     </Switch>

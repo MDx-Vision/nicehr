@@ -501,6 +501,21 @@ import {
   raciAssignments,
   type RaciAssignment,
   type InsertRaciAssignment,
+  // Phase 9B: Auto-Scheduling
+  schedulingRecommendations,
+  autoAssignmentLogs,
+  schedulingConfigs,
+  consultantEhrExperience,
+  consultantSkills,
+  type SchedulingRecommendation,
+  type InsertSchedulingRecommendation,
+  type AutoAssignmentLog,
+  type InsertAutoAssignmentLog,
+  type AutoAssignmentLogWithDetails,
+  type SchedulingConfig,
+  type InsertSchedulingConfig,
+  type ConsultantWithFullDetails,
+  type RequirementWithContext,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, ilike, or, desc, asc, sql, inArray, lt, gt } from "drizzle-orm";
@@ -1537,6 +1552,34 @@ export interface IStorage {
   updateRaciAssignment(id: string, data: Partial<InsertRaciAssignment>): Promise<RaciAssignment | undefined>;
   deleteRaciAssignment(id: string): Promise<boolean>;
   bulkUpsertRaciAssignments(projectId: string, assignments: InsertRaciAssignment[]): Promise<RaciAssignment[]>;
+
+  // ============================================
+  // PHASE 9B: AUTO-SCHEDULING
+  // ============================================
+
+  // Scheduling Recommendations
+  getSchedulingRecommendations(requirementId: string): Promise<SchedulingRecommendation[]>;
+  getSchedulingRecommendationsBySchedule(scheduleId: string): Promise<SchedulingRecommendation[]>;
+  saveSchedulingRecommendations(recommendations: InsertSchedulingRecommendation[]): Promise<void>;
+  invalidateRecommendations(requirementId: string): Promise<void>;
+
+  // Scheduling Configuration
+  getSchedulingConfig(hospitalId?: string, projectId?: string): Promise<SchedulingConfig | null>;
+  createSchedulingConfig(config: InsertSchedulingConfig): Promise<SchedulingConfig>;
+  updateSchedulingConfig(id: string, config: Partial<InsertSchedulingConfig>): Promise<SchedulingConfig | undefined>;
+
+  // Auto-Assignment Logs
+  createAutoAssignmentLog(log: InsertAutoAssignmentLog): Promise<AutoAssignmentLog>;
+  getAutoAssignmentLogs(filters?: { projectId?: string; startDate?: Date; endDate?: Date }): Promise<AutoAssignmentLogWithDetails[]>;
+  updateAutoAssignmentLog(id: string, data: Partial<InsertAutoAssignmentLog>): Promise<AutoAssignmentLog | undefined>;
+
+  // Consultant Full Details (for scheduling algorithm)
+  getConsultantsWithFullDetails(): Promise<ConsultantWithFullDetails[]>;
+  getConsultantFullDetails(consultantId: string): Promise<ConsultantWithFullDetails | null>;
+
+  // Project Requirements with Context (for scheduling algorithm)
+  getProjectRequirementsWithContext(projectId: string): Promise<RequirementWithContext[]>;
+  getRequirementWithContext(requirementId: string): Promise<RequirementWithContext | null>;
 }
 
 export interface ConsultantSearchFilters {
@@ -11744,16 +11787,436 @@ export class DatabaseStorage implements IStorage {
 
   async bulkUpsertRaciAssignments(projectId: string, assignments: InsertRaciAssignment[]): Promise<RaciAssignment[]> {
     await db.delete(raciAssignments).where(eq(raciAssignments.projectId, projectId));
-    
+
     if (assignments.length === 0) {
       return [];
     }
-    
+
     const inserted = await db.insert(raciAssignments)
       .values(assignments.map(a => ({ ...a, projectId })))
       .returning();
-    
+
     return inserted;
+  }
+
+  // ============================================
+  // PHASE 9B: AUTO-SCHEDULING METHODS
+  // ============================================
+
+  async getSchedulingRecommendations(requirementId: string): Promise<SchedulingRecommendation[]> {
+    return await db.select()
+      .from(schedulingRecommendations)
+      .where(eq(schedulingRecommendations.requirementId, requirementId))
+      .orderBy(desc(schedulingRecommendations.totalScore));
+  }
+
+  async getSchedulingRecommendationsBySchedule(scheduleId: string): Promise<SchedulingRecommendation[]> {
+    return await db.select()
+      .from(schedulingRecommendations)
+      .where(eq(schedulingRecommendations.scheduleId, scheduleId))
+      .orderBy(desc(schedulingRecommendations.totalScore));
+  }
+
+  async saveSchedulingRecommendations(recommendations: InsertSchedulingRecommendation[]): Promise<void> {
+    if (recommendations.length === 0) return;
+
+    // Delete existing recommendations for the same requirement
+    const requirementId = recommendations[0].requirementId;
+    if (requirementId) {
+      await db.delete(schedulingRecommendations)
+        .where(eq(schedulingRecommendations.requirementId, requirementId));
+    }
+
+    // Insert new recommendations
+    await db.insert(schedulingRecommendations).values(recommendations);
+  }
+
+  async invalidateRecommendations(requirementId: string): Promise<void> {
+    await db.delete(schedulingRecommendations)
+      .where(eq(schedulingRecommendations.requirementId, requirementId));
+  }
+
+  async getSchedulingConfig(hospitalId?: string, projectId?: string): Promise<SchedulingConfig | null> {
+    // Try to get project-specific config first
+    if (projectId) {
+      const [projectConfig] = await db.select()
+        .from(schedulingConfigs)
+        .where(and(
+          eq(schedulingConfigs.projectId, projectId),
+          eq(schedulingConfigs.isActive, true)
+        ))
+        .limit(1);
+      if (projectConfig) return projectConfig;
+    }
+
+    // Fall back to hospital-specific config
+    if (hospitalId) {
+      const [hospitalConfig] = await db.select()
+        .from(schedulingConfigs)
+        .where(and(
+          eq(schedulingConfigs.hospitalId, hospitalId),
+          eq(schedulingConfigs.isActive, true)
+        ))
+        .limit(1);
+      if (hospitalConfig) return hospitalConfig;
+    }
+
+    // Return default config (no hospital or project specified)
+    const [defaultConfig] = await db.select()
+      .from(schedulingConfigs)
+      .where(and(
+        sql`${schedulingConfigs.hospitalId} IS NULL`,
+        sql`${schedulingConfigs.projectId} IS NULL`,
+        eq(schedulingConfigs.isActive, true)
+      ))
+      .limit(1);
+
+    return defaultConfig || null;
+  }
+
+  async createSchedulingConfig(config: InsertSchedulingConfig): Promise<SchedulingConfig> {
+    const [created] = await db.insert(schedulingConfigs).values(config).returning();
+    return created;
+  }
+
+  async updateSchedulingConfig(id: string, config: Partial<InsertSchedulingConfig>): Promise<SchedulingConfig | undefined> {
+    const [updated] = await db.update(schedulingConfigs)
+      .set({ ...config, updatedAt: new Date() })
+      .where(eq(schedulingConfigs.id, id))
+      .returning();
+    return updated;
+  }
+
+  async createAutoAssignmentLog(log: InsertAutoAssignmentLog): Promise<AutoAssignmentLog> {
+    const [created] = await db.insert(autoAssignmentLogs).values(log).returning();
+    return created;
+  }
+
+  async getAutoAssignmentLogs(filters?: { projectId?: string; startDate?: Date; endDate?: Date }): Promise<AutoAssignmentLogWithDetails[]> {
+    const conditions = [];
+
+    if (filters?.projectId) {
+      conditions.push(eq(autoAssignmentLogs.projectId, filters.projectId));
+    }
+    if (filters?.startDate) {
+      conditions.push(gte(autoAssignmentLogs.startedAt, filters.startDate));
+    }
+    if (filters?.endDate) {
+      conditions.push(lte(autoAssignmentLogs.startedAt, filters.endDate));
+    }
+
+    const logs = await db.select({
+      log: autoAssignmentLogs,
+      project: projects,
+      runner: users,
+    })
+      .from(autoAssignmentLogs)
+      .leftJoin(projects, eq(autoAssignmentLogs.projectId, projects.id))
+      .leftJoin(users, eq(autoAssignmentLogs.runBy, users.id))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(autoAssignmentLogs.startedAt));
+
+    return logs.map(row => ({
+      ...row.log,
+      project: row.project ? {
+        id: row.project.id,
+        name: row.project.name,
+      } : { id: '', name: '' },
+      runner: {
+        firstName: row.runner?.firstName || null,
+        lastName: row.runner?.lastName || null,
+      },
+    }));
+  }
+
+  async updateAutoAssignmentLog(id: string, data: Partial<InsertAutoAssignmentLog>): Promise<AutoAssignmentLog | undefined> {
+    const [updated] = await db.update(autoAssignmentLogs)
+      .set(data)
+      .where(eq(autoAssignmentLogs.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getConsultantsWithFullDetails(): Promise<ConsultantWithFullDetails[]> {
+    // Get all active consultants
+    const consultantsList = await db.select({
+      consultant: consultants,
+      user: users,
+    })
+      .from(consultants)
+      .leftJoin(users, eq(consultants.userId, users.id))
+      .where(eq(consultants.isAvailable, true));
+
+    // Get additional data for each consultant
+    const results: ConsultantWithFullDetails[] = [];
+
+    for (const row of consultantsList) {
+      const consultant = row.consultant;
+      const user = row.user;
+
+      // Get EHR experience
+      const ehrExp = await db.select()
+        .from(consultantEhrExperience)
+        .where(eq(consultantEhrExperience.consultantId, consultant.id));
+
+      // Get skills
+      const skills = await db.select()
+        .from(consultantSkills)
+        .where(eq(consultantSkills.consultantId, consultant.id));
+
+      // Get ratings
+      const ratings = await db.select()
+        .from(consultantRatings)
+        .where(eq(consultantRatings.consultantId, consultant.id));
+
+      // Get availability blocks
+      const availability = await db.select()
+        .from(availabilityBlocks)
+        .where(eq(availabilityBlocks.consultantId, consultant.id));
+
+      results.push({
+        id: consultant.id,
+        userId: consultant.userId,
+        tngId: consultant.tngId,
+        location: consultant.location,
+        state: consultant.state,
+        yearsExperience: consultant.yearsExperience,
+        emrSystems: consultant.emrSystems,
+        modules: consultant.modules,
+        units: consultant.units,
+        shiftPreference: consultant.shiftPreference,
+        preferredColleagues: consultant.preferredColleagues,
+        isAvailable: consultant.isAvailable,
+        isOnboarded: consultant.isOnboarded,
+        user: {
+          firstName: user?.firstName || null,
+          lastName: user?.lastName || null,
+          profileImageUrl: user?.profileImageUrl || null,
+        },
+        ehrExperience: ehrExp.map(e => ({
+          ehrSystem: e.ehrSystem,
+          yearsExperience: e.yearsExperience,
+          proficiency: e.proficiency,
+          isCertified: e.isCertified,
+        })),
+        skills: skills.map(s => ({
+          skillItemId: s.skillItemId,
+          proficiency: s.proficiency,
+          yearsExperience: s.yearsExperience,
+          isCertified: s.isCertified,
+        })),
+        ratings: ratings.map(r => ({
+          overallRating: r.overallRating,
+          mannerism: r.mannerism,
+          professionalism: r.professionalism,
+          knowledge: r.knowledge,
+        })),
+        availabilityBlocks: availability.map(a => ({
+          type: a.type,
+          startDate: a.startDate,
+          endDate: a.endDate,
+        })),
+      });
+    }
+
+    return results;
+  }
+
+  async getConsultantFullDetails(consultantId: string): Promise<ConsultantWithFullDetails | null> {
+    const [row] = await db.select({
+      consultant: consultants,
+      user: users,
+    })
+      .from(consultants)
+      .leftJoin(users, eq(consultants.userId, users.id))
+      .where(eq(consultants.id, consultantId))
+      .limit(1);
+
+    if (!row) return null;
+
+    const consultant = row.consultant;
+    const user = row.user;
+
+    // Get EHR experience
+    const ehrExp = await db.select()
+      .from(consultantEhrExperience)
+      .where(eq(consultantEhrExperience.consultantId, consultant.id));
+
+    // Get skills
+    const skills = await db.select()
+      .from(consultantSkills)
+      .where(eq(consultantSkills.consultantId, consultant.id));
+
+    // Get ratings
+    const ratings = await db.select()
+      .from(consultantRatings)
+      .where(eq(consultantRatings.consultantId, consultant.id));
+
+    // Get availability blocks
+    const availability = await db.select()
+      .from(availabilityBlocks)
+      .where(eq(availabilityBlocks.consultantId, consultant.id));
+
+    return {
+      id: consultant.id,
+      userId: consultant.userId,
+      tngId: consultant.tngId,
+      location: consultant.location,
+      state: consultant.state,
+      yearsExperience: consultant.yearsExperience,
+      emrSystems: consultant.emrSystems,
+      modules: consultant.modules,
+      units: consultant.units,
+      shiftPreference: consultant.shiftPreference,
+      preferredColleagues: consultant.preferredColleagues,
+      isAvailable: consultant.isAvailable,
+      isOnboarded: consultant.isOnboarded,
+      user: {
+        firstName: user?.firstName || null,
+        lastName: user?.lastName || null,
+        profileImageUrl: user?.profileImageUrl || null,
+      },
+      ehrExperience: ehrExp.map(e => ({
+        ehrSystem: e.ehrSystem,
+        yearsExperience: e.yearsExperience,
+        proficiency: e.proficiency,
+        isCertified: e.isCertified,
+      })),
+      skills: skills.map(s => ({
+        skillItemId: s.skillItemId,
+        proficiency: s.proficiency,
+        yearsExperience: s.yearsExperience,
+        isCertified: s.isCertified,
+      })),
+      ratings: ratings.map(r => ({
+        overallRating: r.overallRating,
+        mannerism: r.mannerism,
+        professionalism: r.professionalism,
+        knowledge: r.knowledge,
+      })),
+      availabilityBlocks: availability.map(a => ({
+        type: a.type,
+        startDate: a.startDate,
+        endDate: a.endDate,
+      })),
+    };
+  }
+
+  async getProjectRequirementsWithContext(projectId: string): Promise<RequirementWithContext[]> {
+    const requirements = await db.select({
+      requirement: projectRequirements,
+      project: projects,
+      hospital: hospitals,
+      unit: hospitalUnits,
+      module: hospitalModules,
+    })
+      .from(projectRequirements)
+      .leftJoin(projects, eq(projectRequirements.projectId, projects.id))
+      .leftJoin(hospitals, eq(projects.hospitalId, hospitals.id))
+      .leftJoin(hospitalUnits, eq(projectRequirements.unitId, hospitalUnits.id))
+      .leftJoin(hospitalModules, eq(projectRequirements.moduleId, hospitalModules.id))
+      .where(eq(projectRequirements.projectId, projectId));
+
+    const results: RequirementWithContext[] = [];
+
+    for (const row of requirements) {
+      // Get schedules for this project
+      const schedules = await db.select()
+        .from(projectSchedules)
+        .where(eq(projectSchedules.projectId, projectId));
+
+      // Get already assigned consultants
+      const assignedConsultants: string[] = [];
+      for (const schedule of schedules) {
+        const assignments = await db.select()
+          .from(scheduleAssignments)
+          .where(eq(scheduleAssignments.scheduleId, schedule.id));
+        assignedConsultants.push(...assignments.map(a => a.consultantId));
+      }
+
+      results.push({
+        id: row.requirement.id,
+        projectId: row.requirement.projectId,
+        hospitalId: row.hospital?.id || '',
+        hospitalName: row.hospital?.name || '',
+        hospitalEmr: row.hospital?.emrSystem || null,
+        hospitalCity: row.hospital?.city || null,
+        hospitalState: row.hospital?.state || null,
+        unitId: row.requirement.unitId,
+        unitName: row.unit?.name || null,
+        moduleId: row.requirement.moduleId,
+        moduleName: row.module?.name || null,
+        consultantsNeeded: row.requirement.consultantsNeeded,
+        shiftType: row.requirement.shiftType,
+        notes: row.requirement.notes,
+        scheduleDates: schedules.map(s => ({
+          scheduleId: s.id,
+          date: s.scheduleDate,
+          shiftType: s.shiftType,
+        })),
+        alreadyAssignedConsultantIds: [...new Set(assignedConsultants)],
+      });
+    }
+
+    return results;
+  }
+
+  async getRequirementWithContext(requirementId: string): Promise<RequirementWithContext | null> {
+    const [row] = await db.select({
+      requirement: projectRequirements,
+      project: projects,
+      hospital: hospitals,
+      unit: hospitalUnits,
+      module: hospitalModules,
+    })
+      .from(projectRequirements)
+      .leftJoin(projects, eq(projectRequirements.projectId, projects.id))
+      .leftJoin(hospitals, eq(projects.hospitalId, hospitals.id))
+      .leftJoin(hospitalUnits, eq(projectRequirements.unitId, hospitalUnits.id))
+      .leftJoin(hospitalModules, eq(projectRequirements.moduleId, hospitalModules.id))
+      .where(eq(projectRequirements.id, requirementId))
+      .limit(1);
+
+    if (!row) return null;
+
+    const projectId = row.requirement.projectId;
+
+    // Get schedules for this project
+    const schedules = await db.select()
+      .from(projectSchedules)
+      .where(eq(projectSchedules.projectId, projectId));
+
+    // Get already assigned consultants
+    const assignedConsultants: string[] = [];
+    for (const schedule of schedules) {
+      const assignments = await db.select()
+        .from(scheduleAssignments)
+        .where(eq(scheduleAssignments.scheduleId, schedule.id));
+      assignedConsultants.push(...assignments.map(a => a.consultantId));
+    }
+
+    return {
+      id: row.requirement.id,
+      projectId: row.requirement.projectId,
+      hospitalId: row.hospital?.id || '',
+      hospitalName: row.hospital?.name || '',
+      hospitalEmr: row.hospital?.emrSystem || null,
+      hospitalCity: row.hospital?.city || null,
+      hospitalState: row.hospital?.state || null,
+      unitId: row.requirement.unitId,
+      unitName: row.unit?.name || null,
+      moduleId: row.requirement.moduleId,
+      moduleName: row.module?.name || null,
+      consultantsNeeded: row.requirement.consultantsNeeded,
+      shiftType: row.requirement.shiftType,
+      notes: row.requirement.notes,
+      scheduleDates: schedules.map(s => ({
+        scheduleId: s.id,
+        date: s.scheduleDate,
+        shiftType: s.shiftType,
+      })),
+      alreadyAssignedConsultantIds: [...new Set(assignedConsultants)],
+    };
   }
 }
 

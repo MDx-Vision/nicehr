@@ -2442,6 +2442,312 @@ export const shiftSwapRequestsRelations = relations(shiftSwapRequests, ({ one })
   }),
 }));
 
+// ==========================================
+// PHASE 9B: AUTO-SCHEDULING ALGORITHM
+// ==========================================
+
+// Auto-scheduling enums
+export const autoAssignmentModeEnum = pgEnum("auto_assignment_mode", ["recommendation", "auto_assign"]);
+export const autoAssignmentStatusEnum = pgEnum("auto_assignment_status", ["pending", "running", "completed", "failed"]);
+
+// Scheduling recommendations - cached scores for consultant-requirement matching
+export const schedulingRecommendations = pgTable("scheduling_recommendations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  requirementId: varchar("requirement_id").references(() => projectRequirements.id),
+  scheduleId: varchar("schedule_id").references(() => projectSchedules.id),
+  consultantId: varchar("consultant_id").references(() => consultants.id).notNull(),
+  // Total composite score
+  totalScore: decimal("total_score", { precision: 8, scale: 4 }).notNull(),
+  // Individual score components
+  emrScore: decimal("emr_score", { precision: 8, scale: 4 }),
+  moduleScore: decimal("module_score", { precision: 8, scale: 4 }),
+  proficiencyScore: decimal("proficiency_score", { precision: 8, scale: 4 }),
+  availabilityScore: decimal("availability_score", { precision: 8, scale: 4 }),
+  performanceScore: decimal("performance_score", { precision: 8, scale: 4 }),
+  shiftScore: decimal("shift_score", { precision: 8, scale: 4 }),
+  colleagueScore: decimal("colleague_score", { precision: 8, scale: 4 }),
+  locationScore: decimal("location_score", { precision: 8, scale: 4 }),
+  // Constraint tracking
+  hardConstraintsFailed: text("hard_constraints_failed").array(),
+  isEligible: boolean("is_eligible").default(true).notNull(),
+  rank: integer("rank"),
+  // Metadata
+  calculatedAt: timestamp("calculated_at").defaultNow(),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_recommendations_requirement").on(table.requirementId),
+  index("idx_recommendations_schedule").on(table.scheduleId),
+  index("idx_recommendations_consultant").on(table.consultantId),
+  index("idx_recommendations_score").on(table.totalScore),
+  index("idx_recommendations_eligible").on(table.isEligible),
+]);
+
+export const schedulingRecommendationsRelations = relations(schedulingRecommendations, ({ one }) => ({
+  requirement: one(projectRequirements, {
+    fields: [schedulingRecommendations.requirementId],
+    references: [projectRequirements.id],
+  }),
+  schedule: one(projectSchedules, {
+    fields: [schedulingRecommendations.scheduleId],
+    references: [projectSchedules.id],
+  }),
+  consultant: one(consultants, {
+    fields: [schedulingRecommendations.consultantId],
+    references: [consultants.id],
+  }),
+}));
+
+// Auto-assignment logs - audit trail for scheduling decisions
+export const autoAssignmentLogs = pgTable("auto_assignment_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  scheduleId: varchar("schedule_id").references(() => projectSchedules.id),
+  runBy: varchar("run_by").references(() => users.id).notNull(),
+  mode: autoAssignmentModeEnum("mode").notNull(),
+  // Statistics
+  consultantsEvaluated: integer("consultants_evaluated").default(0),
+  consultantsEligible: integer("consultants_eligible").default(0),
+  assignmentsMade: integer("assignments_made").default(0),
+  conflictsFound: integer("conflicts_found").default(0),
+  // Configuration snapshot
+  parameters: jsonb("parameters"),
+  // Status tracking
+  status: autoAssignmentStatusEnum("status").default("pending").notNull(),
+  errorMessage: text("error_message"),
+  startedAt: timestamp("started_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_assignment_logs_project").on(table.projectId),
+  index("idx_assignment_logs_schedule").on(table.scheduleId),
+  index("idx_assignment_logs_status").on(table.status),
+  index("idx_assignment_logs_date").on(table.startedAt),
+]);
+
+export const autoAssignmentLogsRelations = relations(autoAssignmentLogs, ({ one }) => ({
+  project: one(projects, {
+    fields: [autoAssignmentLogs.projectId],
+    references: [projects.id],
+  }),
+  schedule: one(projectSchedules, {
+    fields: [autoAssignmentLogs.scheduleId],
+    references: [projectSchedules.id],
+  }),
+  runner: one(users, {
+    fields: [autoAssignmentLogs.runBy],
+    references: [users.id],
+  }),
+}));
+
+// Scheduling configuration - adjustable weights per hospital/project
+export const schedulingConfigs = pgTable("scheduling_configs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  hospitalId: varchar("hospital_id").references(() => hospitals.id),
+  projectId: varchar("project_id").references(() => projects.id),
+  // Scoring weights (must sum to 1.0)
+  emrWeight: decimal("emr_weight", { precision: 4, scale: 2 }).default("0.25"),
+  moduleWeight: decimal("module_weight", { precision: 4, scale: 2 }).default("0.20"),
+  proficiencyWeight: decimal("proficiency_weight", { precision: 4, scale: 2 }).default("0.15"),
+  availabilityWeight: decimal("availability_weight", { precision: 4, scale: 2 }).default("0.15"),
+  performanceWeight: decimal("performance_weight", { precision: 4, scale: 2 }).default("0.10"),
+  shiftWeight: decimal("shift_weight", { precision: 4, scale: 2 }).default("0.08"),
+  colleagueWeight: decimal("colleague_weight", { precision: 4, scale: 2 }).default("0.05"),
+  locationWeight: decimal("location_weight", { precision: 4, scale: 2 }).default("0.02"),
+  // Thresholds
+  minimumRatingThreshold: decimal("minimum_rating_threshold", { precision: 3, scale: 1 }).default("0"),
+  minimumProficiencyLevel: varchar("minimum_proficiency_level").default("beginner"),
+  // Preferences
+  preferExperiencedConsultants: boolean("prefer_experienced_consultants").default(true),
+  allowPartialAvailability: boolean("allow_partial_availability").default(false),
+  // Status
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_scheduling_config_hospital").on(table.hospitalId),
+  index("idx_scheduling_config_project").on(table.projectId),
+]);
+
+export const schedulingConfigsRelations = relations(schedulingConfigs, ({ one }) => ({
+  hospital: one(hospitals, {
+    fields: [schedulingConfigs.hospitalId],
+    references: [hospitals.id],
+  }),
+  project: one(projects, {
+    fields: [schedulingConfigs.projectId],
+    references: [projects.id],
+  }),
+}));
+
+// Insert schemas for Phase 9B
+export const insertSchedulingRecommendationSchema = createInsertSchema(schedulingRecommendations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAutoAssignmentLogSchema = createInsertSchema(autoAssignmentLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSchedulingConfigSchema = createInsertSchema(schedulingConfigs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for Phase 9B
+export type SchedulingRecommendation = typeof schedulingRecommendations.$inferSelect;
+export type InsertSchedulingRecommendation = z.infer<typeof insertSchedulingRecommendationSchema>;
+
+export type AutoAssignmentLog = typeof autoAssignmentLogs.$inferSelect;
+export type InsertAutoAssignmentLog = z.infer<typeof insertAutoAssignmentLogSchema>;
+
+export type SchedulingConfig = typeof schedulingConfigs.$inferSelect;
+export type InsertSchedulingConfig = z.infer<typeof insertSchedulingConfigSchema>;
+
+// Extended types for Phase 9B
+export interface SchedulingRecommendationWithDetails extends SchedulingRecommendation {
+  consultant: {
+    id: string;
+    tngId: string | null;
+    yearsExperience: number | null;
+    emrSystems: string[] | null;
+    modules: string[] | null;
+    shiftPreference: string | null;
+    isAvailable: boolean;
+    user: {
+      firstName: string | null;
+      lastName: string | null;
+      profileImageUrl: string | null;
+    };
+  };
+  requirement?: {
+    id: string;
+    consultantsNeeded: number;
+    shiftType: string | null;
+  };
+}
+
+export interface AutoAssignmentLogWithDetails extends AutoAssignmentLog {
+  project: {
+    id: string;
+    name: string;
+  };
+  runner: {
+    firstName: string | null;
+    lastName: string | null;
+  };
+}
+
+export interface ConsultantWithFullDetails {
+  id: string;
+  userId: string;
+  tngId: string | null;
+  location: string | null;
+  state: string | null;
+  yearsExperience: number | null;
+  emrSystems: string[] | null;
+  modules: string[] | null;
+  units: string[] | null;
+  shiftPreference: string | null;
+  preferredColleagues: string[] | null;
+  isAvailable: boolean;
+  isOnboarded: boolean;
+  user: {
+    firstName: string | null;
+    lastName: string | null;
+    profileImageUrl: string | null;
+  };
+  ehrExperience: Array<{
+    ehrSystem: string;
+    yearsExperience: number | null;
+    proficiency: string | null;
+    isCertified: boolean | null;
+  }>;
+  skills: Array<{
+    skillItemId: string;
+    proficiency: string | null;
+    yearsExperience: number | null;
+    isCertified: boolean | null;
+  }>;
+  ratings: Array<{
+    overallRating: number | null;
+    mannerism: number | null;
+    professionalism: number | null;
+    knowledge: number | null;
+  }>;
+  availabilityBlocks: Array<{
+    type: string;
+    startDate: string;
+    endDate: string;
+  }>;
+}
+
+export interface RequirementWithContext {
+  id: string;
+  projectId: string;
+  hospitalId: string;
+  hospitalName: string;
+  hospitalEmr: string | null;
+  hospitalCity: string | null;
+  hospitalState: string | null;
+  unitId: string | null;
+  unitName: string | null;
+  moduleId: string | null;
+  moduleName: string | null;
+  consultantsNeeded: number;
+  shiftType: string | null;
+  notes: string | null;
+  scheduleDates: Array<{
+    scheduleId: string;
+    date: string;
+    shiftType: string;
+  }>;
+  alreadyAssignedConsultantIds: string[];
+}
+
+export interface ConsultantScoreResult {
+  consultantId: string;
+  totalScore: number;
+  scores: {
+    emr: number;
+    module: number;
+    proficiency: number;
+    availability: number;
+    performance: number;
+    shift: number;
+    colleague: number;
+    location: number;
+  };
+  hardConstraintsFailed: string[];
+  isEligible: boolean;
+  rank: number;
+}
+
+export interface ScoringWeights {
+  emr: number;
+  module: number;
+  proficiency: number;
+  availability: number;
+  performance: number;
+  shift: number;
+  colleague: number;
+  location: number;
+}
+
+export const DEFAULT_SCORING_WEIGHTS: ScoringWeights = {
+  emr: 0.25,
+  module: 0.20,
+  proficiency: 0.15,
+  availability: 0.15,
+  performance: 0.10,
+  shift: 0.08,
+  colleague: 0.05,
+  location: 0.02,
+};
+
 // Insert schemas for Phase 10
 export const insertTimesheetSchema = createInsertSchema(timesheets).omit({
   id: true,

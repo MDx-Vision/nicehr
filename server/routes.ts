@@ -12010,6 +12010,274 @@ export async function registerRoutes(
   });
 
   // ============================================
+  // PHASE 9B: AUTO-SCHEDULING ROUTES
+  // ============================================
+
+  // Get recommendations for a project requirement
+  app.get('/api/scheduling/recommendations/:requirementId', isAuthenticated, requireAnyPermission('projects:manage', 'admin:manage'), async (req: any, res) => {
+    try {
+      const { requirementId } = req.params;
+      const { recalculate } = req.query;
+
+      // Get the requirement context
+      const context = await storage.getRequirementWithContext(requirementId);
+      if (!context) {
+        return res.status(404).json({ message: "Requirement not found" });
+      }
+
+      // Check if we need to recalculate or can use cached recommendations
+      if (recalculate === 'true') {
+        // Import and use the scheduler
+        const { AutoScheduler } = await import('./scheduling');
+
+        // Get scheduling config if available
+        const config = await storage.getSchedulingConfig(context.hospitalId, context.projectId);
+
+        // Create scheduler with config
+        const scheduler = new AutoScheduler(storage, config ? {
+          weights: {
+            emr: parseFloat(config.emrWeight?.toString() || '0.25'),
+            module: parseFloat(config.moduleWeight?.toString() || '0.20'),
+            proficiency: parseFloat(config.proficiencyWeight?.toString() || '0.15'),
+            availability: parseFloat(config.availabilityWeight?.toString() || '0.15'),
+            performance: parseFloat(config.performanceWeight?.toString() || '0.10'),
+            shift: parseFloat(config.shiftWeight?.toString() || '0.08'),
+            colleague: parseFloat(config.colleagueWeight?.toString() || '0.05'),
+            location: parseFloat(config.locationWeight?.toString() || '0.02'),
+          },
+          minimumRatingThreshold: config.minimumRatingThreshold ? parseFloat(config.minimumRatingThreshold.toString()) : undefined,
+        } : undefined);
+
+        // Calculate recommendations
+        const result = await scheduler.getRecommendations(context);
+
+        // Save to cache
+        await scheduler.saveRecommendations(result);
+
+        // Log the run
+        const userId = req.user?.claims?.sub;
+        if (userId) {
+          await scheduler.createAssignmentLog(context.projectId, undefined, userId, 'recommendation', result);
+        }
+
+        res.json({
+          requirementId,
+          totalEvaluated: result.totalEvaluated,
+          totalEligible: result.totalEligible,
+          recommendations: result.recommendations,
+          calculatedAt: result.calculatedAt,
+        });
+      } else {
+        // Return cached recommendations
+        const cached = await storage.getSchedulingRecommendations(requirementId);
+        res.json({
+          requirementId,
+          totalEvaluated: cached.length,
+          totalEligible: cached.filter(r => r.isEligible).length,
+          recommendations: cached,
+          cached: true,
+        });
+      }
+    } catch (error) {
+      console.error("Error getting recommendations:", error);
+      res.status(500).json({ message: "Failed to get recommendations" });
+    }
+  });
+
+  // Get recommendations for a specific schedule
+  app.get('/api/scheduling/schedules/:scheduleId/recommendations', isAuthenticated, requireAnyPermission('projects:manage', 'admin:manage'), async (req: any, res) => {
+    try {
+      const { scheduleId } = req.params;
+      const recommendations = await storage.getSchedulingRecommendationsBySchedule(scheduleId);
+      res.json(recommendations);
+    } catch (error) {
+      console.error("Error getting schedule recommendations:", error);
+      res.status(500).json({ message: "Failed to get schedule recommendations" });
+    }
+  });
+
+  // Recalculate recommendations for a requirement
+  app.post('/api/scheduling/requirements/:requirementId/recalculate', isAuthenticated, requireAnyPermission('projects:manage', 'admin:manage'), async (req: any, res) => {
+    try {
+      const { requirementId } = req.params;
+
+      // Get the requirement context
+      const context = await storage.getRequirementWithContext(requirementId);
+      if (!context) {
+        return res.status(404).json({ message: "Requirement not found" });
+      }
+
+      // Import and use the scheduler
+      const { AutoScheduler } = await import('./scheduling');
+
+      // Get scheduling config if available
+      const config = await storage.getSchedulingConfig(context.hospitalId, context.projectId);
+
+      // Create scheduler
+      const scheduler = new AutoScheduler(storage, config ? {
+        weights: {
+          emr: parseFloat(config.emrWeight?.toString() || '0.25'),
+          module: parseFloat(config.moduleWeight?.toString() || '0.20'),
+          proficiency: parseFloat(config.proficiencyWeight?.toString() || '0.15'),
+          availability: parseFloat(config.availabilityWeight?.toString() || '0.15'),
+          performance: parseFloat(config.performanceWeight?.toString() || '0.10'),
+          shift: parseFloat(config.shiftWeight?.toString() || '0.08'),
+          colleague: parseFloat(config.colleagueWeight?.toString() || '0.05'),
+          location: parseFloat(config.locationWeight?.toString() || '0.02'),
+        },
+      } : undefined);
+
+      // Calculate recommendations
+      const result = await scheduler.getRecommendations(context);
+
+      // Save to cache
+      await scheduler.saveRecommendations(result);
+
+      // Log the run
+      const userId = req.user?.claims?.sub;
+      if (userId) {
+        await scheduler.createAssignmentLog(context.projectId, undefined, userId, 'recommendation', result);
+      }
+
+      res.json({
+        requirementId,
+        totalEvaluated: result.totalEvaluated,
+        totalEligible: result.totalEligible,
+        recommendations: result.recommendations,
+        calculatedAt: result.calculatedAt,
+      });
+    } catch (error) {
+      console.error("Error recalculating recommendations:", error);
+      res.status(500).json({ message: "Failed to recalculate recommendations" });
+    }
+  });
+
+  // Get scheduling configuration
+  app.get('/api/scheduling/config', isAuthenticated, requireAnyPermission('projects:manage', 'admin:manage'), async (req: any, res) => {
+    try {
+      const { hospitalId, projectId } = req.query;
+      const config = await storage.getSchedulingConfig(
+        hospitalId as string | undefined,
+        projectId as string | undefined
+      );
+
+      if (!config) {
+        // Return default config
+        const { DEFAULT_SCORING_WEIGHTS } = await import('../shared/schema');
+        res.json({
+          id: null,
+          ...DEFAULT_SCORING_WEIGHTS,
+          minimumRatingThreshold: 0,
+          minimumProficiencyLevel: 'beginner',
+          preferExperiencedConsultants: true,
+          allowPartialAvailability: false,
+          isDefault: true,
+        });
+      } else {
+        res.json(config);
+      }
+    } catch (error) {
+      console.error("Error getting scheduling config:", error);
+      res.status(500).json({ message: "Failed to get scheduling config" });
+    }
+  });
+
+  // Create scheduling configuration
+  app.post('/api/scheduling/config', isAuthenticated, requirePermission('admin:manage'), async (req: any, res) => {
+    try {
+      const config = await storage.createSchedulingConfig(req.body);
+      res.status(201).json(config);
+    } catch (error) {
+      console.error("Error creating scheduling config:", error);
+      res.status(400).json({ message: "Failed to create scheduling config" });
+    }
+  });
+
+  // Update scheduling configuration
+  app.put('/api/scheduling/config/:id', isAuthenticated, requirePermission('admin:manage'), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const updated = await storage.updateSchedulingConfig(id, req.body);
+      if (!updated) {
+        return res.status(404).json({ message: "Config not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating scheduling config:", error);
+      res.status(400).json({ message: "Failed to update scheduling config" });
+    }
+  });
+
+  // Get auto-assignment logs
+  app.get('/api/scheduling/logs', isAuthenticated, requireAnyPermission('projects:view', 'admin:manage'), async (req: any, res) => {
+    try {
+      const { projectId, startDate, endDate } = req.query;
+      const logs = await storage.getAutoAssignmentLogs({
+        projectId: projectId as string | undefined,
+        startDate: startDate ? new Date(startDate as string) : undefined,
+        endDate: endDate ? new Date(endDate as string) : undefined,
+      });
+      res.json(logs);
+    } catch (error) {
+      console.error("Error getting auto-assignment logs:", error);
+      res.status(500).json({ message: "Failed to get auto-assignment logs" });
+    }
+  });
+
+  // Check consultant eligibility for a requirement
+  app.get('/api/scheduling/consultants/:consultantId/eligibility/:requirementId', isAuthenticated, requireAnyPermission('projects:view', 'admin:manage'), async (req: any, res) => {
+    try {
+      const { consultantId, requirementId } = req.params;
+
+      // Get consultant details
+      const consultant = await storage.getConsultantFullDetails(consultantId);
+      if (!consultant) {
+        return res.status(404).json({ message: "Consultant not found" });
+      }
+
+      // Get requirement context
+      const context = await storage.getRequirementWithContext(requirementId);
+      if (!context) {
+        return res.status(404).json({ message: "Requirement not found" });
+      }
+
+      // Check constraints
+      const { ConstraintChecker } = await import('./scheduling');
+      const checker = new ConstraintChecker(storage);
+      const result = await checker.checkHardConstraints(consultant, context);
+
+      // Calculate score
+      const { AutoScheduler } = await import('./scheduling');
+      const scheduler = new AutoScheduler(storage);
+      const score = await scheduler.calculateConsultantScore(consultant, context);
+
+      res.json({
+        consultantId,
+        requirementId,
+        isEligible: result.passed,
+        hardConstraintsFailed: result.failedConstraints,
+        warnings: result.warnings,
+        score,
+      });
+    } catch (error) {
+      console.error("Error checking eligibility:", error);
+      res.status(500).json({ message: "Failed to check eligibility" });
+    }
+  });
+
+  // Get project requirements with context (for scheduling UI)
+  app.get('/api/scheduling/projects/:projectId/requirements', isAuthenticated, requireAnyPermission('projects:view', 'admin:manage'), async (req: any, res) => {
+    try {
+      const { projectId } = req.params;
+      const requirements = await storage.getProjectRequirementsWithContext(projectId);
+      res.json(requirements);
+    } catch (error) {
+      console.error("Error getting project requirements:", error);
+      res.status(500).json({ message: "Failed to get project requirements" });
+    }
+  });
+
+  // ============================================
   // NOTIFICATION COUNTS ROUTE
   // ============================================
 
