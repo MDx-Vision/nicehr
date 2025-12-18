@@ -16,11 +16,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
-import { 
-  ChevronRight, 
-  CheckCircle2, 
-  Clock, 
-  AlertCircle, 
+import {
+  ChevronRight,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
   Target,
   Calendar,
   ListTodo,
@@ -32,7 +32,11 @@ import {
   Milestone,
   ListChecks,
   FileText,
-  Activity
+  Activity,
+  Layers,
+  TrendingUp,
+  PlayCircle,
+  CircleDashed
 } from "lucide-react";
 import type { Project, ProjectPhase, ProjectTask, ProjectMilestone, ProjectRisk, PhaseStep } from "@shared/schema";
 
@@ -227,9 +231,9 @@ function TaskList({
       ) : (
         <div className="space-y-2">
           {tasks.map((task) => (
-            <div 
-              key={task.id} 
-              className="flex items-center justify-between p-3 rounded-lg border bg-card"
+            <div
+              key={task.id}
+              className="flex items-center justify-between p-3 rounded-lg border bg-card transition-colors hover:bg-muted/50"
               data-testid={`task-item-${task.id}`}
             >
               <div className="flex items-center gap-3">
@@ -431,19 +435,33 @@ export default function ProjectPhases() {
     );
   }
 
+  // Calculate phase statistics
+  const completedPhases = phases?.filter(p => p.status === "completed").length || 0;
+  const inProgressPhases = phases?.filter(p => p.status === "in_progress").length || 0;
+  const notStartedPhases = phases ? 11 - completedPhases - inProgressPhases : 11;
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => setLocation("/projects")} data-testid="button-back-to-projects">
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold" data-testid="text-project-phases-title">Project Phases</h1>
-          <p className="text-muted-foreground">Track and manage EHR implementation phases</p>
+      {/* Apple-style Header */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => setLocation("/projects")} data-testid="button-back-to-projects">
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight" data-testid="text-project-phases-title">Project Phases</h1>
+            <p className="text-muted-foreground">Track the 11-phase EHR implementation lifecycle</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-xs px-3 py-1">
+            <Layers className="w-3 h-3 mr-1" />
+            11 Phases
+          </Badge>
         </div>
       </div>
 
-      <Card>
+      <Card className="hover-elevate">
         <CardHeader>
           <CardTitle className="text-lg">Select Project</CardTitle>
         </CardHeader>
@@ -479,16 +497,71 @@ export default function ProjectPhases() {
 
       {selectedProject && (
         <>
-          <Card>
+          {/* Apple-style Summary KPI Cards */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card className="hover-elevate" data-testid="kpi-overall-progress">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Overall Progress</CardTitle>
+                <TrendingUp className="h-4 w-4 text-blue-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{overallProgress}%</div>
+                <Progress value={overallProgress} className="h-2 mt-2" />
+                <p className="text-xs text-muted-foreground mt-2">Across all 11 phases</p>
+              </CardContent>
+            </Card>
+
+            <Card className="hover-elevate" data-testid="kpi-completed-phases">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Completed</CardTitle>
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-green-600">{completedPhases}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {completedPhases > 0 ? `${Math.round((completedPhases / 11) * 100)}% of phases complete` : "No phases completed yet"}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="hover-elevate" data-testid="kpi-in-progress-phases">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">In Progress</CardTitle>
+                <PlayCircle className="h-4 w-4 text-blue-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-blue-600">{inProgressPhases}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {inProgressPhases > 0 ? "Active implementation" : "No phases in progress"}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="hover-elevate" data-testid="kpi-not-started-phases">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Not Started</CardTitle>
+                <CircleDashed className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{notStartedPhases}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {notStartedPhases > 0 ? "Phases remaining" : "All phases initiated"}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Implementation Progress Card */}
+          <Card className="hover-elevate">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Target className="w-5 h-5" />
-                    Implementation Progress
+                    Implementation Timeline
                   </CardTitle>
                   <CardDescription>
-                    Overall completion: {overallProgress}% across all phases
+                    Visual progress tracker across all 11 EHR implementation phases
                   </CardDescription>
                 </div>
                 {isAdmin && (!phases || phases.length === 0) && (
@@ -501,7 +574,6 @@ export default function ProjectPhases() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <Progress value={overallProgress} className="h-3" />
                 {phases && phases.length > 0 && (
                   <PhaseProgressTracker phases={phases} projectId={selectedProject} />
                 )}
@@ -760,12 +832,12 @@ function MilestonesTab({ projectId }: { projectId: string }) {
   }
 
   return (
-    <Card>
+    <Card className="hover-elevate">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <Flag className="w-5 h-5" />
+              <Flag className="w-5 h-5 text-amber-500" />
               Project Milestones
             </CardTitle>
             <CardDescription>Key deliverables and checkpoints</CardDescription>
@@ -780,9 +852,9 @@ function MilestonesTab({ projectId }: { projectId: string }) {
         {milestones && milestones.length > 0 ? (
           <div className="space-y-3">
             {milestones.map((milestone) => (
-              <div 
-                key={milestone.id} 
-                className="flex items-center justify-between p-4 rounded-lg border"
+              <div
+                key={milestone.id}
+                className="flex items-center justify-between p-4 rounded-lg border bg-card transition-colors hover:bg-muted/50"
                 data-testid={`milestone-item-${milestone.id}`}
               >
                 <div className="flex items-center gap-3">
@@ -899,12 +971,12 @@ function RisksTab({ projectId }: { projectId: string }) {
   }
 
   return (
-    <Card>
+    <Card className="hover-elevate">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5" />
+              <AlertCircle className="w-5 h-5 text-orange-500" />
               Risk Register
             </CardTitle>
             <CardDescription>Track and mitigate project risks</CardDescription>
@@ -919,9 +991,9 @@ function RisksTab({ projectId }: { projectId: string }) {
         {risks && risks.length > 0 ? (
           <div className="space-y-3">
             {risks.map((risk) => (
-              <div 
-                key={risk.id} 
-                className="p-4 rounded-lg border space-y-2"
+              <div
+                key={risk.id}
+                className="p-4 rounded-lg border bg-card space-y-2 transition-colors hover:bg-muted/50"
                 data-testid={`risk-item-${risk.id}`}
               >
                 <div className="flex items-start justify-between">
@@ -1090,10 +1162,10 @@ function StepsTab({ projectId, phases }: { projectId: string; phases: ProjectPha
 
   return (
     <div className="space-y-4">
-      <Card>
+      <Card className="hover-elevate">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <ListChecks className="w-5 h-5" />
+            <ListChecks className="w-5 h-5 text-indigo-500" />
             Phase Steps
           </CardTitle>
           <CardDescription>View and manage implementation steps for each phase</CardDescription>
@@ -1147,9 +1219,9 @@ function StepsTab({ projectId, phases }: { projectId: string; phases: ProjectPha
           {selectedPhase && steps && steps.length > 0 && (
             <div className="space-y-3">
               {steps.map((step) => (
-                <div 
-                  key={step.id} 
-                  className="p-4 rounded-lg border space-y-3"
+                <div
+                  key={step.id}
+                  className="p-4 rounded-lg border bg-card space-y-3 transition-colors hover:bg-muted/50"
                   data-testid={`step-item-${step.id}`}
                 >
                   <div className="flex items-start justify-between gap-4">

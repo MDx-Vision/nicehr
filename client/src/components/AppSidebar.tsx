@@ -119,6 +119,8 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { id: "overview", title: "Overview", url: "/", icon: "LayoutDashboard", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
       { id: "projects", title: "Projects", url: "/projects", icon: "FolderKanban", roles: ["admin", "hospital_leadership", "hospital_staff"] },
+      { id: "project-phases", title: "Project Phases", url: "/project-phases", icon: "Layers", roles: ["admin", "hospital_leadership", "hospital_staff"] },
+      { id: "raci-matrix", title: "RACI Matrix", url: "/raci-matrix", icon: "ClipboardCheck", roles: ["admin", "hospital_leadership", "hospital_staff"] },
       { id: "my-projects", title: "My Projects", url: "/my-projects", icon: "FolderKanban", roles: ["consultant"] },
       { id: "hospitals", title: "Hospitals", url: "/hospitals", icon: "Building2", roles: ["admin"] },
       { id: "consultants", title: "People", url: "/consultants", icon: "Users", roles: ["admin", "hospital_leadership"] },
@@ -136,6 +138,41 @@ const NAV_GROUPS: NavGroup[] = [
       { id: "timesheets", title: "Timesheets", url: "/timesheets", icon: "Clock", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
       { id: "availability", title: "Availability", url: "/availability", icon: "CalendarDays", roles: ["admin", "consultant"] },
       { id: "shift-swaps", title: "Shift Swaps", url: "/shift-swaps", icon: "ArrowLeftRight", roles: ["admin", "hospital_staff", "consultant"] },
+    ],
+  },
+  {
+    id: "travel",
+    label: "Travel",
+    icon: "Plane",
+    roles: ["admin", "hospital_leadership", "consultant"],
+    defaultOpen: false,
+    items: [
+      { id: "travel-bookings", title: "Bookings", url: "/travel-bookings", icon: "Luggage", roles: ["admin", "hospital_leadership", "consultant"] },
+      { id: "travel-preferences", title: "Preferences", url: "/travel-preferences", icon: "Plane", roles: ["admin", "consultant"] },
+      { id: "transportation", title: "Transportation", url: "/transportation", icon: "Bus", roles: ["admin", "hospital_leadership", "consultant"] },
+    ],
+  },
+  {
+    id: "communication",
+    label: "Communication",
+    icon: "MessageCircle",
+    roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"],
+    defaultOpen: false,
+    items: [
+      { id: "chat", title: "Chat", url: "/chat", icon: "MessageCircle", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
+      { id: "contracts", title: "Contracts", url: "/contracts", icon: "FileSignature", roles: ["admin", "hospital_leadership", "consultant"] },
+    ],
+  },
+  {
+    id: "quality",
+    label: "Quality",
+    icon: "Target",
+    roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"],
+    defaultOpen: false,
+    items: [
+      { id: "quality-assurance", title: "Quality Assurance", url: "/quality-assurance", icon: "Target", roles: ["admin", "hospital_leadership", "hospital_staff"] },
+      { id: "compliance-center", title: "Compliance", url: "/compliance-center", icon: "ShieldCheck", roles: ["admin", "hospital_leadership", "hospital_staff"] },
+      { id: "gamification", title: "Achievements", url: "/gamification", icon: "Award", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
     ],
   },
   {
@@ -163,6 +200,7 @@ const NAV_GROUPS: NavGroup[] = [
       { id: "tickets", title: "Tickets", url: "/support-tickets", icon: "Ticket", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
       { id: "knowledge", title: "Knowledge Base", url: "/knowledge-base", icon: "Book", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
       { id: "eod", title: "EOD Reports", url: "/eod-reports", icon: "FileCheck", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
+      { id: "escalations", title: "Escalations", url: "/escalation-management", icon: "AlertTriangle", roles: ["admin"] },
     ],
   },
   {
@@ -175,6 +213,7 @@ const NAV_GROUPS: NavGroup[] = [
       { id: "training", title: "Courses", url: "/training", icon: "GraduationCap", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
       { id: "assessments", title: "Assessments", url: "/assessments", icon: "ClipboardCheck", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
       { id: "labs", title: "Login Labs", url: "/login-labs", icon: "Monitor", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
+      { id: "onboarding", title: "Onboarding", url: "/onboarding", icon: "UserCheck", roles: ["admin", "consultant"] },
     ],
   },
   {
@@ -188,6 +227,22 @@ const NAV_GROUPS: NavGroup[] = [
       { id: "invoices", title: "Invoices", url: "/invoices", icon: "Receipt", roles: ["admin", "hospital_leadership"] },
       { id: "payroll", title: "Payroll", url: "/payroll", icon: "Banknote", roles: ["admin", "consultant"] },
       { id: "budget", title: "Budget", url: "/budget", icon: "Calculator", roles: ["admin", "hospital_leadership"] },
+      { id: "budget-modeling", title: "Budget Modeling", url: "/budget-modeling", icon: "TrendingUp", roles: ["admin"] },
+    ],
+  },
+  {
+    id: "profile",
+    label: "Profile",
+    icon: "UserCog",
+    roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"],
+    defaultOpen: false,
+    items: [
+      { id: "profile", title: "My Profile", url: "/profile", icon: "UserCog", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
+      { id: "personal-info", title: "Personal Info", url: "/personal-information", icon: "FileText", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
+      { id: "skills", title: "Skills", url: "/skills-questionnaire", icon: "Award", roles: ["consultant"] },
+      { id: "my-documents", title: "My Documents", url: "/my-documents", icon: "FileText", roles: ["consultant"] },
+      { id: "documents", title: "Documents", url: "/documents", icon: "FileText", roles: ["admin", "hospital_leadership", "hospital_staff"] },
+      { id: "account", title: "Account Settings", url: "/account", icon: "Settings", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
     ],
   },
   {
@@ -203,6 +258,9 @@ const NAV_GROUPS: NavGroup[] = [
       { id: "invitations", title: "Invitations", url: "/staff-invitations", icon: "UserPlus", roles: ["admin"] },
       { id: "activity", title: "Activity Log", url: "/activity-log", icon: "Activity", roles: ["admin"] },
       { id: "integrations", title: "Integrations", url: "/integrations", icon: "Link2", roles: ["admin"] },
+      { id: "ehr-monitoring", title: "EHR Monitoring", url: "/ehr-monitoring", icon: "Monitor", roles: ["admin"] },
+      { id: "skills-verification", title: "Skills Verify", url: "/skills-verification", icon: "UserCheck", roles: ["admin"] },
+      { id: "identity", title: "Identity Verify", url: "/identity-verification", icon: "Shield", roles: ["admin"] },
     ],
   },
 ];

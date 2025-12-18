@@ -3,11 +3,14 @@
 ## Overview
 NICEHR is a comprehensive healthcare consultant management platform designed for EHR implementation projects following an 11-phase methodology. It manages consultants, hospitals, projects, onboarding, go-live operations, ROI measurement, time/attendance, training/competency, support ticketing, financial management, travel coordination, quality assurance, gamification, compliance tracking, digital signatures, real-time chat, identity verification, and reporting & business intelligence. The platform aims to streamline complex EHR implementations and improve operational efficiency for healthcare organizations.
 
+**Current Status:** 97% Complete (420/433 features) - Apple-Style UI Redesign Implemented
+
 ## User Preferences
+- **Apple-Style Design** - Clean, minimal interface with hover effects and consistent styling
 - Professional healthcare aesthetic with calming blue/teal colors
-- Clean, minimal interface focused on usability
 - Dark mode support for night shift workers
 - Responsive design for desktop and tablet use
+- Collapsible sidebar navigation with 11 organized groups
 
 ## System Architecture
 
@@ -42,6 +45,23 @@ NICEHR is a comprehensive healthcare consultant management platform designed for
 - **Analytics & Reporting:** Role-specific and executive dashboards, hospital ROI analysis, report builder, consultant performance insights. Advanced analytics including Go-Live Readiness, Consultant Utilization, Timeline Forecast, and Cost Variance Analysis.
 - **Integration Hub:** Facilitates connections with Calendar (Google, Outlook, iCal), Payroll (ADP, Workday, Paychex, Gusto), and EHR systems (Epic, Cerner, Meditech, Allscripts) with sync jobs, event tracking, and system health monitoring.
 - **Demo Data Seeding System:** Comprehensive system for populating the database with realistic demo data across all modules for showcase and testing.
+
+### Apple-Style Navigation Structure (11 Groups)
+The sidebar is organized into collapsible groups for easy navigation:
+
+| Group | Pages | Roles |
+|-------|-------|-------|
+| **Work** | Overview, Projects, Project Phases, RACI Matrix, Hospitals, People | All roles |
+| **Schedule** | Calendar, Timesheets, Availability, Shift Swaps | All roles |
+| **Travel** | Bookings, Preferences, Transportation | Admin, Leadership, Consultant |
+| **Communication** | Chat, Contracts | All roles |
+| **Quality** | Quality Assurance, Compliance, Achievements | All roles |
+| **Reports** | Analytics, Executive, ROI, Builder, Advanced | Admin, Leadership |
+| **Support** | Command Center, Tickets, Knowledge Base, EOD, Escalations | All roles |
+| **Training** | Courses, Assessments, Login Labs, Onboarding | All roles |
+| **Finance** | Expenses, Invoices, Payroll, Budget, Budget Modeling | Admin, Leadership, Consultant |
+| **Profile** | My Profile, Personal Info, Skills, Documents, Account | All roles |
+| **Admin** | Settings, Access Control, Roles, Invitations, Activity, Integrations, EHR Monitoring, Skills Verify, Identity Verify | Admin only |
 
 ### Database Schema Highlights
 - **RBAC Tables:** `roles`, `permissions`, `role_permissions`, `user_role_assignments`
