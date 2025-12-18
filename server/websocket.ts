@@ -5,8 +5,8 @@ import { sessionStore } from './replitAuth';
 import cookie from 'cookie';
 import cookieSignature from 'cookie-signature';
 
-interface ChatMessage {
-  type: 'message' | 'join' | 'leave' | 'typing' | 'read';
+interface WebSocketMessage {
+  type: 'message' | 'join' | 'leave' | 'typing' | 'read' | 'subscribe_notifications' | 'unsubscribe_notifications';
   channelId?: string;
   content?: string;
   messageId?: string;
@@ -14,77 +14,93 @@ interface ChatMessage {
 
 interface AuthenticatedWebSocket extends WebSocket {
   userId?: string;
+  userRole?: string;
   channels: Set<string>;
+  subscribedToNotifications: boolean;
   isAlive: boolean;
 }
 
+// Channel-based clients for chat
 const clients = new Map<string, Set<AuthenticatedWebSocket>>();
 
-async function getUserIdFromSession(req: IncomingMessage): Promise<string | null> {
+// Global user clients for notifications (userId -> Set of connections)
+const userClients = new Map<string, Set<AuthenticatedWebSocket>>();
+
+// All connected clients for broadcast
+const allClients = new Set<AuthenticatedWebSocket>();
+
+interface SessionInfo {
+  userId: string | null;
+  userRole: string | null;
+}
+
+async function getSessionInfo(req: IncomingMessage): Promise<SessionInfo> {
   return new Promise((resolve) => {
     try {
       const cookies = cookie.parse(req.headers.cookie || '');
       const sessionCookie = cookies['connect.sid'];
-      
+
       if (!sessionCookie) {
-        resolve(null);
+        resolve({ userId: null, userRole: null });
         return;
       }
 
       const secret = process.env.SESSION_SECRET;
       if (!secret) {
         console.error('SESSION_SECRET not configured');
-        resolve(null);
+        resolve({ userId: null, userRole: null });
         return;
       }
 
       if (!sessionCookie.startsWith('s:')) {
-        resolve(null);
+        resolve({ userId: null, userRole: null });
         return;
       }
 
       const signedValue = sessionCookie.slice(2);
       const sessionId = cookieSignature.unsign(signedValue, secret);
-      
+
       if (sessionId === false) {
         console.error('Invalid session signature');
-        resolve(null);
+        resolve({ userId: null, userRole: null });
         return;
       }
 
       sessionStore.get(sessionId, (err, sessionData: any) => {
         if (err) {
           console.error('Session lookup error:', err);
-          resolve(null);
+          resolve({ userId: null, userRole: null });
           return;
         }
-        
+
         if (!sessionData) {
-          resolve(null);
+          resolve({ userId: null, userRole: null });
           return;
         }
 
         const userId = sessionData?.passport?.user?.claims?.sub;
-        resolve(userId || null);
+        const userRole = sessionData?.passport?.user?.claims?.metadata?.role || 'consultant';
+        resolve({ userId: userId || null, userRole });
       });
     } catch (error) {
       console.error('Session validation error:', error);
-      resolve(null);
+      resolve({ userId: null, userRole: null });
     }
   });
 }
 
 export function setupWebSocket(server: Server) {
-  const wss = new WebSocketServer({ 
-    server, 
+  const wss = new WebSocketServer({
+    server,
     path: '/ws',
     verifyClient: async (info, callback) => {
-      const userId = await getUserIdFromSession(info.req);
-      if (!userId) {
+      const sessionInfo = await getSessionInfo(info.req);
+      if (!sessionInfo.userId) {
         callback(false, 401, 'Unauthorized');
         return;
       }
-      (info.req as any).userId = userId;
+      (info.req as any).userId = sessionInfo.userId;
+      (info.req as any).userRole = sessionInfo.userRole;
       callback(true);
     }
   });
@@ -114,11 +130,22 @@ export function setupWebSocket(server: Server) {
     const client = ws as AuthenticatedWebSocket;
     client.channels = new Set();
     client.isAlive = true;
+    client.subscribedToNotifications = false;
     client.userId = (req as any).userId;
+    client.userRole = (req as any).userRole;
 
-    client.send(JSON.stringify({ 
-      type: 'authenticated', 
-      userId: client.userId 
+    // Track client globally
+    allClients.add(client);
+    if (client.userId) {
+      if (!userClients.has(client.userId)) {
+        userClients.set(client.userId, new Set());
+      }
+      userClients.get(client.userId)!.add(client);
+    }
+
+    client.send(JSON.stringify({
+      type: 'authenticated',
+      userId: client.userId
     }));
 
     client.on('pong', () => {
@@ -127,7 +154,7 @@ export function setupWebSocket(server: Server) {
 
     client.on('message', async (data: Buffer) => {
       try {
-        const message = JSON.parse(data.toString()) as ChatMessage;
+        const message = JSON.parse(data.toString()) as WebSocketMessage;
 
         if (!client.userId) {
           client.send(JSON.stringify({ type: 'error', message: 'Not authenticated' }));
@@ -235,7 +262,7 @@ export function setupWebSocket(server: Server) {
                 messageId: message.messageId,
                 userId: client.userId,
               });
-              
+
               const members = await storage.getChannelMembers(message.channelId);
               const member = members.find(m => m.userId === client.userId);
               if (member) {
@@ -245,6 +272,20 @@ export function setupWebSocket(server: Server) {
               }
             }
             break;
+
+          case 'subscribe_notifications':
+            client.subscribedToNotifications = true;
+            // Send initial notification counts
+            const counts = await getNotificationCountsForUser(client.userId, client.userRole || 'consultant');
+            client.send(JSON.stringify({
+              type: 'notification_counts',
+              counts
+            }));
+            break;
+
+          case 'unsubscribe_notifications':
+            client.subscribedToNotifications = false;
+            break;
         }
       } catch (error) {
         console.error('WebSocket message error:', error);
@@ -253,11 +294,24 @@ export function setupWebSocket(server: Server) {
     });
 
     client.on('close', () => {
+      // Remove from global tracking
+      allClients.delete(client);
+      if (client.userId) {
+        const userClientSet = userClients.get(client.userId);
+        if (userClientSet) {
+          userClientSet.delete(client);
+          if (userClientSet.size === 0) {
+            userClients.delete(client.userId);
+          }
+        }
+      }
+
+      // Remove from channel tracking
       client.channels.forEach(channelId => {
         const channelClients = clients.get(channelId);
         if (channelClients) {
           channelClients.delete(client);
-          
+
           broadcastToChannel(channelId, {
             type: 'user_left',
             channelId,
@@ -291,7 +345,7 @@ function broadcastToChannel(channelId: string, message: object, exclude?: Authen
 export function getOnlineUsers(channelId: string): string[] {
   const channelClients = clients.get(channelId);
   if (!channelClients) return [];
-  
+
   const onlineUsers: string[] = [];
   channelClients.forEach(client => {
     if (client.userId && client.readyState === WebSocket.OPEN) {
@@ -299,4 +353,108 @@ export function getOnlineUsers(channelId: string): string[] {
     }
   });
   return Array.from(new Set(onlineUsers));
+}
+
+// Get notification counts for a specific user based on their role
+async function getNotificationCountsForUser(userId: string, userRole: string): Promise<Record<string, number>> {
+  const counts: Record<string, number> = {};
+
+  try {
+    // Get pending shift swap requests
+    if (userRole === 'admin' || userRole === 'consultant') {
+      const pendingSwaps = await storage.getPendingSwapRequests();
+      if (userRole === 'admin') {
+        counts['shift-swaps'] = pendingSwaps.length;
+      } else {
+        const consultant = await storage.getConsultantByUserId(userId);
+        if (consultant) {
+          counts['shift-swaps'] = pendingSwaps.filter(
+            s => s.requesterId === consultant.id || s.targetConsultantId === consultant.id
+          ).length;
+        }
+      }
+    }
+
+    // Get open support tickets
+    const allTickets = await storage.getAllSupportTickets();
+    const openTickets = allTickets.filter(t => t.status === 'open' || t.status === 'in_progress');
+    if (userRole === 'admin') {
+      counts['tickets'] = openTickets.length;
+    } else {
+      counts['tickets'] = openTickets.filter(
+        t => t.reportedById === userId || t.assignedToId === userId
+      ).length;
+    }
+
+    // Get pending invitations (admin only)
+    if (userRole === 'admin') {
+      const pendingInvitations = await storage.getInvitationsByStatus('pending');
+      counts['invitations'] = pendingInvitations.length;
+    }
+
+    // Get pending timesheets (admin/leadership)
+    if (userRole === 'admin' || userRole === 'hospital_leadership') {
+      const timesheets = await storage.getAllTimesheets();
+      counts['timesheets'] = timesheets.filter(t => t.status === 'submitted').length;
+    }
+  } catch (error) {
+    console.error('Error getting notification counts:', error);
+  }
+
+  return counts;
+}
+
+// Broadcast notification count updates to all subscribed clients
+export async function broadcastNotificationUpdate(affectedTypes?: string[]) {
+  const updatePromises: Promise<void>[] = [];
+
+  allClients.forEach(client => {
+    if (client.subscribedToNotifications && client.userId && client.readyState === WebSocket.OPEN) {
+      const promise = (async () => {
+        try {
+          const counts = await getNotificationCountsForUser(client.userId!, client.userRole || 'consultant');
+          client.send(JSON.stringify({
+            type: 'notification_counts',
+            counts,
+            affectedTypes
+          }));
+        } catch (error) {
+          console.error('Error broadcasting notification update:', error);
+        }
+      })();
+      updatePromises.push(promise);
+    }
+  });
+
+  await Promise.all(updatePromises);
+}
+
+// Broadcast to specific user(s)
+export async function broadcastNotificationUpdateToUsers(userIds: string[], affectedTypes?: string[]) {
+  const updatePromises: Promise<void>[] = [];
+
+  userIds.forEach(userId => {
+    const userClientSet = userClients.get(userId);
+    if (userClientSet) {
+      userClientSet.forEach(client => {
+        if (client.subscribedToNotifications && client.readyState === WebSocket.OPEN) {
+          const promise = (async () => {
+            try {
+              const counts = await getNotificationCountsForUser(userId, client.userRole || 'consultant');
+              client.send(JSON.stringify({
+                type: 'notification_counts',
+                counts,
+                affectedTypes
+              }));
+            } catch (error) {
+              console.error('Error broadcasting notification update to user:', error);
+            }
+          })();
+          updatePromises.push(promise);
+        }
+      });
+    }
+  });
+
+  await Promise.all(updatePromises);
 }

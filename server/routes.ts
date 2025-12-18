@@ -9,6 +9,7 @@ import {
 import { ObjectPermission } from "./objectAcl";
 import { logActivity } from "./activityLogger";
 import { sendInvitationEmail } from "./emailService";
+import { broadcastNotificationUpdate } from "./websocket";
 import {
   insertHospitalSchema,
   insertHospitalUnitSchema,
@@ -1803,7 +1804,10 @@ export async function registerRoutes(
         message,
         expiresAt,
       });
-      
+
+      // Broadcast notification update for invitations
+      broadcastNotificationUpdate(['invitations']);
+
       res.status(201).json(invitation);
     } catch (error) {
       console.error("Error creating invitation:", error);
@@ -1815,21 +1819,24 @@ export async function registerRoutes(
     try {
       const adminUserId = req.user?.claims?.sub;
       const { reason } = req.body;
-      
+
       const invitation = await storage.revokeInvitation(
-        req.params.id, 
-        adminUserId, 
+        req.params.id,
+        adminUserId,
         reason || 'Revoked by administrator'
       );
-      
+
       if (!invitation) {
         return res.status(404).json({ message: "Invitation not found" });
       }
-      
+
       if (invitation.acceptedByUserId) {
         await storage.updateUserAccessStatus(invitation.acceptedByUserId, 'revoked');
       }
-      
+
+      // Broadcast notification update for invitations
+      broadcastNotificationUpdate(['invitations']);
+
       res.json(invitation);
     } catch (error) {
       console.error("Error revoking invitation:", error);
@@ -3507,7 +3514,10 @@ export async function registerRoutes(
         resourceName: ticket.ticketNumber || `Ticket ${ticket.id}`,
         description: `Created support ticket: ${ticket.title}`,
       }, req);
-      
+
+      // Broadcast notification update for tickets
+      broadcastNotificationUpdate(['tickets']);
+
       res.status(201).json(ticket);
     } catch (error) {
       console.error("Error creating support ticket:", error);
@@ -3522,6 +3532,12 @@ export async function registerRoutes(
       if (!ticket) {
         return res.status(404).json({ message: "Ticket not found" });
       }
+
+      // Broadcast notification update if status changed
+      if (updateData.status) {
+        broadcastNotificationUpdate(['tickets']);
+      }
+
       res.json(ticket);
     } catch (error) {
       console.error("Error updating ticket:", error);
@@ -3830,7 +3846,10 @@ export async function registerRoutes(
         resourceName: `Timesheet for week of ${timesheet.weekStartDate}`,
         description: 'Submitted timesheet for approval',
       }, req);
-      
+
+      // Broadcast notification update for timesheets
+      broadcastNotificationUpdate(['timesheets']);
+
       res.json(timesheet);
     } catch (error) {
       console.error("Error submitting timesheet:", error);
@@ -3845,7 +3864,7 @@ export async function registerRoutes(
       if (!timesheet) {
         return res.status(404).json({ message: "Timesheet not found" });
       }
-      
+
       await logActivity(approverId, {
         activityType: 'update',
         resourceType: 'timesheet',
@@ -3853,7 +3872,7 @@ export async function registerRoutes(
         resourceName: `Timesheet for week of ${timesheet.weekStartDate}`,
         description: 'Approved timesheet',
       }, req);
-      
+
       const timesheetDetails = await storage.getTimesheetById(timesheet.id);
       if (timesheetDetails?.consultant?.userId) {
         await storage.createNotification({
@@ -3864,7 +3883,10 @@ export async function registerRoutes(
           link: `/timesheets/${timesheet.id}`,
         });
       }
-      
+
+      // Broadcast notification update for timesheets
+      broadcastNotificationUpdate(['timesheets']);
+
       res.json(timesheet);
     } catch (error) {
       console.error("Error approving timesheet:", error);
@@ -3903,7 +3925,10 @@ export async function registerRoutes(
           link: `/timesheets/${timesheet.id}`,
         });
       }
-      
+
+      // Broadcast notification update for timesheets
+      broadcastNotificationUpdate(['timesheets']);
+
       res.json(timesheet);
     } catch (error) {
       console.error("Error rejecting timesheet:", error);
@@ -4223,7 +4248,10 @@ export async function registerRoutes(
           });
         }
       }
-      
+
+      // Broadcast notification update for shift swaps
+      broadcastNotificationUpdate(['shift-swaps']);
+
       res.status(201).json(swapRequest);
     } catch (error) {
       console.error("Error creating shift swap request:", error);
@@ -4239,7 +4267,7 @@ export async function registerRoutes(
       if (!swapRequest) {
         return res.status(404).json({ message: "Shift swap request not found" });
       }
-      
+
       await logActivity(responderId, {
         activityType: 'update',
         resourceType: 'shift_swap',
@@ -4247,7 +4275,7 @@ export async function registerRoutes(
         resourceName: `Shift swap request`,
         description: 'Approved shift swap request',
       }, req);
-      
+
       const requester = await storage.getConsultant(swapRequest.requesterId);
       if (requester?.userId) {
         await storage.createNotification({
@@ -4258,7 +4286,10 @@ export async function registerRoutes(
           link: `/shift-swaps/${swapRequest.id}`,
         });
       }
-      
+
+      // Broadcast notification update for shift swaps
+      broadcastNotificationUpdate(['shift-swaps']);
+
       res.json(swapRequest);
     } catch (error) {
       console.error("Error approving shift swap request:", error);
@@ -4274,7 +4305,7 @@ export async function registerRoutes(
       if (!swapRequest) {
         return res.status(404).json({ message: "Shift swap request not found" });
       }
-      
+
       await logActivity(responderId, {
         activityType: 'update',
         resourceType: 'shift_swap',
@@ -4282,7 +4313,10 @@ export async function registerRoutes(
         resourceName: `Shift swap request`,
         description: 'Rejected shift swap request',
       }, req);
-      
+
+      // Broadcast notification update for shift swaps
+      broadcastNotificationUpdate(['shift-swaps']);
+
       const requester = await storage.getConsultant(swapRequest.requesterId);
       if (requester?.userId) {
         await storage.createNotification({
@@ -12012,7 +12046,7 @@ export async function registerRoutes(
       } else {
         // For non-admins, count tickets they created or are assigned to
         counts['tickets'] = openTickets.filter(
-          t => t.reportedBy === userId || t.assignedTo === userId
+          t => t.reportedById === userId || t.assignedToId === userId
         ).length;
       }
 

@@ -339,7 +339,7 @@ export function AppSidebar() {
           isActive={isActive}
           className={cn(
             "group relative transition-all duration-150",
-            isActive && "bg-white/10 text-white font-medium"
+            isActive && "bg-muted text-foreground font-medium"
           )}
           data-testid={`nav-${item.id}`}
         >
@@ -352,7 +352,7 @@ export function AppSidebar() {
                   "ml-auto h-5 min-w-5 px-1.5 text-[10px] font-medium",
                   typeof badge === "number" && badge > 0
                     ? "bg-red-500/20 text-red-400 border-red-500/30"
-                    : "bg-white/10 text-white/60 border-white/20"
+                    : "bg-muted text-muted-foreground border-border"
                 )}
               >
                 {typeof badge === "number" && badge > 99 ? "99+" : badge}
@@ -366,14 +366,14 @@ export function AppSidebar() {
                   toggleFavorite(item.id);
                 }}
                 className={cn(
-                  "opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-white/10",
+                  "opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-muted",
                   isFavorite && "opacity-100"
                 )}
               >
                 <Star
                   className={cn(
                     "w-3 h-3",
-                    isFavorite ? "fill-amber-400 text-amber-400" : "text-white/40"
+                    isFavorite ? "fill-amber-400 text-amber-400" : "text-muted-foreground"
                   )}
                 />
               </button>
@@ -385,15 +385,15 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar className="border-r border-white/5 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950">
+    <Sidebar className="border-r border-border bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950">
       {/* Header */}
       <SidebarHeader className="p-4 pb-2">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-            <span className="text-white font-bold text-sm">N</span>
+            <span className="text-foreground font-bold text-sm">N</span>
           </div>
           <div className="flex flex-col">
-            <span className="font-semibold text-sm text-white tracking-tight">NICEHR</span>
+            <span className="font-semibold text-sm text-foreground tracking-tight">NICEHR</span>
             {getRoleBadge(roleLevel)}
           </div>
         </div>
@@ -403,12 +403,12 @@ export function AppSidebar() {
       <div className="px-3 py-2">
         <Button
           variant="outline"
-          className="w-full justify-start gap-2 h-9 bg-white/5 border-white/10 text-white/60 hover:text-white hover:bg-white/10 hover:border-white/20"
+          className="w-full justify-start gap-2 h-9 bg-muted/50 border-border text-muted-foreground hover:text-foreground hover:bg-muted hover:border-border"
           onClick={() => (window.location.href = "/search")}
         >
           <Search className="w-4 h-4" />
           <span className="flex-1 text-left text-sm">Search...</span>
-          <kbd className="hidden sm:inline-flex h-5 items-center gap-1 rounded border border-white/20 bg-white/5 px-1.5 font-mono text-[10px] text-white/40">
+          <kbd className="hidden sm:inline-flex h-5 items-center gap-1 rounded border border-border bg-muted/50 px-1.5 font-mono text-[10px] text-muted-foreground">
             <Command className="w-3 h-3" />K
           </kbd>
         </Button>
@@ -418,7 +418,7 @@ export function AppSidebar() {
         {/* Favorites Section */}
         {favoriteItems.length > 0 && (
           <SidebarGroup>
-            <SidebarGroupLabel className="text-[11px] uppercase tracking-wider text-white/40 font-medium px-2">
+            <SidebarGroupLabel className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium px-2">
               <Star className="w-3 h-3 mr-1.5 fill-amber-400 text-amber-400" />
               Favorites
             </SidebarGroupLabel>
@@ -444,7 +444,7 @@ export function AppSidebar() {
             >
               <SidebarGroup>
                 <CollapsibleTrigger asChild>
-                  <SidebarGroupLabel className="text-[11px] uppercase tracking-wider text-white/40 font-medium px-2 cursor-pointer hover:text-white/60 transition-colors flex items-center justify-between group">
+                  <SidebarGroupLabel className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium px-2 cursor-pointer hover:text-muted-foreground transition-colors flex items-center justify-between group">
                     <span className="flex items-center gap-1.5">
                       <GroupIcon className="w-3 h-3" />
                       {group.label}
@@ -471,28 +471,28 @@ export function AppSidebar() {
       </SidebarContent>
 
       {/* Footer */}
-      <SidebarFooter className="p-3 mt-auto border-t border-white/5">
-        <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors cursor-pointer">
-          <Avatar className="h-8 w-8 ring-2 ring-white/10">
+      <SidebarFooter className="p-3 mt-auto border-t border-border">
+        <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+          <Avatar className="h-8 w-8 ring-2 ring-border">
             <AvatarImage src={user?.profileImageUrl || undefined} />
-            <AvatarFallback className="bg-gradient-to-br from-slate-700 to-slate-800 text-white text-xs">
+            <AvatarFallback className="bg-gradient-to-br from-slate-700 to-slate-800 text-foreground text-xs">
               {getInitials()}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col flex-1 min-w-0">
-            <span className="text-sm font-medium text-white truncate">
+            <span className="text-sm font-medium text-foreground truncate">
               {user?.firstName && user?.lastName
                 ? `${user.firstName} ${user.lastName}`
                 : user?.email || "User"}
             </span>
-            <span className="text-[11px] text-white/40 truncate">
+            <span className="text-[11px] text-muted-foreground truncate">
               {user?.email}
             </span>
           </div>
         </div>
         <Button
           variant="ghost"
-          className="w-full justify-start gap-2 h-9 text-white/60 hover:text-white hover:bg-white/10 mt-1"
+          className="w-full justify-start gap-2 h-9 text-muted-foreground hover:text-foreground hover:bg-muted mt-1"
           asChild
           data-testid="button-logout"
         >
