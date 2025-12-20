@@ -9,6 +9,7 @@ import {
   AlertCircle,
   X,
   Wifi,
+  Users,
 } from 'lucide-react';
 import RatingModal from '../../components/support/RatingModal';
 
@@ -24,6 +25,12 @@ interface SessionInfo {
   started_at?: string;
 }
 
+interface QueuePosition {
+  position: number | null;
+  totalInQueue: number;
+  estimatedWaitSeconds: number;
+}
+
 export default function VideoCall() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const { user } = useAuth();
@@ -35,7 +42,8 @@ export default function VideoCall() {
   const [inCall, setInCall] = useState(false);
   const [error, setError] = useState('');
   const [showRating, setShowRating] = useState(false);
-  
+  const [queuePosition, setQueuePosition] = useState<QueuePosition | null>(null);
+
   const [callDuration, setCallDuration] = useState(0);
 
   const callFrameRef = useRef<DailyCall | null>(null);
@@ -59,6 +67,13 @@ export default function VideoCall() {
 
         setSession(data);
         setLoading(false);
+
+        // If pending, fetch queue position
+        if (data.status === 'pending') {
+          const posRes = await fetch(`/api/support/queue-position/${sessionId}`);
+          const posData = await posRes.json();
+          setQueuePosition(posData);
+        }
       } catch (err) {
         console.error('Failed to fetch session:', err);
         setError('Failed to load session');
@@ -72,8 +87,22 @@ export default function VideoCall() {
     const unsubAccepted = subscribeGlobal('support_request_accepted', (payload) => {
       const data = payload as { sessionId: number; consultantName: string };
       if (data.sessionId === parseInt(sessionId!)) {
+        // Clear queue position when accepted
+        setQueuePosition(null);
         // Refresh session to get updated status
         fetchSession();
+      }
+    });
+
+    // Subscribe to queue position updates
+    const unsubPosition = subscribeGlobal('queue_position_update', (payload) => {
+      const data = payload as { sessionId: number; position: number; totalInQueue: number; estimatedWaitSeconds: number };
+      if (data.sessionId === parseInt(sessionId!)) {
+        setQueuePosition({
+          position: data.position,
+          totalInQueue: data.totalInQueue,
+          estimatedWaitSeconds: data.estimatedWaitSeconds,
+        });
       }
     });
 
@@ -95,6 +124,7 @@ export default function VideoCall() {
 
     return () => {
       unsubAccepted();
+      unsubPosition();
       unsubEnded();
       clearInterval(interval);
     };
@@ -277,6 +307,18 @@ export default function VideoCall() {
     );
   }
 
+  // Format estimated wait time
+  const formatWaitTime = (seconds: number) => {
+    if (seconds < 60) return 'Less than a minute';
+    const mins = Math.round(seconds / 60);
+    if (mins === 1) return 'About 1 minute';
+    if (mins < 60) return `About ${mins} minutes`;
+    const hours = Math.floor(mins / 60);
+    const remainingMins = mins % 60;
+    if (hours === 1) return `About 1 hour${remainingMins > 0 ? ` ${remainingMins} min` : ''}`;
+    return `About ${hours} hours`;
+  };
+
   // Waiting room for pending status
   if (session?.status === 'pending') {
     return (
@@ -291,6 +333,39 @@ export default function VideoCall() {
           Your request for <span className="font-medium">{session.department}</span> support is in the queue.
           You'll be notified instantly when a consultant accepts.
         </p>
+
+        {/* Queue Position Display */}
+        {queuePosition && queuePosition.position && (
+          <div className="bg-primary-50 border border-primary-200 rounded-xl p-4 mb-6">
+            <div className="flex items-center justify-center gap-6">
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-2 mb-1">
+                  <Users className="w-5 h-5 text-primary-600" />
+                  <span className="text-3xl font-bold text-primary-600">
+                    #{queuePosition.position}
+                  </span>
+                </div>
+                <p className="text-sm text-primary-700">in queue</p>
+              </div>
+              <div className="w-px h-12 bg-primary-200" />
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-2 mb-1">
+                  <Clock className="w-5 h-5 text-primary-600" />
+                  <span className="text-lg font-semibold text-primary-600">
+                    {formatWaitTime(queuePosition.estimatedWaitSeconds)}
+                  </span>
+                </div>
+                <p className="text-sm text-primary-700">estimated wait</p>
+              </div>
+            </div>
+            {queuePosition.totalInQueue > 1 && (
+              <p className="text-xs text-primary-600 mt-3">
+                {queuePosition.totalInQueue} total requests in queue
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="flex items-center justify-center gap-2 mb-6 text-sm text-green-600">
           <Wifi className="w-4 h-4" />
           Live updates enabled

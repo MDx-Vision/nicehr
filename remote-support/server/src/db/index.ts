@@ -250,9 +250,15 @@ export const sessions = {
     if (role !== 'admin' && role !== 'hospital_leadership') {
       filtered = filtered.filter(s => s.requester_id === userId || s.consultant_id === userId);
     }
-    return filtered.sort((a, b) => 
+    return filtered.sort((a, b) =>
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     ).slice(0, limit);
+  },
+  getRecentCompleted: (limit: number) => {
+    return db.support_sessions
+      .filter(s => s.status === 'completed' && s.wait_time_seconds !== null)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, limit);
   },
 };
 

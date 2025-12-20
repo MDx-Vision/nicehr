@@ -37,6 +37,47 @@ function broadcastQueueUpdate() {
   websocketService.broadcastToConsultants('support_request_new', { queue: enriched });
 }
 
+// Helper to calculate average wait time (based on recent completed sessions)
+function getAverageWaitTime(): number {
+  const recentSessions = db.sessions.getRecentCompleted(10);
+  if (recentSessions.length === 0) return 120; // Default 2 minutes
+
+  const totalWait = recentSessions.reduce((sum, s) => sum + (s.wait_time_seconds || 60), 0);
+  return Math.round(totalWait / recentSessions.length);
+}
+
+// Helper to broadcast queue position updates to all waiting staff
+function broadcastQueuePositions() {
+  const queueItems = db.queue.getAll();
+  const avgWaitTime = getAverageWaitTime();
+
+  // Sort by urgency then position to get actual queue order
+  const sortedQueue = queueItems.map(item => {
+    const session = db.sessions.getById(item.session_id);
+    return { ...item, session };
+  }).filter(q => q.session && q.session.status === 'pending')
+    .sort((a, b) => {
+      const urgencyOrder = { critical: 0, urgent: 1, normal: 2 };
+      const aUrgency = urgencyOrder[a.session!.urgency as keyof typeof urgencyOrder] ?? 2;
+      const bUrgency = urgencyOrder[b.session!.urgency as keyof typeof urgencyOrder] ?? 2;
+      if (aUrgency !== bUrgency) return aUrgency - bUrgency;
+      return (a.position || 0) - (b.position || 0);
+    });
+
+  // Send position update to each waiting staff member
+  sortedQueue.forEach((item, index) => {
+    const position = index + 1;
+    const estimatedWait = position * avgWaitTime;
+
+    websocketService.sendToUser(item.session!.requester_id, 'queue_position_update', {
+      sessionId: item.session_id,
+      position,
+      totalInQueue: sortedQueue.length,
+      estimatedWaitSeconds: estimatedWait,
+    });
+  });
+}
+
 // POST /api/support/request - Hospital staff requests support
 router.post('/request', async (req: Request, res: Response) => {
   try {
@@ -144,6 +185,9 @@ router.post('/request', async (req: Request, res: Response) => {
     // Broadcast new request to consultants
     broadcastQueueUpdate();
 
+    // Send position updates to all waiting staff (including this new one)
+    broadcastQueuePositions();
+
     return res.json({
       sessionId: session.id,
       status: 'pending',
@@ -248,6 +292,9 @@ router.post('/accept/:sessionId', async (req: Request, res: Response) => {
 
     // Broadcast updated queue to all consultants
     broadcastQueueUpdate();
+
+    // Update queue positions for remaining waiting staff
+    broadcastQueuePositions();
 
     res.json({
       sessionId,
@@ -469,7 +516,46 @@ router.post('/cancel/:sessionId', (req: Request, res: Response) => {
   // Broadcast updated queue to consultants
   broadcastQueueUpdate();
 
+  // Update queue positions for remaining waiting staff
+  broadcastQueuePositions();
+
   res.json({ success: true });
+});
+
+// GET /api/support/queue-position/:sessionId - Get queue position for a session
+router.get('/queue-position/:sessionId', (req: Request, res: Response) => {
+  const sessionId = parseInt(req.params.sessionId);
+
+  const session = db.sessions.getById(sessionId);
+  if (!session || session.status !== 'pending') {
+    return res.json({ position: null, totalInQueue: 0, estimatedWaitSeconds: 0 });
+  }
+
+  const queueItems = db.queue.getAll();
+  const avgWaitTime = getAverageWaitTime();
+
+  // Sort by urgency then position to get actual queue order
+  const sortedQueue = queueItems.map(item => {
+    const s = db.sessions.getById(item.session_id);
+    return { ...item, session: s };
+  }).filter(q => q.session && q.session.status === 'pending')
+    .sort((a, b) => {
+      const urgencyOrder = { critical: 0, urgent: 1, normal: 2 };
+      const aUrgency = urgencyOrder[a.session!.urgency as keyof typeof urgencyOrder] ?? 2;
+      const bUrgency = urgencyOrder[b.session!.urgency as keyof typeof urgencyOrder] ?? 2;
+      if (aUrgency !== bUrgency) return aUrgency - bUrgency;
+      return (a.position || 0) - (b.position || 0);
+    });
+
+  const index = sortedQueue.findIndex(q => q.session_id === sessionId);
+  const position = index >= 0 ? index + 1 : null;
+  const estimatedWait = position ? position * avgWaitTime : 0;
+
+  res.json({
+    position,
+    totalInQueue: sortedQueue.length,
+    estimatedWaitSeconds: estimatedWait,
+  });
 });
 
 // GET /api/support/active - Get user's active session
