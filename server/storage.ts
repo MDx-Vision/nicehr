@@ -603,6 +603,7 @@ export interface IStorage {
   // Schedule Assignment operations
   getScheduleAssignments(scheduleId: string): Promise<ScheduleAssignment[]>;
   getConsultantSchedules(consultantId: string): Promise<ScheduleAssignment[]>;
+  getConsultantAssignments(consultantId: string): Promise<Array<ScheduleAssignment & { schedule?: ProjectSchedule }>>;
   getProjectsForConsultant(consultantId: string): Promise<string[]>;
   createScheduleAssignment(assignment: InsertScheduleAssignment): Promise<ScheduleAssignment>;
   deleteScheduleAssignment(id: string): Promise<boolean>;
@@ -2215,6 +2216,22 @@ export class DatabaseStorage implements IStorage {
 
   async getConsultantSchedules(consultantId: string): Promise<ScheduleAssignment[]> {
     return await db.select().from(scheduleAssignments).where(eq(scheduleAssignments.consultantId, consultantId));
+  }
+
+  async getConsultantAssignments(consultantId: string): Promise<Array<ScheduleAssignment & { schedule?: ProjectSchedule }>> {
+    const assignments = await db
+      .select({
+        assignment: scheduleAssignments,
+        schedule: projectSchedules,
+      })
+      .from(scheduleAssignments)
+      .leftJoin(projectSchedules, eq(scheduleAssignments.scheduleId, projectSchedules.id))
+      .where(eq(scheduleAssignments.consultantId, consultantId));
+
+    return assignments.map(row => ({
+      ...row.assignment,
+      schedule: row.schedule || undefined,
+    }));
   }
 
   async getProjectsForConsultant(consultantId: string): Promise<string[]> {

@@ -12152,6 +12152,65 @@ export async function registerRoutes(
     }
   });
 
+  // Auto-assign consultants to project requirements
+  app.post('/api/scheduling/projects/:projectId/auto-assign', isAuthenticated, requireAnyPermission('projects:manage', 'admin:manage'), async (req: any, res) => {
+    try {
+      const { projectId } = req.params;
+      const { requirementIds, dryRun = false, maxPerConsultant = 5 } = req.body;
+
+      // Verify project exists
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      // Import and use the scheduler
+      const { AutoScheduler } = await import('./scheduling');
+
+      // Get scheduling config if available
+      const config = await storage.getSchedulingConfig(project.hospitalId, projectId);
+
+      // Create scheduler
+      const scheduler = new AutoScheduler(storage, config ? {
+        weights: {
+          emr: parseFloat(config.emrWeight?.toString() || '0.25'),
+          module: parseFloat(config.moduleWeight?.toString() || '0.20'),
+          proficiency: parseFloat(config.proficiencyWeight?.toString() || '0.15'),
+          availability: parseFloat(config.availabilityWeight?.toString() || '0.15'),
+          performance: parseFloat(config.performanceWeight?.toString() || '0.10'),
+          shift: parseFloat(config.shiftWeight?.toString() || '0.08'),
+          colleague: parseFloat(config.colleagueWeight?.toString() || '0.05'),
+          location: parseFloat(config.locationWeight?.toString() || '0.02'),
+        },
+      } : undefined);
+
+      // Run auto-assign
+      const result = await scheduler.autoAssign(projectId, requirementIds, {
+        dryRun,
+        maxPerConsultant,
+      });
+
+      // Log the run (only if not dry run)
+      const userId = req.user?.claims?.sub;
+      if (userId && !dryRun) {
+        await scheduler.createAssignmentLog(projectId, undefined, userId, 'auto_assign', result);
+      }
+
+      res.json({
+        success: true,
+        dryRun,
+        projectId,
+        assignmentsMade: result.assignmentsMade,
+        conflictsFound: result.conflictsFound,
+        assignments: result.assignments,
+        skipped: result.skipped,
+      });
+    } catch (error) {
+      console.error("Error running auto-assign:", error);
+      res.status(500).json({ message: "Failed to run auto-assign" });
+    }
+  });
+
   // Get scheduling configuration
   app.get('/api/scheduling/config', isAuthenticated, requireAnyPermission('projects:manage', 'admin:manage'), async (req: any, res) => {
     try {

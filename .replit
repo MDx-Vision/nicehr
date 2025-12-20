@@ -4,7 +4,7 @@ hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["python311Packages.openpyxl", "python311Packages.python-docx", "xlsx2csv", "pandoc", "glib", "nss", "nspr", "atk", "cups", "libdrm", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "xorg.libxcb", "xorg.libX11", "mesa", "expat", "libxkbcommon", "alsa-lib", "at-spi2-atk", "gtk3", "pango", "cairo", "gdk-pixbuf", "dbus", "unzipNLS", "nano"]
+packages = ["python311Packages.openpyxl", "python311Packages.python-docx", "xlsx2csv", "pandoc", "glib", "nss", "nspr", "atk", "cups", "libdrm", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "xorg.libxcb", "xorg.libX11", "mesa", "expat", "libxkbcommon", "alsa-lib", "at-spi2-atk", "gtk3", "pango", "cairo", "gdk-pixbuf", "dbus", "unzipNLS", "nano", "killall"]
 
 [deployment]
 deploymentTarget = "autoscale"
@@ -12,8 +12,32 @@ build = ["npm", "run", "build"]
 run = ["npm", "run", "start"]
 
 [[ports]]
+localPort = 3000
+externalPort = 3003
+
+[[ports]]
+localPort = 3001
+externalPort = 4200
+
+[[ports]]
+localPort = 3002
+externalPort = 3002
+
+[[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 5173
+externalPort = 5173
+
+[[ports]]
+localPort = 5174
+externalPort = 3000
+
+[[ports]]
+localPort = 5175
+externalPort = 3001
 
 [env]
 PORT = "5000"

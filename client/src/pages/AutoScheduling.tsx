@@ -47,14 +47,16 @@ import {
   MapPin,
   Briefcase,
   Award,
+  Wand2,
 } from "lucide-react";
-import type { Project, ConsultantScoreResult, RequirementWithContext } from "@shared/schema";
+import { AutoAssignWizard } from "@/components/scheduling/AutoAssignWizard";
+import type { Project, RequirementWithContext, SchedulingRecommendation } from "@shared/schema";
 
 interface RecommendationResponse {
   requirementId: string;
   totalEvaluated: number;
   totalEligible: number;
-  recommendations: ConsultantScoreResult[];
+  recommendations: SchedulingRecommendation[];
   calculatedAt?: string;
   cached?: boolean;
 }
@@ -75,7 +77,7 @@ function ConsultantScoreCard({
   onExpand,
   isExpanded,
 }: {
-  score: ConsultantScoreResult;
+  score: SchedulingRecommendation;
   rank: number;
   onExpand: () => void;
   isExpanded: boolean;
@@ -108,7 +110,7 @@ function ConsultantScoreCard({
             </div>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-bold">{score.totalScore.toFixed(1)}</div>
+            <div className="text-2xl font-bold">{Number(score.totalScore).toFixed(1)}</div>
             <div className="text-xs text-muted-foreground">Total Score</div>
           </div>
         </div>
@@ -131,23 +133,23 @@ function ConsultantScoreCard({
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-4 space-y-3">
-            <ScoreBar score={score.scores.emr} label="EMR Match" color="[&>div]:bg-blue-500" />
-            <ScoreBar score={score.scores.module} label="Module" color="[&>div]:bg-purple-500" />
-            <ScoreBar score={score.scores.proficiency} label="Proficiency" color="[&>div]:bg-amber-500" />
-            <ScoreBar score={score.scores.availability} label="Availability" color="[&>div]:bg-green-500" />
-            <ScoreBar score={score.scores.performance} label="Performance" color="[&>div]:bg-cyan-500" />
-            <ScoreBar score={score.scores.shift} label="Shift Pref" color="[&>div]:bg-indigo-500" />
-            <ScoreBar score={score.scores.colleague} label="Colleagues" color="[&>div]:bg-pink-500" />
-            <ScoreBar score={score.scores.location} label="Location" color="[&>div]:bg-orange-500" />
+            <ScoreBar score={Number(score.emrScore || 0)} label="EMR Match" color="[&>div]:bg-blue-500" />
+            <ScoreBar score={Number(score.moduleScore || 0)} label="Module" color="[&>div]:bg-purple-500" />
+            <ScoreBar score={Number(score.proficiencyScore || 0)} label="Proficiency" color="[&>div]:bg-amber-500" />
+            <ScoreBar score={Number(score.availabilityScore || 0)} label="Availability" color="[&>div]:bg-green-500" />
+            <ScoreBar score={Number(score.performanceScore || 0)} label="Performance" color="[&>div]:bg-cyan-500" />
+            <ScoreBar score={Number(score.shiftScore || 0)} label="Shift Pref" color="[&>div]:bg-indigo-500" />
+            <ScoreBar score={Number(score.colleagueScore || 0)} label="Colleagues" color="[&>div]:bg-pink-500" />
+            <ScoreBar score={Number(score.locationScore || 0)} label="Location" color="[&>div]:bg-orange-500" />
 
-            {score.hardConstraintsFailed.length > 0 && (
+            {(score.hardConstraintsFailed?.length ?? 0) > 0 && (
               <div className="mt-4 p-3 bg-red-50 dark:bg-red-950 rounded-lg">
                 <div className="flex items-center gap-2 text-red-600 dark:text-red-400 font-medium text-sm mb-2">
                   <AlertTriangle className="w-4 h-4" />
                   Failed Constraints
                 </div>
                 <ul className="space-y-1">
-                  {score.hardConstraintsFailed.map((constraint, i) => (
+                  {score.hardConstraintsFailed?.map((constraint, i) => (
                     <li key={i} className="text-xs text-red-600 dark:text-red-400">
                       {constraint.replace(/_/g, " ")}
                     </li>
@@ -166,6 +168,7 @@ export default function AutoScheduling() {
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [selectedRequirementId, setSelectedRequirementId] = useState<string>("");
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const [showAutoAssignWizard, setShowAutoAssignWizard] = useState(false);
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
 
@@ -235,6 +238,12 @@ export default function AutoScheduling() {
             Skills-first consultant matching algorithm
           </p>
         </div>
+        {canManage && selectedProjectId && requirements && requirements.length > 0 && (
+          <Button onClick={() => setShowAutoAssignWizard(true)} className="bg-purple-600 hover:bg-purple-700">
+            <Wand2 className="w-4 h-4 mr-2" />
+            Auto-Assign All
+          </Button>
+        )}
       </div>
 
       {/* Project & Requirement Selection */}
@@ -455,6 +464,17 @@ export default function AutoScheduling() {
           </p>
         </CardContent>
       </Card>
+
+      {/* Auto-Assign Wizard */}
+      {selectedProjectId && requirements && (
+        <AutoAssignWizard
+          open={showAutoAssignWizard}
+          onOpenChange={setShowAutoAssignWizard}
+          projectId={selectedProjectId}
+          projectName={projects?.find(p => p.id === selectedProjectId)?.name || "Project"}
+          requirements={requirements}
+        />
+      )}
     </div>
   );
 }

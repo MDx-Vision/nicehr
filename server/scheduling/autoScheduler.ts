@@ -480,25 +480,231 @@ export class AutoScheduler {
   }
 
   /**
-   * Run auto-assignment for a project (future enhancement)
+   * Run auto-assignment for a project
+   * Automatically assigns top-ranked consultants to requirements
    */
   async autoAssign(
     projectId: string,
-    scheduleIds?: string[],
+    requirementIds?: string[],
     options?: {
       dryRun?: boolean;
       maxPerConsultant?: number;
     }
   ): Promise<AutoAssignResult> {
-    // This will be implemented in a future iteration
-    // For now, return empty result
+    const { dryRun = false, maxPerConsultant = 5 } = options || {};
+
+    const assignments: AutoAssignResult["assignments"] = [];
+    const skipped: AutoAssignResult["skipped"] = [];
+    let conflictsFound = 0;
+
+    // Track how many times each consultant has been assigned in this run
+    const consultantAssignmentCount = new Map<string, number>();
+
+    // Get all requirements for the project (or specific ones)
+    const allRequirements = await this.storage.getProjectRequirementsWithContext(projectId);
+    const requirements = requirementIds?.length
+      ? allRequirements.filter(r => requirementIds.includes(r.id))
+      : allRequirements;
+
+    for (const requirement of requirements) {
+      // Calculate how many more consultants are needed
+      const alreadyAssigned = requirement.alreadyAssignedConsultantIds?.length || 0;
+      const stillNeeded = requirement.consultantsNeeded - alreadyAssigned;
+
+      if (stillNeeded <= 0) {
+        continue; // Requirement is fully staffed
+      }
+
+      // Get recommendations for this requirement
+      const recommendations = await this.getRecommendations(requirement);
+
+      // Get eligible consultants sorted by score
+      const eligibleConsultants = recommendations.recommendations
+        .filter(r => r.isEligible)
+        .slice(0, stillNeeded * 2); // Get more than needed to handle conflicts
+
+      let assignedCount = 0;
+
+      for (const rec of eligibleConsultants) {
+        if (assignedCount >= stillNeeded) {
+          break;
+        }
+
+        // Check if consultant has hit max assignments
+        const currentAssignments = consultantAssignmentCount.get(rec.consultantId) || 0;
+        if (currentAssignments >= maxPerConsultant) {
+          skipped.push({
+            consultantId: rec.consultantId,
+            reason: `Exceeded max assignments per consultant (${maxPerConsultant})`,
+          });
+          continue;
+        }
+
+        // Check if consultant is already assigned to this requirement
+        if (requirement.alreadyAssignedConsultantIds?.includes(rec.consultantId)) {
+          skipped.push({
+            consultantId: rec.consultantId,
+            reason: "Already assigned to this requirement",
+          });
+          conflictsFound++;
+          continue;
+        }
+
+        // Check for schedule conflicts on the requirement dates
+        if (requirement.scheduleDates?.length) {
+          const hasConflict = await this.checkScheduleConflict(
+            rec.consultantId,
+            requirement.scheduleDates.map(d => d.date),
+            projectId
+          );
+
+          if (hasConflict) {
+            skipped.push({
+              consultantId: rec.consultantId,
+              reason: "Schedule conflict on required dates",
+            });
+            conflictsFound++;
+            continue;
+          }
+        }
+
+        // Find or create a schedule for this requirement
+        const scheduleId = await this.findOrCreateSchedule(
+          projectId,
+          requirement,
+          dryRun
+        );
+
+        if (!scheduleId) {
+          skipped.push({
+            consultantId: rec.consultantId,
+            reason: "Could not find or create schedule",
+          });
+          continue;
+        }
+
+        // Create the assignment (unless dry run)
+        if (!dryRun) {
+          try {
+            await this.storage.createScheduleAssignment({
+              scheduleId,
+              consultantId: rec.consultantId,
+              unitId: requirement.unitId || undefined,
+              moduleId: requirement.moduleId || undefined,
+              notes: `Auto-assigned with score ${rec.totalScore.toFixed(2)}`,
+            });
+          } catch (error) {
+            skipped.push({
+              consultantId: rec.consultantId,
+              reason: `Failed to create assignment: ${error}`,
+            });
+            continue;
+          }
+        }
+
+        assignments.push({
+          scheduleId,
+          consultantId: rec.consultantId,
+          score: rec.totalScore,
+        });
+
+        consultantAssignmentCount.set(
+          rec.consultantId,
+          currentAssignments + 1
+        );
+        assignedCount++;
+      }
+    }
+
     return {
       projectId,
-      assignmentsMade: 0,
-      conflictsFound: 0,
-      assignments: [],
-      skipped: [],
+      assignmentsMade: assignments.length,
+      conflictsFound,
+      assignments,
+      skipped,
     };
+  }
+
+  /**
+   * Check if consultant has a schedule conflict on given dates
+   */
+  private async checkScheduleConflict(
+    consultantId: string,
+    dates: string[],
+    excludeProjectId?: string
+  ): Promise<boolean> {
+    // Get consultant's existing assignments
+    const existingAssignments = await this.storage.getConsultantAssignments(consultantId);
+
+    for (const assignment of existingAssignments) {
+      // Skip assignments from the same project (can work multiple shifts)
+      if (excludeProjectId && assignment.schedule?.projectId === excludeProjectId) {
+        continue;
+      }
+
+      // Check if any of the dates conflict
+      const assignmentDate = assignment.schedule?.scheduleDate;
+      if (assignmentDate && dates.includes(assignmentDate)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Find an existing schedule or create one for the requirement
+   */
+  private async findOrCreateSchedule(
+    projectId: string,
+    requirement: RequirementWithContext,
+    dryRun: boolean
+  ): Promise<string | null> {
+    // If requirement has specific dates, use the first one
+    const scheduleDate = requirement.scheduleDates?.[0]?.date;
+    const shiftType = requirement.shiftType || requirement.scheduleDates?.[0]?.shiftType || "day";
+
+    if (!scheduleDate) {
+      // No specific date - create with today's date
+      const today = new Date().toISOString().split("T")[0];
+
+      if (dryRun) {
+        return `dry-run-schedule-${Date.now()}`;
+      }
+
+      const schedule = await this.storage.createProjectSchedule({
+        projectId,
+        scheduleDate: today,
+        shiftType: shiftType as "day" | "night" | "swing",
+        status: "pending",
+      });
+
+      return schedule.id;
+    }
+
+    // Try to find existing schedule for this date/shift
+    const existingSchedules = await this.storage.getProjectSchedules(projectId);
+    const matchingSchedule = existingSchedules.find(
+      s => s.scheduleDate === scheduleDate && s.shiftType === shiftType
+    );
+
+    if (matchingSchedule) {
+      return matchingSchedule.id;
+    }
+
+    // Create new schedule
+    if (dryRun) {
+      return `dry-run-schedule-${Date.now()}`;
+    }
+
+    const schedule = await this.storage.createProjectSchedule({
+      projectId,
+      scheduleDate,
+      shiftType: shiftType as "day" | "night" | "swing",
+      status: "pending",
+    });
+
+    return schedule.id;
   }
 
   /**

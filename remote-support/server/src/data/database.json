@@ -1,0 +1,1186 @@
+{
+  "users": [
+    {
+      "email": "sarah.chen@nicehr.com",
+      "name": "Sarah Chen",
+      "role": "consultant",
+      "hospital_id": null,
+      "id": 1,
+      "created_at": "2025-12-18T22:53:52.816Z"
+    },
+    {
+      "email": "marcus.johnson@nicehr.com",
+      "name": "Marcus Johnson",
+      "role": "consultant",
+      "hospital_id": null,
+      "id": 2,
+      "created_at": "2025-12-18T22:53:52.817Z"
+    },
+    {
+      "email": "emily.rodriguez@nicehr.com",
+      "name": "Emily Rodriguez",
+      "role": "consultant",
+      "hospital_id": null,
+      "id": 3,
+      "created_at": "2025-12-18T22:53:52.817Z"
+    },
+    {
+      "email": "david.kim@nicehr.com",
+      "name": "David Kim",
+      "role": "consultant",
+      "hospital_id": null,
+      "id": 4,
+      "created_at": "2025-12-18T22:53:52.817Z"
+    },
+    {
+      "email": "john.smith@metrogeneral.org",
+      "name": "John Smith",
+      "role": "hospital_staff",
+      "hospital_id": 1,
+      "id": 5,
+      "created_at": "2025-12-18T22:53:52.818Z"
+    },
+    {
+      "email": "lisa.wong@metrogeneral.org",
+      "name": "Lisa Wong",
+      "role": "hospital_staff",
+      "hospital_id": 1,
+      "id": 6,
+      "created_at": "2025-12-18T22:53:52.818Z"
+    },
+    {
+      "email": "mike.brown@metrogeneral.org",
+      "name": "Mike Brown",
+      "role": "hospital_leadership",
+      "hospital_id": 1,
+      "id": 7,
+      "created_at": "2025-12-18T22:53:52.818Z"
+    },
+    {
+      "email": "anna.garcia@stmarys.org",
+      "name": "Anna Garcia",
+      "role": "hospital_staff",
+      "hospital_id": 2,
+      "id": 8,
+      "created_at": "2025-12-18T22:53:52.819Z"
+    },
+    {
+      "email": "james.wilson@stmarys.org",
+      "name": "James Wilson",
+      "role": "hospital_staff",
+      "hospital_id": 2,
+      "id": 9,
+      "created_at": "2025-12-18T22:53:52.819Z"
+    },
+    {
+      "email": "admin@nicehr.com",
+      "name": "Admin User",
+      "role": "admin",
+      "hospital_id": null,
+      "id": 10,
+      "created_at": "2025-12-18T22:53:52.820Z"
+    }
+  ],
+  "hospitals": [
+    {
+      "name": "Metro General Hospital",
+      "id": 1,
+      "created_at": "2025-12-18T22:53:52.814Z"
+    },
+    {
+      "name": "St. Mary's Medical Center",
+      "id": 2,
+      "created_at": "2025-12-18T22:53:52.815Z"
+    },
+    {
+      "name": "Valley Health System",
+      "id": 3,
+      "created_at": "2025-12-18T22:53:52.816Z"
+    }
+  ],
+  "support_sessions": [
+    {
+      "id": 1,
+      "hospital_id": 1,
+      "requester_id": 5,
+      "consultant_id": 1,
+      "department": "ER",
+      "urgency": "normal",
+      "status": "completed",
+      "daily_room_name": null,
+      "daily_room_url": null,
+      "issue_summary": "Patient registration workflow issue",
+      "resolution_notes": "Reconfigured workflow order, tested successfully",
+      "started_at": "2024-12-10T09:30:00.000Z",
+      "ended_at": "2024-12-10T09:45:00.000Z",
+      "wait_time_seconds": null,
+      "duration_seconds": 900,
+      "rating": 5,
+      "feedback": "Sarah was extremely helpful!",
+      "auto_cancelled_reason": null,
+      "created_at": "2025-12-18T22:53:52.826Z",
+      "updated_at": "2025-12-18T22:53:52.826Z"
+    },
+    {
+      "id": 2,
+      "hospital_id": 1,
+      "requester_id": 5,
+      "consultant_id": 1,
+      "department": "ER",
+      "urgency": "normal",
+      "status": "completed",
+      "daily_room_name": null,
+      "daily_room_url": null,
+      "issue_summary": "Medication reconciliation form not loading",
+      "resolution_notes": "Cache cleared, form loading correctly",
+      "started_at": "2024-12-15T14:00:00.000Z",
+      "ended_at": "2024-12-15T14:20:00.000Z",
+      "wait_time_seconds": null,
+      "duration_seconds": 1200,
+      "rating": 5,
+      "feedback": "Quick resolution as always",
+      "auto_cancelled_reason": null,
+      "created_at": "2025-12-18T22:53:52.826Z",
+      "updated_at": "2025-12-18T22:53:52.826Z"
+    },
+    {
+      "id": 3,
+      "hospital_id": 2,
+      "requester_id": 8,
+      "consultant_id": 2,
+      "department": "Radiology",
+      "urgency": "normal",
+      "status": "completed",
+      "daily_room_name": null,
+      "daily_room_url": null,
+      "issue_summary": "PACS integration showing duplicate images",
+      "resolution_notes": "Adjusted HL7 message parsing rules",
+      "started_at": "2024-12-12T11:00:00.000Z",
+      "ended_at": "2024-12-12T11:35:00.000Z",
+      "wait_time_seconds": null,
+      "duration_seconds": 2100,
+      "rating": 4,
+      "feedback": "Good help, took a bit to diagnose",
+      "auto_cancelled_reason": null,
+      "created_at": "2025-12-18T22:53:52.827Z",
+      "updated_at": "2025-12-18T22:53:52.827Z"
+    },
+    {
+      "id": 4,
+      "hospital_id": 1,
+      "requester_id": 5,
+      "consultant_id": null,
+      "department": "ER",
+      "urgency": "normal",
+      "status": "cancelled",
+      "daily_room_name": null,
+      "daily_room_url": null,
+      "issue_summary": "having issues with a medication",
+      "resolution_notes": null,
+      "started_at": null,
+      "ended_at": null,
+      "wait_time_seconds": null,
+      "duration_seconds": null,
+      "rating": null,
+      "feedback": null,
+      "auto_cancelled_reason": null,
+      "created_at": "2025-12-19T15:01:07.726Z",
+      "updated_at": "2025-12-19T15:31:14.331Z"
+    },
+    {
+      "id": 5,
+      "hospital_id": 1,
+      "requester_id": 5,
+      "consultant_id": 1,
+      "department": "ER",
+      "urgency": "normal",
+      "status": "completed",
+      "daily_room_name": "session-5-ab04aeb8",
+      "daily_room_url": "https://no1nicehr.daily.co/session-5-ab04aeb8",
+      "issue_summary": "patient pharmacy isnt loging in",
+      "resolution_notes": null,
+      "started_at": "2025-12-19T17:33:26.713Z",
+      "ended_at": "2025-12-19T17:38:11.182Z",
+      "wait_time_seconds": 3855,
+      "duration_seconds": 284,
+      "rating": 5,
+      "feedback": null,
+      "auto_cancelled_reason": null,
+      "created_at": "2025-12-19T15:31:35.912Z",
+      "updated_at": "2025-12-19T17:38:15.107Z"
+    },
+    {
+      "id": 6,
+      "hospital_id": 2,
+      "requester_id": 8,
+      "consultant_id": 2,
+      "department": "ER",
+      "urgency": "critical",
+      "status": "completed",
+      "daily_room_name": "session-6-1d7048bb",
+      "daily_room_url": "https://no1nicehr.daily.co/session-6-1d7048bb",
+      "issue_summary": "need to add oreder of cblood\n\\",
+      "resolution_notes": null,
+      "started_at": "2025-12-19T19:50:02.022Z",
+      "ended_at": "2025-12-19T19:55:10.693Z",
+      "wait_time_seconds": null,
+      "duration_seconds": 308,
+      "rating": null,
+      "feedback": null,
+      "auto_cancelled_reason": null,
+      "created_at": "2025-12-19T19:49:58.264Z",
+      "updated_at": "2025-12-19T19:55:10.693Z"
+    },
+    {
+      "id": 7,
+      "hospital_id": 2,
+      "requester_id": 8,
+      "consultant_id": 2,
+      "department": "Radiology",
+      "urgency": "urgent",
+      "status": "completed",
+      "daily_room_name": "session-7-2a3dec18",
+      "daily_room_url": "https://no1nicehr.daily.co/session-7-2a3dec18",
+      "issue_summary": "have a patient in the xray room",
+      "resolution_notes": null,
+      "started_at": "2025-12-19T19:55:31.322Z",
+      "ended_at": "2025-12-19T20:07:41.535Z",
+      "wait_time_seconds": null,
+      "duration_seconds": 730,
+      "rating": null,
+      "feedback": null,
+      "auto_cancelled_reason": null,
+      "created_at": "2025-12-19T19:55:28.087Z",
+      "updated_at": "2025-12-19T20:07:41.535Z"
+    },
+    {
+      "id": 8,
+      "hospital_id": 2,
+      "requester_id": 8,
+      "consultant_id": 2,
+      "department": "Radiology",
+      "urgency": "normal",
+      "status": "completed",
+      "daily_room_name": "session-8-bdb736ac",
+      "daily_room_url": "https://no1nicehr.daily.co/session-8-bdb736ac",
+      "issue_summary": "testing",
+      "resolution_notes": null,
+      "started_at": "2025-12-20T03:23:10.636Z",
+      "ended_at": "2025-12-20T03:48:37.171Z",
+      "wait_time_seconds": null,
+      "duration_seconds": 1526,
+      "rating": null,
+      "feedback": null,
+      "auto_cancelled_reason": null,
+      "created_at": "2025-12-20T03:23:06.000Z",
+      "updated_at": "2025-12-20T03:48:37.172Z"
+    },
+    {
+      "id": 9,
+      "hospital_id": 2,
+      "requester_id": 8,
+      "consultant_id": 2,
+      "department": "Radiology",
+      "urgency": "urgent",
+      "status": "completed",
+      "daily_room_name": "session-9-27401f4e",
+      "daily_room_url": "https://no1nicehr.daily.co/session-9-27401f4e",
+      "issue_summary": "123",
+      "resolution_notes": null,
+      "started_at": "2025-12-20T03:36:07.969Z",
+      "ended_at": null,
+      "wait_time_seconds": null,
+      "duration_seconds": null,
+      "rating": null,
+      "feedback": null,
+      "auto_cancelled_reason": null,
+      "created_at": "2025-12-20T03:36:00.892Z",
+      "updated_at": "2025-12-20T03:36:07.969Z"
+    },
+    {
+      "id": 10,
+      "hospital_id": 2,
+      "requester_id": 8,
+      "consultant_id": 2,
+      "department": "Radiology",
+      "urgency": "urgent",
+      "status": "completed",
+      "daily_room_name": "session-10-e3bfef43",
+      "daily_room_url": "https://no1nicehr.daily.co/session-10-e3bfef43",
+      "issue_summary": "double xray",
+      "resolution_notes": null,
+      "started_at": "2025-12-20T03:57:08.386Z",
+      "ended_at": "2025-12-20T04:03:50.165Z",
+      "wait_time_seconds": null,
+      "duration_seconds": 401,
+      "rating": null,
+      "feedback": null,
+      "auto_cancelled_reason": null,
+      "created_at": "2025-12-20T03:56:42.924Z",
+      "updated_at": "2025-12-20T04:03:50.165Z"
+    },
+    {
+      "id": 11,
+      "hospital_id": 2,
+      "requester_id": 8,
+      "consultant_id": 2,
+      "department": "Radiology",
+      "urgency": "normal",
+      "status": "completed",
+      "daily_room_name": "session-11-657de7e8",
+      "daily_room_url": "https://no1nicehr.daily.co/session-11-657de7e8",
+      "issue_summary": "test 1.4",
+      "resolution_notes": null,
+      "started_at": "2025-12-20T04:04:16.226Z",
+      "ended_at": "2025-12-20T04:04:47.903Z",
+      "wait_time_seconds": null,
+      "duration_seconds": 31,
+      "rating": null,
+      "feedback": null,
+      "auto_cancelled_reason": null,
+      "created_at": "2025-12-20T04:04:10.968Z",
+      "updated_at": "2025-12-20T04:04:47.903Z"
+    },
+    {
+      "id": 12,
+      "hospital_id": 2,
+      "requester_id": 8,
+      "consultant_id": 2,
+      "department": "Radiology",
+      "urgency": "critical",
+      "status": "completed",
+      "daily_room_name": "session-12-22484a2f",
+      "daily_room_url": "https://no1nicehr.daily.co/session-12-22484a2f",
+      "issue_summary": "testing 5.0",
+      "resolution_notes": null,
+      "started_at": "2025-12-20T16:37:05.863Z",
+      "ended_at": "2025-12-20T16:58:09.196Z",
+      "wait_time_seconds": null,
+      "duration_seconds": 1263,
+      "rating": null,
+      "feedback": null,
+      "auto_cancelled_reason": null,
+      "created_at": "2025-12-20T16:36:44.774Z",
+      "updated_at": "2025-12-20T16:58:09.196Z"
+    },
+    {
+      "id": 13,
+      "hospital_id": 2,
+      "requester_id": 8,
+      "consultant_id": 2,
+      "department": "Radiology",
+      "urgency": "critical",
+      "status": "completed",
+      "daily_room_name": "session-13-8e8e97a7",
+      "daily_room_url": "https://no1nicehr.daily.co/session-13-8e8e97a7",
+      "issue_summary": "test v 6.0",
+      "resolution_notes": null,
+      "started_at": "2025-12-20T17:24:38.273Z",
+      "ended_at": "2025-12-20T17:25:07.496Z",
+      "wait_time_seconds": null,
+      "duration_seconds": 29,
+      "rating": null,
+      "feedback": null,
+      "auto_cancelled_reason": null,
+      "created_at": "2025-12-20T17:24:33.933Z",
+      "updated_at": "2025-12-20T17:25:07.496Z"
+    },
+    {
+      "id": 14,
+      "hospital_id": 2,
+      "requester_id": 8,
+      "consultant_id": 2,
+      "department": "Radiology",
+      "urgency": "critical",
+      "status": "completed",
+      "daily_room_name": "session-14-4b82f224",
+      "daily_room_url": "https://no1nicehr.daily.co/session-14-4b82f224",
+      "issue_summary": "version 7.0 instatnt queue",
+      "resolution_notes": null,
+      "started_at": "2025-12-20T17:25:34.135Z",
+      "ended_at": "2025-12-20T17:25:48.396Z",
+      "wait_time_seconds": null,
+      "duration_seconds": 14,
+      "rating": null,
+      "feedback": null,
+      "auto_cancelled_reason": null,
+      "created_at": "2025-12-20T17:25:30.644Z",
+      "updated_at": "2025-12-20T17:25:48.396Z"
+    },
+    {
+      "id": 15,
+      "hospital_id": 2,
+      "requester_id": 8,
+      "consultant_id": 2,
+      "department": "Radiology",
+      "urgency": "critical",
+      "status": "completed",
+      "daily_room_name": "session-15-40e62284",
+      "daily_room_url": "https://no1nicehr.daily.co/session-15-40e62284",
+      "issue_summary": "instant live preview",
+      "resolution_notes": null,
+      "started_at": "2025-12-20T17:27:31.421Z",
+      "ended_at": "2025-12-20T17:31:28.655Z",
+      "wait_time_seconds": null,
+      "duration_seconds": 237,
+      "rating": null,
+      "feedback": null,
+      "auto_cancelled_reason": null,
+      "created_at": "2025-12-20T17:27:28.106Z",
+      "updated_at": "2025-12-20T17:31:28.655Z"
+    },
+    {
+      "id": 16,
+      "hospital_id": 2,
+      "requester_id": 8,
+      "consultant_id": 2,
+      "department": "Radiology",
+      "urgency": "critical",
+      "status": "completed",
+      "daily_room_name": "session-16-b5693e02",
+      "daily_room_url": "https://no1nicehr.daily.co/session-16-b5693e02",
+      "issue_summary": "testing",
+      "resolution_notes": null,
+      "started_at": "2025-12-20T17:32:01.080Z",
+      "ended_at": "2025-12-20T17:32:04.288Z",
+      "wait_time_seconds": null,
+      "duration_seconds": 3,
+      "rating": null,
+      "feedback": null,
+      "auto_cancelled_reason": null,
+      "created_at": "2025-12-20T17:31:43.868Z",
+      "updated_at": "2025-12-20T17:32:04.288Z"
+    },
+    {
+      "id": 17,
+      "hospital_id": 2,
+      "requester_id": 8,
+      "consultant_id": 2,
+      "department": "Radiology",
+      "urgency": "critical",
+      "status": "completed",
+      "daily_room_name": "session-17-ebeb0a66",
+      "daily_room_url": "https://no1nicehr.daily.co/session-17-ebeb0a66",
+      "issue_summary": "chrome browesr test",
+      "resolution_notes": null,
+      "started_at": "2025-12-20T17:32:48.498Z",
+      "ended_at": "2025-12-20T17:33:04.441Z",
+      "wait_time_seconds": null,
+      "duration_seconds": 15,
+      "rating": null,
+      "feedback": null,
+      "auto_cancelled_reason": null,
+      "created_at": "2025-12-20T17:32:43.290Z",
+      "updated_at": "2025-12-20T17:33:04.441Z"
+    },
+    {
+      "id": 18,
+      "hospital_id": 2,
+      "requester_id": 8,
+      "consultant_id": 2,
+      "department": "Radiology",
+      "urgency": "urgent",
+      "status": "completed",
+      "daily_room_name": "session-18-742956a3",
+      "daily_room_url": "https://no1nicehr.daily.co/session-18-742956a3",
+      "issue_summary": "testiung",
+      "resolution_notes": null,
+      "started_at": "2025-12-20T17:36:42.271Z",
+      "ended_at": "2025-12-20T17:36:56.897Z",
+      "wait_time_seconds": null,
+      "duration_seconds": 14,
+      "rating": null,
+      "feedback": null,
+      "auto_cancelled_reason": null,
+      "created_at": "2025-12-20T17:36:34.357Z",
+      "updated_at": "2025-12-20T17:36:56.897Z"
+    },
+    {
+      "id": 19,
+      "hospital_id": 2,
+      "requester_id": 8,
+      "consultant_id": 2,
+      "department": "Radiology",
+      "urgency": "critical",
+      "status": "completed",
+      "daily_room_name": "session-19-1406f77d",
+      "daily_room_url": "https://no1nicehr.daily.co/session-19-1406f77d",
+      "issue_summary": "tetsing instant connectiuon",
+      "resolution_notes": null,
+      "started_at": "2025-12-20T17:37:21.772Z",
+      "ended_at": "2025-12-20T17:37:27.369Z",
+      "wait_time_seconds": null,
+      "duration_seconds": 5,
+      "rating": null,
+      "feedback": null,
+      "auto_cancelled_reason": null,
+      "created_at": "2025-12-20T17:37:13.723Z",
+      "updated_at": "2025-12-20T17:37:27.369Z"
+    }
+  ],
+  "consultant_availability": [
+    {
+      "id": 1,
+      "consultant_id": 1,
+      "status": "available",
+      "current_session_id": null,
+      "sessions_today": 1,
+      "last_session_ended_at": "2025-12-19T17:38:11.183Z",
+      "last_seen_at": "2025-12-18T22:53:52.820Z",
+      "created_at": "2025-12-18T22:53:52.820Z",
+      "updated_at": "2025-12-19T17:38:11.183Z"
+    },
+    {
+      "id": 2,
+      "consultant_id": 2,
+      "status": "available",
+      "current_session_id": null,
+      "sessions_today": 0,
+      "last_session_ended_at": "2025-12-20T17:37:27.370Z",
+      "last_seen_at": "2025-12-18T22:53:52.821Z",
+      "created_at": "2025-12-18T22:53:52.821Z",
+      "updated_at": "2025-12-20T17:37:27.370Z"
+    },
+    {
+      "id": 3,
+      "consultant_id": 3,
+      "status": "busy",
+      "current_session_id": null,
+      "sessions_today": 2,
+      "last_session_ended_at": null,
+      "last_seen_at": "2025-12-18T22:53:52.821Z",
+      "created_at": "2025-12-18T22:53:52.821Z",
+      "updated_at": "2025-12-18T22:53:52.821Z"
+    },
+    {
+      "id": 4,
+      "consultant_id": 4,
+      "status": "available",
+      "current_session_id": null,
+      "sessions_today": 0,
+      "last_session_ended_at": null,
+      "last_seen_at": "2025-12-18T22:53:52.821Z",
+      "created_at": "2025-12-18T22:53:52.821Z",
+      "updated_at": "2025-12-19T19:50:34.536Z"
+    }
+  ],
+  "consultant_specialties": [
+    {
+      "id": 1,
+      "consultant_id": 1,
+      "department": "ER",
+      "proficiency": "expert",
+      "created_at": "2025-12-18T22:53:52.822Z"
+    },
+    {
+      "id": 2,
+      "consultant_id": 1,
+      "department": "Pharmacy",
+      "proficiency": "standard",
+      "created_at": "2025-12-18T22:53:52.823Z"
+    },
+    {
+      "id": 3,
+      "consultant_id": 2,
+      "department": "Radiology",
+      "proficiency": "expert",
+      "created_at": "2025-12-18T22:53:52.823Z"
+    },
+    {
+      "id": 4,
+      "consultant_id": 2,
+      "department": "Lab",
+      "proficiency": "standard",
+      "created_at": "2025-12-18T22:53:52.823Z"
+    },
+    {
+      "id": 5,
+      "consultant_id": 3,
+      "department": "Pharmacy",
+      "proficiency": "expert",
+      "created_at": "2025-12-18T22:53:52.824Z"
+    },
+    {
+      "id": 6,
+      "consultant_id": 3,
+      "department": "ER",
+      "proficiency": "standard",
+      "created_at": "2025-12-18T22:53:52.824Z"
+    },
+    {
+      "id": 7,
+      "consultant_id": 4,
+      "department": "IT",
+      "proficiency": "expert",
+      "created_at": "2025-12-18T22:53:52.825Z"
+    },
+    {
+      "id": 8,
+      "consultant_id": 4,
+      "department": "Build",
+      "proficiency": "expert",
+      "created_at": "2025-12-18T22:53:52.825Z"
+    }
+  ],
+  "support_queue": [],
+  "staff_consultant_preferences": [
+    {
+      "id": 1,
+      "staff_id": 5,
+      "consultant_id": 1,
+      "successful_sessions": 3,
+      "avg_rating": 5,
+      "last_session_at": "2025-12-19T17:38:15.107Z",
+      "created_at": "2025-12-18T22:53:52.827Z"
+    },
+    {
+      "id": 2,
+      "staff_id": 8,
+      "consultant_id": 2,
+      "successful_sessions": 1,
+      "avg_rating": 4,
+      "last_session_at": "2024-12-12T11:35:00.000Z",
+      "created_at": "2025-12-18T22:53:52.828Z"
+    }
+  ],
+  "support_session_events": [
+    {
+      "id": 1,
+      "session_id": 4,
+      "event_type": "created",
+      "actor_id": 5,
+      "metadata": "{\"department\":\"ER\",\"urgency\":\"normal\"}",
+      "created_at": "2025-12-19T15:01:07.734Z"
+    },
+    {
+      "id": 2,
+      "session_id": 4,
+      "event_type": "cancelled",
+      "actor_id": 5,
+      "metadata": null,
+      "created_at": "2025-12-19T15:31:14.336Z"
+    },
+    {
+      "id": 3,
+      "session_id": 5,
+      "event_type": "created",
+      "actor_id": 5,
+      "metadata": "{\"department\":\"ER\",\"urgency\":\"normal\"}",
+      "created_at": "2025-12-19T15:31:35.938Z"
+    },
+    {
+      "id": 4,
+      "session_id": 5,
+      "event_type": "accepted",
+      "actor_id": 1,
+      "metadata": null,
+      "created_at": "2025-12-19T16:35:51.709Z"
+    },
+    {
+      "id": 5,
+      "session_id": 5,
+      "event_type": "started",
+      "actor_id": null,
+      "metadata": null,
+      "created_at": "2025-12-19T17:33:26.715Z"
+    },
+    {
+      "id": 6,
+      "session_id": 5,
+      "event_type": "ended",
+      "actor_id": 5,
+      "metadata": "{\"durationSeconds\":284}",
+      "created_at": "2025-12-19T17:38:11.195Z"
+    },
+    {
+      "id": 7,
+      "session_id": 5,
+      "event_type": "rated",
+      "actor_id": 5,
+      "metadata": "{\"rating\":5,\"feedback\":\"\"}",
+      "created_at": "2025-12-19T17:38:15.113Z"
+    },
+    {
+      "id": 8,
+      "session_id": 6,
+      "event_type": "created",
+      "actor_id": 8,
+      "metadata": "{\"department\":\"ER\",\"urgency\":\"critical\"}",
+      "created_at": "2025-12-19T19:49:58.268Z"
+    },
+    {
+      "id": 9,
+      "session_id": 6,
+      "event_type": "matched",
+      "actor_id": 2,
+      "metadata": "{\"matchReasons\":[\"Previous relationship (+50)\",\"High rating (+20)\"]}",
+      "created_at": "2025-12-19T19:49:58.449Z"
+    },
+    {
+      "id": 10,
+      "session_id": 6,
+      "event_type": "started",
+      "actor_id": null,
+      "metadata": null,
+      "created_at": "2025-12-19T19:50:02.023Z"
+    },
+    {
+      "id": 11,
+      "session_id": 6,
+      "event_type": "ended",
+      "actor_id": 8,
+      "metadata": "{\"durationSeconds\":308}",
+      "created_at": "2025-12-19T19:55:10.695Z"
+    },
+    {
+      "id": 12,
+      "session_id": 7,
+      "event_type": "created",
+      "actor_id": 8,
+      "metadata": "{\"department\":\"Radiology\",\"urgency\":\"urgent\"}",
+      "created_at": "2025-12-19T19:55:28.108Z"
+    },
+    {
+      "id": 13,
+      "session_id": 7,
+      "event_type": "matched",
+      "actor_id": 2,
+      "metadata": "{\"matchReasons\":[\"Department expert (+30)\",\"Previous relationship (+50)\",\"High rating (+20)\"]}",
+      "created_at": "2025-12-19T19:55:28.323Z"
+    },
+    {
+      "id": 14,
+      "session_id": 7,
+      "event_type": "started",
+      "actor_id": null,
+      "metadata": null,
+      "created_at": "2025-12-19T19:55:31.324Z"
+    },
+    {
+      "id": 15,
+      "session_id": 7,
+      "event_type": "ended",
+      "actor_id": 8,
+      "metadata": "{\"durationSeconds\":730}",
+      "created_at": "2025-12-19T20:07:41.537Z"
+    },
+    {
+      "id": 16,
+      "session_id": 8,
+      "event_type": "created",
+      "actor_id": 8,
+      "metadata": "{\"department\":\"Radiology\",\"urgency\":\"normal\"}",
+      "created_at": "2025-12-20T03:23:06.007Z"
+    },
+    {
+      "id": 17,
+      "session_id": 8,
+      "event_type": "matched",
+      "actor_id": 2,
+      "metadata": "{\"matchReasons\":[\"Department expert (+30)\",\"Previous relationship (+50)\",\"High rating (+20)\"]}",
+      "created_at": "2025-12-20T03:23:06.193Z"
+    },
+    {
+      "id": 18,
+      "session_id": 8,
+      "event_type": "started",
+      "actor_id": null,
+      "metadata": null,
+      "created_at": "2025-12-20T03:23:10.641Z"
+    },
+    {
+      "id": 19,
+      "session_id": 8,
+      "event_type": "ended",
+      "actor_id": 8,
+      "metadata": "{\"durationSeconds\":545}",
+      "created_at": "2025-12-20T03:32:16.341Z"
+    },
+    {
+      "id": 20,
+      "session_id": 9,
+      "event_type": "created",
+      "actor_id": 8,
+      "metadata": "{\"department\":\"Radiology\",\"urgency\":\"urgent\"}",
+      "created_at": "2025-12-20T03:36:00.893Z"
+    },
+    {
+      "id": 21,
+      "session_id": 9,
+      "event_type": "matched",
+      "actor_id": 2,
+      "metadata": "{\"matchReasons\":[\"Department expert (+30)\",\"Previous relationship (+50)\",\"High rating (+20)\"]}",
+      "created_at": "2025-12-20T03:36:01.025Z"
+    },
+    {
+      "id": 22,
+      "session_id": 9,
+      "event_type": "started",
+      "actor_id": null,
+      "metadata": null,
+      "created_at": "2025-12-20T03:36:07.978Z"
+    },
+    {
+      "id": 23,
+      "session_id": 8,
+      "event_type": "ended",
+      "actor_id": null,
+      "metadata": "{\"durationSeconds\":1526}",
+      "created_at": "2025-12-20T03:48:37.173Z"
+    },
+    {
+      "id": 24,
+      "session_id": 10,
+      "event_type": "created",
+      "actor_id": 8,
+      "metadata": "{\"department\":\"Radiology\",\"urgency\":\"urgent\"}",
+      "created_at": "2025-12-20T03:56:42.933Z"
+    },
+    {
+      "id": 25,
+      "session_id": 10,
+      "event_type": "matched",
+      "actor_id": 2,
+      "metadata": "{\"matchReasons\":[\"Department expert (+30)\",\"Previous relationship (+50)\",\"High rating (+20)\"]}",
+      "created_at": "2025-12-20T03:56:43.125Z"
+    },
+    {
+      "id": 26,
+      "session_id": 10,
+      "event_type": "started",
+      "actor_id": null,
+      "metadata": null,
+      "created_at": "2025-12-20T03:57:08.392Z"
+    },
+    {
+      "id": 27,
+      "session_id": 10,
+      "event_type": "ended",
+      "actor_id": 8,
+      "metadata": "{\"durationSeconds\":399}",
+      "created_at": "2025-12-20T04:03:47.536Z"
+    },
+    {
+      "id": 28,
+      "session_id": 10,
+      "event_type": "ended",
+      "actor_id": 2,
+      "metadata": "{\"durationSeconds\":401}",
+      "created_at": "2025-12-20T04:03:50.167Z"
+    },
+    {
+      "id": 29,
+      "session_id": 11,
+      "event_type": "created",
+      "actor_id": 8,
+      "metadata": "{\"department\":\"Radiology\",\"urgency\":\"normal\"}",
+      "created_at": "2025-12-20T04:04:11.035Z"
+    },
+    {
+      "id": 30,
+      "session_id": 11,
+      "event_type": "matched",
+      "actor_id": 2,
+      "metadata": "{\"matchReasons\":[\"Department expert (+30)\",\"Previous relationship (+50)\",\"High rating (+20)\"]}",
+      "created_at": "2025-12-20T04:04:11.200Z"
+    },
+    {
+      "id": 31,
+      "session_id": 11,
+      "event_type": "started",
+      "actor_id": null,
+      "metadata": null,
+      "created_at": "2025-12-20T04:04:16.232Z"
+    },
+    {
+      "id": 32,
+      "session_id": 11,
+      "event_type": "ended",
+      "actor_id": 8,
+      "metadata": "{\"durationSeconds\":29}",
+      "created_at": "2025-12-20T04:04:46.197Z"
+    },
+    {
+      "id": 33,
+      "session_id": 11,
+      "event_type": "ended",
+      "actor_id": 2,
+      "metadata": "{\"durationSeconds\":31}",
+      "created_at": "2025-12-20T04:04:47.943Z"
+    },
+    {
+      "id": 34,
+      "session_id": 12,
+      "event_type": "created",
+      "actor_id": 8,
+      "metadata": "{\"department\":\"Radiology\",\"urgency\":\"critical\"}",
+      "created_at": "2025-12-20T16:36:44.782Z"
+    },
+    {
+      "id": 35,
+      "session_id": 12,
+      "event_type": "matched",
+      "actor_id": 2,
+      "metadata": "{\"matchReasons\":[\"Department expert (+30)\",\"Previous relationship (+50)\",\"High rating (+20)\"]}",
+      "created_at": "2025-12-20T16:36:44.917Z"
+    },
+    {
+      "id": 36,
+      "session_id": 12,
+      "event_type": "started",
+      "actor_id": null,
+      "metadata": null,
+      "created_at": "2025-12-20T16:37:05.868Z"
+    },
+    {
+      "id": 37,
+      "session_id": 12,
+      "event_type": "ended",
+      "actor_id": 8,
+      "metadata": "{\"durationSeconds\":1260}",
+      "created_at": "2025-12-20T16:58:06.494Z"
+    },
+    {
+      "id": 38,
+      "session_id": 12,
+      "event_type": "ended",
+      "actor_id": 2,
+      "metadata": "{\"durationSeconds\":1263}",
+      "created_at": "2025-12-20T16:58:09.201Z"
+    },
+    {
+      "id": 39,
+      "session_id": 13,
+      "event_type": "created",
+      "actor_id": 8,
+      "metadata": "{\"department\":\"Radiology\",\"urgency\":\"critical\"}",
+      "created_at": "2025-12-20T17:24:33.937Z"
+    },
+    {
+      "id": 40,
+      "session_id": 13,
+      "event_type": "matched",
+      "actor_id": 2,
+      "metadata": "{\"matchReasons\":[\"Department expert (+30)\",\"Previous relationship (+50)\",\"High rating (+20)\"]}",
+      "created_at": "2025-12-20T17:24:34.183Z"
+    },
+    {
+      "id": 41,
+      "session_id": 13,
+      "event_type": "started",
+      "actor_id": null,
+      "metadata": null,
+      "created_at": "2025-12-20T17:24:38.278Z"
+    },
+    {
+      "id": 42,
+      "session_id": 13,
+      "event_type": "ended",
+      "actor_id": 8,
+      "metadata": "{\"durationSeconds\":29}",
+      "created_at": "2025-12-20T17:25:07.526Z"
+    },
+    {
+      "id": 43,
+      "session_id": 14,
+      "event_type": "created",
+      "actor_id": 8,
+      "metadata": "{\"department\":\"Radiology\",\"urgency\":\"critical\"}",
+      "created_at": "2025-12-20T17:25:30.654Z"
+    },
+    {
+      "id": 44,
+      "session_id": 14,
+      "event_type": "matched",
+      "actor_id": 2,
+      "metadata": "{\"matchReasons\":[\"Department expert (+30)\",\"Previous relationship (+50)\",\"High rating (+20)\"]}",
+      "created_at": "2025-12-20T17:25:30.758Z"
+    },
+    {
+      "id": 45,
+      "session_id": 14,
+      "event_type": "started",
+      "actor_id": null,
+      "metadata": null,
+      "created_at": "2025-12-20T17:25:34.146Z"
+    },
+    {
+      "id": 46,
+      "session_id": 14,
+      "event_type": "ended",
+      "actor_id": 8,
+      "metadata": "{\"durationSeconds\":14}",
+      "created_at": "2025-12-20T17:25:48.412Z"
+    },
+    {
+      "id": 47,
+      "session_id": 15,
+      "event_type": "created",
+      "actor_id": 8,
+      "metadata": "{\"department\":\"Radiology\",\"urgency\":\"critical\"}",
+      "created_at": "2025-12-20T17:27:28.108Z"
+    },
+    {
+      "id": 48,
+      "session_id": 15,
+      "event_type": "matched",
+      "actor_id": 2,
+      "metadata": "{\"matchReasons\":[\"Department expert (+30)\",\"Previous relationship (+50)\",\"High rating (+20)\"]}",
+      "created_at": "2025-12-20T17:27:28.184Z"
+    },
+    {
+      "id": 49,
+      "session_id": 15,
+      "event_type": "started",
+      "actor_id": null,
+      "metadata": null,
+      "created_at": "2025-12-20T17:27:31.424Z"
+    },
+    {
+      "id": 50,
+      "session_id": 15,
+      "event_type": "ended",
+      "actor_id": 8,
+      "metadata": "{\"durationSeconds\":237}",
+      "created_at": "2025-12-20T17:31:28.665Z"
+    },
+    {
+      "id": 51,
+      "session_id": 16,
+      "event_type": "created",
+      "actor_id": 8,
+      "metadata": "{\"department\":\"Radiology\",\"urgency\":\"critical\"}",
+      "created_at": "2025-12-20T17:31:43.878Z"
+    },
+    {
+      "id": 52,
+      "session_id": 16,
+      "event_type": "matched",
+      "actor_id": 2,
+      "metadata": "{\"matchReasons\":[\"Department expert (+30)\",\"Previous relationship (+50)\",\"High rating (+20)\"]}",
+      "created_at": "2025-12-20T17:31:43.993Z"
+    },
+    {
+      "id": 53,
+      "session_id": 16,
+      "event_type": "started",
+      "actor_id": null,
+      "metadata": null,
+      "created_at": "2025-12-20T17:32:01.087Z"
+    },
+    {
+      "id": 54,
+      "session_id": 16,
+      "event_type": "ended",
+      "actor_id": 8,
+      "metadata": "{\"durationSeconds\":3}",
+      "created_at": "2025-12-20T17:32:04.300Z"
+    },
+    {
+      "id": 55,
+      "session_id": 17,
+      "event_type": "created",
+      "actor_id": 8,
+      "metadata": "{\"department\":\"Radiology\",\"urgency\":\"critical\"}",
+      "created_at": "2025-12-20T17:32:43.292Z"
+    },
+    {
+      "id": 56,
+      "session_id": 17,
+      "event_type": "matched",
+      "actor_id": 2,
+      "metadata": "{\"matchReasons\":[\"Department expert (+30)\",\"Previous relationship (+50)\",\"High rating (+20)\"]}",
+      "created_at": "2025-12-20T17:32:43.390Z"
+    },
+    {
+      "id": 57,
+      "session_id": 17,
+      "event_type": "started",
+      "actor_id": null,
+      "metadata": null,
+      "created_at": "2025-12-20T17:32:48.504Z"
+    },
+    {
+      "id": 58,
+      "session_id": 17,
+      "event_type": "ended",
+      "actor_id": 8,
+      "metadata": "{\"durationSeconds\":15}",
+      "created_at": "2025-12-20T17:33:04.536Z"
+    },
+    {
+      "id": 59,
+      "session_id": 18,
+      "event_type": "created",
+      "actor_id": 8,
+      "metadata": "{\"department\":\"Radiology\",\"urgency\":\"urgent\"}",
+      "created_at": "2025-12-20T17:36:34.366Z"
+    },
+    {
+      "id": 60,
+      "session_id": 18,
+      "event_type": "matched",
+      "actor_id": 2,
+      "metadata": "{\"matchReasons\":[\"Department expert (+30)\",\"Previous relationship (+50)\",\"High rating (+20)\"]}",
+      "created_at": "2025-12-20T17:36:34.517Z"
+    },
+    {
+      "id": 61,
+      "session_id": 18,
+      "event_type": "started",
+      "actor_id": null,
+      "metadata": null,
+      "created_at": "2025-12-20T17:36:42.277Z"
+    },
+    {
+      "id": 62,
+      "session_id": 18,
+      "event_type": "ended",
+      "actor_id": 8,
+      "metadata": "{\"durationSeconds\":14}",
+      "created_at": "2025-12-20T17:36:56.911Z"
+    },
+    {
+      "id": 63,
+      "session_id": 19,
+      "event_type": "created",
+      "actor_id": 8,
+      "metadata": "{\"department\":\"Radiology\",\"urgency\":\"critical\"}",
+      "created_at": "2025-12-20T17:37:13.724Z"
+    },
+    {
+      "id": 64,
+      "session_id": 19,
+      "event_type": "matched",
+      "actor_id": 2,
+      "metadata": "{\"matchReasons\":[\"Department expert (+30)\",\"Previous relationship (+50)\",\"High rating (+20)\"]}",
+      "created_at": "2025-12-20T17:37:13.815Z"
+    },
+    {
+      "id": 65,
+      "session_id": 19,
+      "event_type": "started",
+      "actor_id": null,
+      "metadata": null,
+      "created_at": "2025-12-20T17:37:21.778Z"
+    },
+    {
+      "id": 66,
+      "session_id": 19,
+      "event_type": "ended",
+      "actor_id": 8,
+      "metadata": "{\"durationSeconds\":5}",
+      "created_at": "2025-12-20T17:37:27.438Z"
+    }
+  ],
+  "_autoIncrement": {
+    "users": 11,
+    "hospitals": 4,
+    "support_sessions": 20,
+    "consultant_availability": 5,
+    "consultant_specialties": 9,
+    "support_queue": 1,
+    "staff_consultant_preferences": 3,
+    "support_session_events": 67
+  }
+}
