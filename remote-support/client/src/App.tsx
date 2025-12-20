@@ -8,6 +8,8 @@ import VideoCall from './pages/support/VideoCall';
 import SupportHistory from './pages/support/SupportHistory';
 import ConsultantSettings from './pages/support/ConsultantSettings';
 import StaffPreferences from './pages/support/StaffPreferences';
+import ScheduleSession from './pages/support/ScheduleSession';
+import MySchedule from './pages/support/MySchedule';
 import Dashboard from './pages/Dashboard';
 import Analytics from './pages/Analytics';
 import { initGlobalWebSocket, closeGlobalWebSocket } from './hooks/useWebSocket';
@@ -75,6 +77,8 @@ function App() {
           <Route path="/support/history" element={<SupportHistory />} />
           <Route path="/support/settings" element={<ConsultantSettings />} />
           <Route path="/support/preferences" element={<StaffPreferences />} />
+          <Route path="/support/schedule" element={<ScheduleSession />} />
+          <Route path="/support/my-schedule" element={<MySchedule />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

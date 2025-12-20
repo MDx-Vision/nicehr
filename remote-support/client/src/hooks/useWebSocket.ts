@@ -6,7 +6,10 @@ export type WSEventType =
   | 'support_session_started'
   | 'support_session_ended'
   | 'consultant_status_changed'
-  | 'queue_position_update';
+  | 'queue_position_update'
+  | 'scheduled_session_new'
+  | 'scheduled_session_updated'
+  | 'scheduled_session_reminder';
 
 interface WSMessage {
   type: WSEventType;

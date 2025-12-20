@@ -8,7 +8,10 @@ export type WSEventType =
   | 'support_session_started'  // Call connected
   | 'support_session_ended'    // Call ended
   | 'consultant_status_changed' // Consultant availability changed
-  | 'queue_position_update';    // Queue position changed
+  | 'queue_position_update'    // Queue position changed
+  | 'scheduled_session_new'    // New scheduled session
+  | 'scheduled_session_updated' // Scheduled session updated/cancelled
+  | 'scheduled_session_reminder'; // Reminder for upcoming session
 
 interface WSMessage {
   type: WSEventType;

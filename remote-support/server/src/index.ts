@@ -13,6 +13,7 @@ import supportRoutes from './routes/support.js';
 import consultantRoutes from './routes/consultants.js';
 import authRoutes from './routes/auth.js';
 import analyticsRoutes from './routes/analytics.js';
+import scheduleRoutes from './routes/schedule.js';
 import dailyService from './services/daily.js';
 import websocketService from './services/websocket.js';
 import db from './db/index.js';
@@ -40,6 +41,7 @@ app.use('/api/support', supportRoutes);
 app.use('/api/consultants', consultantRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/schedule', scheduleRoutes);
 
 // Health check
 app.get('/api/health', async (_req, res) => {

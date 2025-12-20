@@ -21,6 +21,7 @@ interface Database {
   support_queue: QueueItem[];
   staff_consultant_preferences: StaffConsultantPreference[];
   support_session_events: SessionEvent[];
+  scheduled_sessions: ScheduledSession[];
   _autoIncrement: Record<string, number>;
 }
 
@@ -108,6 +109,22 @@ export interface SessionEvent {
   created_at: string;
 }
 
+export interface ScheduledSession {
+  id: number;
+  requester_id: number;
+  consultant_id: number;
+  hospital_id: number;
+  department: string;
+  scheduled_at: string;
+  duration_minutes: number;
+  topic: string;
+  notes: string | null;
+  status: 'scheduled' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
+  support_session_id: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // Initialize empty database
 const emptyDb: Database = {
   users: [],
@@ -118,6 +135,7 @@ const emptyDb: Database = {
   support_queue: [],
   staff_consultant_preferences: [],
   support_session_events: [],
+  scheduled_sessions: [],
   _autoIncrement: {
     users: 1,
     hospitals: 1,
@@ -127,6 +145,7 @@ const emptyDb: Database = {
     support_queue: 1,
     staff_consultant_preferences: 1,
     support_session_events: 1,
+    scheduled_sessions: 1,
   },
 };
 
@@ -394,6 +413,72 @@ export const events = {
   },
 };
 
+export const scheduledSessions = {
+  getAll: () => (db.scheduled_sessions || []),
+  getById: (id: number) => (db.scheduled_sessions || []).find(s => s.id === id),
+  getByUserId: (userId: number) =>
+    (db.scheduled_sessions || []).filter(
+      s => (s.requester_id === userId || s.consultant_id === userId) &&
+           ['scheduled', 'confirmed'].includes(s.status)
+    ).sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()),
+  getByConsultantId: (consultantId: number) =>
+    (db.scheduled_sessions || []).filter(
+      s => s.consultant_id === consultantId && ['scheduled', 'confirmed'].includes(s.status)
+    ).sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()),
+  getUpcoming: (userId: number, withinMinutes: number = 15) => {
+    const nowTime = new Date().getTime();
+    const windowEnd = nowTime + withinMinutes * 60 * 1000;
+    return (db.scheduled_sessions || []).filter(s => {
+      if (s.requester_id !== userId && s.consultant_id !== userId) return false;
+      if (!['scheduled', 'confirmed'].includes(s.status)) return false;
+      const scheduledTime = new Date(s.scheduled_at).getTime();
+      return scheduledTime >= nowTime && scheduledTime <= windowEnd;
+    });
+  },
+  insert: (session: Omit<ScheduledSession, 'id' | 'created_at' | 'updated_at'>) => {
+    if (!db.scheduled_sessions) db.scheduled_sessions = [];
+    const newSession: ScheduledSession = {
+      id: getNextId('scheduled_sessions'),
+      ...session,
+      created_at: now(),
+      updated_at: now(),
+    };
+    db.scheduled_sessions.push(newSession);
+    saveDb(db);
+    return newSession;
+  },
+  update: (id: number, updates: Partial<ScheduledSession>) => {
+    if (!db.scheduled_sessions) return null;
+    const index = db.scheduled_sessions.findIndex(s => s.id === id);
+    if (index !== -1) {
+      db.scheduled_sessions[index] = {
+        ...db.scheduled_sessions[index],
+        ...updates,
+        updated_at: now(),
+      };
+      saveDb(db);
+      return db.scheduled_sessions[index];
+    }
+    return null;
+  },
+  hasConflict: (consultantId: number, scheduledAt: string, durationMinutes: number, excludeId?: number) => {
+    if (!db.scheduled_sessions) return false;
+    const newStart = new Date(scheduledAt).getTime();
+    const newEnd = newStart + durationMinutes * 60 * 1000;
+
+    return db.scheduled_sessions.some(s => {
+      if (s.consultant_id !== consultantId) return false;
+      if (!['scheduled', 'confirmed'].includes(s.status)) return false;
+      if (excludeId && s.id === excludeId) return false;
+
+      const existingStart = new Date(s.scheduled_at).getTime();
+      const existingEnd = existingStart + s.duration_minutes * 60 * 1000;
+
+      return (newStart < existingEnd && newEnd > existingStart);
+    });
+  },
+};
+
 // Check if database has been seeded
 export function isSeeded(): boolean {
   return db.users.length > 0;
@@ -414,6 +499,7 @@ export default {
   queue,
   preferences,
   events,
+  scheduledSessions,
   isSeeded,
   resetDb,
 };

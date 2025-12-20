@@ -11,7 +11,6 @@ import {
   Inbox,
   RefreshCw,
   Wifi,
-  WifiOff,
 } from 'lucide-react';
 
 interface QueueItem {
