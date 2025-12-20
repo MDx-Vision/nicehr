@@ -22,6 +22,7 @@ interface Database {
   staff_consultant_preferences: StaffConsultantPreference[];
   support_session_events: SessionEvent[];
   scheduled_sessions: ScheduledSession[];
+  staff_schedules: StaffSchedule[];
   _autoIncrement: Record<string, number>;
 }
 
@@ -59,6 +60,7 @@ export interface SupportSession {
   rating: number | null;
   feedback: string | null;
   auto_cancelled_reason: string | null;
+  recording_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -121,6 +123,28 @@ export interface ScheduledSession {
   notes: string | null;
   status: 'scheduled' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
   support_session_id: number | null;
+  // All-day dedicated support
+  is_all_day: boolean;
+  all_day_start_time: string | null; // e.g., "09:00"
+  all_day_end_time: string | null;   // e.g., "17:00"
+  // Recurring sessions
+  is_recurring: boolean;
+  recurrence_pattern: 'daily' | 'weekly' | 'biweekly' | 'monthly' | null;
+  recurrence_days: string | null;     // e.g., "1,3,5" for Mon, Wed, Fri
+  recurrence_end_date: string | null;
+  parent_session_id: number | null;   // For recurring instances
+  created_at: string;
+  updated_at: string;
+}
+
+// Staff availability/schedule for dedicated support
+export interface StaffSchedule {
+  id: number;
+  staff_id: number;
+  day_of_week: number; // 0=Sunday, 1=Monday, etc.
+  start_time: string;  // "09:00"
+  end_time: string;    // "17:00"
+  is_available: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -136,6 +160,7 @@ const emptyDb: Database = {
   staff_consultant_preferences: [],
   support_session_events: [],
   scheduled_sessions: [],
+  staff_schedules: [],
   _autoIncrement: {
     users: 1,
     hospitals: 1,
@@ -146,6 +171,7 @@ const emptyDb: Database = {
     staff_consultant_preferences: 1,
     support_session_events: 1,
     scheduled_sessions: 1,
+    staff_schedules: 1,
   },
 };
 
@@ -479,6 +505,69 @@ export const scheduledSessions = {
   },
 };
 
+// Staff schedules accessor
+export const staffSchedules = {
+  getAll: () => (db.staff_schedules || []),
+  getByStaffId: (staffId: number) =>
+    (db.staff_schedules || []).filter(s => s.staff_id === staffId)
+      .sort((a, b) => a.day_of_week - b.day_of_week),
+  getAvailability: (staffId: number, dayOfWeek: number) =>
+    (db.staff_schedules || []).find(
+      s => s.staff_id === staffId && s.day_of_week === dayOfWeek && s.is_available
+    ),
+  insert: (schedule: Omit<StaffSchedule, 'id' | 'created_at' | 'updated_at'>) => {
+    if (!db.staff_schedules) db.staff_schedules = [];
+    const newSchedule: StaffSchedule = {
+      id: getNextId('staff_schedules'),
+      ...schedule,
+      created_at: now(),
+      updated_at: now(),
+    };
+    db.staff_schedules.push(newSchedule);
+    saveDb(db);
+    return newSchedule;
+  },
+  update: (id: number, updates: Partial<StaffSchedule>) => {
+    if (!db.staff_schedules) return null;
+    const index = db.staff_schedules.findIndex(s => s.id === id);
+    if (index !== -1) {
+      db.staff_schedules[index] = {
+        ...db.staff_schedules[index],
+        ...updates,
+        updated_at: now(),
+      };
+      saveDb(db);
+      return db.staff_schedules[index];
+    }
+    return null;
+  },
+  upsert: (staffId: number, dayOfWeek: number, updates: Partial<StaffSchedule>) => {
+    if (!db.staff_schedules) db.staff_schedules = [];
+    const existing = db.staff_schedules.find(
+      s => s.staff_id === staffId && s.day_of_week === dayOfWeek
+    );
+    if (existing) {
+      return staffSchedules.update(existing.id, updates);
+    } else {
+      return staffSchedules.insert({
+        staff_id: staffId,
+        day_of_week: dayOfWeek,
+        start_time: updates.start_time || '09:00',
+        end_time: updates.end_time || '17:00',
+        is_available: updates.is_available ?? true,
+      });
+    }
+  },
+  delete: (id: number) => {
+    if (!db.staff_schedules) return;
+    const index = db.staff_schedules.findIndex(s => s.id === id);
+    if (index !== -1) {
+      db.staff_schedules.splice(index, 1);
+      saveDb(db);
+    }
+  },
+};
+
 // Check if database has been seeded
 export function isSeeded(): boolean {
   return db.users.length > 0;
@@ -500,6 +589,7 @@ export default {
   preferences,
   events,
   scheduledSessions,
+  staffSchedules,
   isSeeded,
   resetDb,
 };

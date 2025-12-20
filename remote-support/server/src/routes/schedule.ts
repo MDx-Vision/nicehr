@@ -86,6 +86,15 @@ router.post('/', (req: Request, res: Response) => {
     durationMinutes = 30,
     topic,
     notes,
+    // All-day support
+    isAllDay = false,
+    allDayStartTime,
+    allDayEndTime,
+    // Recurring sessions
+    isRecurring = false,
+    recurrencePattern,
+    recurrenceDays,
+    recurrenceEndDate,
   } = req.body;
 
   // Validate required fields
@@ -93,8 +102,16 @@ router.post('/', (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
-  // Check for time conflicts
-  if (db.scheduledSessions.hasConflict(consultantId, scheduledAt, durationMinutes)) {
+  // For all-day sessions, calculate duration from start/end times
+  let actualDuration = durationMinutes;
+  if (isAllDay && allDayStartTime && allDayEndTime) {
+    const [startHour, startMin] = allDayStartTime.split(':').map(Number);
+    const [endHour, endMin] = allDayEndTime.split(':').map(Number);
+    actualDuration = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+  }
+
+  // Check for time conflicts (skip for recurring - we'll check each instance)
+  if (!isRecurring && db.scheduledSessions.hasConflict(consultantId, scheduledAt, actualDuration)) {
     return res.status(409).json({ error: 'Consultant has a conflicting appointment at this time' });
   }
 
@@ -110,12 +127,25 @@ router.post('/', (req: Request, res: Response) => {
     hospital_id: hospitalId,
     department: department || 'General',
     scheduled_at: scheduledAt,
-    duration_minutes: durationMinutes,
+    duration_minutes: actualDuration,
     topic,
     notes: notes || null,
     status: 'scheduled',
     support_session_id: null,
+    is_all_day: isAllDay,
+    all_day_start_time: isAllDay ? allDayStartTime : null,
+    all_day_end_time: isAllDay ? allDayEndTime : null,
+    is_recurring: isRecurring,
+    recurrence_pattern: isRecurring ? recurrencePattern : null,
+    recurrence_days: isRecurring ? recurrenceDays : null,
+    recurrence_end_date: isRecurring ? recurrenceEndDate : null,
+    parent_session_id: null,
   });
+
+  // If recurring, create future instances
+  if (isRecurring && recurrencePattern && recurrenceEndDate) {
+    createRecurringInstances(session, recurrencePattern, recurrenceDays, recurrenceEndDate);
+  }
 
   // Get names for notification
   const requester = db.users.getById(requesterId);
@@ -129,6 +159,8 @@ router.post('/', (req: Request, res: Response) => {
     durationMinutes: session.duration_minutes,
     topic: session.topic,
     department: session.department,
+    isAllDay: session.is_all_day,
+    isRecurring: session.is_recurring,
     requesterName: requester?.name,
     consultantName: consultant?.name,
     hospitalName: hospital?.name,
@@ -144,6 +176,73 @@ router.post('/', (req: Request, res: Response) => {
     hospitalName: hospital?.name,
   });
 });
+
+// Helper function to create recurring session instances
+function createRecurringInstances(
+  parentSession: any,
+  pattern: string,
+  recurrenceDays: string | null,
+  endDate: string
+) {
+  const startDate = new Date(parentSession.scheduled_at);
+  const endDateTime = new Date(endDate);
+  const instances = [];
+
+  let currentDate = new Date(startDate);
+  const daysOfWeek = recurrenceDays ? recurrenceDays.split(',').map(Number) : [];
+
+  while (currentDate <= endDateTime) {
+    // Skip the first date (parent session)
+    if (currentDate.getTime() !== startDate.getTime()) {
+      // Check if this day matches recurrence pattern
+      let shouldCreate = false;
+
+      if (pattern === 'daily') {
+        shouldCreate = true;
+      } else if (pattern === 'weekly' && daysOfWeek.length > 0) {
+        shouldCreate = daysOfWeek.includes(currentDate.getDay());
+      } else if (pattern === 'biweekly' && daysOfWeek.length > 0) {
+        const weeksDiff = Math.floor((currentDate.getTime() - startDate.getTime()) / (7 * 24 * 60 * 60 * 1000));
+        shouldCreate = weeksDiff % 2 === 0 && daysOfWeek.includes(currentDate.getDay());
+      } else if (pattern === 'monthly') {
+        shouldCreate = currentDate.getDate() === startDate.getDate();
+      }
+
+      if (shouldCreate) {
+        // Check for conflicts before creating
+        if (!db.scheduledSessions.hasConflict(
+          parentSession.consultant_id,
+          currentDate.toISOString(),
+          parentSession.duration_minutes
+        )) {
+          db.scheduledSessions.insert({
+            requester_id: parentSession.requester_id,
+            consultant_id: parentSession.consultant_id,
+            hospital_id: parentSession.hospital_id,
+            department: parentSession.department,
+            scheduled_at: currentDate.toISOString(),
+            duration_minutes: parentSession.duration_minutes,
+            topic: parentSession.topic,
+            notes: parentSession.notes,
+            status: 'scheduled',
+            support_session_id: null,
+            is_all_day: parentSession.is_all_day,
+            all_day_start_time: parentSession.all_day_start_time,
+            all_day_end_time: parentSession.all_day_end_time,
+            is_recurring: true,
+            recurrence_pattern: pattern,
+            recurrence_days: recurrenceDays,
+            recurrence_end_date: endDate,
+            parent_session_id: parentSession.id,
+          });
+        }
+      }
+    }
+
+    // Move to next day
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+}
 
 // PUT /api/schedule/:id - Update a scheduled session
 router.put('/:id', (req: Request, res: Response) => {
@@ -300,6 +399,76 @@ router.post('/:id/start', async (req: Request, res: Response) => {
   res.json({
     scheduledSessionId: id,
     supportSessionId: session.id,
+  });
+});
+
+// ============ Staff Schedule Management ============
+
+// GET /api/schedule/staff/:staffId/schedule - Get staff's weekly schedule
+router.get('/staff/:staffId/schedule', (req: Request, res: Response) => {
+  const staffId = parseInt(req.params.staffId);
+  const schedules = db.staffSchedules.getByStaffId(staffId);
+
+  // If no schedule exists, return default 9-5 Mon-Fri
+  if (schedules.length === 0) {
+    const defaultSchedule = [1, 2, 3, 4, 5].map(day => ({
+      day_of_week: day,
+      start_time: '09:00',
+      end_time: '17:00',
+      is_available: true,
+    }));
+    return res.json(defaultSchedule);
+  }
+
+  res.json(schedules);
+});
+
+// PUT /api/schedule/staff/:staffId/schedule - Update staff's weekly schedule
+router.put('/staff/:staffId/schedule', (req: Request, res: Response) => {
+  const staffId = parseInt(req.params.staffId);
+  const { schedules } = req.body; // Array of { day_of_week, start_time, end_time, is_available }
+
+  if (!Array.isArray(schedules)) {
+    return res.status(400).json({ error: 'Invalid schedule format' });
+  }
+
+  const updated = schedules.map(s => {
+    return db.staffSchedules.upsert(staffId, s.day_of_week, {
+      start_time: s.start_time,
+      end_time: s.end_time,
+      is_available: s.is_available,
+    });
+  });
+
+  res.json(updated);
+});
+
+// GET /api/schedule/staff/:staffId/availability - Check staff availability for a specific date
+router.get('/staff/:staffId/availability', (req: Request, res: Response) => {
+  const staffId = parseInt(req.params.staffId);
+  const date = req.query.date as string; // YYYY-MM-DD
+
+  if (!date) {
+    return res.status(400).json({ error: 'Date is required' });
+  }
+
+  const dayOfWeek = new Date(date).getDay();
+  const schedule = db.staffSchedules.getAvailability(staffId, dayOfWeek);
+
+  if (!schedule) {
+    // Check if it's a weekday, default to available 9-5
+    const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+    return res.json({
+      is_available: isWeekday,
+      start_time: '09:00',
+      end_time: '17:00',
+    });
+  }
+
+  res.json({
+    is_available: schedule.is_available,
+    start_time: schedule.start_time,
+    end_time: schedule.end_time,
   });
 });
 

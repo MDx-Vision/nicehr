@@ -604,4 +604,115 @@ router.get('/history', (req: Request, res: Response) => {
   res.json(enriched);
 });
 
+// POST /api/support/:sessionId/recording/start - Start recording
+router.post('/:sessionId/recording/start', async (req: Request, res: Response) => {
+  const sessionId = parseInt(req.params.sessionId);
+  const { userId } = req.body;
+
+  try {
+    const session = db.sessions.getById(sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    // Only consultant can start recording
+    if (session.consultant_id !== userId) {
+      return res.status(403).json({ error: 'Only the consultant can start recording' });
+    }
+
+    if (!session.daily_room_name) {
+      return res.status(400).json({ error: 'No active room' });
+    }
+
+    const result = await dailyService.startRecording(session.daily_room_name);
+
+    // Store recording ID in session
+    db.sessions.update(sessionId, {
+      recording_id: result.id,
+    });
+
+    // Log event
+    db.events.insert({
+      session_id: sessionId,
+      event_type: 'recording_started',
+      actor_id: userId,
+    });
+
+    res.json({ success: true, recordingId: result.id });
+  } catch (error) {
+    console.error('Error starting recording:', error);
+    res.status(500).json({ error: 'Failed to start recording' });
+  }
+});
+
+// POST /api/support/:sessionId/recording/stop - Stop recording
+router.post('/:sessionId/recording/stop', async (req: Request, res: Response) => {
+  const sessionId = parseInt(req.params.sessionId);
+  const { userId } = req.body;
+
+  try {
+    const session = db.sessions.getById(sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    if (session.consultant_id !== userId) {
+      return res.status(403).json({ error: 'Only the consultant can stop recording' });
+    }
+
+    if (!session.daily_room_name || !session.recording_id) {
+      return res.status(400).json({ error: 'No active recording' });
+    }
+
+    await dailyService.stopRecording(session.daily_room_name, session.recording_id);
+
+    // Log event
+    db.events.insert({
+      session_id: sessionId,
+      event_type: 'recording_stopped',
+      actor_id: userId,
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error stopping recording:', error);
+    res.status(500).json({ error: 'Failed to stop recording' });
+  }
+});
+
+// GET /api/support/:sessionId/recordings - Get recordings for a session
+router.get('/:sessionId/recordings', async (req: Request, res: Response) => {
+  const sessionId = parseInt(req.params.sessionId);
+
+  try {
+    const session = db.sessions.getById(sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    if (!session.daily_room_name) {
+      return res.json([]);
+    }
+
+    const recordings = await dailyService.getRecordings(session.daily_room_name);
+    res.json(recordings);
+  } catch (error) {
+    console.error('Error fetching recordings:', error);
+    res.status(500).json({ error: 'Failed to fetch recordings' });
+  }
+});
+
+// GET /api/support/recording/:recordingId/link - Get download link for a recording
+router.get('/recording/:recordingId/link', async (req: Request, res: Response) => {
+  const { recordingId } = req.params;
+
+  try {
+    const link = await dailyService.getRecordingLink(recordingId);
+    res.json({ link });
+  } catch (error) {
+    console.error('Error getting recording link:', error);
+    res.status(500).json({ error: 'Failed to get recording link' });
+  }
+});
+
 export default router;

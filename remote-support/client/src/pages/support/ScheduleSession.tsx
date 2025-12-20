@@ -10,6 +10,8 @@ import {
   CheckCircle,
   ChevronLeft,
   ChevronRight,
+  Repeat,
+  Sun,
 } from 'lucide-react';
 
 interface Consultant {
@@ -44,6 +46,23 @@ const DURATIONS = [
   { value: 60, label: '1 hour' },
 ];
 
+const RECURRENCE_PATTERNS = [
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'biweekly', label: 'Every 2 weeks' },
+  { value: 'monthly', label: 'Monthly' },
+];
+
+const DAYS_OF_WEEK = [
+  { value: 0, label: 'Sun' },
+  { value: 1, label: 'Mon' },
+  { value: 2, label: 'Tue' },
+  { value: 3, label: 'Wed' },
+  { value: 4, label: 'Thu' },
+  { value: 5, label: 'Fri' },
+  { value: 6, label: 'Sat' },
+];
+
 export default function ScheduleSession() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -62,6 +81,17 @@ export default function ScheduleSession() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+
+  // All-day dedicated support options
+  const [isAllDay, setIsAllDay] = useState(false);
+  const [allDayStartTime, setAllDayStartTime] = useState('09:00');
+  const [allDayEndTime, setAllDayEndTime] = useState('17:00');
+
+  // Recurring session options
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrencePattern, setRecurrencePattern] = useState('weekly');
+  const [recurrenceDays, setRecurrenceDays] = useState<number[]>([1, 3, 5]); // Mon, Wed, Fri
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
 
   // Get next weekday
   function getNextWeekday() {
@@ -136,8 +166,13 @@ export default function ScheduleSession() {
   };
 
   const handleSubmit = async () => {
-    if (!selectedConsultant || !selectedTime || !topic.trim()) {
+    if (!selectedConsultant || (!isAllDay && !selectedTime) || !topic.trim()) {
       setError('Please fill in all required fields');
+      return;
+    }
+
+    if (isRecurring && !recurrenceEndDate) {
+      setError('Please select an end date for recurring sessions');
       return;
     }
 
@@ -145,7 +180,8 @@ export default function ScheduleSession() {
     setError('');
 
     try {
-      const scheduledAt = `${selectedDate.toISOString().split('T')[0]}T${selectedTime}:00.000Z`;
+      const timeToUse = isAllDay ? allDayStartTime : selectedTime;
+      const scheduledAt = `${selectedDate.toISOString().split('T')[0]}T${timeToUse}:00.000Z`;
 
       const res = await fetch('/api/schedule', {
         method: 'POST',
@@ -159,6 +195,17 @@ export default function ScheduleSession() {
           durationMinutes: duration,
           topic: topic.trim(),
           notes: notes.trim() || null,
+          // All-day support
+          isAllDay,
+          allDayStartTime: isAllDay ? allDayStartTime : undefined,
+          allDayEndTime: isAllDay ? allDayEndTime : undefined,
+          // Recurring sessions
+          isRecurring,
+          recurrencePattern: isRecurring ? recurrencePattern : undefined,
+          recurrenceDays: isRecurring && recurrencePattern !== 'daily' && recurrencePattern !== 'monthly'
+            ? recurrenceDays.join(',')
+            : undefined,
+          recurrenceEndDate: isRecurring ? recurrenceEndDate : undefined,
         }),
       });
 
@@ -325,6 +372,32 @@ export default function ScheduleSession() {
             </div>
           </div>
 
+          {/* Session Type Toggle */}
+          <div className="mb-6 flex gap-4">
+            <button
+              onClick={() => { setIsAllDay(false); setSelectedTime(''); }}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-colors ${
+                !isAllDay
+                  ? 'border-primary-500 bg-primary-50 text-primary-700'
+                  : 'border-gray-200 text-gray-600 hover:border-gray-300'
+              }`}
+            >
+              <Clock className="w-5 h-5" />
+              <span className="font-medium">Time Slot</span>
+            </button>
+            <button
+              onClick={() => { setIsAllDay(true); setSelectedTime(''); }}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-colors ${
+                isAllDay
+                  ? 'border-primary-500 bg-primary-50 text-primary-700'
+                  : 'border-gray-200 text-gray-600 hover:border-gray-300'
+              }`}
+            >
+              <Sun className="w-5 h-5" />
+              <span className="font-medium">All-Day Support</span>
+            </button>
+          </div>
+
           {/* Date selector */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-3">
@@ -347,62 +420,192 @@ export default function ScheduleSession() {
             </div>
           </div>
 
-          {/* Duration selector */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Duration
-            </label>
-            <div className="flex gap-2">
-              {DURATIONS.map(d => (
-                <button
-                  key={d.value}
-                  onClick={() => {
-                    setDuration(d.value);
-                    setSelectedTime('');
-                  }}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    duration === d.value
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {d.label}
-                </button>
-              ))}
+          {/* All-Day Time Range */}
+          {isAllDay && (
+            <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="flex items-center gap-2 mb-3 text-amber-800">
+                <Sun className="w-5 h-5" />
+                <span className="font-medium">Dedicated All-Day Support</span>
+              </div>
+              <p className="text-sm text-amber-700 mb-4">
+                The consultant will be dedicated to your team for the entire time range.
+              </p>
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Start Time
+                  </label>
+                  <select
+                    value={allDayStartTime}
+                    onChange={e => setAllDayStartTime(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  >
+                    {TIME_SLOTS.slice(0, -1).map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    End Time
+                  </label>
+                  <select
+                    value={allDayEndTime}
+                    onChange={e => setAllDayEndTime(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  >
+                    {TIME_SLOTS.slice(1).map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Time slots */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Available Times
-            </label>
-            <div className="grid grid-cols-4 gap-2">
-              {TIME_SLOTS.map(time => {
-                const available = isSlotAvailable(time);
-                return (
+          {/* Duration selector - only for time slots */}
+          {!isAllDay && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Duration
+              </label>
+              <div className="flex gap-2">
+                {DURATIONS.map(d => (
                   <button
-                    key={time}
-                    onClick={() => available && setSelectedTime(time)}
-                    disabled={!available}
+                    key={d.value}
+                    onClick={() => {
+                      setDuration(d.value);
+                      setSelectedTime('');
+                    }}
                     className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      selectedTime === time
+                      duration === d.value
                         ? 'bg-primary-600 text-white'
-                        : available
-                        ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        : 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    {time}
+                    {d.label}
                   </button>
-                );
-              })}
+                ))}
+              </div>
             </div>
+          )}
+
+          {/* Time slots - only for regular sessions */}
+          {!isAllDay && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Available Times
+              </label>
+              <div className="grid grid-cols-4 gap-2">
+                {TIME_SLOTS.map(time => {
+                  const available = isSlotAvailable(time);
+                  return (
+                    <button
+                      key={time}
+                      onClick={() => available && setSelectedTime(time)}
+                      disabled={!available}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        selectedTime === time
+                          ? 'bg-primary-600 text-white'
+                          : available
+                          ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          : 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                      }`}
+                    >
+                      {time}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Recurring Option */}
+          <div className="mb-6 p-4 border border-gray-200 rounded-lg">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isRecurring}
+                onChange={e => setIsRecurring(e.target.checked)}
+                className="w-5 h-5 text-primary-600 rounded focus:ring-primary-500"
+              />
+              <div className="flex items-center gap-2">
+                <Repeat className="w-5 h-5 text-gray-500" />
+                <span className="font-medium text-gray-900">Make this a recurring session</span>
+              </div>
+            </label>
+
+            {isRecurring && (
+              <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Repeat
+                  </label>
+                  <div className="flex gap-2 flex-wrap">
+                    {RECURRENCE_PATTERNS.map(p => (
+                      <button
+                        key={p.value}
+                        onClick={() => setRecurrencePattern(p.value)}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          recurrencePattern === p.value
+                            ? 'bg-primary-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {(recurrencePattern === 'weekly' || recurrencePattern === 'biweekly') && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      On these days
+                    </label>
+                    <div className="flex gap-2">
+                      {DAYS_OF_WEEK.map(day => (
+                        <button
+                          key={day.value}
+                          onClick={() => {
+                            if (recurrenceDays.includes(day.value)) {
+                              setRecurrenceDays(recurrenceDays.filter(d => d !== day.value));
+                            } else {
+                              setRecurrenceDays([...recurrenceDays, day.value].sort());
+                            }
+                          }}
+                          className={`w-10 h-10 rounded-full text-sm font-medium transition-colors ${
+                            recurrenceDays.includes(day.value)
+                              ? 'bg-primary-600 text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {day.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    End recurring on
+                  </label>
+                  <input
+                    type="date"
+                    value={recurrenceEndDate}
+                    onChange={e => setRecurrenceEndDate(e.target.value)}
+                    min={selectedDate.toISOString().split('T')[0]}
+                    className="px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <button
-            onClick={() => selectedTime && setStep(3)}
-            disabled={!selectedTime}
+            onClick={() => (isAllDay || selectedTime) && setStep(3)}
+            disabled={!isAllDay && !selectedTime}
             className="w-full mt-6 px-4 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Continue

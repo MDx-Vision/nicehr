@@ -20,6 +20,8 @@ interface DailyRoom {
 interface CreateRoomOptions {
   sessionId: number;
   expiryMinutes?: number;
+  enableRecording?: boolean;
+  recordingType?: 'cloud' | 'local';
 }
 
 interface CreateTokenOptions {
@@ -28,6 +30,16 @@ interface CreateTokenOptions {
   participantName: string;
   isOwner?: boolean;
   expiryMinutes?: number;
+  canRecord?: boolean;
+}
+
+interface RecordingInfo {
+  id: string;
+  room_name: string;
+  start_ts: number;
+  status: string;
+  duration?: number;
+  share_link?: string;
 }
 
 class DailyService {
@@ -50,17 +62,25 @@ class DailyService {
   async createRoom(options: CreateRoomOptions): Promise<DailyRoom> {
     const roomName = 'session-' + options.sessionId + '-' + uuidv4().slice(0, 8);
     const expiryMinutes = options.expiryMinutes || 120;
+    const enableRecording = options.enableRecording ?? true; // Enable by default
+    const recordingType = options.recordingType || 'cloud';
+
+    const properties: Record<string, unknown> = {
+      max_participants: 10, // Allow more for dedicated support
+      enable_screenshare: true,
+      enable_chat: true,
+      exp: Math.floor(Date.now() / 1000) + expiryMinutes * 60,
+    };
+
+    // Enable recording if requested
+    if (enableRecording) {
+      properties.enable_recording = recordingType;
+      properties.enable_advanced_chat = true;
+    }
+
     const room = await this.request<DailyRoom>('/rooms', {
       method: 'POST',
-      body: JSON.stringify({
-        name: roomName,
-        properties: {
-          max_participants: 2,
-          enable_screenshare: true,
-          enable_chat: true,
-          exp: Math.floor(Date.now() / 1000) + expiryMinutes * 60,
-        },
-      }),
+      body: JSON.stringify({ name: roomName, properties }),
     });
     return { ...room, url: 'https://' + getDomain() + '/' + room.name };
   }
@@ -84,11 +104,39 @@ class DailyService {
           user_name: options.participantName,
           is_owner: options.isOwner || false,
           exp: Math.floor(Date.now() / 1000) + expiryMinutes * 60,
-          enable_prejoin_ui: false, // Skip Daily's prejoin screen - app has its own Join button
+          enable_prejoin_ui: false,
+          enable_recording: options.canRecord ? 'cloud' : undefined,
         },
       }),
     });
     return result.token;
+  }
+
+  // Recording control methods
+  async startRecording(roomName: string): Promise<{ id: string }> {
+    const result = await this.request<{ id: string }>('/rooms/' + roomName + '/recordings', {
+      method: 'POST',
+      body: JSON.stringify({
+        type: 'cloud',
+      }),
+    });
+    return result;
+  }
+
+  async stopRecording(roomName: string, recordingId: string): Promise<void> {
+    await this.request('/rooms/' + roomName + '/recordings/' + recordingId, {
+      method: 'DELETE',
+    });
+  }
+
+  async getRecordings(roomName: string): Promise<RecordingInfo[]> {
+    const result = await this.request<{ data: RecordingInfo[] }>('/rooms/' + roomName + '/recordings');
+    return result.data || [];
+  }
+
+  async getRecordingLink(recordingId: string): Promise<string> {
+    const result = await this.request<{ download_link: string }>('/recordings/' + recordingId + '/access-link');
+    return result.download_link;
   }
 
   async healthCheck(): Promise<boolean> {
