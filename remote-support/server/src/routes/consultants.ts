@@ -156,4 +156,61 @@ router.get('/meta/departments', (_req: Request, res: Response) => {
   res.json(departments);
 });
 
+// GET /api/consultants/preferences/:staffId - Get staff's preferred consultants
+router.get('/preferences/:staffId', (req: Request, res: Response) => {
+  const staffId = parseInt(req.params.staffId);
+  const prefs = db.preferences.getByStaffId(staffId);
+
+  const enriched = prefs.map(pref => {
+    const consultant = db.users.getById(pref.consultant_id);
+    const avail = db.availability.getByConsultantId(pref.consultant_id);
+    const specs = db.specialties.getByConsultantId(pref.consultant_id);
+
+    return {
+      consultantId: pref.consultant_id,
+      consultantName: consultant?.name,
+      consultantEmail: consultant?.email,
+      status: avail?.status || 'offline',
+      specialties: specs.map(s => ({ department: s.department, proficiency: s.proficiency })),
+      successfulSessions: pref.successful_sessions,
+      avgRating: pref.avg_rating,
+      lastSessionAt: pref.last_session_at,
+      isFavorite: true,
+    };
+  });
+
+  res.json(enriched);
+});
+
+// POST /api/consultants/preferences/:staffId - Add a preferred consultant
+router.post('/preferences/:staffId', (req: Request, res: Response) => {
+  const staffId = parseInt(req.params.staffId);
+  const { consultantId } = req.body;
+
+  if (!consultantId) {
+    return res.status(400).json({ error: 'consultantId is required' });
+  }
+
+  // Check if consultant exists
+  const consultant = db.users.getById(consultantId);
+  if (!consultant || consultant.role !== 'consultant') {
+    return res.status(404).json({ error: 'Consultant not found' });
+  }
+
+  // Add preference (or update if exists)
+  db.preferences.upsert(staffId, consultantId, {});
+
+  res.json({ success: true, consultantId, consultantName: consultant.name });
+});
+
+// DELETE /api/consultants/preferences/:staffId/:consultantId - Remove a preferred consultant
+router.delete('/preferences/:staffId/:consultantId', (req: Request, res: Response) => {
+  const staffId = parseInt(req.params.staffId);
+  const consultantId = parseInt(req.params.consultantId);
+
+  db.preferences.delete(staffId, consultantId);
+
+  res.json({ success: true });
+});
+
 export default router;

@@ -7,6 +7,7 @@ import SupportQueue from './pages/support/SupportQueue';
 import VideoCall from './pages/support/VideoCall';
 import SupportHistory from './pages/support/SupportHistory';
 import ConsultantSettings from './pages/support/ConsultantSettings';
+import StaffPreferences from './pages/support/StaffPreferences';
 import Dashboard from './pages/Dashboard';
 import Analytics from './pages/Analytics';
 import { initGlobalWebSocket, closeGlobalWebSocket } from './hooks/useWebSocket';
@@ -73,6 +74,7 @@ function App() {
           <Route path="/support/call/:sessionId" element={<VideoCall />} />
           <Route path="/support/history" element={<SupportHistory />} />
           <Route path="/support/settings" element={<ConsultantSettings />} />
+          <Route path="/support/preferences" element={<StaffPreferences />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

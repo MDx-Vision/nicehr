@@ -13,6 +13,7 @@ import {
   Phone,
   X,
   BarChart3,
+  Star,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -84,6 +85,7 @@ export default function Layout({ children }: LayoutProps) {
   const navItems = [
     { path: '/', label: 'Dashboard', icon: Home, show: true },
     { path: '/support/request', label: 'Get Support', icon: Headphones, show: isStaff || user?.role === 'admin' },
+    { path: '/support/preferences', label: 'Favorites', icon: Star, show: isStaff },
     { path: '/support/queue', label: 'Support Queue', icon: ListTodo, show: isConsultant },
     { path: '/support/history', label: 'History', icon: History, show: true },
     { path: '/analytics', label: 'Analytics', icon: BarChart3, show: isLeadership || isConsultant },

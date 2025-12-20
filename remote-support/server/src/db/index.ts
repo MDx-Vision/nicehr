@@ -342,8 +342,10 @@ export const queue = {
 };
 
 export const preferences = {
-  get: (staffId: number, consultantId: number) => 
+  get: (staffId: number, consultantId: number) =>
     db.staff_consultant_preferences.find(p => p.staff_id === staffId && p.consultant_id === consultantId),
+  getByStaffId: (staffId: number) =>
+    db.staff_consultant_preferences.filter(p => p.staff_id === staffId),
   upsert: (staffId: number, consultantId: number, updates: Partial<StaffConsultantPreference>) => {
     const existing = preferences.get(staffId, consultantId);
     if (existing) {
@@ -358,15 +360,21 @@ export const preferences = {
         id: getNextId('staff_consultant_preferences'),
         staff_id: staffId,
         consultant_id: consultantId,
-        successful_sessions: updates.successful_sessions || 1,
+        successful_sessions: updates.successful_sessions || 0,
         avg_rating: updates.avg_rating || null,
-        last_session_at: updates.last_session_at || now(),
+        last_session_at: updates.last_session_at || null,
         created_at: now(),
       };
       db.staff_consultant_preferences.push(newPref);
       saveDb(db);
       return newPref;
     }
+  },
+  delete: (staffId: number, consultantId: number) => {
+    db.staff_consultant_preferences = db.staff_consultant_preferences.filter(
+      p => !(p.staff_id === staffId && p.consultant_id === consultantId)
+    );
+    saveDb(db);
   },
 };
 

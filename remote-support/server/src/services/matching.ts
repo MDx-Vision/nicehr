@@ -42,14 +42,21 @@ export function matchConsultant(request: SupportRequest): MatchResult | null {
       reasons.push('Department experience (+15)');
     }
 
-    // Check for previous relationship
+    // Check for previous relationship / favorite
     const pref = db.preferences.get(request.staffId, consultant.id);
     if (pref) {
-      score += 50;
-      reasons.push('Previous relationship (+50)');
-      if (pref.avg_rating && pref.avg_rating >= 4) {
-        score += 20;
-        reasons.push('High rating (+20)');
+      // If explicitly added as favorite (no sessions yet), give bonus
+      if (pref.successful_sessions === 0) {
+        score += 40;
+        reasons.push('Favorite consultant (+40)');
+      } else {
+        // Previous relationship from actual sessions
+        score += 50;
+        reasons.push('Previous relationship (+50)');
+        if (pref.avg_rating && pref.avg_rating >= 4) {
+          score += 20;
+          reasons.push('High rating (+20)');
+        }
       }
     }
 
