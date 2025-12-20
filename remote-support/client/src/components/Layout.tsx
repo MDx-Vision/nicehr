@@ -12,6 +12,7 @@ import {
   LogOut,
   Phone,
   X,
+  BarChart3,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -78,11 +79,14 @@ export default function Layout({ children }: LayoutProps) {
     setIncomingCall(null);
   };
 
+  const isLeadership = user?.role === 'hospital_leadership' || user?.role === 'admin';
+
   const navItems = [
     { path: '/', label: 'Dashboard', icon: Home, show: true },
     { path: '/support/request', label: 'Get Support', icon: Headphones, show: isStaff || user?.role === 'admin' },
     { path: '/support/queue', label: 'Support Queue', icon: ListTodo, show: isConsultant },
     { path: '/support/history', label: 'History', icon: History, show: true },
+    { path: '/analytics', label: 'Analytics', icon: BarChart3, show: isLeadership || isConsultant },
     { path: '/support/settings', label: 'Settings', icon: Settings, show: isConsultant },
   ];
 

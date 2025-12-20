@@ -12,6 +12,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 import supportRoutes from './routes/support.js';
 import consultantRoutes from './routes/consultants.js';
 import authRoutes from './routes/auth.js';
+import analyticsRoutes from './routes/analytics.js';
 import dailyService from './services/daily.js';
 import websocketService from './services/websocket.js';
 import db from './db/index.js';
@@ -38,6 +39,7 @@ app.use((req, _res, next) => {
 app.use('/api/support', supportRoutes);
 app.use('/api/consultants', consultantRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Health check
 app.get('/api/health', async (_req, res) => {
