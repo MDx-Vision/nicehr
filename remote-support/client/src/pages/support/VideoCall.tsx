@@ -10,8 +10,6 @@ import {
   X,
   Wifi,
   Users,
-  Circle,
-  StopCircle,
 } from 'lucide-react';
 import RatingModal from '../../components/support/RatingModal';
 
@@ -45,8 +43,6 @@ export default function VideoCall() {
   const [error, setError] = useState('');
   const [showRating, setShowRating] = useState(false);
   const [queuePosition, setQueuePosition] = useState<QueuePosition | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingLoading, setRecordingLoading] = useState(false);
 
   const [callDuration, setCallDuration] = useState(0);
 
@@ -261,54 +257,6 @@ export default function VideoCall() {
     navigate('/');
   };
 
-  // Start recording (consultant only)
-  const startRecording = async () => {
-    if (!isConsultant || recordingLoading) return;
-
-    setRecordingLoading(true);
-    try {
-      const res = await fetch(`/api/support/${sessionId}/recording/start`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user?.id }),
-      });
-
-      if (res.ok) {
-        setIsRecording(true);
-      } else {
-        const data = await res.json();
-        setError(data.error || 'Failed to start recording');
-      }
-    } catch (err) {
-      console.error('Failed to start recording:', err);
-      setError('Failed to start recording');
-    } finally {
-      setRecordingLoading(false);
-    }
-  };
-
-  // Stop recording (consultant only)
-  const stopRecording = async () => {
-    if (!isConsultant || recordingLoading) return;
-
-    setRecordingLoading(true);
-    try {
-      const res = await fetch(`/api/support/${sessionId}/recording/stop`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user?.id }),
-      });
-
-      if (res.ok) {
-        setIsRecording(false);
-      }
-    } catch (err) {
-      console.error('Failed to stop recording:', err);
-    } finally {
-      setRecordingLoading(false);
-    }
-  };
-
   // Format duration
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -462,49 +410,10 @@ export default function VideoCall() {
           </p>
         </div>
         {inCall && (
-          <div className="flex items-center gap-3">
-            {/* Recording indicator/button for consultants */}
-            {isConsultant && (
-              <button
-                onClick={isRecording ? stopRecording : startRecording}
-                disabled={recordingLoading}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors ${
-                  isRecording
-                    ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                } disabled:opacity-50`}
-                title={isRecording ? 'Stop Recording' : 'Start Recording'}
-              >
-                {recordingLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : isRecording ? (
-                  <>
-                    <StopCircle className="w-4 h-4" />
-                    <span className="text-sm font-medium">Recording</span>
-                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                  </>
-                ) : (
-                  <>
-                    <Circle className="w-4 h-4" />
-                    <span className="text-sm font-medium">Record</span>
-                  </>
-                )}
-              </button>
-            )}
-
-            {/* Recording indicator for staff */}
-            {!isConsultant && isRecording && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-red-100 text-red-700 rounded-full">
-                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                <span className="text-sm font-medium">Recording</span>
-              </div>
-            )}
-
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-green-100 text-green-700 rounded-full">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <Clock className="w-4 h-4" />
-              <span className="font-medium">{formatDuration(callDuration)}</span>
-            </div>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-green-100 text-green-700 rounded-full">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            <Clock className="w-4 h-4" />
+            <span className="font-medium">{formatDuration(callDuration)}</span>
           </div>
         )}
       </div>
