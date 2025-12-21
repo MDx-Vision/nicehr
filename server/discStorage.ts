@@ -76,6 +76,111 @@ export async function deleteDiscAssessment(consultantId: string) {
     .where(eq(discAssessments.consultantId, consultantId));
 }
 
+// Get assessments filtered by organization type
+export async function getDiscAssessmentsByOrgType(orgType: "nicehr" | "hospital") {
+  return db
+    .select()
+    .from(discAssessments)
+    .innerJoin(consultants, eq(discAssessments.consultantId, consultants.id))
+    .where(eq(discAssessments.organizationType, orgType))
+    .orderBy(desc(discAssessments.createdAt));
+}
+
+// Get assessments filtered by hospital
+export async function getDiscAssessmentsByHospital(hospitalId: string) {
+  return db
+    .select()
+    .from(discAssessments)
+    .innerJoin(consultants, eq(discAssessments.consultantId, consultants.id))
+    .where(
+      and(
+        eq(discAssessments.organizationType, "hospital"),
+        eq(discAssessments.hospitalId, hospitalId)
+      )
+    )
+    .orderBy(desc(discAssessments.createdAt));
+}
+
+// Get assessments with flexible filtering options
+export async function getDiscAssessmentsFiltered(options: {
+  orgType?: "nicehr" | "hospital";
+  hospitalId?: string;
+}) {
+  const conditions = [];
+
+  if (options.orgType) {
+    conditions.push(eq(discAssessments.organizationType, options.orgType));
+  }
+
+  if (options.hospitalId) {
+    conditions.push(eq(discAssessments.hospitalId, options.hospitalId));
+  }
+
+  const query = db
+    .select()
+    .from(discAssessments)
+    .innerJoin(consultants, eq(discAssessments.consultantId, consultants.id));
+
+  if (conditions.length > 0) {
+    return query
+      .where(and(...conditions))
+      .orderBy(desc(discAssessments.createdAt));
+  }
+
+  return query.orderBy(desc(discAssessments.createdAt));
+}
+
+// Get dashboard stats filtered by organization
+export async function getDiscDashboardStatsFiltered(options: {
+  orgType?: "nicehr" | "hospital";
+  hospitalId?: string;
+}) {
+  const conditions = [];
+
+  if (options.orgType) {
+    conditions.push(eq(discAssessments.organizationType, options.orgType));
+  }
+
+  if (options.hospitalId) {
+    conditions.push(eq(discAssessments.hospitalId, options.hospitalId));
+  }
+
+  // Build base query with optional filters
+  const assessmentsQuery = conditions.length > 0
+    ? db.select().from(discAssessments).where(and(...conditions))
+    : db.select().from(discAssessments);
+
+  const assessments = await assessmentsQuery;
+
+  // Calculate style distribution
+  const styleDistribution = { D: 0, i: 0, S: 0, C: 0 };
+  assessments.forEach((a) => {
+    styleDistribution[a.primaryStyle as keyof typeof styleDistribution]++;
+  });
+
+  // Get teams (for now, show all teams - can be filtered later if needed)
+  const teams = await db.select().from(discTeams);
+  const activeTeams = teams.filter((t) => t.status === "active");
+
+  // Get skills count
+  const skills = await db.select().from(discSkills).where(eq(discSkills.isActive, true));
+
+  // Get team analyses for average score
+  const analyses = await db.select().from(discTeamAnalyses);
+  const avgScore = analyses.length > 0
+    ? Math.round(analyses.reduce((sum, a) => sum + a.overallScore, 0) / analyses.length)
+    : 0;
+
+  return {
+    totalAssessments: assessments.length,
+    totalTeams: teams.length,
+    activeTeams: activeTeams.length,
+    totalSkills: skills.length,
+    averageTeamScore: avgScore,
+    styleDistribution,
+  };
+}
+
 // ==========================================
 // DiSC SKILLS
 // ==========================================

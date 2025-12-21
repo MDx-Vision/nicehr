@@ -18,9 +18,64 @@ const router = Router();
 // DiSC DASHBOARD
 // ==========================================
 
+// Helper function to get user's filter options based on role
+async function getUserFilterOptions(req: Request): Promise<{
+  isAdmin: boolean;
+  orgType?: "nicehr" | "hospital";
+  hospitalId?: string;
+}> {
+  const userId = (req as any).user?.claims?.sub;
+  if (!userId) {
+    return { isAdmin: false };
+  }
+
+  const { storage } = await import("./storage");
+  const user = await storage.getUser(userId);
+
+  if (!user) {
+    return { isAdmin: false };
+  }
+
+  // Admin sees everything
+  if (user.role === "admin") {
+    return { isAdmin: true };
+  }
+
+  // Hospital staff sees only their hospital's assessments
+  if (user.role === "hospital_staff") {
+    // Get the user's hospital association
+    const consultant = await storage.getConsultantByUserId(userId);
+    // For now, hospital staff can see hospital assessments
+    // TODO: Add hospitalId to user or consultant to filter by specific hospital
+    return {
+      isAdmin: false,
+      orgType: "hospital",
+      hospitalId: consultant?.hospitalId || undefined,
+    };
+  }
+
+  // Consultants see only NICEHR assessments (but mainly use /assessments/my for their own)
+  return {
+    isAdmin: false,
+    orgType: "nicehr",
+  };
+}
+
 router.get("/dashboard/stats", async (req: Request, res: Response) => {
   try {
-    const stats = await discStorage.getDiscDashboardStats();
+    const filterOptions = await getUserFilterOptions(req);
+
+    // Admin sees all stats
+    if (filterOptions.isAdmin) {
+      const stats = await discStorage.getDiscDashboardStats();
+      return res.json(stats);
+    }
+
+    // Others see filtered stats
+    const stats = await discStorage.getDiscDashboardStatsFiltered({
+      orgType: filterOptions.orgType,
+      hospitalId: filterOptions.hospitalId,
+    });
     res.json(stats);
   } catch (error) {
     console.error("Error fetching DiSC dashboard stats:", error);
@@ -64,7 +119,19 @@ router.get("/assessments/my", async (req: Request, res: Response) => {
 
 router.get("/assessments", async (req: Request, res: Response) => {
   try {
-    const assessments = await discStorage.getDiscAssessments();
+    const filterOptions = await getUserFilterOptions(req);
+
+    // Admin sees all assessments
+    if (filterOptions.isAdmin) {
+      const assessments = await discStorage.getDiscAssessments();
+      return res.json(assessments);
+    }
+
+    // Others see filtered assessments
+    const assessments = await discStorage.getDiscAssessmentsFiltered({
+      orgType: filterOptions.orgType,
+      hospitalId: filterOptions.hospitalId,
+    });
     res.json(assessments);
   } catch (error) {
     console.error("Error fetching DiSC assessments:", error);

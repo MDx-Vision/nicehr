@@ -7185,6 +7185,9 @@ export const discTeamStatusEnum = pgEnum("disc_team_status", ["forming", "active
 // DiSC rule severity enum
 export const discRuleSeverityEnum = pgEnum("disc_rule_severity", ["info", "warning", "critical", "success"]);
 
+// DiSC organization type enum - distinguishes NICEHR staff from hospital staff
+export const discOrgTypeEnum = pgEnum("disc_org_type", ["nicehr", "hospital"]);
+
 // DiSC Assessments - Behavioral assessment results for consultants
 export const discAssessments = pgTable("disc_assessments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -7199,17 +7202,26 @@ export const discAssessments = pgTable("disc_assessments", {
   validUntil: timestamp("valid_until").notNull(),
   assessorName: varchar("assessor_name"),
   notes: text("notes"),
+  // Organization filtering fields
+  organizationType: discOrgTypeEnum("organization_type").default("nicehr").notNull(),
+  hospitalId: varchar("hospital_id").references(() => hospitals.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
   index("idx_disc_assessments_consultant").on(table.consultantId),
   index("idx_disc_assessments_style").on(table.primaryStyle),
+  index("idx_disc_assessments_org_type").on(table.organizationType),
+  index("idx_disc_assessments_hospital").on(table.hospitalId),
 ]);
 
 export const discAssessmentsRelations = relations(discAssessments, ({ one }) => ({
   consultant: one(consultants, {
     fields: [discAssessments.consultantId],
     references: [consultants.id],
+  }),
+  hospital: one(hospitals, {
+    fields: [discAssessments.hospitalId],
+    references: [hospitals.id],
   }),
 }));
 
