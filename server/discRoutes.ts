@@ -36,6 +36,32 @@ router.get("/styles", (req: Request, res: Response) => {
 // DiSC ASSESSMENTS
 // ==========================================
 
+// Get current user's own DISC assessment
+router.get("/assessments/my", async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.claims?.sub;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    // Import storage to get consultant by user ID
+    const { storage } = await import("./storage");
+    const consultant = await storage.getConsultantByUserId(userId);
+
+    if (!consultant) {
+      return res.status(404).json({ error: "Consultant profile not found" });
+    }
+
+    const assessment = await discStorage.getDiscAssessmentByConsultantId(consultant.id);
+
+    // Return null if no assessment (not an error - user just hasn't taken it yet)
+    res.json(assessment || null);
+  } catch (error) {
+    console.error("Error fetching user's DiSC assessment:", error);
+    res.status(500).json({ error: "Failed to fetch your DiSC assessment" });
+  }
+});
+
 router.get("/assessments", async (req: Request, res: Response) => {
   try {
     const assessments = await discStorage.getDiscAssessments();

@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Camera, Save, Linkedin, Globe, Mail, CheckCircle, AlertCircle, ClipboardCheck, ExternalLink, Clock, UserCog, Phone, Heart } from "lucide-react";
+import { Camera, Save, Linkedin, Globe, Mail, CheckCircle, AlertCircle, ClipboardCheck, ExternalLink, Clock, UserCog, Phone, Heart, Sparkles, Target, Users, TrendingUp } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -96,6 +96,62 @@ export default function Profile() {
     queryKey: ["/api/personal-info"],
     enabled: !!user?.id,
   });
+
+  // Fetch DiSC assessment data
+  interface DiscAssessmentData {
+    id: string;
+    consultantId: string;
+    primaryStyle: "D" | "i" | "S" | "C";
+    secondaryStyle?: "D" | "i" | "S" | "C";
+    dScore: number;
+    iScore: number;
+    sScore: number;
+    cScore: number;
+    assessmentDate: string;
+    assessedBy?: string;
+    notes?: string;
+  }
+
+  const { data: discAssessment, isLoading: discLoading } = useQuery<DiscAssessmentData | null>({
+    queryKey: ["/api/disc/assessments/my"],
+    enabled: !!user?.id,
+  });
+
+  // DiSC style information
+  const DISC_STYLES: Record<string, { name: string; color: string; bgColor: string; description: string; strengths: string[]; challenges: string[] }> = {
+    D: {
+      name: "Dominance",
+      color: "#D64933",
+      bgColor: "bg-red-100 dark:bg-red-950",
+      description: "Direct, results-oriented, firm, strong-willed, forceful",
+      strengths: ["Decision-making", "Problem-solving", "Taking charge", "Getting results"],
+      challenges: ["Patience", "Sensitivity", "Listening", "Collaboration"],
+    },
+    i: {
+      name: "Influence",
+      color: "#F4B942",
+      bgColor: "bg-yellow-100 dark:bg-yellow-950",
+      description: "Outgoing, enthusiastic, optimistic, high-spirited, lively",
+      strengths: ["Communication", "Motivation", "Team building", "Creativity"],
+      challenges: ["Follow-through", "Details", "Focus", "Time management"],
+    },
+    S: {
+      name: "Steadiness",
+      color: "#4A9B5D",
+      bgColor: "bg-green-100 dark:bg-green-950",
+      description: "Even-tempered, accommodating, patient, humble, tactful",
+      strengths: ["Reliability", "Support", "Consistency", "Collaboration"],
+      challenges: ["Change", "Confrontation", "Quick decisions", "Self-promotion"],
+    },
+    C: {
+      name: "Conscientiousness",
+      color: "#3B82C4",
+      bgColor: "bg-blue-100 dark:bg-blue-950",
+      description: "Analytical, reserved, precise, private, systematic",
+      strengths: ["Quality", "Analysis", "Planning", "Accuracy"],
+      challenges: ["Flexibility", "Delegation", "Speed", "Risk-taking"],
+    },
+  };
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -691,6 +747,157 @@ export default function Profile() {
               {questionnaire.lastSavedAt && (
                 <p className="text-xs text-muted-foreground">
                   Last updated: {new Date(questionnaire.lastSavedAt).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* DiSC Profile Section */}
+      <Card data-testid="card-disc-profile">
+        <CardHeader>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5" />
+                My DiSC Profile
+              </CardTitle>
+              <CardDescription>
+                Your behavioral assessment results and working style
+              </CardDescription>
+            </div>
+            {discAssessment && (
+              <Badge
+                variant="outline"
+                className="text-white"
+                style={{ backgroundColor: DISC_STYLES[discAssessment.primaryStyle]?.color }}
+              >
+                {DISC_STYLES[discAssessment.primaryStyle]?.name} ({discAssessment.primaryStyle})
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {discLoading ? (
+            <div className="space-y-4">
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-16 w-full" />
+            </div>
+          ) : !discAssessment ? (
+            <div className="text-center py-8 border rounded-lg border-dashed">
+              <Target className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="font-medium mb-2">DiSC Assessment Pending</h3>
+              <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
+                Your DiSC behavioral assessment has not been completed yet. Contact your administrator or check with HR about scheduling your DiSC assessment.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Primary Style Card */}
+              <div className={`p-4 rounded-xl ${DISC_STYLES[discAssessment.primaryStyle]?.bgColor}`}>
+                <div className="flex items-start gap-4">
+                  <div
+                    className="w-16 h-16 rounded-xl flex items-center justify-center text-white text-2xl font-bold shadow-md"
+                    style={{ backgroundColor: DISC_STYLES[discAssessment.primaryStyle]?.color }}
+                  >
+                    {discAssessment.primaryStyle}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg">
+                      {DISC_STYLES[discAssessment.primaryStyle]?.name}
+                      {discAssessment.secondaryStyle && (
+                        <span className="text-muted-foreground font-normal text-sm ml-2">
+                          with {DISC_STYLES[discAssessment.secondaryStyle]?.name} tendencies
+                        </span>
+                      )}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {DISC_STYLES[discAssessment.primaryStyle]?.description}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Score Breakdown */}
+              <div>
+                <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  Score Breakdown
+                </h4>
+                <div className="grid grid-cols-4 gap-3">
+                  {(["D", "i", "S", "C"] as const).map((style) => {
+                    const score = discAssessment[`${style.toLowerCase()}Score` as keyof DiscAssessmentData] as number;
+                    const isPrimary = discAssessment.primaryStyle === style;
+                    const isSecondary = discAssessment.secondaryStyle === style;
+                    return (
+                      <div
+                        key={style}
+                        className={`text-center p-3 rounded-lg border ${isPrimary ? 'border-2 ring-2 ring-offset-2' : ''}`}
+                        style={{
+                          borderColor: isPrimary ? DISC_STYLES[style].color : undefined,
+                          ringColor: isPrimary ? DISC_STYLES[style].color : undefined,
+                        }}
+                      >
+                        <div
+                          className="w-10 h-10 rounded-lg mx-auto mb-2 flex items-center justify-center text-white font-bold"
+                          style={{ backgroundColor: DISC_STYLES[style].color }}
+                        >
+                          {style}
+                        </div>
+                        <div className="text-2xl font-bold">{score}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {DISC_STYLES[style].name}
+                        </div>
+                        {isPrimary && (
+                          <Badge variant="default" className="mt-1 text-xs">Primary</Badge>
+                        )}
+                        {isSecondary && (
+                          <Badge variant="secondary" className="mt-1 text-xs">Secondary</Badge>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Strengths & Challenges */}
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg">
+                  <h4 className="font-medium mb-2 flex items-center gap-2 text-green-700 dark:text-green-400">
+                    <CheckCircle className="h-4 w-4" />
+                    Strengths
+                  </h4>
+                  <ul className="space-y-1">
+                    {DISC_STYLES[discAssessment.primaryStyle]?.strengths.map((strength, idx) => (
+                      <li key={idx} className="text-sm flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                        {strength}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="p-4 bg-orange-50 dark:bg-orange-950/30 rounded-lg">
+                  <h4 className="font-medium mb-2 flex items-center gap-2 text-orange-700 dark:text-orange-400">
+                    <AlertCircle className="h-4 w-4" />
+                    Growth Areas
+                  </h4>
+                  <ul className="space-y-1">
+                    {DISC_STYLES[discAssessment.primaryStyle]?.challenges.map((challenge, idx) => (
+                      <li key={idx} className="text-sm flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                        {challenge}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              {/* Assessment Info */}
+              {discAssessment.assessmentDate && (
+                <p className="text-xs text-muted-foreground">
+                  Assessed on {new Date(discAssessment.assessmentDate).toLocaleDateString()}
+                  {discAssessment.assessedBy && ` by ${discAssessment.assessedBy}`}
                 </p>
               )}
             </div>
