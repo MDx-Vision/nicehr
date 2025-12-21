@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Users,
   UsersRound,
@@ -14,7 +17,9 @@ import {
   CheckCircle2,
   Plus,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  Building2,
+  ClipboardList,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -103,8 +108,25 @@ function ScoreGauge({ score, label }: { score: number; label: string }) {
 }
 
 export default function DiscDashboard() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  const [orgFilter, setOrgFilter] = useState<string>("all");
+
+  // Build query key with filter for admin
+  const statsQueryKey = isAdmin && orgFilter !== "all"
+    ? ["/api/disc/dashboard/stats", { orgType: orgFilter }]
+    : ["/api/disc/dashboard/stats"];
+
   const { data: stats, isLoading } = useQuery<DiscDashboardStats>({
-    queryKey: ["/api/disc/dashboard/stats"],
+    queryKey: statsQueryKey,
+    queryFn: async () => {
+      const url = isAdmin && orgFilter !== "all"
+        ? `/api/disc/dashboard/stats?orgType=${orgFilter}`
+        : "/api/disc/dashboard/stats";
+      const response = await fetch(url, { credentials: "include" });
+      if (!response.ok) throw new Error("Failed to fetch stats");
+      return response.json();
+    },
   });
 
   const { data: styles } = useQuery<Record<string, DiscStyleInfo>>({
@@ -125,7 +147,21 @@ export default function DiscDashboard() {
             Build high-performing teams with behavioral insights
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
+          {/* Admin Org Filter */}
+          {isAdmin && (
+            <Select value={orgFilter} onValueChange={setOrgFilter}>
+              <SelectTrigger className="w-[180px]">
+                <Building2 className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="All Organizations" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Organizations</SelectItem>
+                <SelectItem value="nicehr">NICEHR Staff</SelectItem>
+                <SelectItem value="hospital">Hospital Staff</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
           <Button variant="outline" asChild>
             <Link href="/disc/teams">
               <UsersRound className="h-4 w-4 mr-2" />
@@ -296,6 +332,13 @@ export default function DiscDashboard() {
             <CardDescription>Common DiSC tasks</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
+            <Button variant="default" className="w-full justify-between" asChild>
+              <Link href="/disc/assessment">
+                <ClipboardList className="h-4 w-4 mr-2" />
+                Take Assessment
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
             <Button variant="outline" className="w-full justify-between" asChild>
               <Link href="/disc/teams/new">
                 Build New Team

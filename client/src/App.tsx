@@ -74,6 +74,11 @@ import DiscDashboard from "@/pages/DiscDashboard";
 import DiscTeams from "@/pages/DiscTeams";
 import DiscTeamBuilder from "@/pages/DiscTeamBuilder";
 import DiscTeamDetail from "@/pages/DiscTeamDetail";
+import DiscAssessment from "@/pages/DiscAssessment";
+import DiscConsultants from "@/pages/DiscConsultants";
+import DiscConsultantProfile from "@/pages/DiscConsultantProfile";
+import DiscSkills from "@/pages/DiscSkills";
+import DiscRules from "@/pages/DiscRules";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
@@ -187,8 +192,13 @@ function Router() {
       <Route path="/access-denied" component={AccessDenied} />
       <Route path="/disc" component={() => <ProtectedRoute component={DiscDashboard} />} />
       <Route path="/disc/teams" component={() => <ProtectedRoute component={DiscTeams} />} />
-      <Route path="/disc/team-builder" component={() => <ProtectedRoute component={DiscTeamBuilder} />} />
+      <Route path="/disc/teams/new" component={() => <ProtectedRoute component={DiscTeamBuilder} />} />
       <Route path="/disc/teams/:teamId" component={() => <ProtectedRoute component={DiscTeamDetail} />} />
+      <Route path="/disc/assessment" component={() => <ProtectedRoute component={DiscAssessment} />} />
+      <Route path="/disc/consultants" component={() => <ProtectedRoute component={DiscConsultants} />} />
+      <Route path="/disc/consultants/:id" component={() => <ProtectedRoute component={DiscConsultantProfile} />} />
+      <Route path="/disc/skills" component={() => <ProtectedRoute component={DiscSkills} />} />
+      <Route path="/disc/rules" component={() => <ProtectedRoute component={DiscRules} />} />
       <Route component={NotFound} />
     </Switch>
   );

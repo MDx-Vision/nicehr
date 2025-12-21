@@ -65,13 +65,24 @@ router.get("/dashboard/stats", async (req: Request, res: Response) => {
   try {
     const filterOptions = await getUserFilterOptions(req);
 
-    // Admin sees all stats
+    // Check for admin override via query parameter
+    const queryOrgType = req.query.orgType as string | undefined;
+
+    // Admin can override with query parameter
     if (filterOptions.isAdmin) {
+      if (queryOrgType && (queryOrgType === "nicehr" || queryOrgType === "hospital")) {
+        // Admin is filtering by specific org type
+        const stats = await discStorage.getDiscDashboardStatsFiltered({
+          orgType: queryOrgType,
+        });
+        return res.json(stats);
+      }
+      // Admin sees all stats (no filter)
       const stats = await discStorage.getDiscDashboardStats();
       return res.json(stats);
     }
 
-    // Others see filtered stats
+    // Others see filtered stats based on their role
     const stats = await discStorage.getDiscDashboardStatsFiltered({
       orgType: filterOptions.orgType,
       hospitalId: filterOptions.hospitalId,
