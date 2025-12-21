@@ -72,7 +72,9 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     refetchOnWindowFocus: true,
   });
 
-  const roleLevel: UserRoleLevel = permissions?.roleLevel || 'consultant';
+  // Use dev role override as initial fallback to prevent flickering
+  const initialRoleLevel: UserRoleLevel = (devRoleOverride as UserRoleLevel) || 'admin';
+  const roleLevel: UserRoleLevel = permissions?.roleLevel || initialRoleLevel;
   
   const isLeadership = permissions?.isLeadership || false;
   const assignedProjectIds = permissions?.assignedProjectIds || [];
