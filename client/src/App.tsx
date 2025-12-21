@@ -7,13 +7,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { NotificationCenter } from "@/components/NotificationCenter";
-import { DevRoleSwitcher } from "@/components/DevRoleSwitcher";
 import { useAuth } from "@/hooks/useAuth";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PermissionsProvider } from "@/hooks/use-permissions";
-import { ProjectContextProvider } from "@/hooks/use-project-context";
 
 import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
@@ -137,8 +134,6 @@ function AuthenticatedLayout({ children }: { children: ReactNode }) {
           <header className="flex items-center justify-between gap-2 p-3 border-b bg-card">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
             <div className="flex items-center gap-2">
-              <DevRoleSwitcher />
-              <NotificationCenter />
               <ThemeToggle />
             </div>
           </header>
@@ -302,12 +297,10 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <PermissionsProvider>
-          <ProjectContextProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Router />
-            </TooltipProvider>
-          </ProjectContextProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
         </PermissionsProvider>
       </QueryClientProvider>
     </ErrorBoundary>
