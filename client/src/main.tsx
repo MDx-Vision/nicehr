@@ -1,5 +1,5 @@
+import * as React from "react";
 import { createRoot } from "react-dom/client";
-import { StrictMode } from "react";
 import App from "./App";
 import "./index.css";
 
@@ -38,9 +38,6 @@ class ErrorBoundary extends React.Component<
     return this.props.children;
   }
 }
-
-// Import React for the error boundary class
-import * as React from "react";
 
 const rootElement = document.getElementById("root");
 if (rootElement) {
