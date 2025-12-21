@@ -4,10 +4,7 @@ import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { NotificationCenter } from "@/components/NotificationCenter";
-import { DevRoleSwitcher } from "@/components/DevRoleSwitcher";
 import { useAuth } from "@/hooks/useAuth";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,6 +15,19 @@ import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
 import NotFound from "@/pages/not-found";
 
+function SimpleSidebar() {
+  return (
+    <div className="w-64 h-full bg-slate-900 p-4 text-white">
+      <h2 className="text-lg font-bold mb-4">NICEHR</h2>
+      <nav className="space-y-2">
+        <a href="/" className="block p-2 hover:bg-slate-800 rounded">Dashboard</a>
+        <a href="/hospitals" className="block p-2 hover:bg-slate-800 rounded">Hospitals</a>
+        <a href="/projects" className="block p-2 hover:bg-slate-800 rounded">Projects</a>
+      </nav>
+    </div>
+  );
+}
+
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const style = {
     "--sidebar-width": "16rem",
@@ -27,13 +37,11 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider style={style as React.CSSProperties}>
       <div className="flex h-screen w-full">
-        <AppSidebar />
+        <SimpleSidebar />
         <div className="flex flex-col flex-1 overflow-hidden">
           <header className="flex items-center justify-between gap-2 p-3 border-b bg-card">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
             <div className="flex items-center gap-2">
-              <DevRoleSwitcher />
-              <NotificationCenter />
               <ThemeToggle />
             </div>
           </header>
