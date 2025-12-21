@@ -24,6 +24,7 @@ import {
   LayoutDashboard,
   Building2,
   Users,
+  UsersRound,
   FolderKanban,
   Calendar,
   Calculator,
@@ -82,7 +83,7 @@ import { cn } from "@/lib/utils";
 
 // Icon mapping
 const ICON_MAP: Record<string, LucideIcon> = {
-  LayoutDashboard, Building2, Users, FolderKanban, Calendar, Calculator,
+  LayoutDashboard, Building2, Users, UsersRound, FolderKanban, Calendar, Calculator,
   BarChart3, FileText, Settings, LogOut, Search, UserCog, Shield, Activity,
   LineChart, Layers, ClipboardCheck, Radio, Clock, CalendarDays, ArrowLeftRight,
   GraduationCap, Book, Monitor, Ticket, FileCheck, AlertTriangle, DollarSign,
