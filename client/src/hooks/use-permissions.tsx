@@ -1,7 +1,17 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { type UserRoleLevel, type NavigationItem } from "@/lib/permissions";
-import { getDevRoleOverride } from "@/components/DevRoleSwitcher";
+
+const DEV_ROLE_KEY = "nicehr_dev_role_override";
+
+function getDevRoleOverride(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(DEV_ROLE_KEY);
+  } catch {
+    return null;
+  }
+}
 
 interface PermissionsData {
   role: string | null;
@@ -42,7 +52,6 @@ const PermissionsContext = createContext<PermissionsContextValue | null>(null);
 export function PermissionsProvider({ children }: { children: ReactNode }) {
   const devRoleOverride = getDevRoleOverride();
   
-  // Use dev endpoints when dev mode is active
   const permissionsEndpoint = devRoleOverride 
     ? `/api/dev/permissions/${devRoleOverride}` 
     : '/api/permissions';
