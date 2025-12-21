@@ -73,6 +73,10 @@ import EhrMonitoring from "@/pages/ehr-monitoring";
 import AdvancedAnalytics from "@/pages/AdvancedAnalytics";
 import RaciMatrix from "@/pages/RaciMatrix";
 import AutoScheduling from "@/pages/AutoScheduling";
+import DiscDashboard from "@/pages/DiscDashboard";
+import DiscTeamBuilder from "@/pages/DiscTeamBuilder";
+import DiscTeams from "@/pages/DiscTeams";
+import DiscTeamDetail from "@/pages/DiscTeamDetail";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/not-found";
 
@@ -242,6 +246,10 @@ function Router() {
       <Route path="/advanced-analytics" component={() => <ProtectedRoute component={AdvancedAnalytics} requiredRoles={["admin"]} />} />
       <Route path="/raci-matrix" component={() => <ProtectedRoute component={RaciMatrix} />} />
       <Route path="/auto-scheduling" component={() => <ProtectedRoute component={AutoScheduling} />} />
+      <Route path="/disc" component={() => <ProtectedRoute component={DiscDashboard} />} />
+      <Route path="/disc/teams" component={() => <ProtectedRoute component={DiscTeams} />} />
+      <Route path="/disc/teams/new" component={() => <ProtectedRoute component={DiscTeamBuilder} />} />
+      <Route path="/disc/teams/:id" component={() => <ProtectedRoute component={DiscTeamDetail} />} />
       <Route path="/access-denied" component={AccessDenied} />
       <Route component={NotFound} />
     </Switch>

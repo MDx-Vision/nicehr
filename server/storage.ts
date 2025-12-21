@@ -607,6 +607,29 @@ export interface IStorage {
   getProjectsForConsultant(consultantId: string): Promise<string[]>;
   createScheduleAssignment(assignment: InsertScheduleAssignment): Promise<ScheduleAssignment>;
   deleteScheduleAssignment(id: string): Promise<boolean>;
+  getSchedulesForExport(filters?: {
+    projectId?: string;
+    consultantId?: string;
+    startDate?: string;
+    endDate?: string;
+    status?: string;
+  }): Promise<Array<{
+    scheduleId: string;
+    scheduleDate: string;
+    shiftType: string;
+    status: string;
+    projectName: string;
+    hospitalName: string;
+    consultantName: string;
+    consultantEmail: string;
+    unitName: string | null;
+    moduleName: string | null;
+    startTime: string | null;
+    endTime: string | null;
+    notes: string | null;
+    approvedBy: string | null;
+    approvedAt: string | null;
+  }>>;
 
   // Document Type operations
   getAllDocumentTypes(): Promise<DocumentType[]>;
@@ -2254,6 +2277,145 @@ export class DatabaseStorage implements IStorage {
   async deleteScheduleAssignment(id: string): Promise<boolean> {
     await db.delete(scheduleAssignments).where(eq(scheduleAssignments.id, id));
     return true;
+  }
+
+  async getSchedulesForExport(filters?: {
+    projectId?: string;
+    consultantId?: string;
+    startDate?: string;
+    endDate?: string;
+    status?: string;
+  }): Promise<Array<{
+    scheduleId: string;
+    scheduleDate: string;
+    shiftType: string;
+    status: string;
+    projectName: string;
+    hospitalName: string;
+    consultantName: string;
+    consultantEmail: string;
+    unitName: string | null;
+    moduleName: string | null;
+    startTime: string | null;
+    endTime: string | null;
+    notes: string | null;
+    approvedBy: string | null;
+    approvedAt: string | null;
+  }>> {
+    // Build conditions array
+    const conditions: any[] = [];
+
+    if (filters?.projectId) {
+      conditions.push(eq(projectSchedules.projectId, filters.projectId));
+    }
+    if (filters?.consultantId) {
+      conditions.push(eq(scheduleAssignments.consultantId, filters.consultantId));
+    }
+    if (filters?.startDate) {
+      conditions.push(gte(projectSchedules.scheduleDate, filters.startDate));
+    }
+    if (filters?.endDate) {
+      conditions.push(lte(projectSchedules.scheduleDate, filters.endDate));
+    }
+    if (filters?.status) {
+      conditions.push(eq(projectSchedules.status, filters.status as any));
+    }
+
+    // Query with joins
+    const results = await db
+      .select({
+        scheduleId: projectSchedules.id,
+        scheduleDate: projectSchedules.scheduleDate,
+        shiftType: projectSchedules.shiftType,
+        status: projectSchedules.status,
+        projectName: projects.name,
+        hospitalId: projects.hospitalId,
+        consultantId: scheduleAssignments.consultantId,
+        unitId: scheduleAssignments.unitId,
+        moduleId: scheduleAssignments.moduleId,
+        startTime: scheduleAssignments.startTime,
+        endTime: scheduleAssignments.endTime,
+        notes: scheduleAssignments.notes,
+        approvedBy: projectSchedules.approvedBy,
+        approvedAt: projectSchedules.approvedAt,
+      })
+      .from(projectSchedules)
+      .innerJoin(projects, eq(projectSchedules.projectId, projects.id))
+      .innerJoin(scheduleAssignments, eq(projectSchedules.id, scheduleAssignments.scheduleId))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(projectSchedules.scheduleDate);
+
+    // Fetch related data
+    const hospitalIds = [...new Set(results.map(r => r.hospitalId).filter(Boolean))];
+    const consultantIds = [...new Set(results.map(r => r.consultantId).filter(Boolean))];
+    const unitIds = [...new Set(results.map(r => r.unitId).filter(Boolean))];
+    const moduleIds = [...new Set(results.map(r => r.moduleId).filter(Boolean))];
+    const approverIds = [...new Set(results.map(r => r.approvedBy).filter(Boolean))];
+
+    // Fetch hospitals
+    const hospitalsData = hospitalIds.length > 0
+      ? await db.select().from(hospitals).where(inArray(hospitals.id, hospitalIds as string[]))
+      : [];
+    const hospitalMap = new Map(hospitalsData.map(h => [h.id, h]));
+
+    // Fetch consultants with user info
+    const consultantsData = consultantIds.length > 0
+      ? await db
+          .select({ consultant: consultants, user: users })
+          .from(consultants)
+          .innerJoin(users, eq(consultants.userId, users.id))
+          .where(inArray(consultants.id, consultantIds as string[]))
+      : [];
+    const consultantMap = new Map(consultantsData.map(c => [c.consultant.id, c]));
+
+    // Fetch units
+    const unitsData = unitIds.length > 0
+      ? await db.select().from(hospitalUnits).where(inArray(hospitalUnits.id, unitIds as string[]))
+      : [];
+    const unitMap = new Map(unitsData.map(u => [u.id, u]));
+
+    // Fetch modules
+    const modulesData = moduleIds.length > 0
+      ? await db.select().from(hospitalModules).where(inArray(hospitalModules.id, moduleIds as string[]))
+      : [];
+    const moduleMap = new Map(modulesData.map(m => [m.id, m]));
+
+    // Fetch approvers
+    const approversData = approverIds.length > 0
+      ? await db.select().from(users).where(inArray(users.id, approverIds as string[]))
+      : [];
+    const approverMap = new Map(approversData.map(u => [u.id, u]));
+
+    // Map results to export format
+    return results.map(r => {
+      const hospital = r.hospitalId ? hospitalMap.get(r.hospitalId) : null;
+      const consultantData = r.consultantId ? consultantMap.get(r.consultantId) : null;
+      const unit = r.unitId ? unitMap.get(r.unitId) : null;
+      const module = r.moduleId ? moduleMap.get(r.moduleId) : null;
+      const approver = r.approvedBy ? approverMap.get(r.approvedBy) : null;
+
+      return {
+        scheduleId: r.scheduleId,
+        scheduleDate: r.scheduleDate,
+        shiftType: r.shiftType,
+        status: r.status,
+        projectName: r.projectName,
+        hospitalName: hospital?.name || '',
+        consultantName: consultantData
+          ? `${consultantData.user.firstName || ''} ${consultantData.user.lastName || ''}`.trim()
+          : '',
+        consultantEmail: consultantData?.user.email || '',
+        unitName: unit?.name || null,
+        moduleName: module?.name || null,
+        startTime: r.startTime ? r.startTime.toISOString() : null,
+        endTime: r.endTime ? r.endTime.toISOString() : null,
+        notes: r.notes,
+        approvedBy: approver
+          ? `${approver.firstName || ''} ${approver.lastName || ''}`.trim()
+          : null,
+        approvedAt: r.approvedAt ? r.approvedAt.toISOString() : null,
+      };
+    });
   }
 
   // Document Type operations

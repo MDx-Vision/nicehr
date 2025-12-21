@@ -1,8 +1,8 @@
 # NICEHR Platform - Master Implementation Checklist
 
 **Created:** November 27, 2025
-**Last Updated:** December 18, 2025
-**Status:** 97% Complete - Apple-Style UI Redesign Implemented
+**Last Updated:** December 21, 2025
+**Status:** 96% Complete - Auto-Scheduling Engine Verified Complete
 **Legend:** ✅ = Complete | 🔄 = In Progress | ⬜ = Not Started
 
 ---
@@ -211,24 +211,29 @@
 
 ## PHASE 10: SCHEDULING & TIME MANAGEMENT ✅
 
-### 10.1 Auto-Scheduling Engine (Deferred)
-- [ ] Consultant-unit matching algorithm
-- [ ] Factor: EMR module experience
-- [ ] Factor: Unit type experience
-- [ ] Factor: Availability calendar
-- [ ] Factor: Location/travel preferences
-- [ ] Factor: Past performance ratings
-- [ ] Factor: Colleague pairing preferences
-- [ ] Optimization algorithm (reduce consultant count)
-- [ ] Schedule recommendations UI
-- [ ] Manual override capability
+### 10.1 Auto-Scheduling Engine ✅
+- [x] Consultant-unit matching algorithm (server/scheduling/autoScheduler.ts)
+- [x] Factor: EMR module experience (25% weight)
+- [x] Factor: Unit type experience (20% weight)
+- [x] Factor: Availability calendar (15% weight + hard constraints)
+- [x] Factor: Location/travel preferences (2% weight, state-based proximity)
+- [x] Factor: Past performance ratings (10% weight)
+- [x] Factor: Colleague pairing preferences (5% weight)
+- [x] Factor: Shift preference alignment (8% weight)
+- [x] Optimization algorithm (greedy top-N selection with maxPerConsultant limit)
+- [x] Schedule recommendations UI (client/src/pages/AutoScheduling.tsx)
+- [x] Manual override capability (direct assignment endpoints)
+- [x] Constraint checker (server/scheduling/constraintChecker.ts)
+- [x] Auto-assign wizard (client/src/components/scheduling/AutoAssignWizard.tsx)
+- [x] Configurable scoring weights via API (/api/scheduling/config)
+- [x] Assignment audit logs (/api/scheduling/logs)
 
-### 10.2 Schedule Import/Export (Deferred)
+### 10.2 Schedule Import/Export 🔄
 - [ ] Excel/CSV schedule import
 - [ ] Schedule template library
 - [ ] Bulk assignment tools
-- [ ] Schedule export to Excel
-- [ ] Calendar export (iCal)
+- [x] Schedule export to CSV/Excel (client/src/pages/Schedules.tsx, server/routes.ts:1253)
+- [x] Calendar export (iCal) - RFC 5545 compliant with shift times, locations
 
 ### 10.3 Shift Management ✅
 - [x] Swap request workflow
@@ -774,7 +779,7 @@ These were example features we wanted to replicate in our own system:
 | Phase 1-7 (Foundation) | 85 | 85 | 0 | 0 |
 | Phase 8 (Lifecycle/Onboarding) | 45 | 45 | 0 | 0 |
 | Phase 9 (Command Center) | 25 | 25 | 0 | 0 |
-| Phase 10 (Scheduling/Time) | 30 | 30 | 0 | 0 |
+| Phase 10 (Scheduling/Time) | 45 | 42 | 0 | 3 |
 | Phase 11 (Training) | 20 | 20 | 0 | 0 |
 | Phase 12 (Ticketing) | 18 | 18 | 0 | 0 |
 | Phase 13 (Financial) | 25 | 25 | 0 | 0 |
@@ -785,9 +790,9 @@ These were example features we wanted to replicate in our own system:
 | Phase 18 (Skills Questionnaire) | 45 | 40 | 0 | 5 |
 | Phase 18.5 (Personal Information) | 10 | 10 | 0 | 0 |
 | Phase 19 (Apple-Style UI Redesign) | 25 | 25 | 0 | 0 |
-| **TOTAL** | **433** | **420** | **0** | **13** |
+| **TOTAL** | **448** | **432** | **0** | **16** |
 
-**Overall Progress: 97% Complete**
+**Overall Progress: 96% Complete**
 
 ---
 
@@ -814,6 +819,7 @@ These were example features we wanted to replicate in our own system:
 - External system connections - 17.6
 
 **Deferred Items:**
+- Schedule Import/Export (Excel/CSV, templates, iCal) - 10.2
 - Mobile Experience (PWA, offline mode, push notifications, biometric login)
 - Calendar sync (Google, Outlook)
 
@@ -821,7 +827,26 @@ These were example features we wanted to replicate in our own system:
 
 ## RECENT UPDATES
 
-**December 18, 2025 (Apple-Style UI Redesign - Latest):**
+**December 21, 2025 (Schedule Export - CSV & iCal):**
+- Implemented Schedule Export to CSV feature (Phase 10.2)
+- Implemented iCal calendar export (RFC 5545 compliant)
+- Created reusable export utilities (client/src/lib/export-utils.ts)
+- Added getSchedulesForExport storage function with filters
+- Added GET /api/schedules/export and /api/schedules/export/ical endpoints
+- Added Export button and modal to Schedules page with format selector
+- Supports CSV, Excel, and Calendar (.ics) formats
+- iCal includes shift times, locations, and event descriptions
+
+**December 21, 2025 (Auto-Scheduling Engine Verification):**
+- Verified Phase 10.1 Auto-Scheduling Engine is fully implemented
+- Core algorithm in server/scheduling/autoScheduler.ts (779 lines)
+- Constraint checker in server/scheduling/constraintChecker.ts (397 lines)
+- All 8 matching factors implemented with configurable weights
+- Schedule recommendations UI complete with scoring breakdown
+- Auto-assign wizard with dry-run support
+- Removed from "Deferred" status - now marked as COMPLETE
+
+**December 18, 2025 (Apple-Style UI Redesign):**
 - Implemented Phase 19: Apple-Style UI Redesign
 - Added 11 navigation groups: Work, Schedule, Travel, Communication, Quality, Reports, Support, Training, Finance, Profile, Admin
 - Added 21 previously missing pages to sidebar navigation

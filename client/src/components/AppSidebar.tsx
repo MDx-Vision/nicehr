@@ -128,6 +128,18 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    id: "dischedule",
+    label: "DiSChedule",
+    icon: "Sparkles",
+    roles: ["admin", "hospital_leadership"],
+    defaultOpen: false,
+    items: [
+      { id: "disc-dashboard", title: "Dashboard", url: "/disc", icon: "Target", roles: ["admin", "hospital_leadership"] },
+      { id: "disc-teams", title: "Teams", url: "/disc/teams", icon: "UsersRound", roles: ["admin", "hospital_leadership"] },
+      { id: "disc-build", title: "Build Team", url: "/disc/teams/new", icon: "UserPlus", roles: ["admin", "hospital_leadership"] },
+    ],
+  },
+  {
     id: "schedule",
     label: "Schedule",
     icon: "Calendar",

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, addWeeks, subWeeks, addMonths, subMonths, startOfWeek, endOfWeek, eachDayOfInterval, isToday } from "date-fns";
-import { Calendar, Clock, Plus, ChevronLeft, ChevronRight, Users, Briefcase, CheckCircle, XCircle, FileText, ArrowRightLeft, LogIn, LogOut, AlertCircle } from "lucide-react";
+import { Calendar, Clock, Plus, ChevronLeft, ChevronRight, Users, Briefcase, CheckCircle, XCircle, FileText, ArrowRightLeft, LogIn, LogOut, AlertCircle, Download } from "lucide-react";
+import { downloadCSV, downloadICal, getExportTimestamp, type ICalEvent } from "@/lib/export-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -95,6 +96,13 @@ export default function Schedules() {
   const [timeOffModalOpen, setTimeOffModalOpen] = useState(false);
   const [eodModalOpen, setEodModalOpen] = useState(false);
   const [handoffModalOpen, setHandoffModalOpen] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState<"csv" | "excel" | "ical">("csv");
+  const [exportDateRange, setExportDateRange] = useState({
+    startDate: format(subMonths(new Date(), 1), "yyyy-MM-dd"),
+    endDate: format(new Date(), "yyyy-MM-dd"),
+  });
+  const [isExporting, setIsExporting] = useState(false);
 
   // Form state for create shift
   const [shiftForm, setShiftForm] = useState({
@@ -164,8 +172,8 @@ export default function Schedules() {
   ];
 
   // Use API data if available, otherwise use demo data
-  const projects: any[] = projectsData.length > 0 ? projectsData : demoProjects;
-  const consultants: any[] = consultantsData.length > 0 ? consultantsData : demoConsultants;
+  const projects: any[] = (projectsData as any[])?.length > 0 ? (projectsData as any[]) : demoProjects;
+  const consultants: any[] = (consultantsData as any[])?.length > 0 ? (consultantsData as any[]) : demoConsultants;
 
   // Mock data for shifts (in real app, this would come from API)
   const [shifts, setShifts] = useState<Shift[]>([
@@ -407,6 +415,105 @@ export default function Schedules() {
     });
   };
 
+  const handleExportSchedules = async () => {
+    setIsExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (exportDateRange.startDate) params.append('startDate', exportDateRange.startDate);
+      if (exportDateRange.endDate) params.append('endDate', exportDateRange.endDate);
+      if (projectFilter) params.append('projectId', projectFilter);
+      if (consultantFilter) params.append('consultantId', consultantFilter);
+
+      const filename = `schedules_export_${getExportTimestamp()}`;
+
+      if (exportFormat === 'ical') {
+        // Fetch iCal data
+        const response = await fetch(`/api/schedules/export/ical?${params.toString()}`, {
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to export schedules');
+        }
+
+        const result = await response.json();
+
+        if (result.events.length === 0) {
+          toast({
+            title: "No Data",
+            description: "No schedules found for the selected filters.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Download as iCal file
+        downloadICal(result.events as ICalEvent[], filename, 'NICEHR Schedules');
+
+        setExportModalOpen(false);
+        toast({
+          title: "Export Complete",
+          description: `Successfully exported ${result.count} schedule events to calendar.`,
+        });
+      } else {
+        // Fetch CSV data
+        const response = await fetch(`/api/schedules/export?${params.toString()}`, {
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to export schedules');
+        }
+
+        const result = await response.json();
+
+        if (result.data.length === 0) {
+          toast({
+            title: "No Data",
+            description: "No schedules found for the selected filters.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Define export headers and map data
+        const headers = [
+          'scheduleDate',
+          'shiftType',
+          'status',
+          'projectName',
+          'hospitalName',
+          'consultantName',
+          'consultantEmail',
+          'unitName',
+          'moduleName',
+          'startTime',
+          'endTime',
+          'notes',
+          'approvedBy',
+          'approvedAt',
+        ];
+
+        downloadCSV(headers, result.data, filename);
+
+        setExportModalOpen(false);
+        toast({
+          title: "Export Complete",
+          description: `Successfully exported ${result.count} schedule records.`,
+        });
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to export schedules. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   // Handle acknowledge handoff
   const handleAcknowledgeHandoff = (noteId: string) => {
     setHandoffNotes(handoffNotes.map(note => 
@@ -428,10 +535,16 @@ export default function Schedules() {
           <h1 className="text-3xl font-bold">Schedules</h1>
           <p className="text-muted-foreground">Manage shifts, availability, and time tracking</p>
         </div>
-        <Button onClick={() => setCreateShiftOpen(true)} data-testid="button-create-shift">
-          <Plus className="h-4 w-4 mr-2" />
-          Create Shift
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setExportModalOpen(true)} data-testid="button-export-schedules">
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </Button>
+          <Button onClick={() => setCreateShiftOpen(true)} data-testid="button-create-shift">
+            <Plus className="h-4 w-4 mr-2" />
+            Create Shift
+          </Button>
+        </div>
       </div>
 
       {/* Main Tabs */}
@@ -1229,6 +1342,77 @@ export default function Schedules() {
             </Button>
             <Button onClick={handleSubmitHandoff} data-testid="button-submit-handoff">
               Create Handoff Note
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Export Modal */}
+      <Dialog open={exportModalOpen} onOpenChange={setExportModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Export Schedules</DialogTitle>
+            <DialogDescription>
+              Export schedule data to CSV or calendar format
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="export-format">Format</Label>
+              <Select
+                value={exportFormat}
+                onValueChange={(v) => setExportFormat(v as "csv" | "excel" | "ical")}
+              >
+                <SelectTrigger id="export-format" data-testid="select-export-format">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="csv">CSV Spreadsheet</SelectItem>
+                  <SelectItem value="excel">Excel (CSV)</SelectItem>
+                  <SelectItem value="ical">Calendar (.ics)</SelectItem>
+                </SelectContent>
+              </Select>
+              {exportFormat === 'ical' && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Import into Google Calendar, Outlook, or Apple Calendar
+                </p>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="export-start-date">Start Date</Label>
+                <Input
+                  id="export-start-date"
+                  type="date"
+                  value={exportDateRange.startDate}
+                  onChange={(e) => setExportDateRange({...exportDateRange, startDate: e.target.value})}
+                  data-testid="input-export-start-date"
+                />
+              </div>
+              <div>
+                <Label htmlFor="export-end-date">End Date</Label>
+                <Input
+                  id="export-end-date"
+                  type="date"
+                  value={exportDateRange.endDate}
+                  onChange={(e) => setExportDateRange({...exportDateRange, endDate: e.target.value})}
+                  data-testid="input-export-end-date"
+                />
+              </div>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {projectFilter && <p>Filtered by selected project</p>}
+              {consultantFilter && <p>Filtered by selected consultant</p>}
+              {!projectFilter && !consultantFilter && <p>Exporting all schedules in date range</p>}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExportModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleExportSchedules} disabled={isExporting} data-testid="button-export-download">
+              <Download className="h-4 w-4 mr-2" />
+              {isExporting ? "Exporting..." : "Download"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -7171,3 +7171,284 @@ export interface AdvancedAnalyticsSummary {
     projectsUnderBudget: number;
   };
 }
+
+// ==========================================
+// DiSCHEDULE - BEHAVIORAL ASSESSMENT & TEAM OPTIMIZATION
+// ==========================================
+
+// DiSC primary style enum (D, i, S, C)
+export const discStyleEnum = pgEnum("disc_style", ["D", "i", "S", "C"]);
+
+// DiSC team status enum
+export const discTeamStatusEnum = pgEnum("disc_team_status", ["forming", "active", "completed", "archived"]);
+
+// DiSC rule severity enum
+export const discRuleSeverityEnum = pgEnum("disc_rule_severity", ["info", "warning", "critical", "success"]);
+
+// DiSC Assessments - Behavioral assessment results for consultants
+export const discAssessments = pgTable("disc_assessments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  consultantId: varchar("consultant_id").notNull().references(() => consultants.id, { onDelete: "cascade" }),
+  primaryStyle: discStyleEnum("primary_style").notNull(),
+  secondaryStyle: discStyleEnum("secondary_style"),
+  dScore: integer("d_score").notNull(), // 0-100
+  iScore: integer("i_score").notNull(), // 0-100
+  sScore: integer("s_score").notNull(), // 0-100
+  cScore: integer("c_score").notNull(), // 0-100
+  assessmentDate: timestamp("assessment_date").notNull(),
+  validUntil: timestamp("valid_until").notNull(),
+  assessorName: varchar("assessor_name"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_disc_assessments_consultant").on(table.consultantId),
+  index("idx_disc_assessments_style").on(table.primaryStyle),
+]);
+
+export const discAssessmentsRelations = relations(discAssessments, ({ one }) => ({
+  consultant: one(consultants, {
+    fields: [discAssessments.consultantId],
+    references: [consultants.id],
+  }),
+}));
+
+export const insertDiscAssessmentSchema = createInsertSchema(discAssessments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertDiscAssessment = z.infer<typeof insertDiscAssessmentSchema>;
+export type DiscAssessment = typeof discAssessments.$inferSelect;
+
+// DiSC Skills - Skill definitions for team matching
+export const discSkills = pgTable("disc_skills", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  category: varchar("category").notNull(),
+  subcategory: varchar("subcategory"),
+  description: text("description"),
+  isCertifiable: boolean("is_certifiable").default(false).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_disc_skills_category").on(table.category),
+  index("idx_disc_skills_name").on(table.name),
+]);
+
+export const insertDiscSkillSchema = createInsertSchema(discSkills).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertDiscSkill = z.infer<typeof insertDiscSkillSchema>;
+export type DiscSkill = typeof discSkills.$inferSelect;
+
+// DiSC Person Skills - Link consultants to skills with proficiency
+export const discPersonSkills = pgTable("disc_person_skills", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  consultantId: varchar("consultant_id").notNull().references(() => consultants.id, { onDelete: "cascade" }),
+  skillId: varchar("skill_id").notNull().references(() => discSkills.id, { onDelete: "cascade" }),
+  proficiencyLevel: integer("proficiency_level").notNull(), // 1-5
+  yearsExperience: decimal("years_experience", { precision: 4, scale: 1 }),
+  certificationName: varchar("certification_name"),
+  certificationDate: timestamp("certification_date"),
+  certificationExpiry: timestamp("certification_expiry"),
+  lastUsedDate: timestamp("last_used_date"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_disc_person_skills_consultant").on(table.consultantId),
+  index("idx_disc_person_skills_skill").on(table.skillId),
+]);
+
+export const discPersonSkillsRelations = relations(discPersonSkills, ({ one }) => ({
+  consultant: one(consultants, {
+    fields: [discPersonSkills.consultantId],
+    references: [consultants.id],
+  }),
+  skill: one(discSkills, {
+    fields: [discPersonSkills.skillId],
+    references: [discSkills.id],
+  }),
+}));
+
+export const insertDiscPersonSkillSchema = createInsertSchema(discPersonSkills).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertDiscPersonSkill = z.infer<typeof insertDiscPersonSkillSchema>;
+export type DiscPersonSkill = typeof discPersonSkills.$inferSelect;
+
+// DiSC Teams - Team definitions for compatibility analysis
+export const discTeams = pgTable("disc_teams", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id),
+  name: varchar("name").notNull(),
+  purpose: text("purpose"),
+  targetSize: integer("target_size"),
+  status: discTeamStatusEnum("status").default("forming").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_disc_teams_project").on(table.projectId),
+  index("idx_disc_teams_status").on(table.status),
+]);
+
+export const discTeamsRelations = relations(discTeams, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [discTeams.projectId],
+    references: [projects.id],
+  }),
+  assignments: many(discTeamAssignments),
+  analyses: many(discTeamAnalyses),
+}));
+
+export const insertDiscTeamSchema = createInsertSchema(discTeams).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertDiscTeam = z.infer<typeof insertDiscTeamSchema>;
+export type DiscTeam = typeof discTeams.$inferSelect;
+
+// DiSC Team Assignments - Link consultants to teams
+export const discTeamAssignments = pgTable("disc_team_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  teamId: varchar("team_id").notNull().references(() => discTeams.id, { onDelete: "cascade" }),
+  consultantId: varchar("consultant_id").notNull().references(() => consultants.id),
+  role: varchar("role"),
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  allocationPercent: integer("allocation_percent").default(100),
+  status: varchar("status").default("active"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_disc_team_assignments_team").on(table.teamId),
+  index("idx_disc_team_assignments_consultant").on(table.consultantId),
+]);
+
+export const discTeamAssignmentsRelations = relations(discTeamAssignments, ({ one }) => ({
+  team: one(discTeams, {
+    fields: [discTeamAssignments.teamId],
+    references: [discTeams.id],
+  }),
+  consultant: one(consultants, {
+    fields: [discTeamAssignments.consultantId],
+    references: [consultants.id],
+  }),
+}));
+
+export const insertDiscTeamAssignmentSchema = createInsertSchema(discTeamAssignments).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertDiscTeamAssignment = z.infer<typeof insertDiscTeamAssignmentSchema>;
+export type DiscTeamAssignment = typeof discTeamAssignments.$inferSelect;
+
+// DiSC Team Analyses - Compatibility analysis results
+export const discTeamAnalyses = pgTable("disc_team_analyses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  teamId: varchar("team_id").notNull().references(() => discTeams.id, { onDelete: "cascade" }),
+  analysisDate: timestamp("analysis_date").defaultNow(),
+  overallScore: integer("overall_score").notNull(), // 0-100
+  styleDistribution: jsonb("style_distribution").notNull(), // { D: 2, i: 1, S: 3, C: 1 }
+  compatibilityMatrix: jsonb("compatibility_matrix").notNull(), // Pairwise scores
+  strengths: text("strengths").array(),
+  risks: text("risks").array(),
+  recommendations: text("recommendations").array(),
+  flagsTriggered: jsonb("flags_triggered"), // Rule violations
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_disc_team_analyses_team").on(table.teamId),
+  index("idx_disc_team_analyses_date").on(table.analysisDate),
+]);
+
+export const discTeamAnalysesRelations = relations(discTeamAnalyses, ({ one }) => ({
+  team: one(discTeams, {
+    fields: [discTeamAnalyses.teamId],
+    references: [discTeams.id],
+  }),
+}));
+
+export const insertDiscTeamAnalysisSchema = createInsertSchema(discTeamAnalyses).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertDiscTeamAnalysis = z.infer<typeof insertDiscTeamAnalysisSchema>;
+export type DiscTeamAnalysis = typeof discTeamAnalyses.$inferSelect;
+
+// DiSC Compatibility Rules - Configurable rules for team composition
+export const discCompatibilityRules = pgTable("disc_compatibility_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull().unique(),
+  description: text("description").notNull(),
+  ruleType: varchar("rule_type").notNull(), // composition, pairing, skill_gap
+  severity: discRuleSeverityEnum("severity").default("warning").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  conditions: jsonb("conditions").notNull(), // Rule logic as JSON
+  messageTemplate: text("message_template").notNull(),
+  suggestion: text("suggestion"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_disc_rules_type").on(table.ruleType),
+  index("idx_disc_rules_active").on(table.isActive),
+]);
+
+export const insertDiscCompatibilityRuleSchema = createInsertSchema(discCompatibilityRules).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertDiscCompatibilityRule = z.infer<typeof insertDiscCompatibilityRuleSchema>;
+export type DiscCompatibilityRule = typeof discCompatibilityRules.$inferSelect;
+
+// ==========================================
+// DiSCHEDULE - DERIVED TYPES
+// ==========================================
+
+// Consultant with DiSC assessment
+export type ConsultantWithDisc = typeof consultants.$inferSelect & {
+  discAssessment: DiscAssessment | null;
+  discSkills: (DiscPersonSkill & { skill: DiscSkill })[];
+};
+
+// Team with full details
+export type DiscTeamWithDetails = DiscTeam & {
+  project: typeof projects.$inferSelect | null;
+  assignments: (DiscTeamAssignment & {
+    consultant: typeof consultants.$inferSelect & {
+      discAssessment: DiscAssessment | null;
+    };
+  })[];
+  latestAnalysis: DiscTeamAnalysis | null;
+};
+
+// DiSC style metadata
+export interface DiscStyleInfo {
+  style: "D" | "i" | "S" | "C";
+  name: string;
+  color: string;
+  strengths: string[];
+  challenges: string[];
+  idealRoles: string[];
+}
+
+// Analysis result type
+export interface DiscAnalysisResult {
+  overallScore: number;
+  styleDistribution: Record<"D" | "i" | "S" | "C", number>;
+  compatibilityMatrix: Array<{
+    person1Id: string;
+    person2Id: string;
+    score: number;
+  }>;
+  strengths: string[];
+  risks: string[];
+  recommendations: string[];
+  flagsTriggered: Array<{
+    ruleId: string;
+    ruleName: string;
+    severity: "info" | "warning" | "critical" | "success";
+    message: string;
+    suggestion?: string;
+  }>;
+}

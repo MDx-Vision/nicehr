@@ -121,6 +121,7 @@ import {
   sendScheduleAssignedEmail,
   sendAccountDeletionRequestedEmail,
 } from "./emailService";
+import discRoutes from "./discRoutes";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -128,6 +129,9 @@ export async function registerRoutes(
 ): Promise<Server> {
   // Setup Replit Auth
   await setupAuth(app);
+
+  // Mount DiSC routes
+  app.use('/api/disc', discRoutes);
 
   // Seed RBAC roles and permissions at startup
   try {
@@ -1247,6 +1251,117 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error deleting assignment:", error);
       res.status(500).json({ message: "Failed to delete assignment" });
+    }
+  });
+
+  // Schedule export endpoint
+  app.get('/api/schedules/export', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        projectId: req.query.projectId as string | undefined,
+        consultantId: req.query.consultantId as string | undefined,
+        startDate: req.query.startDate as string | undefined,
+        endDate: req.query.endDate as string | undefined,
+        status: req.query.status as string | undefined,
+      };
+
+      const data = await storage.getSchedulesForExport(filters);
+
+      res.json({
+        data,
+        count: data.length,
+        exportedAt: new Date().toISOString(),
+        filters,
+      });
+    } catch (error) {
+      console.error("Error exporting schedules:", error);
+      res.status(500).json({ message: "Failed to export schedules" });
+    }
+  });
+
+  // Schedule iCal export endpoint
+  app.get('/api/schedules/export/ical', isAuthenticated, async (req, res) => {
+    try {
+      const filters = {
+        projectId: req.query.projectId as string | undefined,
+        consultantId: req.query.consultantId as string | undefined,
+        startDate: req.query.startDate as string | undefined,
+        endDate: req.query.endDate as string | undefined,
+        status: req.query.status as string | undefined,
+      };
+
+      const data = await storage.getSchedulesForExport(filters);
+
+      // Transform schedule data to iCal events format
+      const events = data.map(schedule => {
+        // Parse the schedule date and times
+        const scheduleDate = new Date(schedule.scheduleDate);
+        let startDate: Date;
+        let endDate: Date;
+        let allDay = true;
+
+        if (schedule.startTime && schedule.endTime) {
+          // Use specific times if available
+          startDate = new Date(schedule.startTime);
+          endDate = new Date(schedule.endTime);
+          allDay = false;
+        } else {
+          // Default shift times based on shift type
+          startDate = new Date(scheduleDate);
+          endDate = new Date(scheduleDate);
+
+          switch (schedule.shiftType) {
+            case 'day':
+              startDate.setHours(7, 0, 0, 0);
+              endDate.setHours(19, 0, 0, 0);
+              break;
+            case 'night':
+              startDate.setHours(19, 0, 0, 0);
+              endDate.setDate(endDate.getDate() + 1);
+              endDate.setHours(7, 0, 0, 0);
+              break;
+            case 'swing':
+              startDate.setHours(15, 0, 0, 0);
+              endDate.setHours(23, 0, 0, 0);
+              break;
+            default:
+              startDate.setHours(8, 0, 0, 0);
+              endDate.setHours(17, 0, 0, 0);
+          }
+          allDay = false;
+        }
+
+        // Build description
+        const descriptionParts = [
+          `Project: ${schedule.projectName}`,
+          `Hospital: ${schedule.hospitalName}`,
+          `Consultant: ${schedule.consultantName}`,
+          schedule.unitName ? `Unit: ${schedule.unitName}` : null,
+          schedule.moduleName ? `Module: ${schedule.moduleName}` : null,
+          `Status: ${schedule.status}`,
+          schedule.notes ? `Notes: ${schedule.notes}` : null,
+        ].filter(Boolean);
+
+        return {
+          uid: `${schedule.scheduleId}@nicehr.com`,
+          summary: `${schedule.shiftType.charAt(0).toUpperCase() + schedule.shiftType.slice(1)} Shift - ${schedule.projectName}`,
+          description: descriptionParts.join('\\n'),
+          location: schedule.hospitalName,
+          startDate,
+          endDate,
+          allDay,
+        };
+      });
+
+      res.json({
+        events,
+        count: events.length,
+        exportedAt: new Date().toISOString(),
+        filters,
+      });
+    } catch (error) {
+      console.error("Error exporting schedules to iCal:", error);
+      res.status(500).json({ message: "Failed to export schedules to iCal" });
     }
   });
 
@@ -12396,9 +12511,6 @@ export async function registerRoutes(
     }
   });
 
-  // Setup WebSocket server for real-time chat
-  const { setupWebSocket } = await import('./websocket');
-  setupWebSocket(httpServer);
-
+  // WebSocket will be set up after server starts listening (in index.ts)
   return httpServer;
 }

@@ -85,14 +85,48 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || "5000", 10);
+
+  // Handle port already in use error
+  httpServer.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      log(`Port ${port} is busy, retrying in 2 seconds...`);
+      setTimeout(() => {
+        httpServer.close();
+        httpServer.listen({ port, host: "0.0.0.0" });
+      }, 2000);
+    } else {
+      throw err;
+    }
+  });
+
   httpServer.listen(
     {
       port,
       host: "0.0.0.0",
-      reusePort: true,
     },
-    () => {
+    async () => {
       log(`serving on port ${port}`);
+      // Setup WebSocket only after server successfully starts
+      const { setupWebSocket } = await import('./websocket');
+      setupWebSocket(httpServer);
     },
   );
+
+  // Graceful shutdown handler to properly release port on hot reload
+  const shutdown = () => {
+    log("Shutting down gracefully...");
+    httpServer.close(() => {
+      log("Server closed");
+      process.exit(0);
+    });
+    // Force close after 3 seconds if graceful shutdown fails
+    setTimeout(() => {
+      log("Forcing shutdown");
+      process.exit(0);
+    }, 3000);
+  };
+
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
+  process.on("SIGHUP", shutdown);
 })();
