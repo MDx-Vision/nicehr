@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { Switch, Route } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
@@ -12,91 +13,100 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
-import Hospitals from "@/pages/Hospitals";
-import Consultants from "@/pages/Consultants";
-import Projects from "@/pages/Projects";
-import ProjectPhases from "@/pages/ProjectPhases";
-import RaciMatrix from "@/pages/RaciMatrix";
-import Schedules from "@/pages/Schedules";
-import AutoScheduling from "@/pages/AutoScheduling";
-import ShiftSwaps from "@/pages/ShiftSwaps";
-import Timesheets from "@/pages/Timesheets";
-import Analytics from "@/pages/Analytics";
-import Documents from "@/pages/Documents";
-import Settings from "@/pages/Settings";
-import Profile from "@/pages/Profile";
-import AccountSettings from "@/pages/AccountSettings";
-import AccessControl from "@/pages/AccessControl";
-import ActivityLog from "@/pages/ActivityLog";
-import RoleManagement from "@/pages/RoleManagement";
-import StaffInvitations from "@/pages/StaffInvitations";
-import Search from "@/pages/Search";
-import CommandCenter from "@/pages/CommandCenter";
-import SupportTickets from "@/pages/SupportTickets";
-import Training from "@/pages/Training";
-import ReportBuilder from "@/pages/ReportBuilder";
-import EodReports from "@/pages/EodReports";
-import BudgetModeling from "@/pages/BudgetModeling";
-import Expenses from "@/pages/Expenses";
-import Invoices from "@/pages/Invoices";
-import Payroll from "@/pages/Payroll";
-import TravelBookings from "@/pages/TravelBookings";
-import TravelPreferences from "@/pages/TravelPreferences";
-import Transportation from "@/pages/Transportation";
-import Gamification from "@/pages/Gamification";
-import IdentityVerification from "@/pages/IdentityVerification";
-import Contracts from "@/pages/Contracts";
-import Chat from "@/pages/Chat";
-import SkillsQuestionnaire from "@/pages/SkillsQuestionnaire";
-import SkillsVerification from "@/pages/SkillsVerification";
-import PersonalInformation from "@/pages/PersonalInformation";
-import BudgetCalculator from "@/pages/BudgetCalculator";
-import RoiDashboard from "@/pages/RoiDashboard";
-import RoiSurvey from "@/pages/RoiSurvey";
-import Availability from "@/pages/Availability";
-import Assessments from "@/pages/Assessments";
-import KnowledgeBase from "@/pages/KnowledgeBase";
-import EscalationManagement from "@/pages/EscalationManagement";
-import ComplianceCenter from "@/pages/ComplianceCenter";
-import QualityAssurance from "@/pages/QualityAssurance";
-import LoginLabs from "@/pages/LoginLabs";
-import Login from "@/pages/Login";
-import AdvancedAnalytics from "@/pages/AdvancedAnalytics";
-import ExecutiveDashboard from "@/pages/ExecutiveDashboard";
-import EhrMonitoring from "@/pages/ehr-monitoring";
-import IntegrationsHub from "@/pages/integrations-hub";
-import ConsultantOnboarding from "@/pages/ConsultantOnboarding";
-import MySchedule from "@/pages/MySchedule";
-import MyDocuments from "@/pages/MyDocuments";
-import MyProjects from "@/pages/MyProjects";
-import AccessDenied from "@/pages/AccessDenied";
-import DiscDashboard from "@/pages/DiscDashboard";
-import DiscTeams from "@/pages/DiscTeams";
-import DiscTeamBuilder from "@/pages/DiscTeamBuilder";
-import DiscTeamDetail from "@/pages/DiscTeamDetail";
 import NotFound from "@/pages/not-found";
+
+const Hospitals = lazy(() => import("@/pages/Hospitals"));
+const Consultants = lazy(() => import("@/pages/Consultants"));
+const Projects = lazy(() => import("@/pages/Projects"));
+const ProjectPhases = lazy(() => import("@/pages/ProjectPhases"));
+const RaciMatrix = lazy(() => import("@/pages/RaciMatrix"));
+const Schedules = lazy(() => import("@/pages/Schedules"));
+const AutoScheduling = lazy(() => import("@/pages/AutoScheduling"));
+const ShiftSwaps = lazy(() => import("@/pages/ShiftSwaps"));
+const Timesheets = lazy(() => import("@/pages/Timesheets"));
+const Analytics = lazy(() => import("@/pages/Analytics"));
+const Documents = lazy(() => import("@/pages/Documents"));
+const Settings = lazy(() => import("@/pages/Settings"));
+const Profile = lazy(() => import("@/pages/Profile"));
+const AccountSettings = lazy(() => import("@/pages/AccountSettings"));
+const AccessControl = lazy(() => import("@/pages/AccessControl"));
+const ActivityLog = lazy(() => import("@/pages/ActivityLog"));
+const RoleManagement = lazy(() => import("@/pages/RoleManagement"));
+const StaffInvitations = lazy(() => import("@/pages/StaffInvitations"));
+const Search = lazy(() => import("@/pages/Search"));
+const CommandCenter = lazy(() => import("@/pages/CommandCenter"));
+const SupportTickets = lazy(() => import("@/pages/SupportTickets"));
+const Training = lazy(() => import("@/pages/Training"));
+const ReportBuilder = lazy(() => import("@/pages/ReportBuilder"));
+const EodReports = lazy(() => import("@/pages/EodReports"));
+const BudgetModeling = lazy(() => import("@/pages/BudgetModeling"));
+const Expenses = lazy(() => import("@/pages/Expenses"));
+const Invoices = lazy(() => import("@/pages/Invoices"));
+const Payroll = lazy(() => import("@/pages/Payroll"));
+const TravelBookings = lazy(() => import("@/pages/TravelBookings"));
+const TravelPreferences = lazy(() => import("@/pages/TravelPreferences"));
+const Transportation = lazy(() => import("@/pages/Transportation"));
+const Gamification = lazy(() => import("@/pages/Gamification"));
+const IdentityVerification = lazy(() => import("@/pages/IdentityVerification"));
+const Contracts = lazy(() => import("@/pages/Contracts"));
+const Chat = lazy(() => import("@/pages/Chat"));
+const SkillsQuestionnaire = lazy(() => import("@/pages/SkillsQuestionnaire"));
+const SkillsVerification = lazy(() => import("@/pages/SkillsVerification"));
+const PersonalInformation = lazy(() => import("@/pages/PersonalInformation"));
+const BudgetCalculator = lazy(() => import("@/pages/BudgetCalculator"));
+const RoiDashboard = lazy(() => import("@/pages/RoiDashboard"));
+const RoiSurvey = lazy(() => import("@/pages/RoiSurvey"));
+const Availability = lazy(() => import("@/pages/Availability"));
+const Assessments = lazy(() => import("@/pages/Assessments"));
+const KnowledgeBase = lazy(() => import("@/pages/KnowledgeBase"));
+const EscalationManagement = lazy(() => import("@/pages/EscalationManagement"));
+const ComplianceCenter = lazy(() => import("@/pages/ComplianceCenter"));
+const QualityAssurance = lazy(() => import("@/pages/QualityAssurance"));
+const LoginLabs = lazy(() => import("@/pages/LoginLabs"));
+const Login = lazy(() => import("@/pages/Login"));
+const AdvancedAnalytics = lazy(() => import("@/pages/AdvancedAnalytics"));
+const ExecutiveDashboard = lazy(() => import("@/pages/ExecutiveDashboard"));
+const EhrMonitoring = lazy(() => import("@/pages/ehr-monitoring"));
+const IntegrationsHub = lazy(() => import("@/pages/integrations-hub"));
+const ConsultantOnboarding = lazy(() => import("@/pages/ConsultantOnboarding"));
+const MySchedule = lazy(() => import("@/pages/MySchedule"));
+const MyDocuments = lazy(() => import("@/pages/MyDocuments"));
+const MyProjects = lazy(() => import("@/pages/MyProjects"));
+const AccessDenied = lazy(() => import("@/pages/AccessDenied"));
+const DiscDashboard = lazy(() => import("@/pages/DiscDashboard"));
+const DiscTeams = lazy(() => import("@/pages/DiscTeams"));
+const DiscTeamBuilder = lazy(() => import("@/pages/DiscTeamBuilder"));
+const DiscTeamDetail = lazy(() => import("@/pages/DiscTeamDetail"));
+
+function PageLoader() {
+  return (
+    <div className="p-6 space-y-4">
+      <Skeleton className="h-10 w-48" />
+      <div className="grid gap-4 md:grid-cols-3">
+        <Skeleton className="h-32" />
+        <Skeleton className="h-32" />
+        <Skeleton className="h-32" />
+      </div>
+    </div>
+  );
+}
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
-    return (
-      <div className="p-6 space-y-4">
-        <Skeleton className="h-10 w-48" />
-        <div className="grid gap-4 md:grid-cols-3">
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
-        </div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   if (!user) {
     return <Landing />;
   }
 
-  return <Component />;
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <Component />
+    </Suspense>
+  );
 }
 
 function AppLayout({ children }: { children: React.ReactNode }) {
@@ -175,7 +185,7 @@ function Router() {
       <Route path="/compliance-center" component={() => <ProtectedRoute component={ComplianceCenter} />} />
       <Route path="/quality-assurance" component={() => <ProtectedRoute component={QualityAssurance} />} />
       <Route path="/login-labs" component={() => <ProtectedRoute component={LoginLabs} />} />
-      <Route path="/login" component={Login} />
+      <Route path="/login" component={() => <Suspense fallback={<PageLoader />}><Login /></Suspense>} />
       <Route path="/advanced-analytics" component={() => <ProtectedRoute component={AdvancedAnalytics} />} />
       <Route path="/executive-dashboard" component={() => <ProtectedRoute component={ExecutiveDashboard} />} />
       <Route path="/ehr-monitoring" component={() => <ProtectedRoute component={EhrMonitoring} />} />
@@ -184,7 +194,7 @@ function Router() {
       <Route path="/my-schedule" component={() => <ProtectedRoute component={MySchedule} />} />
       <Route path="/my-documents" component={() => <ProtectedRoute component={MyDocuments} />} />
       <Route path="/my-projects" component={() => <ProtectedRoute component={MyProjects} />} />
-      <Route path="/access-denied" component={AccessDenied} />
+      <Route path="/access-denied" component={() => <Suspense fallback={<PageLoader />}><AccessDenied /></Suspense>} />
       <Route path="/disc" component={() => <ProtectedRoute component={DiscDashboard} />} />
       <Route path="/disc/teams" component={() => <ProtectedRoute component={DiscTeams} />} />
       <Route path="/disc/team-builder" component={() => <ProtectedRoute component={DiscTeamBuilder} />} />
