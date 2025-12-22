@@ -59,7 +59,7 @@ app.get('/api/health', async (_req, res) => {
 });
 
 // Start server with WebSocket support
-const PORT = 3002;
+const PORT = 3000;
 const server = createServer(app);
 
 // Initialize WebSocket
