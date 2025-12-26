@@ -18,7 +18,9 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Enums
-export const userRoleEnum = pgEnum("user_role", ["admin", "hospital_staff", "consultant"]);
+// User roles for RBAC - ordered by permission level (highest to lowest)
+// Note: 'hospital_staff' kept for backwards compatibility, maps to 'manager' level
+export const userRoleEnum = pgEnum("user_role", ["admin", "manager", "hospital_staff", "consultant", "viewer"]);
 export const documentStatusEnum = pgEnum("document_status", ["pending", "approved", "rejected", "expired"]);
 export const projectStatusEnum = pgEnum("project_status", ["draft", "active", "completed", "cancelled"]);
 export const scheduleStatusEnum = pgEnum("schedule_status", ["pending", "approved", "rejected"]);
