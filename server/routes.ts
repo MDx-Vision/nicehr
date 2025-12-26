@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated, requireRole, requirePermission, requireAnyPermission, optionalAuth } from "./replitAuth";
+import { setupAuth, isAuthenticated, requireRole, requirePermission, requireAnyPermission, optionalAuth, sessionTouchMiddleware } from "./replitAuth";
 import {
   ObjectStorageService,
   ObjectNotFoundError,
@@ -128,6 +128,10 @@ export async function registerRoutes(
 ): Promise<Server> {
   // Setup Replit Auth
   await setupAuth(app);
+
+  // HIPAA: Touch session on each request to extend active sessions
+  // This works with rolling: true to reset the 15-minute inactivity timer
+  app.use(sessionTouchMiddleware());
 
   // Seed RBAC roles and permissions at startup
   try {
