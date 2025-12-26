@@ -75,6 +75,8 @@ import RaciMatrix from "@/pages/RaciMatrix";
 import AutoScheduling from "@/pages/AutoScheduling";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/not-found";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import TermsOfService from "@/pages/TermsOfService";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const style = {
@@ -243,6 +245,8 @@ function Router() {
       <Route path="/raci-matrix" component={() => <ProtectedRoute component={RaciMatrix} />} />
       <Route path="/auto-scheduling" component={() => <ProtectedRoute component={AutoScheduling} />} />
       <Route path="/access-denied" component={AccessDenied} />
+      <Route path="/privacy-policy" component={PrivacyPolicy} />
+      <Route path="/terms-of-service" component={TermsOfService} />
       <Route component={NotFound} />
     </Switch>
   );
