@@ -126,6 +126,30 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // =============================================================================
+  // HEALTH CHECK ENDPOINT
+  // =============================================================================
+  // Used by load balancers, Kubernetes, and monitoring systems
+  // Returns 200 OK if the server is healthy, 503 if database is unreachable
+  app.get("/api/health", async (_req, res) => {
+    try {
+      // Check database connectivity
+      await storage.getUser("health-check-probe");
+      res.status(200).json({
+        status: "healthy",
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        version: process.env.npm_package_version || "1.0.0",
+      });
+    } catch (error) {
+      res.status(503).json({
+        status: "unhealthy",
+        timestamp: new Date().toISOString(),
+        error: "Database connection failed",
+      });
+    }
+  });
+
   // Setup Replit Auth
   await setupAuth(app);
 
