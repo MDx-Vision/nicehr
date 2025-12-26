@@ -7138,6 +7138,34 @@ export interface EscalationAnalytics {
 }
 
 // ==========================================
+// HIPAA AUDIT LOGGING
+// ==========================================
+
+export const httpMethodEnum = pgEnum("http_method", ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"]);
+
+export const auditLogs = pgTable("audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  userId: varchar("user_id").references(() => users.id),
+  action: varchar("action", { length: 255 }).notNull(),
+  resource: varchar("resource", { length: 500 }).notNull(),
+  method: httpMethodEnum("method"),
+  ipAddress: varchar("ip_address", { length: 45 }), // IPv6 max length
+  userAgent: varchar("user_agent", { length: 500 }),
+  statusCode: integer("status_code"),
+  responseTimeMs: integer("response_time_ms"),
+}, (table) => [
+  index("idx_audit_logs_timestamp").on(table.timestamp),
+  index("idx_audit_logs_user_id").on(table.userId),
+  index("idx_audit_logs_action").on(table.action),
+  index("idx_audit_logs_resource").on(table.resource),
+]);
+
+export const insertAuditLogSchema = createInsertSchema(auditLogs);
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = typeof auditLogs.$inferInsert;
+
+// ==========================================
 // PHASE 4: ADVANCED ANALYTICS SUMMARY TYPES
 // ==========================================
 
