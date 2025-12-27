@@ -1113,7 +1113,196 @@ describe('Financial Module', () => {
 
     it.skip('TODO: Auto-calculate consultant payments from timesheets', () => {});
     it.skip('TODO: Process batch for payment', () => {});
-    it.skip('TODO: Manage pay rates', () => {});
+
+    // Phase 6: Pay Rates Management Tests
+    it('should display pay rates tab', () => {
+      cy.get('[data-testid="tab-settings"]').click();
+      cy.contains('Pay Rates').should('be.visible');
+    });
+
+    it('should display pay rates list', () => {
+      const mockPayRates = [
+        {
+          id: 'rate-1',
+          consultantId: 'cons-1',
+          hourlyRate: '75.00',
+          overtimeRate: '112.50',
+          effectiveFrom: '2024-01-01',
+          effectiveTo: null,
+          isActive: true
+        }
+      ];
+
+      cy.intercept('GET', '/api/pay-rates', {
+        statusCode: 200,
+        body: mockPayRates
+      }).as('getPayRates');
+
+      cy.get('[data-testid="tab-settings"]').click();
+      cy.wait('@getPayRates');
+
+      cy.get('[data-testid="pay-rate-row-rate-1"]').should('be.visible');
+    });
+
+    it('should show add pay rate button', () => {
+      cy.intercept('GET', '/api/pay-rates', {
+        statusCode: 200,
+        body: []
+      }).as('getPayRates');
+
+      cy.get('[data-testid="tab-settings"]').click();
+      cy.wait('@getPayRates');
+
+      cy.get('[data-testid="button-add-pay-rate"]').should('be.visible');
+    });
+
+    it('should open create pay rate dialog', () => {
+      cy.intercept('GET', '/api/pay-rates', {
+        statusCode: 200,
+        body: []
+      }).as('getPayRates');
+
+      cy.get('[data-testid="tab-settings"]').click();
+      cy.wait('@getPayRates');
+
+      cy.get('[data-testid="button-add-pay-rate"]').click();
+      cy.get('[data-testid="select-pay-rate-consultant"]').should('be.visible');
+      cy.get('[data-testid="input-pay-rate-hourly"]').should('be.visible');
+    });
+
+    it('should create new pay rate', () => {
+      cy.intercept('GET', '/api/pay-rates', {
+        statusCode: 200,
+        body: []
+      }).as('getPayRates');
+
+      cy.intercept('POST', '/api/pay-rates', {
+        statusCode: 201,
+        body: { id: 'rate-new', consultantId: 'cons-1', hourlyRate: '80.00' }
+      }).as('createPayRate');
+
+      cy.get('[data-testid="tab-settings"]').click();
+      cy.wait('@getPayRates');
+
+      cy.get('[data-testid="button-add-pay-rate"]').click();
+      cy.get('[data-testid="select-pay-rate-consultant"]').click();
+      cy.get('[data-testid="select-pay-rate-consultant"]').parent().find('[role="option"]').first().click();
+      cy.get('[data-testid="input-pay-rate-hourly"]').type('80.00');
+      cy.get('[data-testid="button-save-pay-rate"]').click();
+
+      cy.wait('@createPayRate');
+    });
+
+    it('should show edit button for pay rate', () => {
+      const mockPayRates = [
+        {
+          id: 'rate-1',
+          consultantId: 'cons-1',
+          hourlyRate: '75.00',
+          overtimeRate: '112.50',
+          effectiveFrom: '2024-01-01',
+          effectiveTo: null,
+          isActive: true
+        }
+      ];
+
+      cy.intercept('GET', '/api/pay-rates', {
+        statusCode: 200,
+        body: mockPayRates
+      }).as('getPayRates');
+
+      cy.get('[data-testid="tab-settings"]').click();
+      cy.wait('@getPayRates');
+
+      cy.get('[data-testid="button-edit-pay-rate-rate-1"]').should('be.visible');
+    });
+
+    it('should show delete button for pay rate', () => {
+      const mockPayRates = [
+        {
+          id: 'rate-1',
+          consultantId: 'cons-1',
+          hourlyRate: '75.00',
+          overtimeRate: '112.50',
+          effectiveFrom: '2024-01-01',
+          effectiveTo: null,
+          isActive: true
+        }
+      ];
+
+      cy.intercept('GET', '/api/pay-rates', {
+        statusCode: 200,
+        body: mockPayRates
+      }).as('getPayRates');
+
+      cy.get('[data-testid="tab-settings"]').click();
+      cy.wait('@getPayRates');
+
+      cy.get('[data-testid="button-delete-pay-rate-rate-1"]').should('be.visible');
+    });
+
+    it('should update pay rate', () => {
+      const mockPayRates = [
+        {
+          id: 'rate-1',
+          consultantId: 'cons-1',
+          hourlyRate: '75.00',
+          overtimeRate: '112.50',
+          effectiveFrom: '2024-01-01',
+          effectiveTo: null,
+          isActive: true
+        }
+      ];
+
+      cy.intercept('GET', '/api/pay-rates', {
+        statusCode: 200,
+        body: mockPayRates
+      }).as('getPayRates');
+
+      cy.intercept('PATCH', '/api/pay-rates/rate-1', {
+        statusCode: 200,
+        body: { ...mockPayRates[0], hourlyRate: '85.00' }
+      }).as('updatePayRate');
+
+      cy.get('[data-testid="tab-settings"]').click();
+      cy.wait('@getPayRates');
+
+      cy.get('[data-testid="button-edit-pay-rate-rate-1"]').click();
+      cy.get('[data-testid="input-pay-rate-hourly"]').clear().type('85.00');
+      cy.get('[data-testid="button-save-pay-rate"]').click();
+
+      cy.wait('@updatePayRate');
+    });
+
+    it('should delete pay rate', () => {
+      const mockPayRates = [
+        {
+          id: 'rate-1',
+          consultantId: 'cons-1',
+          hourlyRate: '75.00',
+          overtimeRate: '112.50',
+          effectiveFrom: '2024-01-01',
+          effectiveTo: null,
+          isActive: true
+        }
+      ];
+
+      cy.intercept('GET', '/api/pay-rates', {
+        statusCode: 200,
+        body: mockPayRates
+      }).as('getPayRates');
+
+      cy.intercept('DELETE', '/api/pay-rates/rate-1', {
+        statusCode: 200,
+        body: { message: 'Deleted' }
+      }).as('deletePayRate');
+
+      cy.get('[data-testid="tab-settings"]').click();
+      cy.wait('@getPayRates');
+
+      cy.get('[data-testid="button-delete-pay-rate-rate-1"]').click();
+      cy.wait('@deletePayRate');
+    });
   });
 
   describe('Budget Modeling', () => {

@@ -967,6 +967,7 @@ export interface IStorage {
   getPayRate(id: string): Promise<PayRate | undefined>;
   createPayRate(rate: InsertPayRate): Promise<PayRate>;
   updatePayRate(id: string, data: Partial<InsertPayRate>): Promise<PayRate | undefined>;
+  deletePayRate(id: string): Promise<void>;
   getCurrentPayRate(consultantId: string): Promise<PayRate | undefined>;
 
   // Payroll Batch Operations
@@ -6523,6 +6524,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(payRates.id, id))
       .returning();
     return results[0];
+  }
+
+  async deletePayRate(id: string): Promise<void> {
+    await db.delete(payRates).where(eq(payRates.id, id));
   }
 
   async getCurrentPayRate(consultantId: string): Promise<PayRate | undefined> {

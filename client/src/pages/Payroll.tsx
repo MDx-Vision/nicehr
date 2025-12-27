@@ -1070,6 +1070,19 @@ function PayRatesManagement() {
     }
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/pay-rates/${id}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/pay-rates'] });
+      toast({ title: "Pay rate deleted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete pay rate", variant: "destructive" });
+    }
+  });
+
   const resetForm = () => {
     setFormData({
       consultantId: "",
@@ -1152,14 +1165,29 @@ function PayRatesManagement() {
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => openEditDialog(rate)}
-                    data-testid={`button-edit-pay-rate-${rate.id}`}
-                  >
-                    Edit
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openEditDialog(rate)}
+                      data-testid={`button-edit-pay-rate-${rate.id}`}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if (window.confirm("Are you sure you want to delete this pay rate?")) {
+                          deleteMutation.mutate(rate.id);
+                        }
+                      }}
+                      disabled={deleteMutation.isPending}
+                      data-testid={`button-delete-pay-rate-${rate.id}`}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))

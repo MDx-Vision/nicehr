@@ -6692,6 +6692,33 @@ export async function registerRoutes(
     }
   });
 
+  app.delete('/api/pay-rates/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const payRate = await storage.getPayRate(req.params.id);
+      if (!payRate) {
+        return res.status(404).json({ message: "Pay rate not found" });
+      }
+
+      await storage.deletePayRate(req.params.id);
+
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'pay_rate',
+          resourceId: req.params.id,
+          resourceName: `Pay rate: $${payRate.hourlyRate}/hr`,
+          description: 'Deleted pay rate',
+        }, req);
+      }
+
+      res.json({ message: "Pay rate deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting pay rate:", error);
+      res.status(500).json({ message: "Failed to delete pay rate" });
+    }
+  });
+
   // Payroll Batches Routes
   app.get('/api/payroll-batches', isAuthenticated, async (req, res) => {
     try {
