@@ -1796,6 +1796,192 @@ describe('Financial Module', () => {
       cy.get('[data-testid="stat-over-budget"]').should('contain', 'All on track');
     });
 
-    it.skip('TODO: Budget forecasting', () => {});
+    // Phase 10: Budget Forecasting Tests
+    it('should display forecast card in scenario detail', () => {
+      const scenarioWithForecastData = {
+        ...mockBudgetScenarios[0],
+        totalBudget: '50000.00',
+        actualTotalCost: '25000.00',
+        durationWeeks: 12,
+        createdAt: new Date(Date.now() - 6 * 7 * 24 * 60 * 60 * 1000).toISOString() // 6 weeks ago
+      };
+
+      cy.intercept('GET', '/api/budget-scenarios/scenario-1', {
+        statusCode: 200,
+        body: scenarioWithForecastData
+      }).as('getScenarioWithForecast');
+
+      cy.get('[data-testid="scenario-row-scenario-1"]').click();
+      cy.wait('@getScenarioWithForecast');
+
+      cy.get('[data-testid="card-forecast"]').should('be.visible');
+      cy.get('[data-testid="card-forecast"]').should('contain', 'Budget Forecast');
+    });
+
+    it('should display weekly burn rate', () => {
+      const scenarioWithForecastData = {
+        ...mockBudgetScenarios[0],
+        totalBudget: '50000.00',
+        actualTotalCost: '24000.00',
+        durationWeeks: 12,
+        createdAt: new Date(Date.now() - 6 * 7 * 24 * 60 * 60 * 1000).toISOString()
+      };
+
+      cy.intercept('GET', '/api/budget-scenarios/scenario-1', {
+        statusCode: 200,
+        body: scenarioWithForecastData
+      }).as('getScenarioWithForecast');
+
+      cy.get('[data-testid="scenario-row-scenario-1"]').click();
+      cy.wait('@getScenarioWithForecast');
+
+      cy.get('[data-testid="forecast-burn-rate"]').should('be.visible');
+      cy.get('[data-testid="forecast-burn-rate"]').should('contain', '$');
+    });
+
+    it('should display projected total cost', () => {
+      const scenarioWithForecastData = {
+        ...mockBudgetScenarios[0],
+        totalBudget: '50000.00',
+        actualTotalCost: '25000.00',
+        durationWeeks: 12,
+        createdAt: new Date(Date.now() - 6 * 7 * 24 * 60 * 60 * 1000).toISOString()
+      };
+
+      cy.intercept('GET', '/api/budget-scenarios/scenario-1', {
+        statusCode: 200,
+        body: scenarioWithForecastData
+      }).as('getScenarioWithForecast');
+
+      cy.get('[data-testid="scenario-row-scenario-1"]').click();
+      cy.wait('@getScenarioWithForecast');
+
+      cy.get('[data-testid="forecast-projected-total"]').should('be.visible');
+      cy.get('[data-testid="forecast-projected-total"]').should('contain', '$');
+    });
+
+    it('should display forecast variance', () => {
+      const scenarioWithForecastData = {
+        ...mockBudgetScenarios[0],
+        totalBudget: '50000.00',
+        actualTotalCost: '30000.00',
+        durationWeeks: 10,
+        createdAt: new Date(Date.now() - 5 * 7 * 24 * 60 * 60 * 1000).toISOString()
+      };
+
+      cy.intercept('GET', '/api/budget-scenarios/scenario-1', {
+        statusCode: 200,
+        body: scenarioWithForecastData
+      }).as('getScenarioWithForecast');
+
+      cy.get('[data-testid="scenario-row-scenario-1"]').click();
+      cy.wait('@getScenarioWithForecast');
+
+      cy.get('[data-testid="forecast-variance"]').should('be.visible');
+    });
+
+    it('should display on track status when under budget', () => {
+      const scenarioOnTrack = {
+        ...mockBudgetScenarios[0],
+        totalBudget: '100000.00',
+        actualTotalCost: '20000.00',
+        durationWeeks: 20,
+        createdAt: new Date(Date.now() - 5 * 7 * 24 * 60 * 60 * 1000).toISOString()
+      };
+
+      cy.intercept('GET', '/api/budget-scenarios/scenario-1', {
+        statusCode: 200,
+        body: scenarioOnTrack
+      }).as('getScenarioOnTrack');
+
+      cy.get('[data-testid="scenario-row-scenario-1"]').click();
+      cy.wait('@getScenarioOnTrack');
+
+      cy.get('[data-testid="forecast-status-ontrack"]').should('be.visible');
+      cy.get('[data-testid="forecast-status-ontrack"]').should('contain', 'On Track');
+    });
+
+    it('should display at risk status when over budget', () => {
+      const scenarioAtRisk = {
+        ...mockBudgetScenarios[0],
+        totalBudget: '50000.00',
+        actualTotalCost: '40000.00',
+        durationWeeks: 10,
+        createdAt: new Date(Date.now() - 5 * 7 * 24 * 60 * 60 * 1000).toISOString()
+      };
+
+      cy.intercept('GET', '/api/budget-scenarios/scenario-1', {
+        statusCode: 200,
+        body: scenarioAtRisk
+      }).as('getScenarioAtRisk');
+
+      cy.get('[data-testid="scenario-row-scenario-1"]').click();
+      cy.wait('@getScenarioAtRisk');
+
+      cy.get('[data-testid="forecast-status-atrisk"]').should('be.visible');
+      cy.get('[data-testid="forecast-status-atrisk"]').should('contain', 'At Risk');
+    });
+
+    it('should display budget runway warning when at risk', () => {
+      const scenarioAtRisk = {
+        ...mockBudgetScenarios[0],
+        totalBudget: '50000.00',
+        actualTotalCost: '40000.00',
+        durationWeeks: 10,
+        createdAt: new Date(Date.now() - 5 * 7 * 24 * 60 * 60 * 1000).toISOString()
+      };
+
+      cy.intercept('GET', '/api/budget-scenarios/scenario-1', {
+        statusCode: 200,
+        body: scenarioAtRisk
+      }).as('getScenarioAtRisk');
+
+      cy.get('[data-testid="scenario-row-scenario-1"]').click();
+      cy.wait('@getScenarioAtRisk');
+
+      cy.get('[data-testid="forecast-warning"]').should('be.visible');
+      cy.get('[data-testid="forecast-warning"]').should('contain', 'Budget Runway Warning');
+    });
+
+    it('should display progress weeks', () => {
+      const scenarioWithProgress = {
+        ...mockBudgetScenarios[0],
+        totalBudget: '50000.00',
+        actualTotalCost: '25000.00',
+        durationWeeks: 12,
+        createdAt: new Date(Date.now() - 6 * 7 * 24 * 60 * 60 * 1000).toISOString()
+      };
+
+      cy.intercept('GET', '/api/budget-scenarios/scenario-1', {
+        statusCode: 200,
+        body: scenarioWithProgress
+      }).as('getScenarioProgress');
+
+      cy.get('[data-testid="scenario-row-scenario-1"]').click();
+      cy.wait('@getScenarioProgress');
+
+      cy.get('[data-testid="forecast-progress"]').should('be.visible');
+      cy.get('[data-testid="forecast-progress"]').should('contain', '/ 12');
+    });
+
+    it('should show insufficient data message when no actuals', () => {
+      const scenarioNoActuals = {
+        ...mockBudgetScenarios[0],
+        totalBudget: '50000.00',
+        actualTotalCost: null,
+        durationWeeks: 12
+      };
+
+      cy.intercept('GET', '/api/budget-scenarios/scenario-1', {
+        statusCode: 200,
+        body: scenarioNoActuals
+      }).as('getScenarioNoActuals');
+
+      cy.get('[data-testid="scenario-row-scenario-1"]').click();
+      cy.wait('@getScenarioNoActuals');
+
+      cy.get('[data-testid="card-forecast"]').should('be.visible');
+      cy.get('[data-testid="card-forecast"]').should('contain', 'Insufficient data for forecasting');
+    });
   });
 });

@@ -13,6 +13,11 @@ import {
   PieChart,
   Pie,
   Cell,
+  LineChart,
+  Line,
+  ReferenceLine,
+  Area,
+  ComposedChart,
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -153,6 +158,256 @@ function OverBudgetBadge({ scenario }: { scenario: BudgetScenarioWithDetails }) 
       <AlertTriangle className="h-3 w-3" />
       Over Budget
     </Badge>
+  );
+}
+
+interface ForecastData {
+  weeklyBurnRate: number;
+  projectedTotalCost: number;
+  forecastVariance: number;
+  forecastVariancePercent: number;
+  weeksElapsed: number;
+  weeksRemaining: number;
+  budgetRunoutWeeks: number | null;
+  isOnTrack: boolean;
+  chartData: { week: number; actual: number | null; forecast: number | null; budget: number }[];
+}
+
+function calculateForecast(scenario: BudgetScenarioWithDetails): ForecastData | null {
+  const totalBudget = parseFloat(scenario.totalBudget || "0");
+  const actualCost = parseFloat(scenario.actualTotalCost || "0");
+  const durationWeeks = scenario.durationWeeks || 0;
+
+  if (!actualCost || !totalBudget || !durationWeeks) return null;
+
+  // Calculate weeks elapsed based on creation date
+  const createdAt = scenario.createdAt ? new Date(scenario.createdAt) : new Date();
+  const now = new Date();
+  const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+  const weeksElapsed = Math.max(1, Math.ceil((now.getTime() - createdAt.getTime()) / msPerWeek));
+  const weeksRemaining = Math.max(0, durationWeeks - weeksElapsed);
+
+  // Calculate burn rate (cost per week)
+  const weeklyBurnRate = actualCost / weeksElapsed;
+
+  // Project total cost at completion
+  const projectedTotalCost = weeklyBurnRate * durationWeeks;
+
+  // Calculate forecast variance
+  const forecastVariance = projectedTotalCost - totalBudget;
+  const forecastVariancePercent = totalBudget > 0 ? (forecastVariance / totalBudget) * 100 : 0;
+
+  // Calculate when budget will run out at current rate
+  const budgetRunoutWeeks = weeklyBurnRate > 0 ? totalBudget / weeklyBurnRate : null;
+
+  // Is on track?
+  const isOnTrack = projectedTotalCost <= totalBudget;
+
+  // Generate chart data
+  const chartData = [];
+  const weeklyBudget = totalBudget / durationWeeks;
+
+  for (let week = 0; week <= durationWeeks; week++) {
+    const budgetAtWeek = weeklyBudget * week;
+    const actualAtWeek = week <= weeksElapsed ? (actualCost / weeksElapsed) * week : null;
+    const forecastAtWeek = week >= weeksElapsed ? weeklyBurnRate * week : null;
+
+    chartData.push({
+      week,
+      actual: actualAtWeek,
+      forecast: forecastAtWeek,
+      budget: budgetAtWeek,
+    });
+  }
+
+  return {
+    weeklyBurnRate,
+    projectedTotalCost,
+    forecastVariance,
+    forecastVariancePercent,
+    weeksElapsed,
+    weeksRemaining,
+    budgetRunoutWeeks,
+    isOnTrack,
+    chartData,
+  };
+}
+
+function ForecastCard({ scenario }: { scenario: BudgetScenarioWithDetails }) {
+  const forecast = calculateForecast(scenario);
+
+  if (!forecast) {
+    return (
+      <Card className="mb-4" data-testid="card-forecast">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            Budget Forecast
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>Insufficient data for forecasting</p>
+            <p className="text-xs mt-2">
+              Add actual costs and duration to enable forecasting
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const totalBudget = parseFloat(scenario.totalBudget || "0");
+
+  return (
+    <Card className="mb-4" data-testid="card-forecast">
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <TrendingUp className="h-4 w-4" />
+          Budget Forecast
+        </CardTitle>
+        <CardDescription>
+          Projections based on current spending rate
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="space-y-1">
+            <div className="text-xs text-muted-foreground">Weekly Burn Rate</div>
+            <div className="text-lg font-semibold" data-testid="forecast-burn-rate">
+              {formatCurrency(forecast.weeklyBurnRate)}
+            </div>
+            <div className="text-xs text-muted-foreground">per week</div>
+          </div>
+          <div className="space-y-1">
+            <div className="text-xs text-muted-foreground">Projected Total</div>
+            <div className="text-lg font-semibold" data-testid="forecast-projected-total">
+              {formatCurrency(forecast.projectedTotalCost)}
+            </div>
+            <div className="text-xs text-muted-foreground">at completion</div>
+          </div>
+          <div className="space-y-1">
+            <div className="text-xs text-muted-foreground">Forecast Variance</div>
+            <div className={`text-lg font-semibold ${getVarianceColor(forecast.forecastVariance)}`} data-testid="forecast-variance">
+              {formatCurrency(Math.abs(forecast.forecastVariance))}
+              <span className="text-sm ml-1">
+                ({forecast.forecastVariancePercent > 0 ? '+' : ''}{forecast.forecastVariancePercent.toFixed(1)}%)
+              </span>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {forecast.isOnTrack ? "under budget" : "over budget"}
+            </div>
+          </div>
+          <div className="space-y-1">
+            <div className="text-xs text-muted-foreground">Progress</div>
+            <div className="text-lg font-semibold" data-testid="forecast-progress">
+              {forecast.weeksElapsed} / {scenario.durationWeeks}
+            </div>
+            <div className="text-xs text-muted-foreground">weeks elapsed</div>
+          </div>
+        </div>
+
+        {forecast.budgetRunoutWeeks && !forecast.isOnTrack && (
+          <div
+            className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg"
+            data-testid="forecast-warning"
+          >
+            <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                Budget Runway Warning
+              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                At current burn rate, budget will be exhausted in {forecast.budgetRunoutWeeks.toFixed(1)} weeks
+                {forecast.budgetRunoutWeeks < (scenario.durationWeeks || 0) && (
+                  <span> ({((scenario.durationWeeks || 0) - forecast.budgetRunoutWeeks).toFixed(1)} weeks before project end)</span>
+                )}
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div className="pt-4">
+          <div className="text-sm font-medium mb-2">Forecast Trend</div>
+          <ResponsiveContainer width="100%" height={200}>
+            <ComposedChart data={forecast.chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <XAxis
+                dataKey="week"
+                tick={{ fontSize: 11 }}
+                tickFormatter={(v) => `W${v}`}
+              />
+              <YAxis
+                tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                tick={{ fontSize: 11 }}
+              />
+              <Tooltip
+                formatter={(value: number) => formatCurrency(value)}
+                labelFormatter={(label) => `Week ${label}`}
+                contentStyle={{
+                  backgroundColor: "hsl(var(--card))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "6px",
+                }}
+              />
+              <Legend />
+              <ReferenceLine y={totalBudget} stroke="#ef4444" strokeDasharray="5 5" label={{ value: 'Budget', fill: '#ef4444', fontSize: 10 }} />
+              <Line
+                type="monotone"
+                dataKey="budget"
+                stroke="#94a3b8"
+                strokeWidth={2}
+                dot={false}
+                name="Planned"
+              />
+              <Line
+                type="monotone"
+                dataKey="actual"
+                stroke="#22c55e"
+                strokeWidth={2}
+                dot={{ fill: '#22c55e', r: 3 }}
+                name="Actual"
+                connectNulls={false}
+              />
+              <Line
+                type="monotone"
+                dataKey="forecast"
+                stroke="#f59e0b"
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                dot={false}
+                name="Forecast"
+                connectNulls={false}
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="flex items-center justify-between pt-2 border-t">
+          <div className="flex items-center gap-2">
+            {forecast.isOnTrack ? (
+              <>
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <span className="text-sm text-green-600 dark:text-green-400" data-testid="forecast-status-ontrack">
+                  On Track
+                </span>
+              </>
+            ) : (
+              <>
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <span className="text-sm text-amber-600 dark:text-amber-400" data-testid="forecast-status-atrisk">
+                  At Risk
+                </span>
+              </>
+            )}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {forecast.weeksRemaining} weeks remaining
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -577,6 +832,8 @@ function ScenarioDetailPanel({
             )}
           </CardContent>
         </Card>
+
+        <ForecastCard scenario={scenario} />
 
         <Card className="mb-4" data-testid="card-variance-analysis">
           <CardHeader>
