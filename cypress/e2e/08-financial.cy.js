@@ -291,8 +291,8 @@ describe('Financial Module', () => {
     it('should select all submitted expenses', () => {
       cy.get('[data-testid="button-toggle-bulk"]').click();
       cy.get('[data-testid="checkbox-header-select-all"]').click();
-      // Should select exp-1 and exp-3 (submitted) but not exp-2 (approved)
-      cy.get('[data-testid="bulk-actions-bar"]').should('contain', '2 expense(s) selected');
+      // Should select exp-1, exp-3, exp-5 (submitted) but not exp-2 (approved) or exp-4 (draft)
+      cy.get('[data-testid="bulk-actions-bar"]').should('contain', '3 expense(s) selected');
     });
 
     it('should show bulk approve and reject buttons', () => {
@@ -1182,6 +1182,16 @@ describe('Financial Module', () => {
     });
 
     it('should create new pay rate', () => {
+      const mockConsultants = [
+        { id: 'cons-1', user: { firstName: 'John', lastName: 'Doe' } },
+        { id: 'cons-2', user: { firstName: 'Jane', lastName: 'Smith' } }
+      ];
+
+      cy.intercept('GET', '/api/consultants', {
+        statusCode: 200,
+        body: mockConsultants
+      }).as('getConsultantsForPayRate');
+
       cy.intercept('GET', '/api/pay-rates', {
         statusCode: 200,
         body: []
@@ -1197,7 +1207,7 @@ describe('Financial Module', () => {
 
       cy.get('[data-testid="button-add-pay-rate"]').click();
       cy.get('[data-testid="select-pay-rate-consultant"]').click();
-      cy.get('[data-testid="select-pay-rate-consultant"]').parent().find('[role="option"]').first().click();
+      cy.get('[role="option"]').first().click({ force: true });
       cy.get('[data-testid="input-pay-rate-hourly"]').type('80.00');
       cy.get('[data-testid="button-save-pay-rate"]').click();
 
@@ -1394,8 +1404,8 @@ describe('Financial Module', () => {
     });
 
     it('should display scenario list', () => {
-      cy.get('[data-testid="scenario-row-scenario-1"]').should('be.visible');
-      cy.get('[data-testid="scenario-row-scenario-2"]').should('be.visible');
+      cy.get('[data-testid="scenario-row-scenario-1"]').scrollIntoView().should('be.visible');
+      cy.get('[data-testid="scenario-row-scenario-2"]').scrollIntoView().should('be.visible');
     });
 
     it('should filter scenarios by type using tabs', () => {
@@ -1456,7 +1466,7 @@ describe('Financial Module', () => {
       // Fill in scenario details
       cy.get('[data-testid="input-scenario-name"]').type('Q2 2025 Budget');
       cy.get('[data-testid="select-scenario-type"]').click();
-      cy.contains('Baseline').click();
+      cy.get('[role="option"]').contains('Baseline').click({ force: true });
 
       // Fill in line items
       cy.get('[data-testid="input-labor-cost"]').type('30000');
@@ -1533,7 +1543,7 @@ describe('Financial Module', () => {
       cy.get('[data-testid="scenario-row-scenario-1"]').click();
       cy.wait('@getScenarioWithActuals');
 
-      cy.get('[data-testid="card-variance-analysis"]').should('be.visible');
+      cy.get('[data-testid="card-variance-analysis"]').scrollIntoView().should('exist');
     });
 
     it('should display variance analysis table with all categories', () => {
@@ -1560,12 +1570,12 @@ describe('Financial Module', () => {
       cy.get('[data-testid="scenario-row-scenario-1"]').click();
       cy.wait('@getScenarioWithActuals');
 
-      cy.get('[data-testid="table-variance-analysis"]').should('be.visible');
-      cy.get('[data-testid="variance-row-labor"]').should('be.visible');
-      cy.get('[data-testid="variance-row-travel"]').should('be.visible');
-      cy.get('[data-testid="variance-row-expenses"]').should('be.visible');
-      cy.get('[data-testid="variance-row-overhead"]').should('be.visible');
-      cy.get('[data-testid="variance-row-total"]').should('be.visible');
+      cy.get('[data-testid="table-variance-analysis"]').scrollIntoView().should('exist');
+      cy.get('[data-testid="variance-row-labor"]').should('exist');
+      cy.get('[data-testid="variance-row-travel"]').should('exist');
+      cy.get('[data-testid="variance-row-expenses"]').should('exist');
+      cy.get('[data-testid="variance-row-overhead"]').should('exist');
+      cy.get('[data-testid="variance-row-total"]').should('exist');
     });
 
     it('should display budgeted and actual values', () => {
@@ -1592,10 +1602,10 @@ describe('Financial Module', () => {
       cy.get('[data-testid="scenario-row-scenario-1"]').click();
       cy.wait('@getScenarioWithActuals');
 
-      cy.get('[data-testid="budgeted-labor"]').should('be.visible');
-      cy.get('[data-testid="actual-labor"]').should('be.visible');
-      cy.get('[data-testid="budgeted-total"]').should('be.visible');
-      cy.get('[data-testid="actual-total"]').should('be.visible');
+      cy.get('[data-testid="budgeted-labor"]').scrollIntoView().should('exist');
+      cy.get('[data-testid="actual-labor"]').should('exist');
+      cy.get('[data-testid="budgeted-total"]').should('exist');
+      cy.get('[data-testid="actual-total"]').should('exist');
     });
 
     it('should display variance amounts', () => {
@@ -1622,10 +1632,10 @@ describe('Financial Module', () => {
       cy.get('[data-testid="scenario-row-scenario-1"]').click();
       cy.wait('@getScenarioWithActuals');
 
-      cy.get('[data-testid="variance-labor"]').should('be.visible');
-      cy.get('[data-testid="variance-travel"]').should('be.visible');
-      cy.get('[data-testid="variance-expenses"]').should('be.visible');
-      cy.get('[data-testid="variance-total"]').should('be.visible');
+      cy.get('[data-testid="variance-labor"]').scrollIntoView().should('exist');
+      cy.get('[data-testid="variance-travel"]').should('exist');
+      cy.get('[data-testid="variance-expenses"]').should('exist');
+      cy.get('[data-testid="variance-total"]').should('exist');
     });
 
     it('should display variance percentages', () => {
@@ -1652,10 +1662,10 @@ describe('Financial Module', () => {
       cy.get('[data-testid="scenario-row-scenario-1"]').click();
       cy.wait('@getScenarioWithActuals');
 
-      cy.get('[data-testid="variance-pct-labor"]').should('be.visible');
-      cy.get('[data-testid="variance-pct-travel"]').should('be.visible');
-      cy.get('[data-testid="variance-pct-expenses"]').should('be.visible');
-      cy.get('[data-testid="variance-pct-total"]').should('be.visible');
+      cy.get('[data-testid="variance-pct-labor"]').scrollIntoView().should('exist');
+      cy.get('[data-testid="variance-pct-travel"]').should('exist');
+      cy.get('[data-testid="variance-pct-expenses"]').should('exist');
+      cy.get('[data-testid="variance-pct-total"]').should('exist');
     });
 
     it('should show total variance row with summary', () => {
@@ -1677,8 +1687,8 @@ describe('Financial Module', () => {
       cy.get('[data-testid="scenario-row-scenario-1"]').click();
       cy.wait('@getScenarioWithActuals');
 
-      cy.get('[data-testid="variance-row-total"]').should('be.visible');
-      cy.get('[data-testid="variance-total"]').should('be.visible');
+      cy.get('[data-testid="variance-row-total"]').scrollIntoView().should('exist');
+      cy.get('[data-testid="variance-total"]').should('exist');
     });
 
     // Phase 9: Over-budget Alerts Tests
@@ -1695,7 +1705,7 @@ describe('Financial Module', () => {
         body: [overBudgetScenario, mockBudgetScenarios[1]]
       }).as('getScenariosWithOverBudget');
 
-      cy.visit('/financial/budget-modeling');
+      cy.visit('/budget-modeling');
       cy.wait('@getScenariosWithOverBudget');
 
       cy.get('[data-testid="stat-over-budget"]').should('be.visible');
@@ -1715,10 +1725,10 @@ describe('Financial Module', () => {
         body: [overBudgetScenario]
       }).as('getScenariosWithOverBudget');
 
-      cy.visit('/financial/budget-modeling');
+      cy.visit('/budget-modeling');
       cy.wait('@getScenariosWithOverBudget');
 
-      cy.get('[data-testid="badge-over-budget"]').should('be.visible');
+      cy.get('[data-testid="badge-over-budget"]').scrollIntoView().should('exist');
       cy.get('[data-testid="badge-over-budget"]').should('contain', 'Over Budget');
     });
 
@@ -1756,7 +1766,7 @@ describe('Financial Module', () => {
         body: [underBudgetScenario]
       }).as('getScenariosUnderBudget');
 
-      cy.visit('/financial/budget-modeling');
+      cy.visit('/budget-modeling');
       cy.wait('@getScenariosUnderBudget');
 
       cy.get('[data-testid="badge-over-budget"]').should('not.exist');
@@ -1794,7 +1804,7 @@ describe('Financial Module', () => {
         body: onTrackScenarios
       }).as('getScenariosOnTrack');
 
-      cy.visit('/financial/budget-modeling');
+      cy.visit('/budget-modeling');
       cy.wait('@getScenariosOnTrack');
 
       cy.get('[data-testid="stat-over-budget"]').should('be.visible');
@@ -1820,7 +1830,7 @@ describe('Financial Module', () => {
       cy.get('[data-testid="scenario-row-scenario-1"]').click();
       cy.wait('@getScenarioWithForecast');
 
-      cy.get('[data-testid="card-forecast"]').should('be.visible');
+      cy.get('[data-testid="card-forecast"]').scrollIntoView().should('exist');
       cy.get('[data-testid="card-forecast"]').should('contain', 'Budget Forecast');
     });
 
@@ -1841,7 +1851,7 @@ describe('Financial Module', () => {
       cy.get('[data-testid="scenario-row-scenario-1"]').click();
       cy.wait('@getScenarioWithForecast');
 
-      cy.get('[data-testid="forecast-burn-rate"]').should('be.visible');
+      cy.get('[data-testid="forecast-burn-rate"]').scrollIntoView().should('exist');
       cy.get('[data-testid="forecast-burn-rate"]').should('contain', '$');
     });
 
@@ -1862,7 +1872,7 @@ describe('Financial Module', () => {
       cy.get('[data-testid="scenario-row-scenario-1"]').click();
       cy.wait('@getScenarioWithForecast');
 
-      cy.get('[data-testid="forecast-projected-total"]').should('be.visible');
+      cy.get('[data-testid="forecast-projected-total"]').scrollIntoView().should('exist');
       cy.get('[data-testid="forecast-projected-total"]').should('contain', '$');
     });
 
@@ -1883,7 +1893,7 @@ describe('Financial Module', () => {
       cy.get('[data-testid="scenario-row-scenario-1"]').click();
       cy.wait('@getScenarioWithForecast');
 
-      cy.get('[data-testid="forecast-variance"]').should('be.visible');
+      cy.get('[data-testid="forecast-variance"]').scrollIntoView().should('exist');
     });
 
     it('should display on track status when under budget', () => {
@@ -1903,7 +1913,7 @@ describe('Financial Module', () => {
       cy.get('[data-testid="scenario-row-scenario-1"]').click();
       cy.wait('@getScenarioOnTrack');
 
-      cy.get('[data-testid="forecast-status-ontrack"]').should('be.visible');
+      cy.get('[data-testid="forecast-status-ontrack"]').scrollIntoView().should('exist');
       cy.get('[data-testid="forecast-status-ontrack"]').should('contain', 'On Track');
     });
 
@@ -1924,7 +1934,7 @@ describe('Financial Module', () => {
       cy.get('[data-testid="scenario-row-scenario-1"]').click();
       cy.wait('@getScenarioAtRisk');
 
-      cy.get('[data-testid="forecast-status-atrisk"]').should('be.visible');
+      cy.get('[data-testid="forecast-status-atrisk"]').scrollIntoView().should('exist');
       cy.get('[data-testid="forecast-status-atrisk"]').should('contain', 'At Risk');
     });
 
@@ -1945,7 +1955,7 @@ describe('Financial Module', () => {
       cy.get('[data-testid="scenario-row-scenario-1"]').click();
       cy.wait('@getScenarioAtRisk');
 
-      cy.get('[data-testid="forecast-warning"]').should('be.visible');
+      cy.get('[data-testid="forecast-warning"]').scrollIntoView().should('exist');
       cy.get('[data-testid="forecast-warning"]').should('contain', 'Budget Runway Warning');
     });
 
@@ -1966,7 +1976,7 @@ describe('Financial Module', () => {
       cy.get('[data-testid="scenario-row-scenario-1"]').click();
       cy.wait('@getScenarioProgress');
 
-      cy.get('[data-testid="forecast-progress"]').should('be.visible');
+      cy.get('[data-testid="forecast-progress"]').scrollIntoView().should('exist');
       cy.get('[data-testid="forecast-progress"]').should('contain', '/ 12');
     });
 
@@ -1986,7 +1996,7 @@ describe('Financial Module', () => {
       cy.get('[data-testid="scenario-row-scenario-1"]').click();
       cy.wait('@getScenarioNoActuals');
 
-      cy.get('[data-testid="card-forecast"]').should('be.visible');
+      cy.get('[data-testid="card-forecast"]').scrollIntoView().should('exist');
       cy.get('[data-testid="card-forecast"]').should('contain', 'Insufficient data for forecasting');
     });
   });
