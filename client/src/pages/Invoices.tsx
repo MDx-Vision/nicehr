@@ -182,6 +182,12 @@ function InvoiceDetailPanel({
   onClose: () => void;
   isAdmin: boolean;
 }) {
+  const [showVoidDialog, setShowVoidDialog] = useState(false);
+  const [voidReason, setVoidReason] = useState("");
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("");
+  const [paymentReference, setPaymentReference] = useState("");
   const { toast } = useToast();
 
   const { data: invoice, isLoading } = useQuery<InvoiceWithDetails>({
@@ -222,6 +228,60 @@ function InvoiceDetailPanel({
     },
     onError: () => {
       toast({ title: "Failed to delete invoice", variant: "destructive" });
+    }
+  });
+
+  const voidMutation = useMutation({
+    mutationFn: async (reason: string) => {
+      return apiRequest("PATCH", `/api/invoices/${invoiceId}`, {
+        status: "cancelled",
+        notes: invoice?.notes
+          ? `${invoice.notes}\n\n--- VOIDED ---\nReason: ${reason}\nVoided on: ${format(new Date(), "MMM d, yyyy 'at' h:mm a")}`
+          : `--- VOIDED ---\nReason: ${reason}\nVoided on: ${format(new Date(), "MMM d, yyyy 'at' h:mm a")}`
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/invoices', invoiceId] });
+      setShowVoidDialog(false);
+      setVoidReason("");
+      toast({ title: "Invoice voided successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to void invoice", variant: "destructive" });
+    }
+  });
+
+  const recordPaymentMutation = useMutation({
+    mutationFn: async (data: { amount: string; method: string; reference: string }) => {
+      const currentPaid = parseFloat(invoice?.paidAmount || "0");
+      const newPayment = parseFloat(data.amount);
+      const newTotal = currentPaid + newPayment;
+      const totalDue = parseFloat(invoice?.totalAmount || "0");
+      const isFullyPaid = newTotal >= totalDue;
+
+      const paymentNote = `Payment recorded: ${formatCurrency(newPayment)}${data.method ? ` via ${data.method}` : ""}${data.reference ? ` (Ref: ${data.reference})` : ""} on ${format(new Date(), "MMM d, yyyy")}`;
+
+      return apiRequest("PATCH", `/api/invoices/${invoiceId}`, {
+        paidAmount: newTotal.toFixed(2),
+        paidAt: new Date().toISOString(),
+        status: isFullyPaid ? "paid" : invoice?.status,
+        notes: invoice?.notes
+          ? `${invoice.notes}\n\n${paymentNote}`
+          : paymentNote
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/invoices', invoiceId] });
+      setShowPaymentDialog(false);
+      setPaymentAmount("");
+      setPaymentMethod("");
+      setPaymentReference("");
+      toast({ title: "Payment recorded successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to record payment", variant: "destructive" });
     }
   });
 
@@ -365,6 +425,65 @@ function InvoiceDetailPanel({
           </CardContent>
         </Card>
 
+        {isAdmin && invoice.status !== "paid" && invoice.status !== "cancelled" && (
+          <Card className="mb-4">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-base">Payment</CardTitle>
+              <Button
+                size="sm"
+                onClick={() => {
+                  const balance = parseFloat(invoice.totalAmount || "0") - parseFloat(invoice.paidAmount || "0");
+                  setPaymentAmount(balance.toFixed(2));
+                  setShowPaymentDialog(true);
+                }}
+                data-testid="button-record-payment"
+              >
+                <DollarSign className="h-4 w-4 mr-2" />
+                Record Payment
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Amount Due</span>
+                  <span className="font-medium">{formatCurrency(parseFloat(invoice.totalAmount || "0") - parseFloat(invoice.paidAmount || "0"))}</span>
+                </div>
+                {invoice.paidAt && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Last Payment</span>
+                    <span>{format(new Date(invoice.paidAt), "MMM d, yyyy")}</span>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {invoice.status === "paid" && (
+          <Card className="mb-4 border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2 text-green-700 dark:text-green-400">
+                <CheckCircle2 className="h-5 w-5" />
+                Payment Complete
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total Paid</span>
+                  <span className="font-medium text-green-700 dark:text-green-400">{formatCurrency(invoice.paidAmount)}</span>
+                </div>
+                {invoice.paidAt && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Payment Date</span>
+                    <span>{format(new Date(invoice.paidAt), "MMM d, yyyy")}</span>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {invoice.notes && (
           <Card className="mb-4">
             <CardHeader>
@@ -407,7 +526,7 @@ function InvoiceDetailPanel({
         </Button>
         <div className="flex gap-2">
           {isAdmin && invoice.status === "draft" && (
-            <Button 
+            <Button
               variant="destructive"
               onClick={() => deleteMutation.mutate()}
               disabled={deleteMutation.isPending}
@@ -417,8 +536,18 @@ function InvoiceDetailPanel({
               Delete
             </Button>
           )}
+          {isAdmin && (invoice.status === "draft" || invoice.status === "pending" || invoice.status === "sent") && (
+            <Button
+              variant="outline"
+              onClick={() => setShowVoidDialog(true)}
+              data-testid="button-void-invoice"
+            >
+              <XCircle className="h-4 w-4 mr-2" />
+              Void
+            </Button>
+          )}
           {isAdmin && invoice.status === "draft" && (
-            <Button 
+            <Button
               onClick={() => updateStatusMutation.mutate("sent")}
               disabled={updateStatusMutation.isPending}
               data-testid="button-send-invoice"
@@ -428,7 +557,7 @@ function InvoiceDetailPanel({
             </Button>
           )}
           {isAdmin && invoice.status === "sent" && (
-            <Button 
+            <Button
               onClick={() => updateStatusMutation.mutate("paid")}
               disabled={updateStatusMutation.isPending}
               data-testid="button-mark-paid"
@@ -439,6 +568,115 @@ function InvoiceDetailPanel({
           )}
         </div>
       </div>
+
+      <Dialog open={showVoidDialog} onOpenChange={setShowVoidDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Void Invoice</DialogTitle>
+            <DialogDescription>
+              This will mark the invoice as cancelled. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="voidReason">Reason for voiding *</Label>
+              <Textarea
+                id="voidReason"
+                placeholder="Enter the reason for voiding this invoice..."
+                value={voidReason}
+                onChange={(e) => setVoidReason(e.target.value)}
+                className="min-h-[100px]"
+                data-testid="input-void-reason"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowVoidDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => voidMutation.mutate(voidReason)}
+              disabled={!voidReason.trim() || voidMutation.isPending}
+              data-testid="button-confirm-void"
+            >
+              Void Invoice
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Record Payment</DialogTitle>
+            <DialogDescription>
+              Record a payment received for this invoice.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="paymentAmount">Amount *</Label>
+              <Input
+                id="paymentAmount"
+                type="number"
+                step="0.01"
+                min="0.01"
+                max={parseFloat(invoice?.totalAmount || "0") - parseFloat(invoice?.paidAmount || "0")}
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                placeholder="0.00"
+                data-testid="input-payment-amount"
+              />
+              <p className="text-xs text-muted-foreground">
+                Balance due: {formatCurrency(parseFloat(invoice?.totalAmount || "0") - parseFloat(invoice?.paidAmount || "0"))}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="paymentMethod">Payment Method</Label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger data-testid="select-payment-method">
+                  <SelectValue placeholder="Select method (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="check">Check</SelectItem>
+                  <SelectItem value="wire">Wire Transfer</SelectItem>
+                  <SelectItem value="ach">ACH</SelectItem>
+                  <SelectItem value="credit_card">Credit Card</SelectItem>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="paymentReference">Reference Number</Label>
+              <Input
+                id="paymentReference"
+                value={paymentReference}
+                onChange={(e) => setPaymentReference(e.target.value)}
+                placeholder="Check # or Transaction ID (optional)"
+                data-testid="input-payment-reference"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPaymentDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => recordPaymentMutation.mutate({
+                amount: paymentAmount,
+                method: paymentMethod,
+                reference: paymentReference
+              })}
+              disabled={!paymentAmount || parseFloat(paymentAmount) <= 0 || recordPaymentMutation.isPending}
+              data-testid="button-confirm-payment"
+            >
+              Record Payment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

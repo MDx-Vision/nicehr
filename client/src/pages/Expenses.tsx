@@ -20,7 +20,7 @@ import { useProjectContext } from "@/hooks/use-project-context";
 import { ProjectSelector } from "@/components/ProjectSelector";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format, formatDistanceToNow } from "date-fns";
-import { 
+import {
   Receipt,
   Plus,
   Clock,
@@ -41,7 +41,9 @@ import {
   Eye,
   Settings,
   MapPin,
-  X
+  X,
+  Search,
+  Download
 } from "lucide-react";
 import type { 
   Project, 
@@ -1404,6 +1406,9 @@ export default function Expenses() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const { user, isAdmin } = useAuth();
   const { filterByProject, isAdmin: isAdminContext } = useProjectContext();
 
@@ -1432,8 +1437,61 @@ export default function Expenses() {
   const filteredExpenses = expenses.filter(expense => {
     if (statusFilter !== "all" && expense.status !== statusFilter) return false;
     if (categoryFilter !== "all" && expense.category !== categoryFilter) return false;
+
+    // Search filter - search in description and vendor name
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchesDescription = expense.description?.toLowerCase().includes(query);
+      const matchesProject = expense.project?.name?.toLowerCase().includes(query);
+      const matchesConsultant = expense.consultant?.user
+        ? `${expense.consultant.user.firstName} ${expense.consultant.user.lastName}`.toLowerCase().includes(query)
+        : false;
+      if (!matchesDescription && !matchesProject && !matchesConsultant) return false;
+    }
+
+    // Date range filter
+    if (dateFrom && expense.expenseDate) {
+      const expenseDate = new Date(expense.expenseDate);
+      const fromDate = new Date(dateFrom);
+      if (expenseDate < fromDate) return false;
+    }
+    if (dateTo && expense.expenseDate) {
+      const expenseDate = new Date(expense.expenseDate);
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999); // Include the entire end date
+      if (expenseDate > toDate) return false;
+    }
+
     return true;
   });
+
+  // CSV Export function
+  const exportToCSV = () => {
+    const headers = ["Category", "Description", "Status", "Amount", "Project", "Submitted By", "Date"];
+    const rows = filteredExpenses.map(expense => [
+      getCategoryLabel(expense.category),
+      expense.description || "",
+      expense.status,
+      expense.amount || "0",
+      expense.project?.name || "",
+      expense.consultant?.user
+        ? `${expense.consultant.user.firstName || ""} ${expense.consultant.user.lastName || ""}`.trim()
+        : "",
+      expense.expenseDate ? format(new Date(expense.expenseDate), "yyyy-MM-dd") : ""
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `expenses-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
 
   if (expensesLoading) {
     return (
@@ -1489,30 +1547,87 @@ export default function Expenses() {
             <CardHeader>
               <div className="flex items-center justify-between gap-4 flex-wrap">
                 <CardTitle>Expense Reports</CardTitle>
-                <div className="flex gap-2 flex-wrap">
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-[140px]" data-testid="filter-status">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      {EXPENSE_STATUSES.map(s => (
-                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                    <SelectTrigger className="w-[150px]" data-testid="filter-category">
-                      <SelectValue placeholder="Category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
-                      {EXPENSE_CATEGORIES.map(c => (
-                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={exportToCSV}
+                  disabled={filteredExpenses.length === 0}
+                  data-testid="button-export-csv"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export CSV
+                </Button>
+              </div>
+              <div className="flex gap-2 flex-wrap mt-4">
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search expenses..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                    data-testid="input-search-expenses"
+                  />
                 </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm text-muted-foreground whitespace-nowrap">From:</Label>
+                  <Input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="w-[150px]"
+                    data-testid="input-date-from"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm text-muted-foreground whitespace-nowrap">To:</Label>
+                  <Input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="w-[150px]"
+                    data-testid="input-date-to"
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[140px]" data-testid="filter-status">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    {EXPENSE_STATUSES.map(s => (
+                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-[150px]" data-testid="filter-category">
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {EXPENSE_CATEGORIES.map(c => (
+                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {(searchQuery || dateFrom || dateTo || statusFilter !== "all" || categoryFilter !== "all") && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setDateFrom("");
+                      setDateTo("");
+                      setStatusFilter("all");
+                      setCategoryFilter("all");
+                    }}
+                    data-testid="button-clear-filters"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Clear
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent>
