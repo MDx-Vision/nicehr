@@ -1405,7 +1405,103 @@ describe('Financial Module', () => {
       cy.get('[data-testid="button-compare-scenarios"]').should('be.visible');
     });
 
-    it.skip('TODO: Create budget with line items', () => {});
+    // Phase 7: Budget Creation with Line Items Tests
+    it('should open create scenario dialog', () => {
+      cy.get('[data-testid="button-create-scenario"]').click();
+      cy.get('[data-testid="input-scenario-name"]').should('be.visible');
+    });
+
+    it('should display all line item inputs in create dialog', () => {
+      cy.get('[data-testid="button-create-scenario"]').click();
+
+      // Check all line item inputs are visible
+      cy.get('[data-testid="input-labor-cost"]').should('be.visible');
+      cy.get('[data-testid="input-travel-cost"]').should('be.visible');
+      cy.get('[data-testid="input-expense-cost"]').should('be.visible');
+      cy.get('[data-testid="input-overhead-cost"]').should('be.visible');
+    });
+
+    it('should display parameter inputs in create dialog', () => {
+      cy.get('[data-testid="button-create-scenario"]').click();
+
+      cy.get('[data-testid="input-estimated-hours"]').should('be.visible');
+      cy.get('[data-testid="input-hourly-rate"]').should('be.visible');
+      cy.get('[data-testid="input-consultant-count"]').should('be.visible');
+      cy.get('[data-testid="input-duration-weeks"]').should('be.visible');
+    });
+
+    it('should create budget scenario with line items', () => {
+      cy.intercept('POST', '/api/budget-scenarios', {
+        statusCode: 201,
+        body: {
+          id: 'scenario-new',
+          name: 'Q2 2025 Budget',
+          scenarioType: 'baseline',
+          laborCost: '30000.00',
+          travelCost: '5000.00',
+          expenseCost: '3000.00',
+          overheadCost: '2000.00',
+          totalBudget: '40000.00'
+        }
+      }).as('createScenario');
+
+      cy.get('[data-testid="button-create-scenario"]').click();
+
+      // Fill in scenario details
+      cy.get('[data-testid="input-scenario-name"]').type('Q2 2025 Budget');
+      cy.get('[data-testid="select-scenario-type"]').click();
+      cy.contains('Baseline').click();
+
+      // Fill in line items
+      cy.get('[data-testid="input-labor-cost"]').type('30000');
+      cy.get('[data-testid="input-travel-cost"]').type('5000');
+      cy.get('[data-testid="input-expense-cost"]').type('3000');
+      cy.get('[data-testid="input-overhead-cost"]').type('2000');
+
+      cy.get('[data-testid="button-create-scenario"]').last().click();
+      cy.wait('@createScenario');
+    });
+
+    it('should create budget scenario with parameters', () => {
+      cy.intercept('POST', '/api/budget-scenarios', {
+        statusCode: 201,
+        body: {
+          id: 'scenario-new',
+          name: 'Parametric Budget',
+          estimatedHours: '1000.00',
+          hourlyRate: '75.00',
+          consultantCount: 5,
+          durationWeeks: 12
+        }
+      }).as('createScenario');
+
+      cy.get('[data-testid="button-create-scenario"]').click();
+
+      cy.get('[data-testid="input-scenario-name"]').type('Parametric Budget');
+      cy.get('[data-testid="input-estimated-hours"]').type('1000');
+      cy.get('[data-testid="input-hourly-rate"]').type('75');
+      cy.get('[data-testid="input-consultant-count"]').type('5');
+      cy.get('[data-testid="input-duration-weeks"]').type('12');
+
+      cy.get('[data-testid="button-create-scenario"]').last().click();
+      cy.wait('@createScenario');
+    });
+
+    it('should show project selector in create dialog', () => {
+      cy.get('[data-testid="button-create-scenario"]').click();
+      cy.get('[data-testid="select-project"]').should('be.visible');
+    });
+
+    it('should show baseline checkbox in create dialog', () => {
+      cy.get('[data-testid="button-create-scenario"]').click();
+      cy.get('[data-testid="checkbox-is-baseline"]').should('be.visible');
+    });
+
+    it('should show assumptions textarea in create dialog', () => {
+      cy.get('[data-testid="button-create-scenario"]').click();
+      cy.get('[data-testid="input-assumptions"]').should('be.visible');
+    });
+
     it.skip('TODO: Variance analysis report', () => {});
     it.skip('TODO: Over-budget alerts', () => {});
     it.skip('TODO: Budget forecasting', () => {});
