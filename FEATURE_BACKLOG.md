@@ -89,7 +89,7 @@ This document tracks features that have Cypress tests written but are not yet im
 - [x] Budget by category breakdown - IMPLEMENTED (Phase 3)
 - [x] Create budget with line items - IMPLEMENTED (Phase 7)
 - [x] Variance analysis - IMPLEMENTED (Phase 8)
-- [ ] Over-budget alerts
+- [x] Over-budget alerts - IMPLEMENTED (Phase 9)
 - [ ] Budget forecasting
 
 **Test Files**: `08-financial.cy.js`
@@ -373,7 +373,7 @@ This document tracks features that have Cypress tests written but are not yet im
 | Financial - Expenses | 22 | 22 | 100% |
 | Financial - Invoices | 20 | 20 | 100% |
 | Financial - Payroll | 14 | 14 | 100% |
-| Financial - Budget | 12 | 11 | 92% |
+| Financial - Budget | 12 | 12 | 100% |
 | Communication | 150+ | 0 | 0% |
 | Analytics | 250+ | 5 | 2% |
 | Admin/RBAC | 200+ | 12 | 6% |
@@ -382,6 +382,15 @@ This document tracks features that have Cypress tests written but are not yet im
 ---
 
 ## Recent Updates
+
+### December 27, 2024 - P0 Financial Module Phase 9
+- Implemented over-budget alerts with visual indicators
+- Added "Over Budget" stat card to dashboard showing count
+- Added OverBudgetBadge on scenario rows in list view
+- Added OverBudgetAlert banner in scenario detail panel
+- Alert shows variance amount and percentage
+- Added 6 Cypress tests for over-budget alerts
+- Financial - Budget module now at 100% coverage
 
 ### December 27, 2024 - P0 Financial Module Phase 8
 - Enhanced variance analysis table with percentage column
@@ -454,4 +463,4 @@ This document tracks features that have Cypress tests written but are not yet im
 ---
 
 *Last Updated: December 27, 2024*
-*Phase 8 P0 Financial Module - Variance analysis enhanced with percentages*
+*Phase 9 P0 Financial Module - Over-budget alerts implemented (Budget module 100% complete)*

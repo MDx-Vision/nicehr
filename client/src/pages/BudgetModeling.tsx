@@ -31,7 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format, formatDistanceToNow } from "date-fns";
-import { 
+import {
   TrendingUp,
   Calculator,
   Target,
@@ -55,7 +55,8 @@ import {
   Minus,
   Edit,
   GitCompare,
-  Layers
+  Layers,
+  AlertTriangle
 } from "lucide-react";
 import type { BudgetScenario, ScenarioMetric, Project } from "@shared/schema";
 
@@ -110,16 +111,62 @@ function getVarianceIcon(variance: number) {
   return <Minus className="h-4 w-4 text-muted-foreground" />;
 }
 
+function isOverBudget(scenario: BudgetScenarioWithDetails): boolean {
+  const variance = parseFloat(scenario.budgetVariance || "0");
+  return variance > 0 && !!scenario.actualTotalCost;
+}
+
+function getOverBudgetPercentage(scenario: BudgetScenarioWithDetails): number {
+  const variance = parseFloat(scenario.variancePercentage || "0");
+  return variance > 0 ? variance : 0;
+}
+
+function OverBudgetAlert({ scenario }: { scenario: BudgetScenarioWithDetails }) {
+  if (!isOverBudget(scenario)) return null;
+
+  const percentage = getOverBudgetPercentage(scenario);
+  const variance = parseFloat(scenario.budgetVariance || "0");
+
+  return (
+    <div
+      className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg"
+      data-testid="alert-over-budget"
+    >
+      <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0" />
+      <div className="flex-1">
+        <p className="text-sm font-medium text-red-800 dark:text-red-200">
+          Over Budget Alert
+        </p>
+        <p className="text-xs text-red-600 dark:text-red-400">
+          This scenario is {formatCurrency(variance)} ({percentage.toFixed(1)}%) over the planned budget
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function OverBudgetBadge({ scenario }: { scenario: BudgetScenarioWithDetails }) {
+  if (!isOverBudget(scenario)) return null;
+
+  return (
+    <Badge variant="destructive" className="gap-1" data-testid="badge-over-budget">
+      <AlertTriangle className="h-3 w-3" />
+      Over Budget
+    </Badge>
+  );
+}
+
 function ScenarioStats({ scenarios }: { scenarios: BudgetScenarioWithDetails[] }) {
   const totalCount = scenarios.length;
   const baselineCount = scenarios.filter(s => s.scenarioType === "baseline" || s.isBaseline).length;
   const whatIfCount = scenarios.filter(s => s.scenarioType === "what_if").length;
   const activeCount = scenarios.filter(s => s.isActive).length;
-  
+  const overBudgetCount = scenarios.filter(s => isOverBudget(s)).length;
+
   const totalBudget = scenarios.reduce((sum, s) => sum + parseFloat(s.totalBudget || "0"), 0);
 
   return (
-    <div className="grid gap-4 md:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-5">
       <Card data-testid="stat-total-scenarios">
         <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Scenarios</CardTitle>
@@ -158,6 +205,20 @@ function ScenarioStats({ scenarios }: { scenarios: BudgetScenarioWithDetails[] }
         <CardContent>
           <div className="text-2xl font-bold">{activeCount}</div>
           <p className="text-xs text-muted-foreground">{formatCurrency(totalBudget)} total budget</p>
+        </CardContent>
+      </Card>
+      <Card data-testid="stat-over-budget" className={overBudgetCount > 0 ? "border-red-200 dark:border-red-800" : ""}>
+        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Over Budget</CardTitle>
+          <AlertTriangle className={`h-4 w-4 ${overBudgetCount > 0 ? "text-red-500" : "text-muted-foreground"}`} />
+        </CardHeader>
+        <CardContent>
+          <div className={`text-2xl font-bold ${overBudgetCount > 0 ? "text-red-600 dark:text-red-400" : ""}`}>
+            {overBudgetCount}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {overBudgetCount > 0 ? "Requires attention" : "All on track"}
+          </p>
         </CardContent>
       </Card>
     </div>
@@ -341,9 +402,12 @@ function ScenarioRow({
         )}
       </TableCell>
       <TableCell>
-        <Badge variant={scenario.isActive ? "default" : "secondary"}>
-          {scenario.isActive ? "Active" : "Inactive"}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant={scenario.isActive ? "default" : "secondary"}>
+            {scenario.isActive ? "Active" : "Inactive"}
+          </Badge>
+          <OverBudgetBadge scenario={scenario} />
+        </div>
       </TableCell>
       <TableCell>
         <div className="text-sm text-muted-foreground">
@@ -461,6 +525,12 @@ function ScenarioDetailPanel({
       </div>
 
       <ScrollArea className="flex-1 p-6">
+        {isOverBudget(scenario) && (
+          <div className="mb-4">
+            <OverBudgetAlert scenario={scenario} />
+          </div>
+        )}
+
         <Card className="mb-4">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">

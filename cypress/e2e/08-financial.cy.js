@@ -1675,7 +1675,127 @@ describe('Financial Module', () => {
       cy.get('[data-testid="variance-total"]').should('be.visible');
     });
 
-    it.skip('TODO: Over-budget alerts', () => {});
+    // Phase 9: Over-budget Alerts Tests
+    it('should display over budget stat card', () => {
+      const overBudgetScenario = {
+        ...mockBudgetScenarios[0],
+        actualTotalCost: '55000.00',
+        budgetVariance: '5000.00',
+        variancePercentage: '10.00'
+      };
+
+      cy.intercept('GET', '/api/budget-scenarios*', {
+        statusCode: 200,
+        body: [overBudgetScenario, mockBudgetScenarios[1]]
+      }).as('getScenariosWithOverBudget');
+
+      cy.visit('/financial/budget-modeling');
+      cy.wait('@getScenariosWithOverBudget');
+
+      cy.get('[data-testid="stat-over-budget"]').should('be.visible');
+      cy.get('[data-testid="stat-over-budget"]').should('contain', '1');
+    });
+
+    it('should display over budget badge on scenario row', () => {
+      const overBudgetScenario = {
+        ...mockBudgetScenarios[0],
+        actualTotalCost: '55000.00',
+        budgetVariance: '5000.00',
+        variancePercentage: '10.00'
+      };
+
+      cy.intercept('GET', '/api/budget-scenarios*', {
+        statusCode: 200,
+        body: [overBudgetScenario]
+      }).as('getScenariosWithOverBudget');
+
+      cy.visit('/financial/budget-modeling');
+      cy.wait('@getScenariosWithOverBudget');
+
+      cy.get('[data-testid="badge-over-budget"]').should('be.visible');
+      cy.get('[data-testid="badge-over-budget"]').should('contain', 'Over Budget');
+    });
+
+    it('should display over budget alert in scenario detail', () => {
+      const overBudgetScenario = {
+        ...mockBudgetScenarios[0],
+        actualTotalCost: '55000.00',
+        budgetVariance: '5000.00',
+        variancePercentage: '10.00'
+      };
+
+      cy.intercept('GET', '/api/budget-scenarios/scenario-1', {
+        statusCode: 200,
+        body: overBudgetScenario
+      }).as('getOverBudgetScenario');
+
+      cy.get('[data-testid="scenario-row-scenario-1"]').click();
+      cy.wait('@getOverBudgetScenario');
+
+      cy.get('[data-testid="alert-over-budget"]').should('be.visible');
+      cy.get('[data-testid="alert-over-budget"]').should('contain', 'Over Budget Alert');
+      cy.get('[data-testid="alert-over-budget"]').should('contain', '10.0%');
+    });
+
+    it('should not display over budget badge when under budget', () => {
+      const underBudgetScenario = {
+        ...mockBudgetScenarios[0],
+        actualTotalCost: '45000.00',
+        budgetVariance: '-5000.00',
+        variancePercentage: '-10.00'
+      };
+
+      cy.intercept('GET', '/api/budget-scenarios*', {
+        statusCode: 200,
+        body: [underBudgetScenario]
+      }).as('getScenariosUnderBudget');
+
+      cy.visit('/financial/budget-modeling');
+      cy.wait('@getScenariosUnderBudget');
+
+      cy.get('[data-testid="badge-over-budget"]').should('not.exist');
+    });
+
+    it('should not display over budget alert when no actuals', () => {
+      const noActualsScenario = {
+        ...mockBudgetScenarios[0],
+        actualTotalCost: null,
+        budgetVariance: null,
+        variancePercentage: null
+      };
+
+      cy.intercept('GET', '/api/budget-scenarios/scenario-1', {
+        statusCode: 200,
+        body: noActualsScenario
+      }).as('getNoActualsScenario');
+
+      cy.get('[data-testid="scenario-row-scenario-1"]').click();
+      cy.wait('@getNoActualsScenario');
+
+      cy.get('[data-testid="alert-over-budget"]').should('not.exist');
+    });
+
+    it('should show zero count in over budget stat when all on track', () => {
+      const onTrackScenarios = mockBudgetScenarios.map(s => ({
+        ...s,
+        actualTotalCost: '40000.00',
+        budgetVariance: '-10000.00',
+        variancePercentage: '-20.00'
+      }));
+
+      cy.intercept('GET', '/api/budget-scenarios*', {
+        statusCode: 200,
+        body: onTrackScenarios
+      }).as('getScenariosOnTrack');
+
+      cy.visit('/financial/budget-modeling');
+      cy.wait('@getScenariosOnTrack');
+
+      cy.get('[data-testid="stat-over-budget"]').should('be.visible');
+      cy.get('[data-testid="stat-over-budget"]').should('contain', '0');
+      cy.get('[data-testid="stat-over-budget"]').should('contain', 'All on track');
+    });
+
     it.skip('TODO: Budget forecasting', () => {});
   });
 });
