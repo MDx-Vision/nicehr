@@ -508,65 +508,107 @@ function ScenarioDetailPanel({
           </CardContent>
         </Card>
 
-        <Card className="mb-4">
+        <Card className="mb-4" data-testid="card-variance-analysis">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
-              Cost Breakdown
+              Cost Breakdown & Variance Analysis
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
+            <Table data-testid="table-variance-analysis">
               <TableHeader>
                 <TableRow>
                   <TableHead>Category</TableHead>
                   <TableHead className="text-right">Budgeted</TableHead>
                   <TableHead className="text-right">Actual</TableHead>
                   <TableHead className="text-right">Variance</TableHead>
+                  <TableHead className="text-right">Variance %</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                <TableRow>
+                <TableRow data-testid="variance-row-labor">
                   <TableCell>Labor</TableCell>
-                  <TableCell className="text-right">{formatCurrency(scenario.laborCost)}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(scenario.actualLaborCost)}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right" data-testid="budgeted-labor">{formatCurrency(scenario.laborCost)}</TableCell>
+                  <TableCell className="text-right" data-testid="actual-labor">{formatCurrency(scenario.actualLaborCost)}</TableCell>
+                  <TableCell className="text-right" data-testid="variance-labor">
                     {scenario.actualLaborCost ? (
                       <span className={getVarianceColor(parseFloat(scenario.actualLaborCost || "0") - parseFloat(scenario.laborCost || "0"))}>
                         {formatCurrency(parseFloat(scenario.actualLaborCost || "0") - parseFloat(scenario.laborCost || "0"))}
                       </span>
                     ) : "—"}
                   </TableCell>
+                  <TableCell className="text-right" data-testid="variance-pct-labor">
+                    {scenario.actualLaborCost && scenario.laborCost ? (
+                      <span className={getVarianceColor(parseFloat(scenario.actualLaborCost || "0") - parseFloat(scenario.laborCost || "0"))}>
+                        {(((parseFloat(scenario.actualLaborCost || "0") - parseFloat(scenario.laborCost || "0")) / parseFloat(scenario.laborCost || "1")) * 100).toFixed(1)}%
+                      </span>
+                    ) : "—"}
+                  </TableCell>
                 </TableRow>
-                <TableRow>
+                <TableRow data-testid="variance-row-travel">
                   <TableCell>Travel</TableCell>
-                  <TableCell className="text-right">{formatCurrency(scenario.travelCost)}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(scenario.actualTravelCost)}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right" data-testid="budgeted-travel">{formatCurrency(scenario.travelCost)}</TableCell>
+                  <TableCell className="text-right" data-testid="actual-travel">{formatCurrency(scenario.actualTravelCost)}</TableCell>
+                  <TableCell className="text-right" data-testid="variance-travel">
                     {scenario.actualTravelCost ? (
                       <span className={getVarianceColor(parseFloat(scenario.actualTravelCost || "0") - parseFloat(scenario.travelCost || "0"))}>
                         {formatCurrency(parseFloat(scenario.actualTravelCost || "0") - parseFloat(scenario.travelCost || "0"))}
                       </span>
                     ) : "—"}
                   </TableCell>
+                  <TableCell className="text-right" data-testid="variance-pct-travel">
+                    {scenario.actualTravelCost && scenario.travelCost ? (
+                      <span className={getVarianceColor(parseFloat(scenario.actualTravelCost || "0") - parseFloat(scenario.travelCost || "0"))}>
+                        {(((parseFloat(scenario.actualTravelCost || "0") - parseFloat(scenario.travelCost || "0")) / parseFloat(scenario.travelCost || "1")) * 100).toFixed(1)}%
+                      </span>
+                    ) : "—"}
+                  </TableCell>
                 </TableRow>
-                <TableRow>
+                <TableRow data-testid="variance-row-expenses">
                   <TableCell>Expenses</TableCell>
-                  <TableCell className="text-right">{formatCurrency(scenario.expenseCost)}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(scenario.actualExpenseCost)}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right" data-testid="budgeted-expenses">{formatCurrency(scenario.expenseCost)}</TableCell>
+                  <TableCell className="text-right" data-testid="actual-expenses">{formatCurrency(scenario.actualExpenseCost)}</TableCell>
+                  <TableCell className="text-right" data-testid="variance-expenses">
                     {scenario.actualExpenseCost ? (
                       <span className={getVarianceColor(parseFloat(scenario.actualExpenseCost || "0") - parseFloat(scenario.expenseCost || "0"))}>
                         {formatCurrency(parseFloat(scenario.actualExpenseCost || "0") - parseFloat(scenario.expenseCost || "0"))}
                       </span>
                     ) : "—"}
                   </TableCell>
+                  <TableCell className="text-right" data-testid="variance-pct-expenses">
+                    {scenario.actualExpenseCost && scenario.expenseCost ? (
+                      <span className={getVarianceColor(parseFloat(scenario.actualExpenseCost || "0") - parseFloat(scenario.expenseCost || "0"))}>
+                        {(((parseFloat(scenario.actualExpenseCost || "0") - parseFloat(scenario.expenseCost || "0")) / parseFloat(scenario.expenseCost || "1")) * 100).toFixed(1)}%
+                      </span>
+                    ) : "—"}
+                  </TableCell>
                 </TableRow>
-                <TableRow>
+                <TableRow data-testid="variance-row-overhead">
                   <TableCell>Overhead</TableCell>
-                  <TableCell className="text-right">{formatCurrency(scenario.overheadCost)}</TableCell>
+                  <TableCell className="text-right" data-testid="budgeted-overhead">{formatCurrency(scenario.overheadCost)}</TableCell>
                   <TableCell className="text-right">—</TableCell>
                   <TableCell className="text-right">—</TableCell>
+                  <TableCell className="text-right">—</TableCell>
+                </TableRow>
+                <TableRow className="font-semibold border-t-2" data-testid="variance-row-total">
+                  <TableCell>Total</TableCell>
+                  <TableCell className="text-right" data-testid="budgeted-total">{formatCurrency(scenario.totalBudget)}</TableCell>
+                  <TableCell className="text-right" data-testid="actual-total">{formatCurrency(scenario.actualTotalCost)}</TableCell>
+                  <TableCell className="text-right" data-testid="variance-total">
+                    {scenario.actualTotalCost ? (
+                      <span className={getVarianceColor(parseFloat(scenario.budgetVariance || "0"))}>
+                        {formatCurrency(scenario.budgetVariance)}
+                      </span>
+                    ) : "—"}
+                  </TableCell>
+                  <TableCell className="text-right" data-testid="variance-pct-total">
+                    {scenario.variancePercentage ? (
+                      <span className={getVarianceColor(parseFloat(scenario.budgetVariance || "0"))}>
+                        {parseFloat(scenario.variancePercentage).toFixed(1)}%
+                      </span>
+                    ) : "—"}
+                  </TableCell>
                 </TableRow>
               </TableBody>
             </Table>

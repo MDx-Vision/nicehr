@@ -1502,7 +1502,179 @@ describe('Financial Module', () => {
       cy.get('[data-testid="input-assumptions"]').should('be.visible');
     });
 
-    it.skip('TODO: Variance analysis report', () => {});
+    // Phase 8: Variance Analysis Tests
+    it('should display variance analysis card in scenario detail', () => {
+      const scenarioWithActuals = {
+        ...mockBudgetScenarios[0],
+        laborCost: '25000.00',
+        travelCost: '5000.00',
+        expenseCost: '3000.00',
+        overheadCost: '2000.00',
+        totalBudget: '35000.00',
+        actualLaborCost: '27000.00',
+        actualTravelCost: '4500.00',
+        actualExpenseCost: '3500.00',
+        actualTotalCost: '35000.00',
+        budgetVariance: '0.00',
+        variancePercentage: '0.00'
+      };
+
+      cy.intercept('GET', '/api/budget-scenarios/scenario-1', {
+        statusCode: 200,
+        body: scenarioWithActuals
+      }).as('getScenarioWithActuals');
+
+      cy.get('[data-testid="scenario-row-scenario-1"]').click();
+      cy.wait('@getScenarioWithActuals');
+
+      cy.get('[data-testid="card-variance-analysis"]').should('be.visible');
+    });
+
+    it('should display variance analysis table with all categories', () => {
+      const scenarioWithActuals = {
+        ...mockBudgetScenarios[0],
+        laborCost: '25000.00',
+        travelCost: '5000.00',
+        expenseCost: '3000.00',
+        overheadCost: '2000.00',
+        totalBudget: '35000.00',
+        actualLaborCost: '27000.00',
+        actualTravelCost: '4500.00',
+        actualExpenseCost: '3500.00',
+        actualTotalCost: '35000.00',
+        budgetVariance: '0.00',
+        variancePercentage: '0.00'
+      };
+
+      cy.intercept('GET', '/api/budget-scenarios/scenario-1', {
+        statusCode: 200,
+        body: scenarioWithActuals
+      }).as('getScenarioWithActuals');
+
+      cy.get('[data-testid="scenario-row-scenario-1"]').click();
+      cy.wait('@getScenarioWithActuals');
+
+      cy.get('[data-testid="table-variance-analysis"]').should('be.visible');
+      cy.get('[data-testid="variance-row-labor"]').should('be.visible');
+      cy.get('[data-testid="variance-row-travel"]').should('be.visible');
+      cy.get('[data-testid="variance-row-expenses"]').should('be.visible');
+      cy.get('[data-testid="variance-row-overhead"]').should('be.visible');
+      cy.get('[data-testid="variance-row-total"]').should('be.visible');
+    });
+
+    it('should display budgeted and actual values', () => {
+      const scenarioWithActuals = {
+        ...mockBudgetScenarios[0],
+        laborCost: '25000.00',
+        travelCost: '5000.00',
+        expenseCost: '3000.00',
+        overheadCost: '2000.00',
+        totalBudget: '35000.00',
+        actualLaborCost: '27000.00',
+        actualTravelCost: '4500.00',
+        actualExpenseCost: '3500.00',
+        actualTotalCost: '35000.00',
+        budgetVariance: '0.00',
+        variancePercentage: '0.00'
+      };
+
+      cy.intercept('GET', '/api/budget-scenarios/scenario-1', {
+        statusCode: 200,
+        body: scenarioWithActuals
+      }).as('getScenarioWithActuals');
+
+      cy.get('[data-testid="scenario-row-scenario-1"]').click();
+      cy.wait('@getScenarioWithActuals');
+
+      cy.get('[data-testid="budgeted-labor"]').should('be.visible');
+      cy.get('[data-testid="actual-labor"]').should('be.visible');
+      cy.get('[data-testid="budgeted-total"]').should('be.visible');
+      cy.get('[data-testid="actual-total"]').should('be.visible');
+    });
+
+    it('should display variance amounts', () => {
+      const scenarioWithActuals = {
+        ...mockBudgetScenarios[0],
+        laborCost: '25000.00',
+        travelCost: '5000.00',
+        expenseCost: '3000.00',
+        overheadCost: '2000.00',
+        totalBudget: '35000.00',
+        actualLaborCost: '27000.00',
+        actualTravelCost: '4500.00',
+        actualExpenseCost: '3500.00',
+        actualTotalCost: '35000.00',
+        budgetVariance: '0.00',
+        variancePercentage: '0.00'
+      };
+
+      cy.intercept('GET', '/api/budget-scenarios/scenario-1', {
+        statusCode: 200,
+        body: scenarioWithActuals
+      }).as('getScenarioWithActuals');
+
+      cy.get('[data-testid="scenario-row-scenario-1"]').click();
+      cy.wait('@getScenarioWithActuals');
+
+      cy.get('[data-testid="variance-labor"]').should('be.visible');
+      cy.get('[data-testid="variance-travel"]').should('be.visible');
+      cy.get('[data-testid="variance-expenses"]').should('be.visible');
+      cy.get('[data-testid="variance-total"]').should('be.visible');
+    });
+
+    it('should display variance percentages', () => {
+      const scenarioWithActuals = {
+        ...mockBudgetScenarios[0],
+        laborCost: '25000.00',
+        travelCost: '5000.00',
+        expenseCost: '3000.00',
+        overheadCost: '2000.00',
+        totalBudget: '35000.00',
+        actualLaborCost: '27000.00',
+        actualTravelCost: '4500.00',
+        actualExpenseCost: '3500.00',
+        actualTotalCost: '35000.00',
+        budgetVariance: '0.00',
+        variancePercentage: '0.00'
+      };
+
+      cy.intercept('GET', '/api/budget-scenarios/scenario-1', {
+        statusCode: 200,
+        body: scenarioWithActuals
+      }).as('getScenarioWithActuals');
+
+      cy.get('[data-testid="scenario-row-scenario-1"]').click();
+      cy.wait('@getScenarioWithActuals');
+
+      cy.get('[data-testid="variance-pct-labor"]').should('be.visible');
+      cy.get('[data-testid="variance-pct-travel"]').should('be.visible');
+      cy.get('[data-testid="variance-pct-expenses"]').should('be.visible');
+      cy.get('[data-testid="variance-pct-total"]').should('be.visible');
+    });
+
+    it('should show total variance row with summary', () => {
+      const scenarioWithActuals = {
+        ...mockBudgetScenarios[0],
+        laborCost: '25000.00',
+        totalBudget: '35000.00',
+        actualLaborCost: '27000.00',
+        actualTotalCost: '37000.00',
+        budgetVariance: '2000.00',
+        variancePercentage: '5.71'
+      };
+
+      cy.intercept('GET', '/api/budget-scenarios/scenario-1', {
+        statusCode: 200,
+        body: scenarioWithActuals
+      }).as('getScenarioWithActuals');
+
+      cy.get('[data-testid="scenario-row-scenario-1"]').click();
+      cy.wait('@getScenarioWithActuals');
+
+      cy.get('[data-testid="variance-row-total"]').should('be.visible');
+      cy.get('[data-testid="variance-total"]').should('be.visible');
+    });
+
     it.skip('TODO: Over-budget alerts', () => {});
     it.skip('TODO: Budget forecasting', () => {});
   });
