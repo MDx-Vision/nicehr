@@ -19,7 +19,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useProjectContext } from "@/hooks/use-project-context";
 import { ProjectSelector } from "@/components/ProjectSelector";
+import { ObjectUploader } from "@/components/ObjectUploader";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { UploadResult } from "@uppy/core";
 import { format, formatDistanceToNow } from "date-fns";
 import {
   Receipt,
@@ -46,7 +48,9 @@ import {
   Search,
   Download,
   Pencil,
-  Upload
+  Upload,
+  FileUp,
+  ExternalLink
 } from "lucide-react";
 import type { 
   Project, 
@@ -261,7 +265,43 @@ function ExpenseDetailPanel({
     mileageEnd: "",
     mileageDistance: "",
   });
+  const [uploadedReceiptUrl, setUploadedReceiptUrl] = useState<string | null>(null);
+  const [uploadedFileName, setUploadedFileName] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
+
+  const handleGetUploadParameters = async () => {
+    const res = await fetch('/api/objects/upload', {
+      method: 'POST',
+      credentials: 'include'
+    });
+    const { uploadURL } = await res.json();
+    return { method: 'PUT' as const, url: uploadURL };
+  };
+
+  const handleUploadComplete = async (result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
+    if (result.successful?.[0]) {
+      const uploadedFile = result.successful[0];
+      const fileName = uploadedFile.name || 'Receipt';
+      const uploadUrl = uploadedFile.uploadURL;
+
+      setIsUploading(true);
+      try {
+        // Extract the object path from the upload URL
+        const url = new URL(uploadUrl as string);
+        const objectPath = url.pathname;
+        setUploadedReceiptUrl(objectPath);
+        setUploadedFileName(fileName);
+        setEditFormData(prev => ({ ...prev, receiptUrl: objectPath }));
+        toast({ title: "Receipt uploaded successfully" });
+      } catch (error) {
+        console.error('Failed to process upload:', error);
+        toast({ title: "Failed to process upload", variant: "destructive" });
+      } finally {
+        setIsUploading(false);
+      }
+    }
+  };
 
   const { data: expense, isLoading } = useQuery<ExpenseWithDetails>({
     queryKey: ['/api/expenses', expenseId],
@@ -351,6 +391,14 @@ function ExpenseDetailPanel({
         mileageEnd: expense.mileageEnd || "",
         mileageDistance: expense.mileageDistance || "",
       });
+      // Reset upload state and pre-populate if expense has a receipt
+      if (expense.receiptUrl) {
+        setUploadedReceiptUrl(expense.receiptUrl);
+        setUploadedFileName("Current receipt");
+      } else {
+        setUploadedReceiptUrl(null);
+        setUploadedFileName("");
+      }
       setShowEditDialog(true);
     }
   };
@@ -700,15 +748,39 @@ function ExpenseDetailPanel({
             <Separator />
 
             <div className="space-y-2">
-              <Label htmlFor="edit-receipt-url">Receipt URL</Label>
-              <Input
-                id="edit-receipt-url"
-                type="url"
-                value={editFormData.receiptUrl}
-                onChange={(e) => setEditFormData({ ...editFormData, receiptUrl: e.target.value })}
-                placeholder="https://..."
-                data-testid="edit-input-receipt-url"
-              />
+              <Label>Receipt</Label>
+              <div className="space-y-2">
+                <ObjectUploader
+                  maxNumberOfFiles={1}
+                  maxFileSize={10485760}
+                  onGetUploadParameters={handleGetUploadParameters}
+                  onComplete={handleUploadComplete}
+                  buttonClassName="w-full"
+                >
+                  <FileUp className="w-4 h-4 mr-2" />
+                  {uploadedFileName ? `Replace: ${uploadedFileName}` : "Upload Receipt"}
+                </ObjectUploader>
+                {uploadedReceiptUrl && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-green-600" data-testid="text-receipt-uploaded">Receipt uploaded</span>
+                    <a
+                      href={uploadedReceiptUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline flex items-center gap-1"
+                      data-testid="link-view-receipt"
+                    >
+                      View <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                )}
+                {isUploading && (
+                  <p className="text-xs text-muted-foreground">Uploading...</p>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Upload a photo or PDF of the receipt (max 10MB)
+              </p>
             </div>
           </div>
           <DialogFooter>
@@ -759,7 +831,42 @@ function CreateExpenseDialog({
     perDiemPolicyId: "",
     perDiemDays: "",
   });
+  const [uploadedReceiptUrl, setUploadedReceiptUrl] = useState<string | null>(null);
+  const [uploadedFileName, setUploadedFileName] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
+
+  const handleGetUploadParameters = async () => {
+    const res = await fetch('/api/objects/upload', {
+      method: 'POST',
+      credentials: 'include'
+    });
+    const { uploadURL } = await res.json();
+    return { method: 'PUT' as const, url: uploadURL };
+  };
+
+  const handleUploadComplete = async (result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
+    if (result.successful?.[0]) {
+      const uploadedFile = result.successful[0];
+      const fileName = uploadedFile.name || 'Receipt';
+      const uploadUrl = uploadedFile.uploadURL;
+
+      setIsUploading(true);
+      try {
+        const url = new URL(uploadUrl as string);
+        const objectPath = url.pathname;
+        setUploadedReceiptUrl(objectPath);
+        setUploadedFileName(fileName);
+        setFormData(prev => ({ ...prev, receiptUrl: objectPath }));
+        toast({ title: "Receipt uploaded successfully" });
+      } catch (error) {
+        console.error('Failed to process upload:', error);
+        toast({ title: "Failed to process upload", variant: "destructive" });
+      } finally {
+        setIsUploading(false);
+      }
+    }
+  };
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -805,6 +912,9 @@ function CreateExpenseDialog({
         perDiemPolicyId: "",
         perDiemDays: "",
       });
+      // Reset upload state
+      setUploadedReceiptUrl(null);
+      setUploadedFileName("");
       toast({ title: "Expense created successfully" });
     },
     onError: () => {
@@ -1070,19 +1180,40 @@ function CreateExpenseDialog({
           )}
 
           <Separator />
-          
+
           <div className="space-y-2">
-            <Label htmlFor="receiptUrl">Receipt URL</Label>
-            <Input
-              id="receiptUrl"
-              type="url"
-              value={formData.receiptUrl}
-              onChange={(e) => setFormData({ ...formData, receiptUrl: e.target.value })}
-              placeholder="https://..."
-              data-testid="input-receipt-url"
-            />
+            <Label>Receipt</Label>
+            <div className="space-y-2">
+              <ObjectUploader
+                maxNumberOfFiles={1}
+                maxFileSize={10485760}
+                onGetUploadParameters={handleGetUploadParameters}
+                onComplete={handleUploadComplete}
+                buttonClassName="w-full"
+              >
+                <FileUp className="w-4 h-4 mr-2" />
+                {uploadedFileName ? `Selected: ${uploadedFileName}` : "Upload Receipt"}
+              </ObjectUploader>
+              {uploadedReceiptUrl && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-green-600" data-testid="text-receipt-uploaded">Receipt uploaded</span>
+                  <a
+                    href={uploadedReceiptUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline flex items-center gap-1"
+                    data-testid="link-view-receipt"
+                  >
+                    View <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              )}
+              {isUploading && (
+                <p className="text-xs text-muted-foreground">Uploading...</p>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground">
-              Enter a URL to the uploaded receipt image or document
+              Upload a photo or PDF of the receipt (max 10MB)
             </p>
           </div>
         </div>

@@ -51,6 +51,19 @@ describe('Financial Module', () => {
       createdAt: '2024-12-22T10:00:00Z',
       project: { id: 'proj-1', name: 'Hospital Alpha Project' },
       consultant: { id: 'cons-1', user: { firstName: 'John', lastName: 'Doe' } }
+    },
+    {
+      id: 'exp-5',
+      category: 'meals',
+      description: 'Expense with receipt',
+      status: 'submitted',
+      amount: '55.00',
+      expenseDate: '2024-12-23',
+      createdAt: '2024-12-23T10:00:00Z',
+      receiptUrl: '/uploads/receipts/receipt-123.pdf',
+      receiptFileName: 'receipt-123.pdf',
+      project: { id: 'proj-1', name: 'Hospital Alpha Project' },
+      consultant: { id: 'cons-1', user: { firstName: 'John', lastName: 'Doe' } }
     }
   ];
 
@@ -406,6 +419,57 @@ describe('Financial Module', () => {
 
       cy.get('[data-testid="button-submit-expense"]').click();
       cy.wait('@submitExpense');
+    });
+
+    // Phase 5: Receipt Upload Tests
+    it('should display receipt link when expense has receipt', () => {
+      cy.intercept('GET', '/api/expenses/exp-5', {
+        statusCode: 200,
+        body: mockExpenses[4]
+      }).as('getExpense5');
+
+      cy.get('[data-testid="expense-row-exp-5"]').click();
+      cy.wait('@getExpense5');
+
+      cy.get('[data-testid="link-receipt"]').should('be.visible');
+      cy.get('[data-testid="link-receipt"]').should('have.attr', 'href', '/uploads/receipts/receipt-123.pdf');
+    });
+
+    it('should show upload receipt button in create expense dialog', () => {
+      cy.get('[data-testid="button-create-expense"]').click();
+      cy.get('[data-testid="button-upload"]').should('be.visible');
+    });
+
+    it('should show upload receipt button in edit expense dialog', () => {
+      cy.intercept('GET', '/api/expenses/exp-4', {
+        statusCode: 200,
+        body: mockExpenses[3]
+      }).as('getExpense4');
+
+      cy.get('[data-testid="expense-row-exp-4"]').click();
+      cy.wait('@getExpense4');
+
+      cy.get('[data-testid="button-edit-expense"]').click();
+      cy.get('[data-testid="button-upload"]').should('be.visible');
+    });
+
+    it('should show existing receipt info when editing expense with receipt', () => {
+      const expenseWithReceipt = {
+        ...mockExpenses[3],
+        receiptUrl: '/uploads/receipts/existing-receipt.pdf'
+      };
+
+      cy.intercept('GET', '/api/expenses/exp-4', {
+        statusCode: 200,
+        body: expenseWithReceipt
+      }).as('getExpense4WithReceipt');
+
+      cy.get('[data-testid="expense-row-exp-4"]').click();
+      cy.wait('@getExpense4WithReceipt');
+
+      cy.get('[data-testid="button-edit-expense"]').click();
+      cy.get('[data-testid="text-receipt-uploaded"]').should('be.visible');
+      cy.get('[data-testid="link-view-receipt"]').should('be.visible');
     });
   });
 

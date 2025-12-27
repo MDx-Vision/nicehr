@@ -53,7 +53,7 @@ This document tracks features that have Cypress tests written but are not yet im
 - [x] Expenses list with filters (status, date, category) - IMPLEMENTED
 - [x] Search expenses by description/project/consultant - IMPLEMENTED
 - [x] Date range filter for expenses - IMPLEMENTED
-- [ ] Create expense form with receipt upload
+- [x] Create expense form with receipt upload - IMPLEMENTED (Phase 5)
 - [x] Edit expense functionality - IMPLEMENTED (Phase 4)
 - [x] Submit expense for approval - IMPLEMENTED (Phase 4)
 - [x] Approve/reject expenses (manager) - IMPLEMENTED (Phase 4)
@@ -370,7 +370,7 @@ This document tracks features that have Cypress tests written but are not yet im
 | Hospitals CRUD | 12 | 12 | 100% |
 | Authentication | 20 | 16 | 80% |
 | Dashboard | 78 | 10 | 12% |
-| Financial - Expenses | 22 | 21 | 95% |
+| Financial - Expenses | 22 | 22 | 100% |
 | Financial - Invoices | 20 | 20 | 100% |
 | Financial - Payroll | 14 | 13 | 93% |
 | Financial - Budget | 12 | 9 | 75% |
@@ -382,6 +382,13 @@ This document tracks features that have Cypress tests written but are not yet im
 ---
 
 ## Recent Updates
+
+### December 27, 2024 - P0 Financial Module Phase 5
+- Added receipt file upload using Uppy/S3 integration
+- ObjectUploader component integrated into expense create/edit dialogs
+- Receipt display in expense detail view with view link
+- Added 4 Cypress tests for receipt upload functionality
+- Financial - Expenses module now at 100% coverage
 
 ### December 26, 2024 - P0 Financial Module Phase 4
 - Added edit expense functionality for draft expenses
@@ -423,5 +430,5 @@ This document tracks features that have Cypress tests written but are not yet im
 
 ---
 
-*Last Updated: December 26, 2024*
-*Phase 4 P0 Financial Module completed - P0 Module now 95%+ complete*
+*Last Updated: December 27, 2024*
+*Phase 5 P0 Financial Module completed - Expenses at 100% coverage*
