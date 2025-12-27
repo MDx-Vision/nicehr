@@ -60,36 +60,189 @@ describe('Dashboard Feature', () => {
       cy.url().should('not.include', '/login');
     });
 
-    it('should display dashboard page', () => {
-      cy.visit('/dashboard');
+    it('should display dashboard page with title', () => {
+      cy.visit('/');
       cy.wait('@getUser');
-      // Page should load without errors
-      cy.get('body').should('be.visible');
+      cy.get('[data-testid="text-dashboard-title"]').should('contain', 'Dashboard');
+    });
+  });
+
+  describe('Dashboard Stats Cards', () => {
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      // Mock authentication - admin user
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: {
+          id: 1,
+          email: testUser.email,
+          firstName: 'Test',
+          lastName: 'User',
+          role: 'admin'
+        }
+      }).as('getUser');
+
+      // Mock dashboard stats API
+      cy.intercept('GET', '/api/dashboard/stats', {
+        statusCode: 200,
+        body: mockDashboardStats
+      }).as('getDashboardStats');
+
+      // Mock activities API
+      cy.intercept('GET', '/api/activities*', {
+        statusCode: 200,
+        body: []
+      }).as('getActivities');
+
+      cy.visit('/');
+      cy.wait('@getUser');
+    });
+
+    it('should display total consultants card', () => {
+      cy.get('[data-testid="card-total-consultants"]').should('be.visible');
+      cy.get('[data-testid="card-total-consultants"]').should('contain', 'Total Consultants');
+      cy.get('[data-testid="card-total-consultants"]').should('contain', '145');
+    });
+
+    it('should display hospitals card', () => {
+      cy.get('[data-testid="card-total-hospitals"]').should('be.visible');
+      cy.get('[data-testid="card-total-hospitals"]').should('contain', 'Hospitals');
+      cy.get('[data-testid="card-total-hospitals"]').should('contain', '12');
+    });
+
+    it('should display active projects card', () => {
+      cy.get('[data-testid="card-active-projects"]').should('be.visible');
+      cy.get('[data-testid="card-active-projects"]').should('contain', 'Active Projects');
+      cy.get('[data-testid="card-active-projects"]').should('contain', '23');
+    });
+
+    it('should display pending documents card', () => {
+      cy.get('[data-testid="card-pending-documents"]').should('be.visible');
+      cy.get('[data-testid="card-pending-documents"]').should('contain', 'Pending Documents');
+      cy.get('[data-testid="card-pending-documents"]').should('contain', '7');
+    });
+
+    it('should display available consultants card', () => {
+      cy.get('[data-testid="card-active-consultants"]').should('be.visible');
+      cy.get('[data-testid="card-active-consultants"]').should('contain', 'Available Consultants');
+      cy.get('[data-testid="card-active-consultants"]').should('contain', '89');
+    });
+
+    it('should display total savings card', () => {
+      cy.get('[data-testid="card-total-savings"]').should('be.visible');
+      cy.get('[data-testid="card-total-savings"]').should('contain', 'Total Savings');
+      cy.get('[data-testid="card-total-savings"]').should('contain', '$2,450,000');
+    });
+
+    it('should show loading skeletons while fetching data', () => {
+      // Delay the stats response to see loading state
+      cy.intercept('GET', '/api/dashboard/stats', {
+        statusCode: 200,
+        body: mockDashboardStats,
+        delay: 1000
+      }).as('getDashboardStatsDelayed');
+
+      cy.visit('/');
+      cy.wait('@getUser');
+      // Should show skeleton during loading
+      cy.get('.animate-pulse').should('exist');
+    });
+  });
+
+  describe('Consultant Dashboard', () => {
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      // Mock authentication - consultant user
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: {
+          id: 2,
+          email: 'consultant@example.com',
+          firstName: 'Consultant',
+          lastName: 'User',
+          role: 'consultant'
+        }
+      }).as('getUser');
+
+      // Mock dashboard stats API
+      cy.intercept('GET', '/api/dashboard/stats', {
+        statusCode: 200,
+        body: mockDashboardStats
+      }).as('getDashboardStats');
+
+      cy.visit('/');
+      cy.wait('@getUser');
+    });
+
+    it('should display consultant welcome card', () => {
+      cy.get('[data-testid="card-consultant-welcome"]').should('be.visible');
+      cy.get('[data-testid="card-consultant-welcome"]').should('contain', 'Welcome to NICEHR');
+    });
+
+    it('should display quick actions card', () => {
+      cy.get('[data-testid="card-quick-actions"]').should('be.visible');
+      cy.get('[data-testid="card-quick-actions"]').should('contain', 'Quick Actions');
+    });
+
+    it('should show consultant-specific guidance', () => {
+      cy.get('[data-testid="card-consultant-welcome"]').should('contain', 'profile');
+      cy.get('[data-testid="card-quick-actions"]').should('contain', 'schedule');
+    });
+  });
+
+  describe('Hospital Staff Dashboard', () => {
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      // Mock authentication - hospital staff user
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: {
+          id: 3,
+          email: 'hospital@example.com',
+          firstName: 'Hospital',
+          lastName: 'Staff',
+          role: 'hospital_staff'
+        }
+      }).as('getUser');
+
+      // Mock dashboard stats API
+      cy.intercept('GET', '/api/dashboard/stats', {
+        statusCode: 200,
+        body: mockDashboardStats
+      }).as('getDashboardStats');
+
+      cy.visit('/');
+      cy.wait('@getUser');
+    });
+
+    it('should display hospital welcome card', () => {
+      cy.get('[data-testid="card-hospital-welcome"]').should('be.visible');
+      cy.get('[data-testid="card-hospital-welcome"]').should('contain', 'Welcome to NICEHR');
+    });
+
+    it('should display hospital actions card', () => {
+      cy.get('[data-testid="card-hospital-actions"]').should('be.visible');
+      cy.get('[data-testid="card-hospital-actions"]').should('contain', 'Quick Actions');
+    });
+
+    it('should show hospital-specific guidance', () => {
+      cy.get('[data-testid="card-hospital-welcome"]').should('contain', 'projects');
+      cy.get('[data-testid="card-hospital-actions"]').should('contain', 'consultant');
     });
   });
 
   // ===========================================================================
-  // TODO: Dashboard Features (Not Yet Fully Implemented)
+  // TODO: Advanced Dashboard Features (Require UI Implementation)
   // ===========================================================================
-
-  describe('Dashboard Stats Cards', () => {
-    it.skip('TODO: Display total consultants card', () => {});
-    it.skip('TODO: Display hospitals card', () => {});
-    it.skip('TODO: Display active projects card', () => {});
-    it.skip('TODO: Display pending documents card', () => {});
-    it.skip('TODO: Display available consultants card', () => {});
-    it.skip('TODO: Display total savings card', () => {});
-  });
-
-  describe('Consultant Dashboard', () => {
-    it.skip('TODO: Display consultant welcome card', () => {});
-    it.skip('TODO: Display quick actions card', () => {});
-  });
-
-  describe('Hospital Staff Dashboard', () => {
-    it.skip('TODO: Display hospital welcome card', () => {});
-    it.skip('TODO: Display hospital actions card', () => {});
-  });
 
   describe('Charts & Analytics', () => {
     it.skip('TODO: Revenue trends chart with Recharts', () => {});
@@ -110,18 +263,5 @@ describe('Dashboard Feature', () => {
     it.skip('TODO: Show/hide widgets panel', () => {});
     it.skip('TODO: Save layout preferences', () => {});
     it.skip('TODO: Reset to default layout', () => {});
-  });
-
-  describe('Global Search', () => {
-    it.skip('TODO: Dashboard search input', () => {});
-    it.skip('TODO: Search results dropdown', () => {});
-    it.skip('TODO: Quick action buttons', () => {});
-  });
-
-  describe('Notifications', () => {
-    it.skip('TODO: Notification bell with badge count', () => {});
-    it.skip('TODO: Notifications dropdown panel', () => {});
-    it.skip('TODO: Mark notifications as read', () => {});
-    it.skip('TODO: Filter notifications by type', () => {});
   });
 });
