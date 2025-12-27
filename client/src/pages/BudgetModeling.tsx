@@ -1,6 +1,19 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -145,6 +158,134 @@ function ScenarioStats({ scenarios }: { scenarios: BudgetScenarioWithDetails[] }
         <CardContent>
           <div className="text-2xl font-bold">{activeCount}</div>
           <p className="text-xs text-muted-foreground">{formatCurrency(totalBudget)} total budget</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+const CHART_COLORS = ["#0891b2", "#22c55e", "#ef4444", "#8b5cf6", "#f59e0b", "#ec4899"];
+
+function BudgetCharts({ scenarios }: { scenarios: BudgetScenarioWithDetails[] }) {
+  // Prepare data for Budget vs Actual bar chart
+  const budgetVsActualData = scenarios
+    .filter(s => s.totalBudget || s.actualTotalCost)
+    .slice(0, 8) // Limit to 8 for readability
+    .map(s => ({
+      name: s.name.length > 15 ? s.name.slice(0, 15) + "..." : s.name,
+      Budget: parseFloat(s.totalBudget || "0"),
+      Actual: parseFloat(s.actualTotalCost || "0"),
+    }));
+
+  // Prepare data for budget breakdown by type pie chart
+  const typeBreakdown = SCENARIO_TYPES.map((type, index) => {
+    const typeScenarios = scenarios.filter(s => s.scenarioType === type.value);
+    const totalBudget = typeScenarios.reduce((sum, s) => sum + parseFloat(s.totalBudget || "0"), 0);
+    return {
+      name: type.label,
+      value: totalBudget,
+      color: CHART_COLORS[index % CHART_COLORS.length],
+    };
+  }).filter(d => d.value > 0);
+
+  // Format currency for tooltips
+  const formatTooltipValue = (value: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
+  if (scenarios.length === 0) return null;
+
+  return (
+    <div className="grid gap-6 md:grid-cols-2" data-testid="budget-charts">
+      {/* Budget vs Actual Bar Chart */}
+      <Card data-testid="chart-budget-vs-actual">
+        <CardHeader>
+          <CardTitle className="text-base">Budget vs Actual</CardTitle>
+          <CardDescription>Compare planned budget against actual costs</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {budgetVsActualData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={budgetVsActualData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={{ className: "stroke-muted" }}
+                />
+                <YAxis
+                  tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                  tick={{ fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={{ className: "stroke-muted" }}
+                />
+                <Tooltip
+                  formatter={(value: number) => formatTooltipValue(value)}
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "6px",
+                  }}
+                />
+                <Legend />
+                <Bar dataKey="Budget" fill="#0891b2" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Actual" fill="#22c55e" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[280px] flex items-center justify-center text-muted-foreground">
+              No budget data available
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Budget by Type Pie Chart */}
+      <Card data-testid="chart-budget-by-type">
+        <CardHeader>
+          <CardTitle className="text-base">Budget by Scenario Type</CardTitle>
+          <CardDescription>Total budget distribution across scenario types</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {typeBreakdown.length > 0 ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <PieChart>
+                <Pie
+                  data={typeBreakdown}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {typeBreakdown.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value: number) => formatTooltipValue(value)}
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "6px",
+                  }}
+                />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[280px] flex items-center justify-center text-muted-foreground">
+              No budget data available
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -1495,6 +1636,8 @@ export default function BudgetModeling() {
       </div>
 
       <ScenarioStats scenarios={scenarios} />
+
+      <BudgetCharts scenarios={scenarios} />
 
       <div className="flex flex-col lg:flex-row gap-6">
         <div className={`flex-1 space-y-4 ${selectedScenarioId ? 'lg:max-w-[60%]' : ''}`}>

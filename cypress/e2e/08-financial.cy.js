@@ -460,6 +460,64 @@ describe('Financial Module', () => {
       cy.contains('Payment Complete').should('be.visible');
       cy.get('[data-testid="button-record-payment"]').should('not.exist');
     });
+
+    // Phase 3: PDF Download and Email Invoice
+    it('should show download PDF button in invoice detail', () => {
+      cy.get('[data-testid="invoice-row-inv-1"]').click();
+      cy.wait('@getInvoice1');
+
+      cy.get('[data-testid="button-download-pdf"]').should('be.visible');
+      cy.get('[data-testid="button-download-pdf"]').contains('Download PDF');
+    });
+
+    it('should show email invoice button for admin', () => {
+      cy.get('[data-testid="invoice-row-inv-1"]').click();
+      cy.wait('@getInvoice1');
+
+      cy.get('[data-testid="button-email-invoice"]').should('be.visible');
+      cy.get('[data-testid="button-email-invoice"]').contains('Email Invoice');
+    });
+
+    it('should open email invoice dialog', () => {
+      cy.get('[data-testid="invoice-row-inv-1"]').click();
+      cy.wait('@getInvoice1');
+
+      cy.get('[data-testid="button-email-invoice"]').click();
+
+      cy.get('[data-testid="input-recipient-email"]').should('be.visible');
+      cy.get('[data-testid="input-recipient-name"]').should('be.visible');
+      cy.get('[data-testid="input-email-message"]').should('be.visible');
+      cy.get('[data-testid="button-confirm-send-email"]').should('be.visible');
+    });
+
+    it('should require email to send invoice', () => {
+      cy.get('[data-testid="invoice-row-inv-1"]').click();
+      cy.wait('@getInvoice1');
+
+      cy.get('[data-testid="button-email-invoice"]').click();
+      cy.get('[data-testid="button-confirm-send-email"]').should('be.disabled');
+
+      cy.get('[data-testid="input-recipient-email"]').type('client@hospital.com');
+      cy.get('[data-testid="button-confirm-send-email"]').should('not.be.disabled');
+    });
+
+    it('should send invoice email successfully', () => {
+      cy.intercept('POST', '/api/invoices/inv-1/send-email', {
+        statusCode: 200,
+        body: { success: true, message: 'Invoice sent to client@hospital.com' }
+      }).as('sendInvoiceEmail');
+
+      cy.get('[data-testid="invoice-row-inv-1"]').click();
+      cy.wait('@getInvoice1');
+
+      cy.get('[data-testid="button-email-invoice"]').click();
+      cy.get('[data-testid="input-recipient-email"]').type('client@hospital.com');
+      cy.get('[data-testid="input-recipient-name"]').type('John Smith');
+      cy.get('[data-testid="input-email-message"]').type('Please find attached your invoice for services rendered.');
+      cy.get('[data-testid="button-confirm-send-email"]').click();
+
+      cy.wait('@sendInvoiceEmail');
+    });
   });
 
   // ===========================================================================
@@ -565,9 +623,105 @@ describe('Financial Module', () => {
   });
 
   describe('Budget Modeling', () => {
-    it.skip('TODO: Display budget dashboard', () => {});
-    it.skip('TODO: Budget vs actual comparison chart', () => {});
-    it.skip('TODO: Budget breakdown by category', () => {});
+    const mockBudgetScenarios = [
+      {
+        id: 'scenario-1',
+        name: 'Q1 2025 Baseline',
+        description: 'Baseline budget for Q1 2025',
+        scenarioType: 'baseline',
+        projectId: 'proj-1',
+        totalBudget: '50000.00',
+        actualTotalCost: '45000.00',
+        budgetVariance: '-5000.00',
+        variancePercentage: '-10.00',
+        isBaseline: true,
+        isActive: true,
+        createdAt: '2024-12-01T10:00:00Z',
+        project: { id: 'proj-1', name: 'Hospital A Implementation' },
+        creator: { id: 'user-1', firstName: 'Admin', lastName: 'User' }
+      },
+      {
+        id: 'scenario-2',
+        name: 'Q1 2025 Optimistic',
+        description: 'Optimistic scenario with reduced costs',
+        scenarioType: 'optimistic',
+        projectId: 'proj-1',
+        totalBudget: '40000.00',
+        actualTotalCost: '35000.00',
+        budgetVariance: '-5000.00',
+        variancePercentage: '-12.50',
+        isBaseline: false,
+        isActive: true,
+        createdAt: '2024-12-05T10:00:00Z',
+        project: { id: 'proj-1', name: 'Hospital A Implementation' },
+        creator: { id: 'user-1', firstName: 'Admin', lastName: 'User' }
+      }
+    ];
+
+    beforeEach(() => {
+      cy.intercept('GET', '/api/budget-scenarios*', {
+        statusCode: 200,
+        body: mockBudgetScenarios
+      }).as('getBudgetScenarios');
+
+      cy.intercept('GET', '/api/projects', {
+        statusCode: 200,
+        body: [{ id: 'proj-1', name: 'Hospital A Implementation' }]
+      }).as('getProjects');
+
+      // Login and navigate to budget modeling
+      cy.visit('/login', { failOnStatusCode: false });
+      cy.get('[data-testid="input-email"]').type(testUser.email);
+      cy.get('[data-testid="input-password"]').type('password123');
+      cy.get('[data-testid="button-login"]').click();
+      cy.wait('@loginRequest');
+      cy.visit('/budget-modeling', { failOnStatusCode: false });
+      cy.wait('@getBudgetScenarios');
+    });
+
+    it('should display budget modeling page', () => {
+      cy.get('[data-testid="text-page-title"]').should('contain', 'Budget Modeling');
+    });
+
+    it('should display scenario stats cards', () => {
+      cy.get('[data-testid="stat-total-scenarios"]').should('be.visible');
+      cy.get('[data-testid="stat-baseline-scenarios"]').should('be.visible');
+      cy.get('[data-testid="stat-whatif-scenarios"]').should('be.visible');
+      cy.get('[data-testid="stat-active-scenarios"]').should('be.visible');
+    });
+
+    it('should display budget charts section', () => {
+      cy.get('[data-testid="budget-charts"]').should('be.visible');
+    });
+
+    it('should display budget vs actual chart', () => {
+      cy.get('[data-testid="chart-budget-vs-actual"]').should('be.visible');
+      cy.get('[data-testid="chart-budget-vs-actual"]').contains('Budget vs Actual');
+    });
+
+    it('should display budget by type chart', () => {
+      cy.get('[data-testid="chart-budget-by-type"]').should('be.visible');
+      cy.get('[data-testid="chart-budget-by-type"]').contains('Budget by Scenario Type');
+    });
+
+    it('should display scenario list', () => {
+      cy.get('[data-testid="scenario-row-scenario-1"]').should('be.visible');
+      cy.get('[data-testid="scenario-row-scenario-2"]').should('be.visible');
+    });
+
+    it('should filter scenarios by type using tabs', () => {
+      cy.get('[data-testid="tab-baseline"]').click();
+      cy.get('[data-testid="scenario-row-scenario-1"]').should('be.visible');
+    });
+
+    it('should have create scenario button for admin', () => {
+      cy.get('[data-testid="button-create-scenario"]').should('be.visible');
+    });
+
+    it('should have compare button when multiple scenarios exist', () => {
+      cy.get('[data-testid="button-compare-scenarios"]').should('be.visible');
+    });
+
     it.skip('TODO: Create budget with line items', () => {});
     it.skip('TODO: Variance analysis report', () => {});
     it.skip('TODO: Over-budget alerts', () => {});

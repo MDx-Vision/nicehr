@@ -120,6 +120,7 @@ import {
   sendDocumentRejectedEmail,
   sendScheduleAssignedEmail,
   sendAccountDeletionRequestedEmail,
+  sendInvoiceEmailToRecipient,
 } from "./emailService";
 
 export async function registerRoutes(
@@ -6442,6 +6443,82 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error generating invoice from timesheet:", error);
       res.status(500).json({ message: "Failed to generate invoice from timesheet" });
+    }
+  });
+
+  // Send invoice via email
+  app.post('/api/invoices/:id/send-email', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const invoiceId = req.params.id;
+      const { recipientEmail, recipientName, message } = req.body;
+
+      if (!recipientEmail) {
+        return res.status(400).json({ message: "recipientEmail is required" });
+      }
+
+      // Get the invoice with details
+      const invoice = await storage.getInvoiceWithDetails(invoiceId);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+
+      // Get line items
+      const lineItems = await storage.listInvoiceLineItems(invoiceId);
+
+      // Format currency helper
+      const formatCurrency = (amount: string | number | null | undefined) => {
+        if (amount === null || amount === undefined) return "$0.00";
+        const num = typeof amount === "string" ? parseFloat(amount) : amount;
+        return new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: "USD",
+        }).format(num);
+      };
+
+      // Prepare invoice data for email
+      const invoiceData = {
+        recipientName: recipientName || 'Valued Customer',
+        invoiceNumber: invoice.invoiceNumber || `INV-${invoice.id.slice(0, 8)}`,
+        invoiceDate: invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString() : new Date().toLocaleDateString(),
+        dueDate: invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'Upon Receipt',
+        totalAmount: formatCurrency(invoice.totalAmount),
+        hospitalName: invoice.hospital?.name,
+        projectName: invoice.project?.name,
+        lineItems: lineItems.map(item => ({
+          description: item.description || '',
+          quantity: item.quantity || 1,
+          unitPrice: formatCurrency(item.unitPrice),
+          amount: formatCurrency(item.amount),
+        })),
+        message,
+      };
+
+      // Send the email
+      const result = await sendInvoiceEmailToRecipient(recipientEmail, invoiceData);
+
+      if (!result.success) {
+        return res.status(500).json({ message: result.error || "Failed to send email" });
+      }
+
+      // Update invoice status to sent if it's in draft
+      if (invoice.status === 'draft') {
+        await storage.updateInvoice(invoiceId, { status: 'sent' });
+      }
+
+      // Log the activity
+      await logActivity(userId, {
+        activityType: 'update',
+        resourceType: 'invoice',
+        resourceId: invoiceId,
+        resourceName: invoice.invoiceNumber || 'Invoice',
+        description: `Sent invoice via email to ${recipientEmail}`,
+      }, req);
+
+      res.json({ success: true, message: `Invoice sent to ${recipientEmail}` });
+    } catch (error) {
+      console.error("Error sending invoice email:", error);
+      res.status(500).json({ message: "Failed to send invoice email" });
     }
   });
 

@@ -67,8 +67,8 @@ This document tracks features that have Cypress tests written but are not yet im
 - [x] Create invoice with line items - IMPLEMENTED
 - [x] Invoice details view - IMPLEMENTED
 - [x] Payment history tracking - IMPLEMENTED
-- [ ] Download invoice as PDF
-- [ ] Email invoice to client
+- [x] Download invoice as PDF - IMPLEMENTED (Phase 3)
+- [x] Email invoice to client - IMPLEMENTED (Phase 3)
 - [x] Record payment with method/reference - IMPLEMENTED
 - [x] Mark invoice as paid - IMPLEMENTED
 - [x] Void invoice functionality - IMPLEMENTED
@@ -84,9 +84,9 @@ This document tracks features that have Cypress tests written but are not yet im
 - [ ] Pay rates management
 
 ### Budget Modeling
-- [ ] Budget dashboard with charts
-- [ ] Budget vs actual comparison
-- [ ] Budget by category breakdown
+- [x] Budget dashboard with charts - IMPLEMENTED (Phase 3)
+- [x] Budget vs actual comparison - IMPLEMENTED (Phase 3)
+- [x] Budget by category breakdown - IMPLEMENTED (Phase 3)
 - [ ] Create budget with line items
 - [ ] Variance analysis
 - [ ] Over-budget alerts
@@ -371,9 +371,9 @@ This document tracks features that have Cypress tests written but are not yet im
 | Authentication | 20 | 16 | 80% |
 | Dashboard | 78 | 10 | 12% |
 | Financial - Expenses | 22 | 18 | 82% |
-| Financial - Invoices | 14 | 12 | 86% |
+| Financial - Invoices | 20 | 18 | 90% |
 | Financial - Payroll | 14 | 7 | 50% |
-| Financial - Budget | 7 | 0 | 0% |
+| Financial - Budget | 12 | 9 | 75% |
 | Communication | 150+ | 0 | 0% |
 | Analytics | 250+ | 5 | 2% |
 | Admin/RBAC | 200+ | 12 | 6% |
@@ -382,6 +382,13 @@ This document tracks features that have Cypress tests written but are not yet im
 ---
 
 ## Recent Updates
+
+### December 26, 2024 - P0 Financial Module Phase 3
+- Added PDF download for invoices (print dialog approach)
+- Added email invoice to client functionality with SendGrid/Resend integration
+- Added Budget vs Actual comparison chart (Recharts bar chart)
+- Added Budget by Scenario Type pie chart (Recharts)
+- Added 15+ Cypress tests for Phase 3 features
 
 ### December 26, 2024 - P0 Financial Module Phase 2
 - Added bulk approval/reject for expenses (select multiple, approve/reject all)
@@ -409,4 +416,4 @@ This document tracks features that have Cypress tests written but are not yet im
 ---
 
 *Last Updated: December 26, 2024*
-*Phase 1 P0 Financial Module completed*
+*Phase 3 P0 Financial Module completed*

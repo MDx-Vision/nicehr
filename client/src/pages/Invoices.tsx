@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format, formatDistanceToNow } from "date-fns";
-import { 
+import {
   FileText,
   Plus,
   Clock,
@@ -33,7 +33,10 @@ import {
   X,
   Eye,
   XCircle,
-  Receipt
+  Receipt,
+  Download,
+  Mail,
+  Printer
 } from "lucide-react";
 import type { 
   Project, 
@@ -188,6 +191,10 @@ function InvoiceDetailPanel({
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [paymentReference, setPaymentReference] = useState("");
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [recipientEmail, setRecipientEmail] = useState("");
+  const [recipientName, setRecipientName] = useState("");
+  const [emailMessage, setEmailMessage] = useState("");
   const { toast } = useToast();
 
   const { data: invoice, isLoading } = useQuery<InvoiceWithDetails>({
@@ -284,6 +291,184 @@ function InvoiceDetailPanel({
       toast({ title: "Failed to record payment", variant: "destructive" });
     }
   });
+
+  const sendEmailMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", `/api/invoices/${invoiceId}/send-email`, {
+        recipientEmail,
+        recipientName: recipientName || undefined,
+        message: emailMessage || undefined
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/invoices', invoiceId] });
+      setShowEmailDialog(false);
+      setRecipientEmail("");
+      setRecipientName("");
+      setEmailMessage("");
+      toast({ title: "Invoice sent via email successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to send invoice email", variant: "destructive" });
+    }
+  });
+
+  // Generate printable PDF invoice
+  const handleDownloadPDF = () => {
+    if (!invoice) return;
+
+    const lineItemsHtml = invoice.lineItems && invoice.lineItems.length > 0
+      ? invoice.lineItems.map((item: InvoiceLineItem) => `
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${item.description}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${item.quantity}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatCurrency(item.unitPrice)}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatCurrency(item.amount)}</td>
+          </tr>
+        `).join('')
+      : '<tr><td colspan="4" style="padding: 16px; text-align: center; color: #9ca3af;">No line items</td></tr>';
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast({ title: "Please allow popups to download PDF", variant: "destructive" });
+      return;
+    }
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Invoice ${invoice.invoiceNumber || invoice.id.slice(0, 8)}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
+          .header { display: flex; justify-content: space-between; margin-bottom: 40px; }
+          .invoice-title { font-size: 32px; font-weight: bold; color: #1f2937; }
+          .invoice-number { color: #6b7280; margin-top: 8px; }
+          .status { display: inline-block; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 500; }
+          .status-paid { background: #d1fae5; color: #065f46; }
+          .status-sent { background: #dbeafe; color: #1e40af; }
+          .status-draft { background: #f3f4f6; color: #374151; }
+          .status-overdue { background: #fee2e2; color: #991b1b; }
+          .status-cancelled { background: #f3f4f6; color: #6b7280; }
+          .parties { display: flex; justify-content: space-between; margin-bottom: 40px; }
+          .party { width: 45%; }
+          .party-title { font-weight: 600; color: #6b7280; margin-bottom: 8px; font-size: 12px; text-transform: uppercase; }
+          .dates { display: flex; gap: 40px; margin-bottom: 40px; }
+          .date-item { }
+          .date-label { font-size: 12px; color: #6b7280; }
+          .date-value { font-weight: 500; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+          th { text-align: left; padding: 12px 8px; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #374151; }
+          .amount-col { text-align: right; }
+          .summary { margin-left: auto; width: 300px; }
+          .summary-row { display: flex; justify-content: space-between; padding: 8px 0; }
+          .summary-row.total { border-top: 2px solid #e5e7eb; font-weight: bold; font-size: 18px; margin-top: 8px; padding-top: 16px; }
+          .notes { margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e7eb; }
+          .notes-title { font-weight: 600; margin-bottom: 8px; }
+          .footer { margin-top: 60px; text-align: center; color: #9ca3af; font-size: 12px; }
+          @media print { body { padding: 20px; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="invoice-title">INVOICE</div>
+            <div class="invoice-number">#${invoice.invoiceNumber || invoice.id.slice(0, 8)}</div>
+          </div>
+          <div>
+            <span class="status status-${invoice.status}">${INVOICE_STATUSES.find(s => s.value === invoice.status)?.label || invoice.status}</span>
+          </div>
+        </div>
+
+        <div class="parties">
+          <div class="party">
+            <div class="party-title">Bill To</div>
+            <div style="font-weight: 500;">${invoice.hospital?.name || 'N/A'}</div>
+          </div>
+          <div class="party">
+            <div class="party-title">Project</div>
+            <div style="font-weight: 500;">${invoice.project?.name || 'N/A'}</div>
+          </div>
+        </div>
+
+        <div class="dates">
+          <div class="date-item">
+            <div class="date-label">Issue Date</div>
+            <div class="date-value">${invoice.issueDate ? format(new Date(invoice.issueDate), "MMMM d, yyyy") : 'N/A'}</div>
+          </div>
+          <div class="date-item">
+            <div class="date-label">Due Date</div>
+            <div class="date-value">${invoice.dueDate ? format(new Date(invoice.dueDate), "MMMM d, yyyy") : 'N/A'}</div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th class="amount-col">Qty</th>
+              <th class="amount-col">Unit Price</th>
+              <th class="amount-col">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lineItemsHtml}
+          </tbody>
+        </table>
+
+        <div class="summary">
+          <div class="summary-row">
+            <span>Subtotal</span>
+            <span>${formatCurrency(invoice.subtotal)}</span>
+          </div>
+          ${parseFloat(invoice.taxRate || "0") > 0 ? `
+          <div class="summary-row">
+            <span>Tax (${invoice.taxRate}%)</span>
+            <span>${formatCurrency(invoice.taxAmount)}</span>
+          </div>
+          ` : ''}
+          ${parseFloat(invoice.discountAmount || "0") > 0 ? `
+          <div class="summary-row" style="color: #059669;">
+            <span>Discount</span>
+            <span>-${formatCurrency(invoice.discountAmount)}</span>
+          </div>
+          ` : ''}
+          <div class="summary-row total">
+            <span>Total</span>
+            <span>${formatCurrency(invoice.totalAmount)}</span>
+          </div>
+          ${parseFloat(invoice.paidAmount || "0") > 0 ? `
+          <div class="summary-row" style="color: #059669;">
+            <span>Paid</span>
+            <span>${formatCurrency(invoice.paidAmount)}</span>
+          </div>
+          <div class="summary-row" style="font-weight: 600;">
+            <span>Balance Due</span>
+            <span>${formatCurrency(parseFloat(invoice.totalAmount || "0") - parseFloat(invoice.paidAmount || "0"))}</span>
+          </div>
+          ` : ''}
+        </div>
+
+        ${invoice.notes ? `
+        <div class="notes">
+          <div class="notes-title">Notes</div>
+          <div style="white-space: pre-wrap;">${invoice.notes}</div>
+        </div>
+        ` : ''}
+
+        <div class="footer">
+          Generated on ${format(new Date(), "MMMM d, yyyy")}
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  };
 
   if (isLoading) {
     return (
@@ -521,9 +706,29 @@ function InvoiceDetailPanel({
       </ScrollArea>
 
       <div className="p-4 border-t flex justify-between gap-2">
-        <Button variant="outline" onClick={onClose} data-testid="button-close-detail">
-          Close
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={onClose} data-testid="button-close-detail">
+            Close
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleDownloadPDF}
+            data-testid="button-download-pdf"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Download PDF
+          </Button>
+          {isAdmin && (
+            <Button
+              variant="outline"
+              onClick={() => setShowEmailDialog(true)}
+              data-testid="button-email-invoice"
+            >
+              <Mail className="h-4 w-4 mr-2" />
+              Email Invoice
+            </Button>
+          )}
+        </div>
         <div className="flex gap-2">
           {isAdmin && invoice.status === "draft" && (
             <Button
@@ -673,6 +878,64 @@ function InvoiceDetailPanel({
               data-testid="button-confirm-payment"
             >
               Record Payment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Email Invoice</DialogTitle>
+            <DialogDescription>
+              Send this invoice via email to the recipient.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="recipientEmail">Recipient Email *</Label>
+              <Input
+                id="recipientEmail"
+                type="email"
+                value={recipientEmail}
+                onChange={(e) => setRecipientEmail(e.target.value)}
+                placeholder="recipient@example.com"
+                data-testid="input-recipient-email"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="recipientName">Recipient Name</Label>
+              <Input
+                id="recipientName"
+                value={recipientName}
+                onChange={(e) => setRecipientName(e.target.value)}
+                placeholder="John Doe (optional)"
+                data-testid="input-recipient-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="emailMessage">Message</Label>
+              <Textarea
+                id="emailMessage"
+                value={emailMessage}
+                onChange={(e) => setEmailMessage(e.target.value)}
+                placeholder="Add a personal message (optional)"
+                className="min-h-[80px]"
+                data-testid="input-email-message"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEmailDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => sendEmailMutation.mutate()}
+              disabled={!recipientEmail.trim() || sendEmailMutation.isPending}
+              data-testid="button-confirm-send-email"
+            >
+              <Mail className="h-4 w-4 mr-2" />
+              Send Email
             </Button>
           </DialogFooter>
         </DialogContent>
