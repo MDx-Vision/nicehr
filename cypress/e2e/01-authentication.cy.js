@@ -119,36 +119,30 @@ describe('Authentication System', () => {
   });
 
   describe('Session Management', () => {
-    beforeEach(() => {
+    it('should show landing page when accessing protected route without auth', () => {
+      // Mock unauthenticated state - intercept BEFORE visiting the page
+      cy.intercept('GET', '/api/auth/user', { statusCode: 401, body: { error: 'Not authenticated' } }).as('noAuth');
+
+      // Try to access protected route
+      cy.visit('/', { failOnStatusCode: false });
+
+      // Should show landing page with login button
+      cy.get('[data-testid="button-login"]').should('be.visible');
+      cy.contains('Healthcare Consultant Management Platform').should('be.visible');
+    });
+
+    it('should persist session across page refresh', () => {
+      // Set up auth mocks
       cy.intercept('GET', '/api/auth/user', {
         statusCode: 200,
-        body: {
-          id: 1,
-          email: testUser.email,
-          role: 'admin',
-          firstName: 'Test',
-          lastName: 'User'
-        }
+        body: { id: 1, email: testUser.email, role: 'admin', firstName: 'Test', lastName: 'User' }
       }).as('userRequest');
 
       cy.intercept('POST', '/api/auth/login', {
         statusCode: 200,
-        body: {
-          user: { id: 1, email: testUser.email, role: 'admin' }
-        }
+        body: { user: { id: 1, email: testUser.email, role: 'admin' } }
       }).as('loginRequest');
-    });
 
-    it.skip('TODO: Redirect to original destination after login', () => {
-      // This test requires full protected route implementation
-      // Try to access protected route first
-      cy.visit('/dashboard', { failOnStatusCode: false });
-
-      // Should be redirected to login
-      cy.url().should('include', '/login');
-    });
-
-    it('should persist session across page refresh', () => {
       // Login first
       cy.visit('/login', { failOnStatusCode: false });
       cy.get('[data-testid="input-email"]').type(testUser.email);
@@ -163,32 +157,29 @@ describe('Authentication System', () => {
       cy.url().should('not.include', '/login');
     });
 
-    it.skip('TODO: Redirect to login when session expires', () => {
-      // This test requires full session expiration handling
-      // Login first
-      cy.visit('/login', { failOnStatusCode: false });
-      cy.get('[data-testid="input-email"]').type(testUser.email);
-      cy.get('[data-testid="input-password"]').type(testUser.password);
-      cy.get('[data-testid="button-login"]').click();
+    it('should show landing page when session expires', () => {
+      // Mock expired session - 401 response
+      cy.intercept('GET', '/api/auth/user', { statusCode: 401, body: { error: 'Session expired' } }).as('expiredSession');
 
-      cy.wait('@loginRequest');
+      // Try to access protected route with expired session
+      cy.visit('/', { failOnStatusCode: false });
 
-      // Simulate expired session on next request
-      cy.intercept('GET', '/api/auth/user', { statusCode: 401 }).as('expiredSession');
-
-      cy.reload();
-      cy.wait('@expiredSession');
-      cy.url().should('include', '/login');
+      // Should show landing page when session is expired
+      cy.get('[data-testid="button-login"]').should('be.visible');
+      cy.contains('Healthcare Consultant Management Platform').should('be.visible');
     });
 
     it('should handle logout functionality', () => {
-      // Login first
-      cy.visit('/login', { failOnStatusCode: false });
-      cy.get('[data-testid="input-email"]').type(testUser.email);
-      cy.get('[data-testid="input-password"]').type(testUser.password);
-      cy.get('[data-testid="button-login"]').click();
+      // Set up auth mocks
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: { id: 1, email: testUser.email, role: 'admin', firstName: 'Test', lastName: 'User' }
+      }).as('userRequest');
 
-      cy.wait('@loginRequest');
+      cy.intercept('POST', '/api/auth/login', {
+        statusCode: 200,
+        body: { user: { id: 1, email: testUser.email, role: 'admin' } }
+      }).as('loginRequest');
 
       // Mock dashboard stats
       cy.intercept('GET', '/api/dashboard/stats', {
@@ -196,7 +187,15 @@ describe('Authentication System', () => {
         body: { totalConsultants: 10, activeConsultants: 5 }
       });
 
-      // Navigate to dashboard and logout
+      // Login first
+      cy.visit('/login', { failOnStatusCode: false });
+      cy.get('[data-testid="input-email"]').type(testUser.email);
+      cy.get('[data-testid="input-password"]').type(testUser.password);
+      cy.get('[data-testid="button-login"]').click();
+
+      cy.wait('@loginRequest');
+
+      // Navigate to dashboard and check logout button
       cy.visit('/');
       cy.wait('@userRequest');
 
@@ -213,12 +212,16 @@ describe('Authentication System', () => {
       '/projects'
     ];
 
-    it.skip('TODO: Redirect unauthenticated users to login', () => {
-      // This test requires full protected route implementation
-      protectedRoutes.forEach(route => {
-        cy.visit(route, { failOnStatusCode: false });
-        cy.url().should('include', '/login');
-      });
+    it('should show landing page for unauthenticated users on protected routes', () => {
+      // Mock unauthenticated state
+      cy.intercept('GET', '/api/auth/user', { statusCode: 401, body: { error: 'Not authenticated' } }).as('noAuth');
+
+      // Visit first protected route
+      cy.visit('/hospitals', { failOnStatusCode: false });
+
+      // Should show landing page with login button
+      cy.get('[data-testid="button-login"]').should('be.visible');
+      cy.contains('Healthcare Consultant Management Platform').should('be.visible');
     });
 
     it('should allow authenticated users to access protected routes', () => {

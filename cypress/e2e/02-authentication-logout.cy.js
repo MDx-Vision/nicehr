@@ -43,36 +43,44 @@ describe('Authentication - Logout Functionality', () => {
 
   describe('Logout Button', () => {
     it('should display logout button in sidebar', () => {
-      cy.visit('/dashboard');
+      cy.visit('/');
       cy.wait('@getUser');
       cy.get('[data-testid="button-logout"]').should('be.visible');
     });
 
     it('should show logout button is clickable', () => {
-      cy.visit('/dashboard');
+      cy.visit('/');
       cy.wait('@getUser');
       cy.get('[data-testid="button-logout"]').should('not.be.disabled');
     });
+
+    it('should have correct logout href', () => {
+      cy.visit('/');
+      cy.wait('@getUser');
+      // The button-logout testid is on the anchor element due to asChild
+      cy.get('[data-testid="button-logout"]').should('have.attr', 'href', '/api/logout');
+    });
+
+    it('should show sign out text on logout button', () => {
+      cy.visit('/');
+      cy.wait('@getUser');
+      cy.get('[data-testid="button-logout"]').should('contain', 'Sign Out');
+    });
   });
 
-  // ===========================================================================
-  // TODO: Advanced Logout Features (Not Yet Implemented)
-  // ===========================================================================
+  describe('Session State', () => {
+    it('should show user info in sidebar before logout', () => {
+      cy.visit('/');
+      cy.wait('@getUser');
+      // User's email should be visible in sidebar
+      cy.contains(testUser.email).should('exist');
+    });
 
-  describe('Logout Confirmation', () => {
-    it.skip('TODO: Show logout confirmation dialog', () => {});
-    it.skip('TODO: Cancel logout and stay logged in', () => {});
-    it.skip('TODO: Confirm logout and redirect to login', () => {});
-  });
-
-  describe('Session Cleanup', () => {
-    it.skip('TODO: Clear all session data on logout', () => {});
-    it.skip('TODO: Clear local storage on logout', () => {});
-    it.skip('TODO: Invalidate server session token', () => {});
-  });
-
-  describe('Multi-tab Logout', () => {
-    it.skip('TODO: Logout from all tabs simultaneously', () => {});
-    it.skip('TODO: Broadcast logout event to other tabs', () => {});
+    it('should display user name in sidebar', () => {
+      cy.visit('/');
+      cy.wait('@getUser');
+      // User name should be visible
+      cy.contains(`${testUser.firstName} ${testUser.lastName}`).should('exist');
+    });
   });
 });

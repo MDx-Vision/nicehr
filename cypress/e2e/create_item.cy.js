@@ -46,7 +46,7 @@ describe('Create Item', () => {
     cy.get('[data-testid="text-hospitals-title"]').should('be.visible');
   });
 
-  it('should display add hospital button or empty state', () => {
+  it('should display create hospital button', () => {
     // Mock hospitals API
     cy.intercept('GET', '/api/hospitals*', {
       statusCode: 200,
@@ -57,11 +57,7 @@ describe('Create Item', () => {
     cy.wait('@getUser');
     cy.wait('@getHospitals');
 
-    // Should show either add button or empty state button
-    cy.get('body').then(($body) => {
-      const hasAddButton = $body.find('[data-testid="button-add-hospital"]').length > 0;
-      const hasEmptyButton = $body.find('[data-testid="button-add-first-hospital"]').length > 0;
-      expect(hasAddButton || hasEmptyButton).to.be.true;
-    });
+    // Should show create hospital button
+    cy.get('[data-testid="button-create-hospital"]').should('be.visible');
   });
 });
