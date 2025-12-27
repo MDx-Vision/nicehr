@@ -6047,6 +6047,117 @@ export async function registerRoutes(
     }
   });
 
+  // Expense Categories Routes
+  app.get('/api/expense-categories', isAuthenticated, async (req, res) => {
+    try {
+      const isActive = req.query.isActive === 'true' ? true : req.query.isActive === 'false' ? false : undefined;
+      const categories = await storage.listExpenseCategories({ isActive });
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching expense categories:", error);
+      res.status(500).json({ message: "Failed to fetch expense categories" });
+    }
+  });
+
+  app.get('/api/expense-categories/:id', isAuthenticated, async (req, res) => {
+    try {
+      const category = await storage.getExpenseCategory(req.params.id);
+      if (!category) {
+        return res.status(404).json({ message: "Expense category not found" });
+      }
+      res.json(category);
+    } catch (error) {
+      console.error("Error fetching expense category:", error);
+      res.status(500).json({ message: "Failed to fetch expense category" });
+    }
+  });
+
+  app.post('/api/expense-categories', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const { name, code, description, icon, color, sortOrder } = req.body;
+
+      if (!name || !code) {
+        return res.status(400).json({ message: "Name and code are required" });
+      }
+
+      // Check if code already exists
+      const existing = await storage.getExpenseCategoryByCode(code);
+      if (existing) {
+        return res.status(400).json({ message: "Category code already exists" });
+      }
+
+      const category = await storage.createExpenseCategory({
+        name,
+        code,
+        description,
+        icon: icon || "FileText",
+        color: color || "bg-gray-100 text-gray-800",
+        sortOrder: sortOrder || 0,
+        isDefault: false,
+        isActive: true,
+      });
+
+      res.status(201).json(category);
+    } catch (error) {
+      console.error("Error creating expense category:", error);
+      res.status(500).json({ message: "Failed to create expense category" });
+    }
+  });
+
+  app.patch('/api/expense-categories/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const { name, description, icon, color, isActive, sortOrder } = req.body;
+
+      const existing = await storage.getExpenseCategory(req.params.id);
+      if (!existing) {
+        return res.status(404).json({ message: "Expense category not found" });
+      }
+
+      const updated = await storage.updateExpenseCategory(req.params.id, {
+        name,
+        description,
+        icon,
+        color,
+        isActive,
+        sortOrder,
+      });
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating expense category:", error);
+      res.status(500).json({ message: "Failed to update expense category" });
+    }
+  });
+
+  app.delete('/api/expense-categories/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const existing = await storage.getExpenseCategory(req.params.id);
+      if (!existing) {
+        return res.status(404).json({ message: "Expense category not found" });
+      }
+
+      if (existing.isDefault) {
+        return res.status(400).json({ message: "Cannot delete default expense category" });
+      }
+
+      await storage.deleteExpenseCategory(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting expense category:", error);
+      res.status(500).json({ message: "Failed to delete expense category" });
+    }
+  });
+
+  app.post('/api/expense-categories/seed', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      await storage.seedDefaultExpenseCategories();
+      res.json({ message: "Default expense categories seeded successfully" });
+    } catch (error) {
+      console.error("Error seeding expense categories:", error);
+      res.status(500).json({ message: "Failed to seed expense categories" });
+    }
+  });
+
   // Expenses Routes
   app.get('/api/expenses', isAuthenticated, async (req, res) => {
     try {

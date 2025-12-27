@@ -1984,4 +1984,233 @@ describe('Financial Module', () => {
       cy.get('[data-testid="card-forecast"]').should('contain', 'Insufficient data for forecasting');
     });
   });
+
+  // Phase 11: Expense Categories Management Tests
+  describe('Expense Categories Management', () => {
+    const mockCategories = [
+      {
+        id: 'cat-1',
+        name: 'Travel',
+        code: 'travel',
+        description: 'Travel expenses',
+        icon: 'Plane',
+        color: 'bg-blue-100 text-blue-800',
+        isActive: true,
+        isDefault: true,
+        sortOrder: 1
+      },
+      {
+        id: 'cat-2',
+        name: 'Meals',
+        code: 'meals',
+        description: 'Meal expenses',
+        icon: 'Utensils',
+        color: 'bg-orange-100 text-orange-800',
+        isActive: true,
+        isDefault: true,
+        sortOrder: 2
+      },
+      {
+        id: 'cat-3',
+        name: 'Custom Category',
+        code: 'custom',
+        description: 'Custom expense category',
+        icon: 'FileText',
+        color: 'bg-gray-100 text-gray-800',
+        isActive: true,
+        isDefault: false,
+        sortOrder: 10
+      }
+    ];
+
+    beforeEach(() => {
+      cy.intercept('GET', '/api/expense-categories', {
+        statusCode: 200,
+        body: mockCategories
+      }).as('getCategories');
+
+      cy.intercept('GET', '/api/expenses*', {
+        statusCode: 200,
+        body: mockExpenses
+      }).as('getExpenses');
+    });
+
+    it('should display categories tab for admin users', () => {
+      cy.visit('/financial/expenses');
+      cy.wait('@getExpenses');
+
+      cy.get('[data-testid="tab-categories"]').should('be.visible');
+    });
+
+    it('should display categories list when clicking tab', () => {
+      cy.visit('/financial/expenses');
+      cy.wait(['@getExpenses', '@getCategories']);
+
+      cy.get('[data-testid="tab-categories"]').click();
+
+      cy.get('[data-testid="category-list-cat-1"]').should('be.visible');
+      cy.get('[data-testid="category-list-cat-2"]').should('be.visible');
+      cy.get('[data-testid="category-list-cat-3"]').should('be.visible');
+    });
+
+    it('should show manage categories button', () => {
+      cy.visit('/financial/expenses');
+      cy.wait(['@getExpenses', '@getCategories']);
+
+      cy.get('[data-testid="tab-categories"]').click();
+
+      cy.get('[data-testid="button-manage-categories"]').should('be.visible');
+    });
+
+    it('should open manage categories dialog', () => {
+      cy.visit('/financial/expenses');
+      cy.wait(['@getExpenses', '@getCategories']);
+
+      cy.get('[data-testid="tab-categories"]').click();
+      cy.get('[data-testid="button-manage-categories"]').click();
+
+      cy.contains('Manage Expense Categories').should('be.visible');
+    });
+
+    it('should display add category button in dialog', () => {
+      cy.visit('/financial/expenses');
+      cy.wait(['@getExpenses', '@getCategories']);
+
+      cy.get('[data-testid="tab-categories"]').click();
+      cy.get('[data-testid="button-manage-categories"]').click();
+
+      cy.get('[data-testid="button-add-category"]').should('be.visible');
+    });
+
+    it('should show category form when clicking add', () => {
+      cy.visit('/financial/expenses');
+      cy.wait(['@getExpenses', '@getCategories']);
+
+      cy.get('[data-testid="tab-categories"]').click();
+      cy.get('[data-testid="button-manage-categories"]').click();
+      cy.get('[data-testid="button-add-category"]').click();
+
+      cy.get('[data-testid="input-category-name"]').should('be.visible');
+      cy.get('[data-testid="input-category-code"]').should('be.visible');
+    });
+
+    it('should create new category', () => {
+      cy.intercept('POST', '/api/expense-categories', {
+        statusCode: 201,
+        body: {
+          id: 'cat-new',
+          name: 'New Category',
+          code: 'new_category',
+          isActive: true,
+          isDefault: false
+        }
+      }).as('createCategory');
+
+      cy.visit('/financial/expenses');
+      cy.wait(['@getExpenses', '@getCategories']);
+
+      cy.get('[data-testid="tab-categories"]').click();
+      cy.get('[data-testid="button-manage-categories"]').click();
+      cy.get('[data-testid="button-add-category"]').click();
+
+      cy.get('[data-testid="input-category-name"]').type('New Category');
+      cy.get('[data-testid="input-category-code"]').type('new_category');
+      cy.get('[data-testid="button-save-category"]').click();
+
+      cy.wait('@createCategory');
+    });
+
+    it('should show edit button for categories', () => {
+      cy.visit('/financial/expenses');
+      cy.wait(['@getExpenses', '@getCategories']);
+
+      cy.get('[data-testid="tab-categories"]').click();
+      cy.get('[data-testid="button-manage-categories"]').click();
+
+      cy.get('[data-testid="button-edit-category-cat-1"]').should('be.visible');
+    });
+
+    it('should update category', () => {
+      cy.intercept('PATCH', '/api/expense-categories/cat-3', {
+        statusCode: 200,
+        body: { ...mockCategories[2], name: 'Updated Category' }
+      }).as('updateCategory');
+
+      cy.visit('/financial/expenses');
+      cy.wait(['@getExpenses', '@getCategories']);
+
+      cy.get('[data-testid="tab-categories"]').click();
+      cy.get('[data-testid="button-manage-categories"]').click();
+      cy.get('[data-testid="button-edit-category-cat-3"]').click();
+
+      cy.get('[data-testid="input-category-name"]').clear().type('Updated Category');
+      cy.get('[data-testid="button-save-category"]').click();
+
+      cy.wait('@updateCategory');
+    });
+
+    it('should show delete button for non-default categories', () => {
+      cy.visit('/financial/expenses');
+      cy.wait(['@getExpenses', '@getCategories']);
+
+      cy.get('[data-testid="tab-categories"]').click();
+      cy.get('[data-testid="button-manage-categories"]').click();
+
+      // Custom category should have delete button
+      cy.get('[data-testid="button-delete-category-cat-3"]').should('be.visible');
+      // Default categories should not have delete button
+      cy.get('[data-testid="button-delete-category-cat-1"]').should('not.exist');
+    });
+
+    it('should delete custom category', () => {
+      cy.intercept('DELETE', '/api/expense-categories/cat-3', {
+        statusCode: 204
+      }).as('deleteCategory');
+
+      cy.visit('/financial/expenses');
+      cy.wait(['@getExpenses', '@getCategories']);
+
+      cy.get('[data-testid="tab-categories"]').click();
+      cy.get('[data-testid="button-manage-categories"]').click();
+      cy.get('[data-testid="button-delete-category-cat-3"]').click();
+
+      cy.wait('@deleteCategory');
+    });
+
+    it('should show seed button when no categories exist', () => {
+      cy.intercept('GET', '/api/expense-categories', {
+        statusCode: 200,
+        body: []
+      }).as('getEmptyCategories');
+
+      cy.visit('/financial/expenses');
+      cy.wait(['@getExpenses', '@getEmptyCategories']);
+
+      cy.get('[data-testid="tab-categories"]').click();
+      cy.get('[data-testid="button-manage-categories"]').click();
+
+      cy.get('[data-testid="button-seed-categories"]').should('be.visible');
+    });
+
+    it('should seed default categories', () => {
+      cy.intercept('GET', '/api/expense-categories', {
+        statusCode: 200,
+        body: []
+      }).as('getEmptyCategories');
+
+      cy.intercept('POST', '/api/expense-categories/seed', {
+        statusCode: 200,
+        body: { message: 'Default expense categories seeded successfully' }
+      }).as('seedCategories');
+
+      cy.visit('/financial/expenses');
+      cy.wait(['@getExpenses', '@getEmptyCategories']);
+
+      cy.get('[data-testid="tab-categories"]').click();
+      cy.get('[data-testid="button-manage-categories"]').click();
+      cy.get('[data-testid="button-seed-categories"]').click();
+
+      cy.wait('@seedCategories');
+    });
+  });
 });

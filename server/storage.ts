@@ -206,6 +206,7 @@ import {
   HOSPITAL_TEAM_ROLES,
   perDiemPolicies,
   mileageRates,
+  expenseCategories,
   expenses,
   invoiceTemplates,
   invoices,
@@ -228,6 +229,8 @@ import {
   type InsertPerDiemPolicy,
   type MileageRate,
   type InsertMileageRate,
+  type ExpenseCategory,
+  type InsertExpenseCategory,
   type Expense,
   type InsertExpense,
   type InvoiceTemplate,
@@ -6126,6 +6129,69 @@ export class DatabaseStorage implements IStorage {
 
   async deleteMileageRate(id: string): Promise<void> {
     await db.delete(mileageRates).where(eq(mileageRates.id, id));
+  }
+
+  // Expense Categories Operations
+  async listExpenseCategories(filters?: { isActive?: boolean }): Promise<ExpenseCategory[]> {
+    const conditions: any[] = [];
+    if (filters?.isActive !== undefined) {
+      conditions.push(eq(expenseCategories.isActive, filters.isActive));
+    }
+
+    return conditions.length > 0
+      ? await db.select().from(expenseCategories).where(and(...conditions)).orderBy(expenseCategories.sortOrder)
+      : await db.select().from(expenseCategories).orderBy(expenseCategories.sortOrder);
+  }
+
+  async getExpenseCategory(id: string): Promise<ExpenseCategory | undefined> {
+    const results = await db.select().from(expenseCategories).where(eq(expenseCategories.id, id));
+    return results[0];
+  }
+
+  async getExpenseCategoryByCode(code: string): Promise<ExpenseCategory | undefined> {
+    const results = await db.select().from(expenseCategories).where(eq(expenseCategories.code, code));
+    return results[0];
+  }
+
+  async createExpenseCategory(category: InsertExpenseCategory): Promise<ExpenseCategory> {
+    const results = await db.insert(expenseCategories).values(category).returning();
+    return results[0];
+  }
+
+  async updateExpenseCategory(id: string, data: Partial<InsertExpenseCategory>): Promise<ExpenseCategory | undefined> {
+    const results = await db
+      .update(expenseCategories)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(expenseCategories.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteExpenseCategory(id: string): Promise<void> {
+    await db.delete(expenseCategories).where(eq(expenseCategories.id, id));
+  }
+
+  async seedDefaultExpenseCategories(): Promise<void> {
+    const defaultCategories = [
+      { code: "travel", name: "Travel", icon: "Plane", color: "bg-blue-100 text-blue-800", isDefault: true, sortOrder: 1 },
+      { code: "lodging", name: "Lodging", icon: "Hotel", color: "bg-indigo-100 text-indigo-800", isDefault: true, sortOrder: 2 },
+      { code: "meals", name: "Meals", icon: "Utensils", color: "bg-orange-100 text-orange-800", isDefault: true, sortOrder: 3 },
+      { code: "transportation", name: "Transportation", icon: "Car", color: "bg-green-100 text-green-800", isDefault: true, sortOrder: 4 },
+      { code: "parking", name: "Parking", icon: "Car", color: "bg-teal-100 text-teal-800", isDefault: true, sortOrder: 5 },
+      { code: "mileage", name: "Mileage", icon: "MapPin", color: "bg-cyan-100 text-cyan-800", isDefault: true, sortOrder: 6 },
+      { code: "per_diem", name: "Per Diem", icon: "DollarSign", color: "bg-emerald-100 text-emerald-800", isDefault: true, sortOrder: 7 },
+      { code: "equipment", name: "Equipment", icon: "Package", color: "bg-purple-100 text-purple-800", isDefault: true, sortOrder: 8 },
+      { code: "supplies", name: "Supplies", icon: "Package", color: "bg-pink-100 text-pink-800", isDefault: true, sortOrder: 9 },
+      { code: "training", name: "Training", icon: "FileText", color: "bg-yellow-100 text-yellow-800", isDefault: true, sortOrder: 10 },
+      { code: "other", name: "Other", icon: "FileText", color: "bg-gray-100 text-gray-800", isDefault: true, sortOrder: 99 },
+    ];
+
+    for (const cat of defaultCategories) {
+      const existing = await this.getExpenseCategoryByCode(cat.code);
+      if (!existing) {
+        await this.createExpenseCategory(cat);
+      }
+    }
   }
 
   // Expense Operations

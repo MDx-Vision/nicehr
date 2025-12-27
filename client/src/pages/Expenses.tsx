@@ -50,13 +50,16 @@ import {
   Pencil,
   Upload,
   FileUp,
-  ExternalLink
+  ExternalLink,
+  Trash2,
+  Tags
 } from "lucide-react";
-import type { 
-  Project, 
+import type {
+  Project,
   Consultant,
   Expense,
   ExpenseWithDetails,
+  ExpenseCategory,
   PerDiemPolicy,
   MileageRate
 } from "@shared/schema";
@@ -798,6 +801,368 @@ function ExpenseDetailPanel({
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+const ICON_OPTIONS = [
+  { value: "Plane", label: "Plane" },
+  { value: "Hotel", label: "Hotel" },
+  { value: "Utensils", label: "Meals" },
+  { value: "Car", label: "Car" },
+  { value: "MapPin", label: "Location" },
+  { value: "DollarSign", label: "Dollar" },
+  { value: "Package", label: "Package" },
+  { value: "FileText", label: "Document" },
+  { value: "Receipt", label: "Receipt" },
+];
+
+const COLOR_OPTIONS = [
+  { value: "bg-blue-100 text-blue-800", label: "Blue" },
+  { value: "bg-green-100 text-green-800", label: "Green" },
+  { value: "bg-orange-100 text-orange-800", label: "Orange" },
+  { value: "bg-purple-100 text-purple-800", label: "Purple" },
+  { value: "bg-red-100 text-red-800", label: "Red" },
+  { value: "bg-yellow-100 text-yellow-800", label: "Yellow" },
+  { value: "bg-pink-100 text-pink-800", label: "Pink" },
+  { value: "bg-indigo-100 text-indigo-800", label: "Indigo" },
+  { value: "bg-teal-100 text-teal-800", label: "Teal" },
+  { value: "bg-gray-100 text-gray-800", label: "Gray" },
+];
+
+function ManageCategoriesDialog({
+  open,
+  onOpenChange,
+  categories
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  categories: ExpenseCategory[];
+}) {
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<ExpenseCategory | null>(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    code: "",
+    description: "",
+    icon: "FileText",
+    color: "bg-gray-100 text-gray-800",
+  });
+  const { toast } = useToast();
+
+  const createMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
+      return apiRequest("POST", "/api/expense-categories", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expense-categories'] });
+      setShowCreateForm(false);
+      setFormData({ name: "", code: "", description: "", icon: "FileText", color: "bg-gray-100 text-gray-800" });
+      toast({ title: "Category created successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to create category", variant: "destructive" });
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<typeof formData> }) => {
+      return apiRequest("PATCH", `/api/expense-categories/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expense-categories'] });
+      setEditingCategory(null);
+      toast({ title: "Category updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update category", variant: "destructive" });
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/expense-categories/${id}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expense-categories'] });
+      toast({ title: "Category deleted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete category", variant: "destructive" });
+    }
+  });
+
+  const seedMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/expense-categories/seed", {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expense-categories'] });
+      toast({ title: "Default categories seeded successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to seed categories", variant: "destructive" });
+    }
+  });
+
+  const handleCreate = () => {
+    if (!formData.name.trim() || !formData.code.trim()) {
+      toast({ title: "Name and code are required", variant: "destructive" });
+      return;
+    }
+    createMutation.mutate(formData);
+  };
+
+  const handleUpdate = () => {
+    if (!editingCategory) return;
+    updateMutation.mutate({
+      id: editingCategory.id,
+      data: {
+        name: formData.name,
+        description: formData.description,
+        icon: formData.icon,
+        color: formData.color,
+      }
+    });
+  };
+
+  const handleStartEdit = (category: ExpenseCategory) => {
+    setEditingCategory(category);
+    setFormData({
+      name: category.name,
+      code: category.code,
+      description: category.description || "",
+      icon: category.icon || "FileText",
+      color: category.color || "bg-gray-100 text-gray-800",
+    });
+    setShowCreateForm(false);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCategory(null);
+    setShowCreateForm(false);
+    setFormData({ name: "", code: "", description: "", icon: "FileText", color: "bg-gray-100 text-gray-800" });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Tags className="h-5 w-5" />
+            Manage Expense Categories
+          </DialogTitle>
+          <DialogDescription>
+            Create, edit, and manage expense categories for your organization.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Actions */}
+          <div className="flex gap-2">
+            {!showCreateForm && !editingCategory && (
+              <>
+                <Button
+                  size="sm"
+                  onClick={() => setShowCreateForm(true)}
+                  data-testid="button-add-category"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Category
+                </Button>
+                {categories.length === 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => seedMutation.mutate()}
+                    disabled={seedMutation.isPending}
+                    data-testid="button-seed-categories"
+                  >
+                    Seed Default Categories
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Create/Edit Form */}
+          {(showCreateForm || editingCategory) && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">
+                  {editingCategory ? "Edit Category" : "New Category"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="cat-name">Name *</Label>
+                    <Input
+                      id="cat-name"
+                      placeholder="e.g., Office Supplies"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      data-testid="input-category-name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cat-code">Code *</Label>
+                    <Input
+                      id="cat-code"
+                      placeholder="e.g., office_supplies"
+                      value={formData.code}
+                      onChange={(e) => setFormData({ ...formData, code: e.target.value.toLowerCase().replace(/\s+/g, '_') })}
+                      disabled={!!editingCategory}
+                      data-testid="input-category-code"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cat-description">Description</Label>
+                  <Input
+                    id="cat-description"
+                    placeholder="Optional description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    data-testid="input-category-description"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="cat-icon">Icon</Label>
+                    <Select
+                      value={formData.icon}
+                      onValueChange={(value) => setFormData({ ...formData, icon: value })}
+                    >
+                      <SelectTrigger data-testid="select-category-icon">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ICON_OPTIONS.map((icon) => (
+                          <SelectItem key={icon.value} value={icon.value}>
+                            {icon.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cat-color">Color</Label>
+                    <Select
+                      value={formData.color}
+                      onValueChange={(value) => setFormData({ ...formData, color: value })}
+                    >
+                      <SelectTrigger data-testid="select-category-color">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COLOR_OPTIONS.map((color) => (
+                          <SelectItem key={color.value} value={color.value}>
+                            <div className="flex items-center gap-2">
+                              <div className={`w-4 h-4 rounded ${color.value.split(' ')[0]}`} />
+                              {color.label}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    size="sm"
+                    onClick={editingCategory ? handleUpdate : handleCreate}
+                    disabled={createMutation.isPending || updateMutation.isPending}
+                    data-testid="button-save-category"
+                  >
+                    {editingCategory ? "Update" : "Create"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCancelEdit}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Categories List */}
+          <div className="border rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-[100px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {categories.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                      No categories defined. Add a category or seed defaults.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  categories.map((category) => (
+                    <TableRow key={category.id} data-testid={`category-row-${category.id}`}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Badge className={category.color || ""}>
+                            {category.name}
+                          </Badge>
+                          {category.isDefault && (
+                            <Badge variant="outline" className="text-xs">Default</Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">{category.code}</TableCell>
+                      <TableCell>
+                        <Badge variant={category.isActive ? "default" : "secondary"}>
+                          {category.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleStartEdit(category)}
+                            data-testid={`button-edit-category-${category.id}`}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          {!category.isDefault && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => deleteMutation.mutate(category.id)}
+                              disabled={deleteMutation.isPending}
+                              data-testid={`button-delete-category-${category.id}`}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -1771,6 +2136,7 @@ export default function Expenses() {
   const [dateTo, setDateTo] = useState("");
   const [selectedExpenses, setSelectedExpenses] = useState<Set<string>>(new Set());
   const [showBulkActions, setShowBulkActions] = useState(false);
+  const [showCategoriesDialog, setShowCategoriesDialog] = useState(false);
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
   const { filterByProject, isAdmin: isAdminContext } = useProjectContext();
@@ -1793,6 +2159,10 @@ export default function Expenses() {
 
   const { data: perDiemPolicies = [] } = useQuery<PerDiemPolicy[]>({
     queryKey: ['/api/per-diem-policies'],
+  });
+
+  const { data: expenseCategories = [] } = useQuery<ExpenseCategory[]>({
+    queryKey: ['/api/expense-categories'],
   });
 
   const expenses = filterByProject(expensesRaw);
@@ -2013,6 +2383,12 @@ export default function Expenses() {
               Rate Management
             </TabsTrigger>
           )}
+          {isAdmin && (
+            <TabsTrigger value="categories" data-testid="tab-categories">
+              <Tags className="h-4 w-4 mr-2" />
+              Categories
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="expenses" className="space-y-4">
@@ -2230,6 +2606,77 @@ export default function Expenses() {
             </Card>
           </TabsContent>
         )}
+
+        {isAdmin && (
+          <TabsContent value="categories" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Expense Categories</CardTitle>
+                    <CardDescription>
+                      Manage the categories available for expense reports
+                    </CardDescription>
+                  </div>
+                  <Button
+                    onClick={() => setShowCategoriesDialog(true)}
+                    data-testid="button-manage-categories"
+                  >
+                    <Tags className="h-4 w-4 mr-2" />
+                    Manage Categories
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="border rounded-md">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Code</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {expenseCategories.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                            No categories defined. Click "Manage Categories" to add some.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        expenseCategories.map((category) => (
+                          <TableRow key={category.id} data-testid={`category-list-${category.id}`}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Badge className={category.color || ""}>
+                                  {category.name}
+                                </Badge>
+                                {category.isDefault && (
+                                  <Badge variant="outline" className="text-xs">Default</Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-mono text-sm">{category.code}</TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {category.description || "—"}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={category.isActive ? "default" : "secondary"}>
+                                {category.isActive ? "Active" : "Inactive"}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
 
       <Dialog open={!!selectedExpenseId} onOpenChange={(open) => !open && setSelectedExpenseId(null)}>
@@ -2255,6 +2702,12 @@ export default function Expenses() {
         consultants={consultants}
         mileageRates={mileageRates}
         perDiemPolicies={perDiemPolicies}
+      />
+
+      <ManageCategoriesDialog
+        open={showCategoriesDialog}
+        onOpenChange={setShowCategoriesDialog}
+        categories={expenseCategories}
       />
     </div>
   );

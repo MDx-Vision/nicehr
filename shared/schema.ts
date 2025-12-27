@@ -3725,6 +3725,24 @@ export const mileageRates = pgTable("mileage_rates", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Expense Categories (for admin management)
+export const expenseCategories = pgTable("expense_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  code: varchar("code").notNull().unique(),
+  description: text("description"),
+  icon: varchar("icon").default("FileText"),
+  color: varchar("color").default("bg-gray-100 text-gray-800"),
+  isActive: boolean("is_active").default(true).notNull(),
+  isDefault: boolean("is_default").default(false).notNull(),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type ExpenseCategory = typeof expenseCategories.$inferSelect;
+export type InsertExpenseCategory = typeof expenseCategories.$inferInsert;
+
 // Expenses
 export const expenses = pgTable("expenses", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
