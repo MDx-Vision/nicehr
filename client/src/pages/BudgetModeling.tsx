@@ -699,7 +699,7 @@ function ScenarioDetailPanel({
   });
 
   const { data: metrics = [], isLoading: metricsLoading } = useQuery<ScenarioMetric[]>({
-    queryKey: ['/api/scenario-metrics', { scenarioId }],
+    queryKey: [`/api/scenario-metrics?scenarioId=${scenarioId}`],
     enabled: !!scenarioId,
   });
 
@@ -1572,15 +1572,15 @@ function CreateScenarioDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="projectId">Project</Label>
-              <Select 
-                value={formData.projectId} 
-                onValueChange={(value) => setFormData({ ...formData, projectId: value })}
+              <Select
+                value={formData.projectId || "_none"}
+                onValueChange={(value) => setFormData({ ...formData, projectId: value === "_none" ? "" : value })}
               >
                 <SelectTrigger data-testid="select-project">
                   <SelectValue placeholder="Select project..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No Project</SelectItem>
+                  <SelectItem value="_none">No Project</SelectItem>
                   {projects.map((project) => (
                     <SelectItem key={project.id} value={project.id}>
                       {project.name}
@@ -1907,8 +1907,16 @@ export default function BudgetModeling() {
   const { isAdmin } = useAuth();
   const { toast } = useToast();
 
+  const budgetScenariosUrl = (() => {
+    const params = new URLSearchParams();
+    if (projectFilter) params.set('projectId', projectFilter);
+    if (typeFilter) params.set('scenarioType', typeFilter);
+    const queryString = params.toString();
+    return queryString ? `/api/budget-scenarios?${queryString}` : '/api/budget-scenarios';
+  })();
+
   const { data: scenarios = [], isLoading: scenariosLoading } = useQuery<BudgetScenarioWithDetails[]>({
-    queryKey: ['/api/budget-scenarios', { projectId: projectFilter, scenarioType: typeFilter }],
+    queryKey: [budgetScenariosUrl],
   });
 
   const { data: projects = [] } = useQuery<Project[]>({
@@ -2015,12 +2023,12 @@ export default function BudgetModeling() {
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <CardTitle>Scenarios</CardTitle>
                 <div className="flex gap-2 flex-wrap">
-                  <Select value={projectFilter} onValueChange={setProjectFilter}>
+                  <Select value={projectFilter || "_all"} onValueChange={(v) => setProjectFilter(v === "_all" ? "" : v)}>
                     <SelectTrigger className="w-[180px]" data-testid="filter-project">
                       <SelectValue placeholder="All Projects" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Projects</SelectItem>
+                      <SelectItem value="_all">All Projects</SelectItem>
                       {projects.map((project) => (
                         <SelectItem key={project.id} value={project.id}>
                           {project.name}
@@ -2028,12 +2036,12 @@ export default function BudgetModeling() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <Select value={typeFilter || "_all"} onValueChange={(v) => setTypeFilter(v === "_all" ? "" : v)}>
                     <SelectTrigger className="w-[180px]" data-testid="filter-type">
                       <SelectValue placeholder="All Types" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Types</SelectItem>
+                      <SelectItem value="_all">All Types</SelectItem>
                       {SCENARIO_TYPES.map((type) => (
                         <SelectItem key={type.value} value={type.value}>
                           {type.label}

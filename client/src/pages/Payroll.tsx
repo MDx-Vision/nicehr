@@ -200,7 +200,7 @@ function PayrollBatchDetailPanel({
   });
 
   const { data: entries = [] } = useQuery<PayrollEntryWithDetails[]>({
-    queryKey: ['/api/payroll-entries', { batchId }],
+    queryKey: [`/api/payroll-entries?batchId=${batchId}`],
     enabled: !!batchId,
   });
 
