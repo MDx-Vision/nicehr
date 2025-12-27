@@ -40,6 +40,17 @@ describe('Financial Module', () => {
       createdAt: '2024-12-10T10:00:00Z',
       project: { id: 'proj-2', name: 'Beta Hospital' },
       consultant: { id: 'cons-2', user: { firstName: 'Jane', lastName: 'Smith' } }
+    },
+    {
+      id: 'exp-4',
+      category: 'meals',
+      description: 'Draft expense for editing',
+      status: 'draft',
+      amount: '75.00',
+      expenseDate: '2024-12-22',
+      createdAt: '2024-12-22T10:00:00Z',
+      project: { id: 'proj-1', name: 'Hospital Alpha Project' },
+      consultant: { id: 'cons-1', user: { firstName: 'John', lastName: 'Doe' } }
     }
   ];
 
@@ -287,6 +298,114 @@ describe('Financial Module', () => {
       cy.get('[data-testid="checkbox-expense-exp-1"]').click();
       cy.get('[data-testid="button-toggle-bulk"]').click();
       cy.get('[data-testid="bulk-actions-bar"]').should('not.exist');
+    });
+
+    // Phase 4: Edit Expense Tests
+    it('should show edit button for draft expenses', () => {
+      cy.intercept('GET', '/api/expenses/exp-4', {
+        statusCode: 200,
+        body: mockExpenses[3]
+      }).as('getExpense4');
+
+      cy.get('[data-testid="expense-row-exp-4"]').click();
+      cy.wait('@getExpense4');
+
+      cy.get('[data-testid="button-edit-expense"]').should('be.visible');
+    });
+
+    it('should not show edit button for submitted expenses', () => {
+      cy.intercept('GET', '/api/expenses/exp-1', {
+        statusCode: 200,
+        body: mockExpenses[0]
+      }).as('getExpense1');
+
+      cy.get('[data-testid="expense-row-exp-1"]').click();
+      cy.wait('@getExpense1');
+
+      cy.get('[data-testid="button-edit-expense"]').should('not.exist');
+    });
+
+    it('should open edit expense dialog', () => {
+      cy.intercept('GET', '/api/expenses/exp-4', {
+        statusCode: 200,
+        body: mockExpenses[3]
+      }).as('getExpense4');
+
+      cy.get('[data-testid="expense-row-exp-4"]').click();
+      cy.wait('@getExpense4');
+
+      cy.get('[data-testid="button-edit-expense"]').click();
+
+      cy.get('[data-testid="edit-input-description"]').should('be.visible');
+      cy.get('[data-testid="edit-input-amount"]').should('be.visible');
+      cy.get('[data-testid="edit-select-category"]').should('be.visible');
+    });
+
+    it('should pre-populate edit form with expense data', () => {
+      cy.intercept('GET', '/api/expenses/exp-4', {
+        statusCode: 200,
+        body: mockExpenses[3]
+      }).as('getExpense4');
+
+      cy.get('[data-testid="expense-row-exp-4"]').click();
+      cy.wait('@getExpense4');
+
+      cy.get('[data-testid="button-edit-expense"]').click();
+
+      cy.get('[data-testid="edit-input-description"]').should('have.value', 'Draft expense for editing');
+      cy.get('[data-testid="edit-input-amount"]').should('have.value', '75.00');
+    });
+
+    it('should save edited expense', () => {
+      cy.intercept('GET', '/api/expenses/exp-4', {
+        statusCode: 200,
+        body: mockExpenses[3]
+      }).as('getExpense4');
+
+      cy.intercept('PATCH', '/api/expenses/exp-4', {
+        statusCode: 200,
+        body: { ...mockExpenses[3], description: 'Updated expense', amount: '100.00' }
+      }).as('updateExpense');
+
+      cy.get('[data-testid="expense-row-exp-4"]').click();
+      cy.wait('@getExpense4');
+
+      cy.get('[data-testid="button-edit-expense"]').click();
+      cy.get('[data-testid="edit-input-description"]').clear().type('Updated expense');
+      cy.get('[data-testid="edit-input-amount"]').clear().type('100.00');
+      cy.get('[data-testid="button-save-expense"]').click();
+
+      cy.wait('@updateExpense');
+    });
+
+    it('should show submit for approval button for draft expenses', () => {
+      cy.intercept('GET', '/api/expenses/exp-4', {
+        statusCode: 200,
+        body: mockExpenses[3]
+      }).as('getExpense4');
+
+      cy.get('[data-testid="expense-row-exp-4"]').click();
+      cy.wait('@getExpense4');
+
+      cy.get('[data-testid="button-submit-expense"]').should('be.visible');
+    });
+
+    it('should submit expense for approval', () => {
+      cy.intercept('GET', '/api/expenses/exp-4', {
+        statusCode: 200,
+        body: mockExpenses[3]
+      }).as('getExpense4');
+
+      cy.intercept('POST', '/api/expenses/exp-4/submit', {
+        statusCode: 200,
+        body: { ...mockExpenses[3], status: 'submitted' }
+      }).as('submitExpense');
+
+      cy.get('[data-testid="expense-row-exp-4"]').click();
+      cy.wait('@getExpense4');
+
+      cy.get('[data-testid="button-submit-expense"]').click();
+      cy.wait('@submitExpense');
     });
   });
 
@@ -613,11 +732,322 @@ describe('Financial Module', () => {
       cy.get('[data-testid="button-export-batches-csv"]').should('be.disabled');
     });
 
-    it.skip('TODO: Create payroll batch with date range', () => {});
-    it.skip('TODO: Auto-calculate consultant payments', () => {});
-    it.skip('TODO: View batch details', () => {});
-    it.skip('TODO: Edit consultant payment amounts', () => {});
-    it.skip('TODO: Approve batch workflow', () => {});
+    // Phase 4: Payroll batch detail and entry editing tests
+    it('should open batch detail view', () => {
+      const mockBatchDetails = {
+        ...mockPayrollBatches[0],
+        totalHours: '160.00',
+        totalRegularHours: '140.00',
+        totalOvertimeHours: '20.00',
+        consultantCount: 2
+      };
+
+      cy.intercept('GET', '/api/payroll-batches/batch-1', {
+        statusCode: 200,
+        body: mockBatchDetails
+      }).as('getBatchDetails');
+
+      cy.intercept('GET', '/api/payroll-entries?*', {
+        statusCode: 200,
+        body: [
+          {
+            id: 'entry-1',
+            batchId: 'batch-1',
+            consultantId: 'cons-1',
+            regularHours: '80.00',
+            overtimeHours: '10.00',
+            hourlyRate: '75.00',
+            overtimeRate: '112.50',
+            grossPay: '7125.00',
+            expenseReimbursement: '250.00',
+            totalPay: '7375.00',
+            consultant: { id: 'cons-1', user: { firstName: 'John', lastName: 'Doe' } }
+          }
+        ]
+      }).as('getEntries');
+
+      cy.get('[data-testid="batch-row-batch-1"]').click();
+      cy.wait('@getBatchDetails');
+      cy.wait('@getEntries');
+
+      cy.get('[data-testid="button-close-detail"]').should('be.visible');
+      cy.contains('December 2024 Payroll').should('be.visible');
+    });
+
+    it('should display entries in batch detail', () => {
+      const mockBatchDetails = {
+        ...mockPayrollBatches[0],
+        totalHours: '160.00',
+        totalRegularHours: '140.00',
+        totalOvertimeHours: '20.00',
+        consultantCount: 1
+      };
+
+      cy.intercept('GET', '/api/payroll-batches/batch-1', {
+        statusCode: 200,
+        body: mockBatchDetails
+      }).as('getBatchDetails');
+
+      cy.intercept('GET', '/api/payroll-entries?*', {
+        statusCode: 200,
+        body: [
+          {
+            id: 'entry-1',
+            batchId: 'batch-1',
+            consultantId: 'cons-1',
+            regularHours: '80.00',
+            overtimeHours: '10.00',
+            hourlyRate: '75.00',
+            overtimeRate: '112.50',
+            grossPay: '7125.00',
+            expenseReimbursement: '250.00',
+            totalPay: '7375.00',
+            consultant: { id: 'cons-1', user: { firstName: 'John', lastName: 'Doe' } }
+          }
+        ]
+      }).as('getEntries');
+
+      cy.get('[data-testid="batch-row-batch-1"]').click();
+      cy.wait('@getBatchDetails');
+      cy.wait('@getEntries');
+
+      cy.get('[data-testid="entry-row-entry-1"]').should('be.visible');
+      cy.contains('John Doe').should('be.visible');
+    });
+
+    it('should show edit and delete buttons for draft batch entries', () => {
+      const mockBatchDetails = {
+        ...mockPayrollBatches[0],
+        status: 'draft',
+        totalHours: '80.00'
+      };
+
+      cy.intercept('GET', '/api/payroll-batches/batch-1', {
+        statusCode: 200,
+        body: mockBatchDetails
+      }).as('getBatchDetails');
+
+      cy.intercept('GET', '/api/payroll-entries?*', {
+        statusCode: 200,
+        body: [
+          {
+            id: 'entry-1',
+            batchId: 'batch-1',
+            regularHours: '80.00',
+            hourlyRate: '75.00',
+            grossPay: '6000.00',
+            totalPay: '6000.00',
+            consultant: { id: 'cons-1', user: { firstName: 'John', lastName: 'Doe' } }
+          }
+        ]
+      }).as('getEntries');
+
+      cy.get('[data-testid="batch-row-batch-1"]').click();
+      cy.wait('@getBatchDetails');
+      cy.wait('@getEntries');
+
+      cy.get('[data-testid="button-edit-entry-entry-1"]').should('be.visible');
+      cy.get('[data-testid="button-delete-entry-entry-1"]').should('be.visible');
+    });
+
+    it('should open edit entry dialog', () => {
+      const mockBatchDetails = {
+        ...mockPayrollBatches[0],
+        status: 'draft',
+        totalHours: '80.00'
+      };
+
+      cy.intercept('GET', '/api/payroll-batches/batch-1', {
+        statusCode: 200,
+        body: mockBatchDetails
+      }).as('getBatchDetails');
+
+      cy.intercept('GET', '/api/payroll-entries?*', {
+        statusCode: 200,
+        body: [
+          {
+            id: 'entry-1',
+            batchId: 'batch-1',
+            regularHours: '80.00',
+            overtimeHours: '0',
+            hourlyRate: '75.00',
+            overtimeRate: '112.50',
+            expenseReimbursement: '0',
+            grossPay: '6000.00',
+            totalPay: '6000.00',
+            consultant: { id: 'cons-1', user: { firstName: 'John', lastName: 'Doe' } }
+          }
+        ]
+      }).as('getEntries');
+
+      cy.get('[data-testid="batch-row-batch-1"]').click();
+      cy.wait('@getBatchDetails');
+      cy.wait('@getEntries');
+
+      cy.get('[data-testid="button-edit-entry-entry-1"]').click();
+
+      cy.get('[data-testid="edit-input-regular-hours"]').should('be.visible');
+      cy.get('[data-testid="edit-input-overtime-hours"]').should('be.visible');
+      cy.get('[data-testid="edit-input-hourly-rate"]').should('be.visible');
+    });
+
+    it('should save edited entry', () => {
+      const mockBatchDetails = {
+        ...mockPayrollBatches[0],
+        status: 'draft',
+        totalHours: '80.00'
+      };
+
+      cy.intercept('GET', '/api/payroll-batches/batch-1', {
+        statusCode: 200,
+        body: mockBatchDetails
+      }).as('getBatchDetails');
+
+      cy.intercept('GET', '/api/payroll-entries?*', {
+        statusCode: 200,
+        body: [
+          {
+            id: 'entry-1',
+            batchId: 'batch-1',
+            regularHours: '80.00',
+            overtimeHours: '0',
+            hourlyRate: '75.00',
+            overtimeRate: '112.50',
+            expenseReimbursement: '0',
+            grossPay: '6000.00',
+            totalPay: '6000.00',
+            consultant: { id: 'cons-1', user: { firstName: 'John', lastName: 'Doe' } }
+          }
+        ]
+      }).as('getEntries');
+
+      cy.intercept('PATCH', '/api/payroll-entries/entry-1', {
+        statusCode: 200,
+        body: { id: 'entry-1', regularHours: '88.00', totalPay: '6600.00' }
+      }).as('updateEntry');
+
+      cy.get('[data-testid="batch-row-batch-1"]').click();
+      cy.wait('@getBatchDetails');
+      cy.wait('@getEntries');
+
+      cy.get('[data-testid="button-edit-entry-entry-1"]').click();
+      cy.get('[data-testid="edit-input-regular-hours"]').clear().type('88');
+      cy.get('[data-testid="button-save-entry"]').click();
+
+      cy.wait('@updateEntry');
+    });
+
+    it('should delete entry from draft batch', () => {
+      const mockBatchDetails = {
+        ...mockPayrollBatches[0],
+        status: 'draft',
+        totalHours: '80.00'
+      };
+
+      cy.intercept('GET', '/api/payroll-batches/batch-1', {
+        statusCode: 200,
+        body: mockBatchDetails
+      }).as('getBatchDetails');
+
+      cy.intercept('GET', '/api/payroll-entries?*', {
+        statusCode: 200,
+        body: [
+          {
+            id: 'entry-1',
+            batchId: 'batch-1',
+            regularHours: '80.00',
+            totalPay: '6000.00',
+            consultant: { id: 'cons-1', user: { firstName: 'John', lastName: 'Doe' } }
+          }
+        ]
+      }).as('getEntries');
+
+      cy.intercept('DELETE', '/api/payroll-entries/entry-1', {
+        statusCode: 200,
+        body: { success: true }
+      }).as('deleteEntry');
+
+      cy.get('[data-testid="batch-row-batch-1"]').click();
+      cy.wait('@getBatchDetails');
+      cy.wait('@getEntries');
+
+      cy.get('[data-testid="button-delete-entry-entry-1"]').click();
+      cy.wait('@deleteEntry');
+    });
+
+    it('should show submit for approval button for draft batch', () => {
+      const mockBatchDetails = {
+        ...mockPayrollBatches[0],
+        status: 'draft',
+        totalHours: '80.00'
+      };
+
+      cy.intercept('GET', '/api/payroll-batches/batch-1', {
+        statusCode: 200,
+        body: mockBatchDetails
+      }).as('getBatchDetails');
+
+      cy.intercept('GET', '/api/payroll-entries?*', {
+        statusCode: 200,
+        body: [{ id: 'entry-1', batchId: 'batch-1' }]
+      }).as('getEntries');
+
+      cy.get('[data-testid="batch-row-batch-1"]').click();
+      cy.wait('@getBatchDetails');
+      cy.wait('@getEntries');
+
+      cy.get('[data-testid="button-submit-batch"]').should('be.visible');
+    });
+
+    it('should show approve button for processing batch', () => {
+      const mockBatchDetails = {
+        ...mockPayrollBatches[0],
+        status: 'processing',
+        totalHours: '80.00'
+      };
+
+      cy.intercept('GET', '/api/payroll-batches/batch-1', {
+        statusCode: 200,
+        body: mockBatchDetails
+      }).as('getBatchDetails');
+
+      cy.intercept('GET', '/api/payroll-entries?*', {
+        statusCode: 200,
+        body: []
+      }).as('getEntries');
+
+      cy.get('[data-testid="batch-row-batch-1"]').click();
+      cy.wait('@getBatchDetails');
+      cy.wait('@getEntries');
+
+      cy.get('[data-testid="button-approve-batch"]').should('be.visible');
+    });
+
+    it('should show process payment button for approved batch', () => {
+      const mockBatchDetails = {
+        ...mockPayrollBatches[0],
+        status: 'approved',
+        totalHours: '80.00'
+      };
+
+      cy.intercept('GET', '/api/payroll-batches/batch-1', {
+        statusCode: 200,
+        body: mockBatchDetails
+      }).as('getBatchDetails');
+
+      cy.intercept('GET', '/api/payroll-entries?*', {
+        statusCode: 200,
+        body: []
+      }).as('getEntries');
+
+      cy.get('[data-testid="batch-row-batch-1"]').click();
+      cy.wait('@getBatchDetails');
+      cy.wait('@getEntries');
+
+      cy.get('[data-testid="button-process-batch"]').should('be.visible');
+    });
+
+    it.skip('TODO: Auto-calculate consultant payments from timesheets', () => {});
     it.skip('TODO: Process batch for payment', () => {});
     it.skip('TODO: Manage pay rates', () => {});
   });

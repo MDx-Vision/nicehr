@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format, formatDistanceToNow } from "date-fns";
-import { 
+import {
   DollarSign,
   Plus,
   Clock,
@@ -31,7 +31,9 @@ import {
   Download,
   Send,
   Play,
-  Banknote
+  Banknote,
+  Pencil,
+  Trash2
 } from "lucide-react";
 import type { 
   PayrollBatch,
@@ -181,6 +183,15 @@ function PayrollBatchDetailPanel({
   isAdmin: boolean;
 }) {
   const [showAddEntryDialog, setShowAddEntryDialog] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<PayrollEntryWithDetails | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    regularHours: "",
+    overtimeHours: "",
+    hourlyRate: "",
+    overtimeRate: "",
+    expenseReimbursement: "",
+    notes: "",
+  });
   const { toast } = useToast();
 
   const { data: batch, isLoading } = useQuery<PayrollBatchWithDetails>({
@@ -238,6 +249,69 @@ function PayrollBatchDetailPanel({
       toast({ title: "Failed to submit batch", variant: "destructive" });
     }
   });
+
+  const updateEntryMutation = useMutation({
+    mutationFn: async (data: typeof editFormData & { entryId: string }) => {
+      const regularHours = parseFloat(data.regularHours) || 0;
+      const overtimeHours = parseFloat(data.overtimeHours) || 0;
+      const hourlyRate = parseFloat(data.hourlyRate) || 0;
+      const overtimeRate = parseFloat(data.overtimeRate) || hourlyRate * 1.5;
+      const expenseReimbursement = parseFloat(data.expenseReimbursement) || 0;
+
+      const regularPay = regularHours * hourlyRate;
+      const overtimePay = overtimeHours * overtimeRate;
+      const grossPay = regularPay + overtimePay;
+      const totalPay = grossPay + expenseReimbursement;
+
+      return apiRequest("PATCH", `/api/payroll-entries/${data.entryId}`, {
+        regularHours: data.regularHours,
+        overtimeHours: data.overtimeHours || "0",
+        hourlyRate: data.hourlyRate,
+        overtimeRate: data.overtimeRate || String(overtimeRate),
+        regularPay: String(regularPay),
+        overtimePay: String(overtimePay),
+        grossPay: String(grossPay),
+        expenseReimbursement: data.expenseReimbursement || "0",
+        totalPay: String(totalPay),
+        notes: data.notes || undefined,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/payroll-entries'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/payroll-batches', batchId] });
+      setEditingEntry(null);
+      toast({ title: "Entry updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update entry", variant: "destructive" });
+    }
+  });
+
+  const deleteEntryMutation = useMutation({
+    mutationFn: async (entryId: string) => {
+      return apiRequest("DELETE", `/api/payroll-entries/${entryId}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/payroll-entries'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/payroll-batches', batchId] });
+      toast({ title: "Entry deleted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete entry", variant: "destructive" });
+    }
+  });
+
+  const openEditDialog = (entry: PayrollEntryWithDetails) => {
+    setEditFormData({
+      regularHours: entry.regularHours || "",
+      overtimeHours: entry.overtimeHours || "",
+      hourlyRate: entry.hourlyRate || "",
+      overtimeRate: entry.overtimeRate || "",
+      expenseReimbursement: entry.expenseReimbursement || "",
+      notes: entry.notes || "",
+    });
+    setEditingEntry(entry);
+  };
 
   if (isLoading) {
     return (
@@ -342,6 +416,7 @@ function PayrollBatchDetailPanel({
                     <TableHead>Gross Pay</TableHead>
                     <TableHead>Expenses</TableHead>
                     <TableHead>Total</TableHead>
+                    {isAdmin && batch.status === "draft" && <TableHead className="w-[100px]">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -365,6 +440,29 @@ function PayrollBatchDetailPanel({
                       <TableCell>{formatCurrency(entry.grossPay)}</TableCell>
                       <TableCell>{formatCurrency(entry.expenseReimbursement)}</TableCell>
                       <TableCell className="font-medium">{formatCurrency(entry.totalPay)}</TableCell>
+                      {isAdmin && batch.status === "draft" && (
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEditDialog(entry)}
+                              data-testid={`button-edit-entry-${entry.id}`}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => deleteEntryMutation.mutate(entry.id)}
+                              disabled={deleteEntryMutation.isPending}
+                              data-testid={`button-delete-entry-${entry.id}`}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -460,6 +558,110 @@ function PayrollBatchDetailPanel({
         batchId={batchId}
         consultants={consultants}
       />
+
+      <Dialog open={!!editingEntry} onOpenChange={(open) => !open && setEditingEntry(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Payroll Entry</DialogTitle>
+            <DialogDescription>
+              Update the payment details for {editingEntry?.consultant?.user?.firstName} {editingEntry?.consultant?.user?.lastName}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Regular Hours</Label>
+                <Input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  value={editFormData.regularHours}
+                  onChange={(e) => setEditFormData({ ...editFormData, regularHours: e.target.value })}
+                  data-testid="edit-input-regular-hours"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Overtime Hours</Label>
+                <Input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  value={editFormData.overtimeHours}
+                  onChange={(e) => setEditFormData({ ...editFormData, overtimeHours: e.target.value })}
+                  data-testid="edit-input-overtime-hours"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Hourly Rate ($)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={editFormData.hourlyRate}
+                  onChange={(e) => setEditFormData({ ...editFormData, hourlyRate: e.target.value })}
+                  data-testid="edit-input-hourly-rate"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Overtime Rate ($)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={editFormData.overtimeRate}
+                  onChange={(e) => setEditFormData({ ...editFormData, overtimeRate: e.target.value })}
+                  placeholder="Default: 1.5x hourly"
+                  data-testid="edit-input-overtime-rate"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Expense Reimbursement ($)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={editFormData.expenseReimbursement}
+                onChange={(e) => setEditFormData({ ...editFormData, expenseReimbursement: e.target.value })}
+                data-testid="edit-input-expense-reimbursement"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Notes</Label>
+              <Textarea
+                value={editFormData.notes}
+                onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
+                placeholder="Additional notes..."
+                data-testid="edit-input-notes"
+              />
+            </div>
+            <div className="bg-muted p-3 rounded-md">
+              <div className="text-sm text-muted-foreground mb-1">Calculated Total</div>
+              <div className="text-xl font-bold">
+                {formatCurrency(
+                  ((parseFloat(editFormData.regularHours) || 0) * (parseFloat(editFormData.hourlyRate) || 0)) +
+                  ((parseFloat(editFormData.overtimeHours) || 0) * (parseFloat(editFormData.overtimeRate) || (parseFloat(editFormData.hourlyRate) || 0) * 1.5)) +
+                  (parseFloat(editFormData.expenseReimbursement) || 0)
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingEntry(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => editingEntry && updateEntryMutation.mutate({ ...editFormData, entryId: editingEntry.id })}
+              disabled={updateEntryMutation.isPending}
+              data-testid="button-save-entry"
+            >
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

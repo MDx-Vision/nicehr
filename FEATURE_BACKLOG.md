@@ -54,9 +54,9 @@ This document tracks features that have Cypress tests written but are not yet im
 - [x] Search expenses by description/project/consultant - IMPLEMENTED
 - [x] Date range filter for expenses - IMPLEMENTED
 - [ ] Create expense form with receipt upload
-- [ ] Edit expense functionality
-- [ ] Submit expense for approval
-- [ ] Approve/reject expenses (manager)
+- [x] Edit expense functionality - IMPLEMENTED (Phase 4)
+- [x] Submit expense for approval - IMPLEMENTED (Phase 4)
+- [x] Approve/reject expenses (manager) - IMPLEMENTED (Phase 4)
 - [x] Bulk approval functionality - IMPLEMENTED (Phase 2)
 - [x] Bulk reject functionality - IMPLEMENTED (Phase 2)
 - [ ] Expense categories management
@@ -76,11 +76,11 @@ This document tracks features that have Cypress tests written but are not yet im
 ### Payroll
 - [x] Payroll batches list - IMPLEMENTED
 - [x] Export payroll batches to CSV - IMPLEMENTED (Phase 2)
-- [ ] Create payroll batch (date range, auto-calculate)
-- [ ] Batch details with consultant payments
-- [ ] Edit consultant payment amounts
-- [ ] Approve batch workflow
-- [ ] Process batch workflow
+- [x] Create payroll batch (date range, auto-calculate) - IMPLEMENTED (Phase 4)
+- [x] Batch details with consultant payments - IMPLEMENTED (Phase 4)
+- [x] Edit consultant payment amounts - IMPLEMENTED (Phase 4)
+- [x] Approve batch workflow - IMPLEMENTED (Phase 4)
+- [x] Process batch workflow - IMPLEMENTED (Phase 4)
 - [ ] Pay rates management
 
 ### Budget Modeling
@@ -370,9 +370,9 @@ This document tracks features that have Cypress tests written but are not yet im
 | Hospitals CRUD | 12 | 12 | 100% |
 | Authentication | 20 | 16 | 80% |
 | Dashboard | 78 | 10 | 12% |
-| Financial - Expenses | 22 | 18 | 82% |
-| Financial - Invoices | 20 | 18 | 90% |
-| Financial - Payroll | 14 | 7 | 50% |
+| Financial - Expenses | 22 | 21 | 95% |
+| Financial - Invoices | 20 | 20 | 100% |
+| Financial - Payroll | 14 | 13 | 93% |
 | Financial - Budget | 12 | 9 | 75% |
 | Communication | 150+ | 0 | 0% |
 | Analytics | 250+ | 5 | 2% |
@@ -382,6 +382,14 @@ This document tracks features that have Cypress tests written but are not yet im
 ---
 
 ## Recent Updates
+
+### December 26, 2024 - P0 Financial Module Phase 4
+- Added edit expense functionality for draft expenses
+- Added expense approval workflow (submit, approve, reject)
+- Added payroll batch detail view with consultant entries
+- Added edit/delete payroll entries for draft batches
+- Added payroll batch workflow (submit, approve, process)
+- Added 20+ Cypress tests for Phase 4 features
 
 ### December 26, 2024 - P0 Financial Module Phase 3
 - Added PDF download for invoices (print dialog approach)
@@ -416,4 +424,4 @@ This document tracks features that have Cypress tests written but are not yet im
 ---
 
 *Last Updated: December 26, 2024*
-*Phase 3 P0 Financial Module completed*
+*Phase 4 P0 Financial Module completed - P0 Module now 95%+ complete*

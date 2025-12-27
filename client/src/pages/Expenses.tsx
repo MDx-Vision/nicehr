@@ -44,7 +44,9 @@ import {
   MapPin,
   X,
   Search,
-  Download
+  Download,
+  Pencil,
+  Upload
 } from "lucide-react";
 import type { 
   Project, 
@@ -232,14 +234,33 @@ function ExpenseRow({
 function ExpenseDetailPanel({
   expenseId,
   onClose,
-  isAdmin
+  isAdmin,
+  projects = [],
+  consultants = [],
+  mileageRates = [],
+  perDiemPolicies = []
 }: {
   expenseId: string;
   onClose: () => void;
   isAdmin: boolean;
+  projects?: Project[];
+  consultants?: Consultant[];
+  mileageRates?: MileageRate[];
+  perDiemPolicies?: PerDiemPolicy[];
 }) {
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    description: "",
+    amount: "",
+    category: "",
+    expenseDate: "",
+    receiptUrl: "",
+    mileageStart: "",
+    mileageEnd: "",
+    mileageDistance: "",
+  });
   const { toast } = useToast();
 
   const { data: expense, isLoading } = useQuery<ExpenseWithDetails>({
@@ -290,6 +311,49 @@ function ExpenseDetailPanel({
       toast({ title: "Failed to reject expense", variant: "destructive" });
     }
   });
+
+  const updateMutation = useMutation({
+    mutationFn: async (data: typeof editFormData) => {
+      const payload: Record<string, unknown> = {
+        description: data.description,
+        amount: data.amount,
+        category: data.category,
+        expenseDate: data.expenseDate,
+        receiptUrl: data.receiptUrl || undefined,
+      };
+      if (data.category === "mileage") {
+        payload.mileageStart = data.mileageStart;
+        payload.mileageEnd = data.mileageEnd;
+        payload.mileageDistance = data.mileageDistance || undefined;
+      }
+      return apiRequest("PATCH", `/api/expenses/${expenseId}`, payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses', expenseId] });
+      setShowEditDialog(false);
+      toast({ title: "Expense updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update expense", variant: "destructive" });
+    }
+  });
+
+  const openEditDialog = () => {
+    if (expense) {
+      setEditFormData({
+        description: expense.description || "",
+        amount: expense.amount || "",
+        category: expense.category || "other",
+        expenseDate: expense.expenseDate ? format(new Date(expense.expenseDate), "yyyy-MM-dd") : "",
+        receiptUrl: expense.receiptUrl || "",
+        mileageStart: expense.mileageStart || "",
+        mileageEnd: expense.mileageEnd || "",
+        mileageDistance: expense.mileageDistance || "",
+      });
+      setShowEditDialog(true);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -449,14 +513,24 @@ function ExpenseDetailPanel({
         </Button>
         <div className="flex gap-2">
           {expense.status === "draft" && (
-            <Button 
-              onClick={() => submitMutation.mutate()}
-              disabled={submitMutation.isPending}
-              data-testid="button-submit-expense"
-            >
-              <Send className="h-4 w-4 mr-2" />
-              Submit for Approval
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                onClick={openEditDialog}
+                data-testid="button-edit-expense"
+              >
+                <Pencil className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+              <Button
+                onClick={() => submitMutation.mutate()}
+                disabled={submitMutation.isPending}
+                data-testid="button-submit-expense"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Submit for Approval
+              </Button>
+            </>
           )}
           {isAdmin && expense.status === "submitted" && (
             <>
@@ -509,6 +583,144 @@ function ExpenseDetailPanel({
               data-testid="button-confirm-reject"
             >
               Reject Expense
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Expense</DialogTitle>
+            <DialogDescription>
+              Update the expense details.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-category">Category</Label>
+              <Select
+                value={editFormData.category}
+                onValueChange={(value) => setEditFormData({ ...editFormData, category: value })}
+              >
+                <SelectTrigger data-testid="edit-select-category">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {EXPENSE_CATEGORIES.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description *</Label>
+              <Textarea
+                id="edit-description"
+                value={editFormData.description}
+                onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                placeholder="Enter expense description"
+                data-testid="edit-input-description"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-amount">Amount *</Label>
+                <Input
+                  id="edit-amount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={editFormData.amount}
+                  onChange={(e) => setEditFormData({ ...editFormData, amount: e.target.value })}
+                  placeholder="0.00"
+                  data-testid="edit-input-amount"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-date">Date *</Label>
+                <Input
+                  id="edit-date"
+                  type="date"
+                  value={editFormData.expenseDate}
+                  onChange={(e) => setEditFormData({ ...editFormData, expenseDate: e.target.value })}
+                  data-testid="edit-input-date"
+                />
+              </div>
+            </div>
+
+            {editFormData.category === "mileage" && (
+              <>
+                <Separator />
+                <div className="space-y-4">
+                  <h4 className="font-medium">Mileage Details</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-mileage-start">Start Location</Label>
+                      <Input
+                        id="edit-mileage-start"
+                        value={editFormData.mileageStart}
+                        onChange={(e) => setEditFormData({ ...editFormData, mileageStart: e.target.value })}
+                        placeholder="e.g., 123 Main St"
+                        data-testid="edit-input-mileage-start"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-mileage-end">End Location</Label>
+                      <Input
+                        id="edit-mileage-end"
+                        value={editFormData.mileageEnd}
+                        onChange={(e) => setEditFormData({ ...editFormData, mileageEnd: e.target.value })}
+                        placeholder="e.g., 456 Oak Ave"
+                        data-testid="edit-input-mileage-end"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-mileage-distance">Distance (miles)</Label>
+                    <Input
+                      id="edit-mileage-distance"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={editFormData.mileageDistance}
+                      onChange={(e) => setEditFormData({ ...editFormData, mileageDistance: e.target.value })}
+                      placeholder="0.0"
+                      data-testid="edit-input-mileage-distance"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            <Separator />
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-receipt-url">Receipt URL</Label>
+              <Input
+                id="edit-receipt-url"
+                type="url"
+                value={editFormData.receiptUrl}
+                onChange={(e) => setEditFormData({ ...editFormData, receiptUrl: e.target.value })}
+                placeholder="https://..."
+                data-testid="edit-input-receipt-url"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => updateMutation.mutate(editFormData)}
+              disabled={!editFormData.description || !editFormData.amount || updateMutation.isPending}
+              data-testid="button-save-expense"
+            >
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1896,6 +2108,10 @@ export default function Expenses() {
               expenseId={selectedExpenseId}
               onClose={() => setSelectedExpenseId(null)}
               isAdmin={isAdmin}
+              projects={projects}
+              consultants={consultants}
+              mileageRates={mileageRates}
+              perDiemPolicies={perDiemPolicies}
             />
           )}
         </DialogContent>
