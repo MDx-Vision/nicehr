@@ -1205,6 +1205,33 @@ export default function Payroll() {
     return true;
   });
 
+  // CSV Export function for batches
+  const exportBatchesToCSV = () => {
+    const headers = ["Batch Name", "Status", "Period Start", "Period End", "Pay Date", "Total Amount", "Total Entries", "Created"];
+    const rows = filteredBatches.map(batch => [
+      batch.name || "",
+      BATCH_STATUSES.find(s => s.value === batch.status)?.label || batch.status,
+      batch.periodStart ? format(new Date(batch.periodStart), "yyyy-MM-dd") : "",
+      batch.periodEnd ? format(new Date(batch.periodEnd), "yyyy-MM-dd") : "",
+      batch.payDate ? format(new Date(batch.payDate), "yyyy-MM-dd") : "",
+      batch.totalAmount || "0",
+      batch.totalEntries?.toString() || "0",
+      batch.createdAt ? format(new Date(batch.createdAt), "yyyy-MM-dd") : ""
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `payroll-batches-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
   if (batchesLoading) {
     return (
       <div className="space-y-6">
@@ -1274,6 +1301,16 @@ export default function Payroll() {
                       ))}
                     </SelectContent>
                   </Select>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={exportBatchesToCSV}
+                    disabled={filteredBatches.length === 0}
+                    data-testid="button-export-batches-csv"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Export CSV
+                  </Button>
                 </div>
               </div>
             </CardHeader>

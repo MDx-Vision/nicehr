@@ -57,7 +57,8 @@ This document tracks features that have Cypress tests written but are not yet im
 - [ ] Edit expense functionality
 - [ ] Submit expense for approval
 - [ ] Approve/reject expenses (manager)
-- [ ] Bulk approval functionality
+- [x] Bulk approval functionality - IMPLEMENTED (Phase 2)
+- [x] Bulk reject functionality - IMPLEMENTED (Phase 2)
 - [ ] Expense categories management
 - [x] Export expenses to CSV - IMPLEMENTED
 
@@ -73,14 +74,14 @@ This document tracks features that have Cypress tests written but are not yet im
 - [x] Void invoice functionality - IMPLEMENTED
 
 ### Payroll
-- [ ] Payroll batches list
+- [x] Payroll batches list - IMPLEMENTED
+- [x] Export payroll batches to CSV - IMPLEMENTED (Phase 2)
 - [ ] Create payroll batch (date range, auto-calculate)
 - [ ] Batch details with consultant payments
 - [ ] Edit consultant payment amounts
 - [ ] Approve batch workflow
 - [ ] Process batch workflow
 - [ ] Pay rates management
-- [ ] Export payroll reports
 
 ### Budget Modeling
 - [ ] Budget dashboard with charts
@@ -369,9 +370,9 @@ This document tracks features that have Cypress tests written but are not yet im
 | Hospitals CRUD | 12 | 12 | 100% |
 | Authentication | 20 | 16 | 80% |
 | Dashboard | 78 | 10 | 12% |
-| Financial - Expenses | 12 | 10 | 83% |
+| Financial - Expenses | 22 | 18 | 82% |
 | Financial - Invoices | 14 | 12 | 86% |
-| Financial - Payroll | 9 | 0 | 0% |
+| Financial - Payroll | 14 | 7 | 50% |
 | Financial - Budget | 7 | 0 | 0% |
 | Communication | 150+ | 0 | 0% |
 | Analytics | 250+ | 5 | 2% |
@@ -381,6 +382,11 @@ This document tracks features that have Cypress tests written but are not yet im
 ---
 
 ## Recent Updates
+
+### December 26, 2024 - P0 Financial Module Phase 2
+- Added bulk approval/reject for expenses (select multiple, approve/reject all)
+- Added CSV export for payroll batches
+- Added 15+ Cypress tests for bulk operations and payroll
 
 ### December 26, 2024 - P0 Financial Module Phase 1
 - Added date range filter to Expenses

@@ -218,6 +218,76 @@ describe('Financial Module', () => {
 
       cy.get('[data-testid="button-export-csv"]').should('be.disabled');
     });
+
+    it('should show bulk actions toggle for admin', () => {
+      cy.get('[data-testid="button-toggle-bulk"]').should('be.visible');
+    });
+
+    it('should enable bulk actions mode', () => {
+      cy.get('[data-testid="button-toggle-bulk"]').click();
+      cy.get('[data-testid="button-toggle-bulk"]').should('contain', 'Cancel Selection');
+      cy.get('[data-testid="checkbox-header-select-all"]').should('be.visible');
+    });
+
+    it('should show checkboxes for submitted expenses in bulk mode', () => {
+      cy.get('[data-testid="button-toggle-bulk"]').click();
+      // exp-1 is submitted, should have enabled checkbox
+      cy.get('[data-testid="checkbox-expense-exp-1"]').should('be.visible').and('not.be.disabled');
+      // exp-2 is approved, should have disabled checkbox
+      cy.get('[data-testid="checkbox-expense-exp-2"]').should('be.visible').and('be.disabled');
+    });
+
+    it('should select individual expenses', () => {
+      cy.get('[data-testid="button-toggle-bulk"]').click();
+      cy.get('[data-testid="checkbox-expense-exp-1"]').click();
+      cy.get('[data-testid="bulk-actions-bar"]').should('be.visible');
+      cy.get('[data-testid="bulk-actions-bar"]').should('contain', '1 expense(s) selected');
+    });
+
+    it('should select all submitted expenses', () => {
+      cy.get('[data-testid="button-toggle-bulk"]').click();
+      cy.get('[data-testid="checkbox-header-select-all"]').click();
+      // Should select exp-1 and exp-3 (submitted) but not exp-2 (approved)
+      cy.get('[data-testid="bulk-actions-bar"]').should('contain', '2 expense(s) selected');
+    });
+
+    it('should show bulk approve and reject buttons', () => {
+      cy.get('[data-testid="button-toggle-bulk"]').click();
+      cy.get('[data-testid="checkbox-expense-exp-1"]').click();
+      cy.get('[data-testid="button-bulk-approve"]').should('be.visible');
+      cy.get('[data-testid="button-bulk-reject"]').should('be.visible');
+    });
+
+    it('should bulk approve selected expenses', () => {
+      cy.intercept('PATCH', '/api/expenses/exp-1', {
+        statusCode: 200,
+        body: { ...mockExpenses[0], status: 'approved' }
+      }).as('approveExpense1');
+
+      cy.get('[data-testid="button-toggle-bulk"]').click();
+      cy.get('[data-testid="checkbox-expense-exp-1"]').click();
+      cy.get('[data-testid="button-bulk-approve"]').click();
+      cy.wait('@approveExpense1');
+    });
+
+    it('should bulk reject selected expenses', () => {
+      cy.intercept('PATCH', '/api/expenses/exp-1', {
+        statusCode: 200,
+        body: { ...mockExpenses[0], status: 'rejected' }
+      }).as('rejectExpense1');
+
+      cy.get('[data-testid="button-toggle-bulk"]').click();
+      cy.get('[data-testid="checkbox-expense-exp-1"]').click();
+      cy.get('[data-testid="button-bulk-reject"]').click();
+      cy.wait('@rejectExpense1');
+    });
+
+    it('should cancel bulk selection', () => {
+      cy.get('[data-testid="button-toggle-bulk"]').click();
+      cy.get('[data-testid="checkbox-expense-exp-1"]').click();
+      cy.get('[data-testid="button-toggle-bulk"]').click();
+      cy.get('[data-testid="bulk-actions-bar"]').should('not.exist');
+    });
   });
 
   // ===========================================================================
@@ -397,7 +467,94 @@ describe('Financial Module', () => {
   // ===========================================================================
 
   describe('Payroll', () => {
-    it.skip('TODO: Display payroll batches list', () => {});
+    const mockPayrollBatches = [
+      {
+        id: 'batch-1',
+        name: 'December 2024 Payroll',
+        status: 'draft',
+        periodStart: '2024-12-01',
+        periodEnd: '2024-12-15',
+        payDate: '2024-12-20',
+        totalAmount: '15000.00',
+        totalEntries: 5,
+        createdAt: '2024-12-10T10:00:00Z'
+      },
+      {
+        id: 'batch-2',
+        name: 'November 2024 Payroll',
+        status: 'paid',
+        periodStart: '2024-11-01',
+        periodEnd: '2024-11-30',
+        payDate: '2024-12-05',
+        totalAmount: '22500.00',
+        totalEntries: 8,
+        createdAt: '2024-11-25T10:00:00Z'
+      }
+    ];
+
+    beforeEach(() => {
+      cy.intercept('GET', '/api/payroll-batches', {
+        statusCode: 200,
+        body: mockPayrollBatches
+      }).as('getPayrollBatches');
+
+      cy.intercept('GET', '/api/pay-rates', {
+        statusCode: 200,
+        body: []
+      }).as('getPayRates');
+
+      cy.intercept('GET', '/api/paycheck-stubs', {
+        statusCode: 200,
+        body: []
+      }).as('getPaycheckStubs');
+
+      cy.intercept('GET', '/api/consultants', {
+        statusCode: 200,
+        body: []
+      }).as('getConsultants');
+
+      // Login and navigate to payroll
+      cy.visit('/login', { failOnStatusCode: false });
+      cy.get('[data-testid="input-email"]').type(testUser.email);
+      cy.get('[data-testid="input-password"]').type('password123');
+      cy.get('[data-testid="button-login"]').click();
+      cy.wait('@loginRequest');
+      cy.visit('/payroll', { failOnStatusCode: false });
+      cy.wait('@getPayrollBatches');
+    });
+
+    it('should display payroll page', () => {
+      cy.get('[data-testid="text-page-title"]').should('contain', 'Payroll');
+    });
+
+    it('should display payroll stats cards', () => {
+      cy.get('[data-testid="stat-active-batches"]').should('be.visible');
+      cy.get('[data-testid="stat-pending-payroll"]').should('be.visible');
+    });
+
+    it('should display payroll batches list', () => {
+      cy.get('[data-testid="tab-batches"]').click();
+      cy.contains('December 2024 Payroll').should('be.visible');
+      cy.contains('November 2024 Payroll').should('be.visible');
+    });
+
+    it('should filter batches by status', () => {
+      cy.get('[data-testid="filter-status"]').click();
+      cy.contains('Processed').click();
+      cy.contains('November 2024 Payroll').should('be.visible');
+      cy.contains('December 2024 Payroll').should('not.exist');
+    });
+
+    it('should have export CSV button for batches', () => {
+      cy.get('[data-testid="button-export-batches-csv"]').should('be.visible').and('not.be.disabled');
+    });
+
+    it('should disable export when no batches match filter', () => {
+      cy.get('[data-testid="filter-status"]').click();
+      cy.contains('Cancelled').click();
+      cy.get('[data-testid="button-export-batches-csv"]').should('be.disabled');
+    });
+
     it.skip('TODO: Create payroll batch with date range', () => {});
     it.skip('TODO: Auto-calculate consultant payments', () => {});
     it.skip('TODO: View batch details', () => {});
@@ -405,7 +562,6 @@ describe('Financial Module', () => {
     it.skip('TODO: Approve batch workflow', () => {});
     it.skip('TODO: Process batch for payment', () => {});
     it.skip('TODO: Manage pay rates', () => {});
-    it.skip('TODO: Export payroll reports', () => {});
   });
 
   describe('Budget Modeling', () => {

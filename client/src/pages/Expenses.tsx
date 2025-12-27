@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
@@ -155,19 +156,35 @@ function ExpenseStats({ expenses }: { expenses: ExpenseWithDetails[] }) {
   );
 }
 
-function ExpenseRow({ 
+function ExpenseRow({
   expense,
-  onClick 
-}: { 
+  onClick,
+  showCheckbox,
+  isSelected,
+  onSelect
+}: {
   expense: ExpenseWithDetails;
   onClick: () => void;
+  showCheckbox?: boolean;
+  isSelected?: boolean;
+  onSelect?: (id: string, checked: boolean) => void;
 }) {
   return (
-    <TableRow 
-      className="cursor-pointer hover-elevate" 
+    <TableRow
+      className="cursor-pointer hover-elevate"
       onClick={onClick}
       data-testid={`expense-row-${expense.id}`}
     >
+      {showCheckbox && (
+        <TableCell onClick={(e) => e.stopPropagation()}>
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={(checked) => onSelect?.(expense.id, checked as boolean)}
+            disabled={expense.status !== "submitted"}
+            data-testid={`checkbox-expense-${expense.id}`}
+          />
+        </TableCell>
+      )}
       <TableCell className="font-medium">
         <div className="flex items-center gap-2">
           {getCategoryIcon(expense.category)}
@@ -1409,7 +1426,10 @@ export default function Expenses() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [selectedExpenses, setSelectedExpenses] = useState<Set<string>>(new Set());
+  const [showBulkActions, setShowBulkActions] = useState(false);
   const { user, isAdmin } = useAuth();
+  const { toast } = useToast();
   const { filterByProject, isAdmin: isAdminContext } = useProjectContext();
 
   const { data: expensesRaw = [], isLoading: expensesLoading } = useQuery<ExpenseWithDetails[]>({
@@ -1491,6 +1511,116 @@ export default function Expenses() {
     link.download = `expenses-${format(new Date(), "yyyy-MM-dd")}.csv`;
     link.click();
     URL.revokeObjectURL(link.href);
+  };
+
+  // Bulk selection helpers
+  const submittedExpenses = filteredExpenses.filter(e => e.status === "submitted");
+  const allSubmittedSelected = submittedExpenses.length > 0 &&
+    submittedExpenses.every(e => selectedExpenses.has(e.id));
+
+  const handleSelectExpense = (id: string, checked: boolean) => {
+    setSelectedExpenses(prev => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const newSelected = new Set(selectedExpenses);
+      submittedExpenses.forEach(e => newSelected.add(e.id));
+      setSelectedExpenses(newSelected);
+    } else {
+      const newSelected = new Set(selectedExpenses);
+      submittedExpenses.forEach(e => newSelected.delete(e.id));
+      setSelectedExpenses(newSelected);
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedExpenses(new Set());
+    setShowBulkActions(false);
+  };
+
+  // Bulk approval mutation
+  const bulkApproveMutation = useMutation({
+    mutationFn: async (expenseIds: string[]) => {
+      const results = await Promise.all(
+        expenseIds.map(id =>
+          apiRequest("PATCH", `/api/expenses/${id}`, {
+            status: "approved",
+            approvedAt: new Date().toISOString(),
+            approvedById: user?.id
+          })
+        )
+      );
+      return results;
+    },
+    onSuccess: (_, expenseIds) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      clearSelection();
+      toast({
+        title: "Expenses approved",
+        description: `Successfully approved ${expenseIds.length} expense(s)`
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Failed to approve expenses",
+        description: "Some expenses could not be approved",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Bulk reject mutation
+  const bulkRejectMutation = useMutation({
+    mutationFn: async (expenseIds: string[]) => {
+      const results = await Promise.all(
+        expenseIds.map(id =>
+          apiRequest("PATCH", `/api/expenses/${id}`, {
+            status: "rejected",
+            rejectedAt: new Date().toISOString(),
+            rejectedById: user?.id
+          })
+        )
+      );
+      return results;
+    },
+    onSuccess: (_, expenseIds) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      clearSelection();
+      toast({
+        title: "Expenses rejected",
+        description: `Rejected ${expenseIds.length} expense(s)`
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Failed to reject expenses",
+        description: "Some expenses could not be rejected",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleBulkApprove = () => {
+    const ids = Array.from(selectedExpenses);
+    if (ids.length > 0) {
+      bulkApproveMutation.mutate(ids);
+    }
+  };
+
+  const handleBulkReject = () => {
+    const ids = Array.from(selectedExpenses);
+    if (ids.length > 0) {
+      bulkRejectMutation.mutate(ids);
+    }
   };
 
   if (expensesLoading) {
@@ -1629,7 +1759,58 @@ export default function Expenses() {
                   </Button>
                 )}
               </div>
+              {isAdmin && (
+                <Button
+                  variant={showBulkActions ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setShowBulkActions(!showBulkActions);
+                    if (showBulkActions) clearSelection();
+                  }}
+                  data-testid="button-toggle-bulk"
+                >
+                  {showBulkActions ? "Cancel Selection" : "Bulk Actions"}
+                </Button>
+              )}
             </CardHeader>
+
+            {/* Bulk Actions Bar */}
+            {showBulkActions && selectedExpenses.size > 0 && (
+              <div className="mx-6 mb-4 p-3 bg-muted rounded-lg flex items-center justify-between" data-testid="bulk-actions-bar">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={allSubmittedSelected}
+                    onCheckedChange={handleSelectAll}
+                    data-testid="checkbox-select-all"
+                  />
+                  <span className="text-sm font-medium">
+                    {selectedExpenses.size} expense(s) selected
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleBulkReject}
+                    disabled={bulkRejectMutation.isPending}
+                    data-testid="button-bulk-reject"
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Reject Selected
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleBulkApprove}
+                    disabled={bulkApproveMutation.isPending}
+                    data-testid="button-bulk-approve"
+                  >
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Approve Selected
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <CardContent>
               {filteredExpenses.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
@@ -1641,6 +1822,16 @@ export default function Expenses() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      {showBulkActions && (
+                        <TableHead className="w-12">
+                          <Checkbox
+                            checked={allSubmittedSelected}
+                            onCheckedChange={handleSelectAll}
+                            disabled={submittedExpenses.length === 0}
+                            data-testid="checkbox-header-select-all"
+                          />
+                        </TableHead>
+                      )}
                       <TableHead>Category</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead>Status</TableHead>
@@ -1657,6 +1848,9 @@ export default function Expenses() {
                         key={expense.id}
                         expense={expense}
                         onClick={() => setSelectedExpenseId(expense.id)}
+                        showCheckbox={showBulkActions}
+                        isSelected={selectedExpenses.has(expense.id)}
+                        onSelect={handleSelectExpense}
                       />
                     ))}
                   </TableBody>
