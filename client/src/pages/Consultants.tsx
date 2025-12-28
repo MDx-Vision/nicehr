@@ -22,12 +22,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  Users, 
-  Search, 
-  MapPin, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Users,
+  Search,
+  MapPin,
+  CheckCircle,
+  XCircle,
   Filter,
   Plus,
   Edit,
@@ -41,12 +41,30 @@ import {
   Calendar,
   Clock,
   ChevronLeft,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Download,
+  AlertCircle,
+  Loader2
 } from "lucide-react";
 import type { Consultant, User } from "@shared/schema";
 
 interface ConsultantWithUser extends Consultant {
   user?: User;
+}
+
+interface ConsultantDocument {
+  id: string;
+  consultantId: string;
+  documentTypeId: string;
+  fileName: string;
+  fileUrl: string;
+  status: "pending" | "approved" | "rejected";
+  expirationDate?: string | null;
+  reviewedBy?: string | null;
+  reviewedAt?: string | null;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Summary Card Component
@@ -134,6 +152,18 @@ export default function Consultants() {
   // Queries
   const { data: consultants, isLoading } = useQuery<Consultant[]>({
     queryKey: ["/api/consultants"],
+  });
+
+  // Fetch documents for selected consultant
+  const { data: consultantDocuments, isLoading: isLoadingDocuments } = useQuery<ConsultantDocument[]>({
+    queryKey: ["/api/consultants", selectedConsultant?.id, "documents"],
+    queryFn: async () => {
+      if (!selectedConsultant?.id) return [];
+      const response = await fetch(`/api/consultants/${selectedConsultant.id}/documents`);
+      if (!response.ok) throw new Error("Failed to fetch documents");
+      return response.json();
+    },
+    enabled: !!selectedConsultant?.id && isViewModalOpen,
   });
 
   // Mutations
@@ -938,9 +968,85 @@ export default function Consultants() {
                 <Card data-testid="documents-list">
                   <CardHeader>
                     <CardTitle className="text-sm">Documents</CardTitle>
+                    <CardDescription>
+                      {consultantDocuments?.length || 0} document(s) on file
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-muted-foreground text-center py-4">No documents uploaded yet</p>
+                    {isLoadingDocuments ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                        <span className="ml-2 text-muted-foreground">Loading documents...</span>
+                      </div>
+                    ) : consultantDocuments && consultantDocuments.length > 0 ? (
+                      <div className="space-y-3">
+                        {consultantDocuments.map((doc) => {
+                          const isExpiringSoon = doc.expirationDate &&
+                            new Date(doc.expirationDate) <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+                          const isExpired = doc.expirationDate &&
+                            new Date(doc.expirationDate) < new Date();
+
+                          return (
+                            <div
+                              key={doc.id}
+                              className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50"
+                              data-testid="document-item"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="p-2 bg-muted rounded-lg">
+                                  <FileText className="w-5 h-5 text-primary" />
+                                </div>
+                                <div>
+                                  <p className="font-medium text-sm">{doc.fileName}</p>
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <span>Uploaded {new Date(doc.createdAt).toLocaleDateString()}</span>
+                                    {doc.expirationDate && (
+                                      <>
+                                        <span>•</span>
+                                        <span className={isExpired ? "text-red-500" : isExpiringSoon ? "text-yellow-500" : ""}>
+                                          {isExpired ? "Expired" : "Expires"} {new Date(doc.expirationDate).toLocaleDateString()}
+                                        </span>
+                                      </>
+                                    )}
+                                  </div>
+                                  {doc.notes && (
+                                    <p className="text-xs text-muted-foreground mt-1">{doc.notes}</p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge
+                                  variant={
+                                    doc.status === "approved" ? "default" :
+                                    doc.status === "pending" ? "secondary" : "destructive"
+                                  }
+                                  className={
+                                    doc.status === "approved" ? "bg-green-100 text-green-700 hover:bg-green-100" :
+                                    doc.status === "pending" ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-100" : ""
+                                  }
+                                >
+                                  {doc.status === "approved" && <CheckCircle className="w-3 h-3 mr-1" />}
+                                  {doc.status === "pending" && <Clock className="w-3 h-3 mr-1" />}
+                                  {doc.status === "rejected" && <XCircle className="w-3 h-3 mr-1" />}
+                                  {doc.status.charAt(0).toUpperCase() + doc.status.slice(1)}
+                                </Badge>
+                                {isExpired && (
+                                  <Badge variant="destructive" className="bg-red-100 text-red-700">
+                                    <AlertCircle className="w-3 h-3 mr-1" />
+                                    Expired
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+                        <p className="text-muted-foreground">No documents uploaded yet</p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>

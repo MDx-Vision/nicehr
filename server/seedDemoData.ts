@@ -251,6 +251,7 @@ const demoConsultants = [
     positions: ["Senior Implementation Consultant", "Project Lead"],
     bio: "Epic-certified consultant with over 12 years of experience in EMR implementations. Specialized in Emergency Department workflows and clinical documentation optimization.",
     payRate: "150.00",
+    shiftPreference: "day",
     isOnboarded: true,
     isAvailable: true,
   },
@@ -269,6 +270,7 @@ const demoConsultants = [
     positions: ["Implementation Consultant"],
     bio: "Cerner specialist with strong background in acute care settings. Expert in FirstNet ED solutions and clinical order optimization.",
     payRate: "135.00",
+    shiftPreference: "swing",
     isOnboarded: true,
     isAvailable: true,
   },
@@ -287,6 +289,7 @@ const demoConsultants = [
     positions: ["Principal Consultant", "Epic Certified"],
     bio: "Principal-level Epic consultant specializing in population health and patient engagement solutions. Led over 20 successful go-lives.",
     payRate: "175.00",
+    shiftPreference: "day",
     isOnboarded: true,
     isAvailable: true,
   },
@@ -305,6 +308,7 @@ const demoConsultants = [
     positions: ["Clinical Informaticist"],
     bio: "RN-turned-informaticist with hands-on clinical experience. Specializes in medication safety and nursing workflow optimization.",
     payRate: "125.00",
+    shiftPreference: "night",
     isOnboarded: true,
     isAvailable: false,
   },
@@ -323,6 +327,7 @@ const demoConsultants = [
     positions: ["Radiant Specialist"],
     bio: "Epic Radiant and Cardiant certified consultant. Expert in imaging workflow optimization and PACS integration.",
     payRate: "145.00",
+    shiftPreference: "day",
     isOnboarded: true,
     isAvailable: true,
   },
@@ -341,6 +346,7 @@ const demoConsultants = [
     positions: ["Surgical IS Consultant"],
     bio: "Perioperative specialist with extensive OR workflow experience. Expert in surgical scheduling and anesthesia documentation.",
     payRate: "140.00",
+    shiftPreference: "swing",
     isOnboarded: true,
     isAvailable: true,
   },
@@ -359,6 +365,7 @@ const demoConsultants = [
     positions: ["Pediatric Specialist"],
     bio: "Specialized in pediatric and neonatal care workflows. Expert in mother-baby documentation and pediatric-specific build.",
     payRate: "130.00",
+    shiftPreference: "day",
     isOnboarded: true,
     isAvailable: true,
   },
@@ -377,6 +384,7 @@ const demoConsultants = [
     positions: ["Oncology IS Lead"],
     bio: "Oncology informatics expert with deep experience in chemotherapy protocols and cancer registry integration.",
     payRate: "155.00",
+    shiftPreference: "day",
     isOnboarded: true,
     isAvailable: true,
   },
@@ -395,6 +403,7 @@ const demoConsultants = [
     positions: ["Revenue Cycle Analyst"],
     bio: "Revenue cycle specialist focused on Epic Resolute and billing optimization. Strong background in claims management.",
     payRate: "120.00",
+    shiftPreference: "day",
     isOnboarded: true,
     isAvailable: true,
   },
@@ -413,6 +422,7 @@ const demoConsultants = [
     positions: ["Integration Architect"],
     bio: "Senior integration architect with expertise in HL7, FHIR, and healthcare interoperability standards.",
     payRate: "165.00",
+    shiftPreference: "night",
     isOnboarded: true,
     isAvailable: false,
   },
@@ -431,6 +441,7 @@ const demoConsultants = [
     positions: ["Training Lead"],
     bio: "End-user training specialist with expertise in change management and adoption strategies for EMR implementations.",
     payRate: "115.00",
+    shiftPreference: "day",
     isOnboarded: true,
     isAvailable: true,
   },
@@ -449,6 +460,7 @@ const demoConsultants = [
     positions: ["Laboratory Informaticist"],
     bio: "Lab systems specialist with experience in Cerner PathNet and laboratory workflow optimization.",
     payRate: "125.00",
+    shiftPreference: "swing",
     isOnboarded: true,
     isAvailable: true,
   },
@@ -1751,6 +1763,127 @@ const demoDocumentTypes = [
   { id: "doctype-8", name: "W-9 Form", description: "Tax identification form", isRequired: true, hasExpiration: false, category: "Tax" },
   { id: "doctype-9", name: "Proof of Insurance", description: "Professional liability insurance", isRequired: true, hasExpiration: true, expirationMonths: 12, category: "Insurance" },
   { id: "doctype-10", name: "COVID Vaccination", description: "COVID-19 vaccination record", isRequired: false, hasExpiration: false, category: "Health" },
+  { id: "doctype-11", name: "NDA Agreement", description: "Non-disclosure agreement", isRequired: true, hasExpiration: false, category: "Legal" },
+  { id: "doctype-12", name: "Employment Contract", description: "Consultant employment or contractor agreement", isRequired: true, hasExpiration: false, category: "Legal" },
+];
+
+// Consultant documents - onboarded consultants should have their required docs
+const demoConsultantDocuments = [
+  // Consultant 1 - Sarah Chen (Epic certified, available) - All docs approved
+  { id: "doc-1-1", consultantId: "consultant-1", documentTypeId: "doctype-1", fileName: "sarah_chen_resume.pdf", fileUrl: "/documents/sarah_chen_resume.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-15"), notes: "Excellent credentials" },
+  { id: "doc-1-2", consultantId: "consultant-1", documentTypeId: "doctype-3", fileName: "sarah_chen_epic_cert.pdf", fileUrl: "/documents/sarah_chen_epic_cert.pdf", status: "approved" as const, expirationDate: "2027-03-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-15") },
+  { id: "doc-1-3", consultantId: "consultant-1", documentTypeId: "doctype-5", fileName: "sarah_chen_background.pdf", fileUrl: "/documents/sarah_chen_background.pdf", status: "approved" as const, expirationDate: "2025-06-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-16") },
+  { id: "doc-1-4", consultantId: "consultant-1", documentTypeId: "doctype-6", fileName: "sarah_chen_drugscreen.pdf", fileUrl: "/documents/sarah_chen_drugscreen.pdf", status: "approved" as const, expirationDate: "2025-06-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-16") },
+  { id: "doc-1-5", consultantId: "consultant-1", documentTypeId: "doctype-7", fileName: "sarah_chen_hipaa.pdf", fileUrl: "/documents/sarah_chen_hipaa.pdf", status: "approved" as const, expirationDate: "2025-06-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-17") },
+  { id: "doc-1-6", consultantId: "consultant-1", documentTypeId: "doctype-8", fileName: "sarah_chen_w9.pdf", fileUrl: "/documents/sarah_chen_w9.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-17") },
+  { id: "doc-1-7", consultantId: "consultant-1", documentTypeId: "doctype-9", fileName: "sarah_chen_insurance.pdf", fileUrl: "/documents/sarah_chen_insurance.pdf", status: "approved" as const, expirationDate: "2025-06-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-17") },
+  { id: "doc-1-8", consultantId: "consultant-1", documentTypeId: "doctype-11", fileName: "sarah_chen_nda.pdf", fileUrl: "/documents/sarah_chen_nda.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-15") },
+  { id: "doc-1-9", consultantId: "consultant-1", documentTypeId: "doctype-12", fileName: "sarah_chen_contract.pdf", fileUrl: "/documents/sarah_chen_contract.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-15") },
+
+  // Consultant 2 - Michael Rodriguez (Cerner certified, on assignment)
+  { id: "doc-2-1", consultantId: "consultant-2", documentTypeId: "doctype-1", fileName: "michael_rodriguez_resume.pdf", fileUrl: "/documents/michael_rodriguez_resume.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-05-10") },
+  { id: "doc-2-2", consultantId: "consultant-2", documentTypeId: "doctype-4", fileName: "michael_rodriguez_cerner_cert.pdf", fileUrl: "/documents/michael_rodriguez_cerner_cert.pdf", status: "approved" as const, expirationDate: "2026-11-20", reviewedBy: "demo-admin", reviewedAt: new Date("2024-05-10") },
+  { id: "doc-2-3", consultantId: "consultant-2", documentTypeId: "doctype-5", fileName: "michael_rodriguez_background.pdf", fileUrl: "/documents/michael_rodriguez_background.pdf", status: "approved" as const, expirationDate: "2025-05-10", reviewedBy: "demo-admin", reviewedAt: new Date("2024-05-11") },
+  { id: "doc-2-4", consultantId: "consultant-2", documentTypeId: "doctype-6", fileName: "michael_rodriguez_drugscreen.pdf", fileUrl: "/documents/michael_rodriguez_drugscreen.pdf", status: "approved" as const, expirationDate: "2025-05-10", reviewedBy: "demo-admin", reviewedAt: new Date("2024-05-11") },
+  { id: "doc-2-5", consultantId: "consultant-2", documentTypeId: "doctype-7", fileName: "michael_rodriguez_hipaa.pdf", fileUrl: "/documents/michael_rodriguez_hipaa.pdf", status: "approved" as const, expirationDate: "2025-05-10", reviewedBy: "demo-admin", reviewedAt: new Date("2024-05-12") },
+  { id: "doc-2-6", consultantId: "consultant-2", documentTypeId: "doctype-8", fileName: "michael_rodriguez_w9.pdf", fileUrl: "/documents/michael_rodriguez_w9.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-05-12") },
+  { id: "doc-2-7", consultantId: "consultant-2", documentTypeId: "doctype-9", fileName: "michael_rodriguez_insurance.pdf", fileUrl: "/documents/michael_rodriguez_insurance.pdf", status: "approved" as const, expirationDate: "2025-05-10", reviewedBy: "demo-admin", reviewedAt: new Date("2024-05-12") },
+  { id: "doc-2-8", consultantId: "consultant-2", documentTypeId: "doctype-11", fileName: "michael_rodriguez_nda.pdf", fileUrl: "/documents/michael_rodriguez_nda.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-05-10") },
+  { id: "doc-2-9", consultantId: "consultant-2", documentTypeId: "doctype-12", fileName: "michael_rodriguez_contract.pdf", fileUrl: "/documents/michael_rodriguez_contract.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-05-10") },
+
+  // Consultant 3 - Jennifer Williams (Epic & Cerner, on assignment)
+  { id: "doc-3-1", consultantId: "consultant-3", documentTypeId: "doctype-1", fileName: "jennifer_williams_resume.pdf", fileUrl: "/documents/jennifer_williams_resume.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-04-20") },
+  { id: "doc-3-2", consultantId: "consultant-3", documentTypeId: "doctype-3", fileName: "jennifer_williams_epic_cert.pdf", fileUrl: "/documents/jennifer_williams_epic_cert.pdf", status: "approved" as const, expirationDate: "2026-08-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-04-20") },
+  { id: "doc-3-3", consultantId: "consultant-3", documentTypeId: "doctype-4", fileName: "jennifer_williams_cerner_cert.pdf", fileUrl: "/documents/jennifer_williams_cerner_cert.pdf", status: "approved" as const, expirationDate: "2027-01-10", reviewedBy: "demo-admin", reviewedAt: new Date("2024-04-20") },
+  { id: "doc-3-4", consultantId: "consultant-3", documentTypeId: "doctype-5", fileName: "jennifer_williams_background.pdf", fileUrl: "/documents/jennifer_williams_background.pdf", status: "approved" as const, expirationDate: "2025-04-20", reviewedBy: "demo-admin", reviewedAt: new Date("2024-04-21") },
+  { id: "doc-3-5", consultantId: "consultant-3", documentTypeId: "doctype-7", fileName: "jennifer_williams_hipaa.pdf", fileUrl: "/documents/jennifer_williams_hipaa.pdf", status: "approved" as const, expirationDate: "2025-04-20", reviewedBy: "demo-admin", reviewedAt: new Date("2024-04-22") },
+  { id: "doc-3-6", consultantId: "consultant-3", documentTypeId: "doctype-8", fileName: "jennifer_williams_w9.pdf", fileUrl: "/documents/jennifer_williams_w9.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-04-22") },
+  { id: "doc-3-7", consultantId: "consultant-3", documentTypeId: "doctype-11", fileName: "jennifer_williams_nda.pdf", fileUrl: "/documents/jennifer_williams_nda.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-04-20") },
+  { id: "doc-3-8", consultantId: "consultant-3", documentTypeId: "doctype-12", fileName: "jennifer_williams_contract.pdf", fileUrl: "/documents/jennifer_williams_contract.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-04-20") },
+
+  // Consultant 4 - David Kim (Epic, available) - has an expiring document
+  { id: "doc-4-1", consultantId: "consultant-4", documentTypeId: "doctype-1", fileName: "david_kim_resume.pdf", fileUrl: "/documents/david_kim_resume.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-03-01") },
+  { id: "doc-4-2", consultantId: "consultant-4", documentTypeId: "doctype-3", fileName: "david_kim_epic_cert.pdf", fileUrl: "/documents/david_kim_epic_cert.pdf", status: "approved" as const, expirationDate: "2025-09-30", reviewedBy: "demo-admin", reviewedAt: new Date("2024-03-01") },
+  { id: "doc-4-3", consultantId: "consultant-4", documentTypeId: "doctype-5", fileName: "david_kim_background.pdf", fileUrl: "/documents/david_kim_background.pdf", status: "approved" as const, expirationDate: "2025-01-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-03-02"), notes: "Expiring soon - renewal needed" },
+  { id: "doc-4-4", consultantId: "consultant-4", documentTypeId: "doctype-7", fileName: "david_kim_hipaa.pdf", fileUrl: "/documents/david_kim_hipaa.pdf", status: "approved" as const, expirationDate: "2025-03-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-03-03") },
+  { id: "doc-4-5", consultantId: "consultant-4", documentTypeId: "doctype-8", fileName: "david_kim_w9.pdf", fileUrl: "/documents/david_kim_w9.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-03-03") },
+  { id: "doc-4-6", consultantId: "consultant-4", documentTypeId: "doctype-11", fileName: "david_kim_nda.pdf", fileUrl: "/documents/david_kim_nda.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-03-01") },
+  { id: "doc-4-7", consultantId: "consultant-4", documentTypeId: "doctype-12", fileName: "david_kim_contract.pdf", fileUrl: "/documents/david_kim_contract.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-03-01") },
+
+  // Consultant 5 - Amanda Foster (Meditech, available)
+  { id: "doc-5-1", consultantId: "consultant-5", documentTypeId: "doctype-1", fileName: "amanda_foster_resume.pdf", fileUrl: "/documents/amanda_foster_resume.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-07-01") },
+  { id: "doc-5-2", consultantId: "consultant-5", documentTypeId: "doctype-5", fileName: "amanda_foster_background.pdf", fileUrl: "/documents/amanda_foster_background.pdf", status: "approved" as const, expirationDate: "2025-07-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-07-02") },
+  { id: "doc-5-3", consultantId: "consultant-5", documentTypeId: "doctype-7", fileName: "amanda_foster_hipaa.pdf", fileUrl: "/documents/amanda_foster_hipaa.pdf", status: "approved" as const, expirationDate: "2025-07-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-07-03") },
+  { id: "doc-5-4", consultantId: "consultant-5", documentTypeId: "doctype-8", fileName: "amanda_foster_w9.pdf", fileUrl: "/documents/amanda_foster_w9.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-07-03") },
+  { id: "doc-5-5", consultantId: "consultant-5", documentTypeId: "doctype-11", fileName: "amanda_foster_nda.pdf", fileUrl: "/documents/amanda_foster_nda.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-07-01") },
+  { id: "doc-5-6", consultantId: "consultant-5", documentTypeId: "doctype-12", fileName: "amanda_foster_contract.pdf", fileUrl: "/documents/amanda_foster_contract.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-07-01") },
+
+  // Consultant 6 - Robert Thompson (Epic, on assignment)
+  { id: "doc-6-1", consultantId: "consultant-6", documentTypeId: "doctype-1", fileName: "robert_thompson_resume.pdf", fileUrl: "/documents/robert_thompson_resume.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-02-15") },
+  { id: "doc-6-2", consultantId: "consultant-6", documentTypeId: "doctype-3", fileName: "robert_thompson_epic_cert.pdf", fileUrl: "/documents/robert_thompson_epic_cert.pdf", status: "approved" as const, expirationDate: "2026-05-20", reviewedBy: "demo-admin", reviewedAt: new Date("2024-02-15") },
+  { id: "doc-6-3", consultantId: "consultant-6", documentTypeId: "doctype-5", fileName: "robert_thompson_background.pdf", fileUrl: "/documents/robert_thompson_background.pdf", status: "approved" as const, expirationDate: "2025-02-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-02-16") },
+  { id: "doc-6-4", consultantId: "consultant-6", documentTypeId: "doctype-7", fileName: "robert_thompson_hipaa.pdf", fileUrl: "/documents/robert_thompson_hipaa.pdf", status: "approved" as const, expirationDate: "2025-02-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-02-17") },
+  { id: "doc-6-5", consultantId: "consultant-6", documentTypeId: "doctype-8", fileName: "robert_thompson_w9.pdf", fileUrl: "/documents/robert_thompson_w9.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-02-17") },
+  { id: "doc-6-6", consultantId: "consultant-6", documentTypeId: "doctype-11", fileName: "robert_thompson_nda.pdf", fileUrl: "/documents/robert_thompson_nda.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-02-15") },
+  { id: "doc-6-7", consultantId: "consultant-6", documentTypeId: "doctype-12", fileName: "robert_thompson_contract.pdf", fileUrl: "/documents/robert_thompson_contract.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-02-15") },
+
+  // Consultant 7 - Emily Martinez (Epic, available) - RN license
+  { id: "doc-7-1", consultantId: "consultant-7", documentTypeId: "doctype-1", fileName: "emily_martinez_resume.pdf", fileUrl: "/documents/emily_martinez_resume.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-08-01") },
+  { id: "doc-7-2", consultantId: "consultant-7", documentTypeId: "doctype-2", fileName: "emily_martinez_rn_license.pdf", fileUrl: "/documents/emily_martinez_rn_license.pdf", status: "approved" as const, expirationDate: "2026-08-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-08-01") },
+  { id: "doc-7-3", consultantId: "consultant-7", documentTypeId: "doctype-3", fileName: "emily_martinez_epic_cert.pdf", fileUrl: "/documents/emily_martinez_epic_cert.pdf", status: "approved" as const, expirationDate: "2027-02-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-08-01") },
+  { id: "doc-7-4", consultantId: "consultant-7", documentTypeId: "doctype-5", fileName: "emily_martinez_background.pdf", fileUrl: "/documents/emily_martinez_background.pdf", status: "approved" as const, expirationDate: "2025-08-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-08-02") },
+  { id: "doc-7-5", consultantId: "consultant-7", documentTypeId: "doctype-7", fileName: "emily_martinez_hipaa.pdf", fileUrl: "/documents/emily_martinez_hipaa.pdf", status: "approved" as const, expirationDate: "2025-08-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-08-03") },
+  { id: "doc-7-6", consultantId: "consultant-7", documentTypeId: "doctype-8", fileName: "emily_martinez_w9.pdf", fileUrl: "/documents/emily_martinez_w9.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-08-03") },
+  { id: "doc-7-7", consultantId: "consultant-7", documentTypeId: "doctype-11", fileName: "emily_martinez_nda.pdf", fileUrl: "/documents/emily_martinez_nda.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-08-01") },
+  { id: "doc-7-8", consultantId: "consultant-7", documentTypeId: "doctype-12", fileName: "emily_martinez_contract.pdf", fileUrl: "/documents/emily_martinez_contract.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-08-01") },
+
+  // Consultant 8 - James Wilson (Allscripts, available)
+  { id: "doc-8-1", consultantId: "consultant-8", documentTypeId: "doctype-1", fileName: "james_wilson_resume.pdf", fileUrl: "/documents/james_wilson_resume.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-09-01") },
+  { id: "doc-8-2", consultantId: "consultant-8", documentTypeId: "doctype-5", fileName: "james_wilson_background.pdf", fileUrl: "/documents/james_wilson_background.pdf", status: "approved" as const, expirationDate: "2025-09-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-09-02") },
+  { id: "doc-8-3", consultantId: "consultant-8", documentTypeId: "doctype-7", fileName: "james_wilson_hipaa.pdf", fileUrl: "/documents/james_wilson_hipaa.pdf", status: "approved" as const, expirationDate: "2025-09-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-09-03") },
+  { id: "doc-8-4", consultantId: "consultant-8", documentTypeId: "doctype-8", fileName: "james_wilson_w9.pdf", fileUrl: "/documents/james_wilson_w9.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-09-03") },
+  { id: "doc-8-5", consultantId: "consultant-8", documentTypeId: "doctype-11", fileName: "james_wilson_nda.pdf", fileUrl: "/documents/james_wilson_nda.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-09-01") },
+  { id: "doc-8-6", consultantId: "consultant-8", documentTypeId: "doctype-12", fileName: "james_wilson_contract.pdf", fileUrl: "/documents/james_wilson_contract.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-09-01") },
+
+  // Consultant 9 - Lisa Anderson (Epic, on assignment)
+  { id: "doc-9-1", consultantId: "consultant-9", documentTypeId: "doctype-1", fileName: "lisa_anderson_resume.pdf", fileUrl: "/documents/lisa_anderson_resume.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-01-15") },
+  { id: "doc-9-2", consultantId: "consultant-9", documentTypeId: "doctype-3", fileName: "lisa_anderson_epic_cert.pdf", fileUrl: "/documents/lisa_anderson_epic_cert.pdf", status: "approved" as const, expirationDate: "2026-07-20", reviewedBy: "demo-admin", reviewedAt: new Date("2024-01-15") },
+  { id: "doc-9-3", consultantId: "consultant-9", documentTypeId: "doctype-5", fileName: "lisa_anderson_background.pdf", fileUrl: "/documents/lisa_anderson_background.pdf", status: "approved" as const, expirationDate: "2025-01-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-01-16") },
+  { id: "doc-9-4", consultantId: "consultant-9", documentTypeId: "doctype-7", fileName: "lisa_anderson_hipaa.pdf", fileUrl: "/documents/lisa_anderson_hipaa.pdf", status: "approved" as const, expirationDate: "2025-01-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-01-17") },
+  { id: "doc-9-5", consultantId: "consultant-9", documentTypeId: "doctype-8", fileName: "lisa_anderson_w9.pdf", fileUrl: "/documents/lisa_anderson_w9.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-01-17") },
+  { id: "doc-9-6", consultantId: "consultant-9", documentTypeId: "doctype-11", fileName: "lisa_anderson_nda.pdf", fileUrl: "/documents/lisa_anderson_nda.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-01-15") },
+  { id: "doc-9-7", consultantId: "consultant-9", documentTypeId: "doctype-12", fileName: "lisa_anderson_contract.pdf", fileUrl: "/documents/lisa_anderson_contract.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-01-15") },
+
+  // Consultant 10 - Christopher Lee (Cerner, unavailable) - Some docs pending
+  { id: "doc-10-1", consultantId: "consultant-10", documentTypeId: "doctype-1", fileName: "christopher_lee_resume.pdf", fileUrl: "/documents/christopher_lee_resume.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-10-01") },
+  { id: "doc-10-2", consultantId: "consultant-10", documentTypeId: "doctype-4", fileName: "christopher_lee_cerner_cert.pdf", fileUrl: "/documents/christopher_lee_cerner_cert.pdf", status: "approved" as const, expirationDate: "2026-12-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-10-01") },
+  { id: "doc-10-3", consultantId: "consultant-10", documentTypeId: "doctype-5", fileName: "christopher_lee_background.pdf", fileUrl: "/documents/christopher_lee_background.pdf", status: "pending" as const, notes: "Waiting for results from vendor" },
+  { id: "doc-10-4", consultantId: "consultant-10", documentTypeId: "doctype-7", fileName: "christopher_lee_hipaa.pdf", fileUrl: "/documents/christopher_lee_hipaa.pdf", status: "approved" as const, expirationDate: "2025-10-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-10-03") },
+  { id: "doc-10-5", consultantId: "consultant-10", documentTypeId: "doctype-8", fileName: "christopher_lee_w9.pdf", fileUrl: "/documents/christopher_lee_w9.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-10-03") },
+  { id: "doc-10-6", consultantId: "consultant-10", documentTypeId: "doctype-11", fileName: "christopher_lee_nda.pdf", fileUrl: "/documents/christopher_lee_nda.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-10-01") },
+
+  // Consultant 11 - Patricia Brown (Epic, available)
+  { id: "doc-11-1", consultantId: "consultant-11", documentTypeId: "doctype-1", fileName: "patricia_brown_resume.pdf", fileUrl: "/documents/patricia_brown_resume.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-11-01") },
+  { id: "doc-11-2", consultantId: "consultant-11", documentTypeId: "doctype-3", fileName: "patricia_brown_epic_cert.pdf", fileUrl: "/documents/patricia_brown_epic_cert.pdf", status: "approved" as const, expirationDate: "2027-05-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-11-01") },
+  { id: "doc-11-3", consultantId: "consultant-11", documentTypeId: "doctype-5", fileName: "patricia_brown_background.pdf", fileUrl: "/documents/patricia_brown_background.pdf", status: "approved" as const, expirationDate: "2025-11-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-11-02") },
+  { id: "doc-11-4", consultantId: "consultant-11", documentTypeId: "doctype-7", fileName: "patricia_brown_hipaa.pdf", fileUrl: "/documents/patricia_brown_hipaa.pdf", status: "approved" as const, expirationDate: "2025-11-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-11-03") },
+  { id: "doc-11-5", consultantId: "consultant-11", documentTypeId: "doctype-8", fileName: "patricia_brown_w9.pdf", fileUrl: "/documents/patricia_brown_w9.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-11-03") },
+  { id: "doc-11-6", consultantId: "consultant-11", documentTypeId: "doctype-9", fileName: "patricia_brown_insurance.pdf", fileUrl: "/documents/patricia_brown_insurance.pdf", status: "approved" as const, expirationDate: "2025-11-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-11-03") },
+  { id: "doc-11-7", consultantId: "consultant-11", documentTypeId: "doctype-11", fileName: "patricia_brown_nda.pdf", fileUrl: "/documents/patricia_brown_nda.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-11-01") },
+  { id: "doc-11-8", consultantId: "consultant-11", documentTypeId: "doctype-12", fileName: "patricia_brown_contract.pdf", fileUrl: "/documents/patricia_brown_contract.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-11-01") },
+
+  // Consultant 12 - Daniel Wilson (Epic & Cerner, on assignment)
+  { id: "doc-12-1", consultantId: "consultant-12", documentTypeId: "doctype-1", fileName: "daniel_wilson_resume.pdf", fileUrl: "/documents/daniel_wilson_resume.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-01") },
+  { id: "doc-12-2", consultantId: "consultant-12", documentTypeId: "doctype-3", fileName: "daniel_wilson_epic_cert.pdf", fileUrl: "/documents/daniel_wilson_epic_cert.pdf", status: "approved" as const, expirationDate: "2026-10-20", reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-01") },
+  { id: "doc-12-3", consultantId: "consultant-12", documentTypeId: "doctype-4", fileName: "daniel_wilson_cerner_cert.pdf", fileUrl: "/documents/daniel_wilson_cerner_cert.pdf", status: "approved" as const, expirationDate: "2027-03-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-01") },
+  { id: "doc-12-4", consultantId: "consultant-12", documentTypeId: "doctype-5", fileName: "daniel_wilson_background.pdf", fileUrl: "/documents/daniel_wilson_background.pdf", status: "approved" as const, expirationDate: "2025-06-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-02") },
+  { id: "doc-12-5", consultantId: "consultant-12", documentTypeId: "doctype-6", fileName: "daniel_wilson_drugscreen.pdf", fileUrl: "/documents/daniel_wilson_drugscreen.pdf", status: "approved" as const, expirationDate: "2025-06-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-02") },
+  { id: "doc-12-6", consultantId: "consultant-12", documentTypeId: "doctype-7", fileName: "daniel_wilson_hipaa.pdf", fileUrl: "/documents/daniel_wilson_hipaa.pdf", status: "approved" as const, expirationDate: "2025-06-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-03") },
+  { id: "doc-12-7", consultantId: "consultant-12", documentTypeId: "doctype-8", fileName: "daniel_wilson_w9.pdf", fileUrl: "/documents/daniel_wilson_w9.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-03") },
+  { id: "doc-12-8", consultantId: "consultant-12", documentTypeId: "doctype-9", fileName: "daniel_wilson_insurance.pdf", fileUrl: "/documents/daniel_wilson_insurance.pdf", status: "approved" as const, expirationDate: "2025-06-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-03") },
+  { id: "doc-12-9", consultantId: "consultant-12", documentTypeId: "doctype-10", fileName: "daniel_wilson_covid.pdf", fileUrl: "/documents/daniel_wilson_covid.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-01") },
+  { id: "doc-12-10", consultantId: "consultant-12", documentTypeId: "doctype-11", fileName: "daniel_wilson_nda.pdf", fileUrl: "/documents/daniel_wilson_nda.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-01") },
+  { id: "doc-12-11", consultantId: "consultant-12", documentTypeId: "doctype-12", fileName: "daniel_wilson_contract.pdf", fileUrl: "/documents/daniel_wilson_contract.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-01") },
 ];
 
 const demoCourses = [
@@ -3348,14 +3481,36 @@ export async function seedDemoData() {
         positions: consultant.positions,
         bio: consultant.bio,
         payRate: consultant.payRate,
+        shiftPreference: consultant.shiftPreference,
         isOnboarded: consultant.isOnboarded,
         isAvailable: consultant.isAvailable,
-      }).onConflictDoNothing();
+      }).onConflictDoUpdate({
+        target: consultants.id,
+        set: {
+          phone: consultant.phone,
+          city: consultant.city,
+          state: consultant.state,
+          yearsExperience: consultant.yearsExperience,
+          emrSystems: consultant.emrSystems,
+          modules: consultant.modules,
+          positions: consultant.positions,
+          bio: consultant.bio,
+          payRate: consultant.payRate,
+          shiftPreference: consultant.shiftPreference,
+          isOnboarded: consultant.isOnboarded,
+          isAvailable: consultant.isAvailable,
+        },
+      });
     }
 
     console.log("Seeding document types...");
     for (const docType of demoDocumentTypes) {
       await db.insert(documentTypes).values(docType).onConflictDoNothing();
+    }
+
+    console.log("Seeding consultant documents...");
+    for (const doc of demoConsultantDocuments) {
+      await db.insert(consultantDocuments).values(doc).onConflictDoNothing();
     }
 
     console.log("Seeding projects...");
