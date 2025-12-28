@@ -35,7 +35,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Building2, MapPin, Phone, Mail, Globe, Pencil, Trash2, Search, Shield, Server, Users } from "lucide-react";
+import { Plus, Building2, MapPin, Phone, Mail, Globe, Pencil, Trash2, Search, Shield, Server, Users, Eye, Calendar, DollarSign, Activity, CheckCircle, XCircle, ExternalLink, Bed, Stethoscope } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import type { Hospital } from "@shared/schema";
 import { useForm } from "react-hook-form";
@@ -108,6 +108,7 @@ export default function Hospitals() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingHospital, setEditingHospital] = useState<Hospital | null>(null);
+  const [viewingHospital, setViewingHospital] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
   const { data: hospitals, isLoading } = useQuery<Hospital[]>({
@@ -994,29 +995,40 @@ export default function Hospitals() {
                     Staff: {hospital.totalStaff}
                   </p>
                 )}
-                {isAdmin && (
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleEdit(hospital)}
-                      data-testid="button-edit-hospital"
-                    >
-                      <Pencil className="w-4 h-4 mr-1" />
-                      Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => deleteMutation.mutate(hospital.id)}
-                      disabled={deleteMutation.isPending}
-                      data-testid="button-delete-hospital"
-                    >
-                      <Trash2 className="w-4 h-4 mr-1" />
-                      Delete
-                    </Button>
-                  </div>
-                )}
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setViewingHospital(hospital)}
+                    data-testid="button-view-hospital"
+                  >
+                    <Eye className="w-4 h-4 mr-1" />
+                    View More
+                  </Button>
+                  {isAdmin && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleEdit(hospital)}
+                        data-testid="button-edit-hospital"
+                      >
+                        <Pencil className="w-4 h-4 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => deleteMutation.mutate(hospital.id)}
+                        disabled={deleteMutation.isPending}
+                        data-testid="button-delete-hospital"
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Delete
+                      </Button>
+                    </>
+                  )}
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -1036,6 +1048,390 @@ export default function Hospitals() {
           </CardContent>
         </Card>
       )}
+
+      {/* View Hospital Details Modal */}
+      <Dialog open={!!viewingHospital} onOpenChange={(open) => !open && setViewingHospital(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {viewingHospital && (
+            <>
+              <DialogHeader>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <DialogTitle className="text-2xl flex items-center gap-2">
+                      <Building2 className="w-6 h-6" />
+                      {viewingHospital.name}
+                    </DialogTitle>
+                    <DialogDescription className="flex items-center gap-4 mt-2">
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-4 h-4" />
+                        {[viewingHospital.city, viewingHospital.state].filter(Boolean).join(", ") || "Location not set"}
+                      </span>
+                      {viewingHospital.emrSystem && (
+                        <Badge variant="secondary">{viewingHospital.emrSystem}</Badge>
+                      )}
+                      {viewingHospital.implementationPhase && (
+                        <Badge variant="outline">{viewingHospital.implementationPhase}</Badge>
+                      )}
+                    </DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+                {/* Quick Stats */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Bed Count</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2">
+                      <Bed className="w-5 h-5 text-blue-500" />
+                      <span className="text-2xl font-bold">{viewingHospital.bedCount || "N/A"}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Total Staff</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2">
+                      <Users className="w-5 h-5 text-green-500" />
+                      <span className="text-2xl font-bold">{viewingHospital.totalStaff?.toLocaleString() || "N/A"}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">IT Staff</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2">
+                      <Server className="w-5 h-5 text-purple-500" />
+                      <span className="text-2xl font-bold">{viewingHospital.itStaffCount || "N/A"}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Tabs defaultValue="overview" className="mt-6">
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="overview">Overview</TabsTrigger>
+                  <TabsTrigger value="technical">Technical</TabsTrigger>
+                  <TabsTrigger value="implementation">Implementation</TabsTrigger>
+                  <TabsTrigger value="compliance">Compliance</TabsTrigger>
+                </TabsList>
+
+                {/* Overview Tab */}
+                <TabsContent value="overview" className="space-y-4 mt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Contact Information */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Phone className="w-4 h-4" />
+                          Contact Information
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <span className="text-muted-foreground">Address:</span>
+                          <span>{viewingHospital.address || "Not set"}</span>
+
+                          <span className="text-muted-foreground">City, State:</span>
+                          <span>{[viewingHospital.city, viewingHospital.state, viewingHospital.zipCode].filter(Boolean).join(", ") || "Not set"}</span>
+
+                          <span className="text-muted-foreground">Phone:</span>
+                          <span>{viewingHospital.phone || "Not set"}</span>
+
+                          <span className="text-muted-foreground">Email:</span>
+                          <span>{viewingHospital.email || "Not set"}</span>
+
+                          <span className="text-muted-foreground">Website:</span>
+                          <span>
+                            {viewingHospital.website ? (
+                              <a href={viewingHospital.website} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline flex items-center gap-1">
+                                Visit <ExternalLink className="w-3 h-3" />
+                              </a>
+                            ) : "Not set"}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Organization Details */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Building2 className="w-4 h-4" />
+                          Organization Details
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <span className="text-muted-foreground">Facility Type:</span>
+                          <span>{viewingHospital.facilityType || "Not set"}</span>
+
+                          <span className="text-muted-foreground">Trauma Level:</span>
+                          <span>
+                            {viewingHospital.traumaLevel ? (
+                              <Badge variant="outline">{viewingHospital.traumaLevel}</Badge>
+                            ) : "Not set"}
+                          </span>
+
+                          <span className="text-muted-foreground">Teaching Status:</span>
+                          <span>{viewingHospital.teachingStatus || "Not set"}</span>
+
+                          <span className="text-muted-foreground">Ownership:</span>
+                          <span>{viewingHospital.ownershipType || "Not set"}</span>
+
+                          <span className="text-muted-foreground">Health System:</span>
+                          <span>{viewingHospital.healthSystemAffiliation || "Not set"}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Identifiers */}
+                    <Card className="md:col-span-2">
+                      <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Stethoscope className="w-4 h-4" />
+                          Healthcare Identifiers
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div>
+                            <p className="text-xs text-muted-foreground">NPI Number</p>
+                            <p className="font-mono text-sm">{viewingHospital.npiNumber || "Not set"}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">CMS Number</p>
+                            <p className="font-mono text-sm">{viewingHospital.cmsNumber || "Not set"}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
+
+                {/* Technical Tab */}
+                <TabsContent value="technical" className="space-y-4 mt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Server className="w-4 h-4" />
+                          EMR Information
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <span className="text-muted-foreground">Current EMR:</span>
+                          <span>
+                            {viewingHospital.emrSystem ? (
+                              <Badge>{viewingHospital.emrSystem}</Badge>
+                            ) : "Not set"}
+                          </span>
+
+                          <span className="text-muted-foreground">Version:</span>
+                          <span>{viewingHospital.currentEmrVersion || "Not set"}</span>
+
+                          <span className="text-muted-foreground">Target EMR:</span>
+                          <span>
+                            {viewingHospital.targetEmrSystem ? (
+                              <Badge variant="secondary">{viewingHospital.targetEmrSystem}</Badge>
+                            ) : "No migration planned"}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Activity className="w-4 h-4" />
+                          Infrastructure
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <span className="text-muted-foreground">Data Center:</span>
+                          <span>
+                            {viewingHospital.dataCenter ? (
+                              <Badge variant="outline">{viewingHospital.dataCenter}</Badge>
+                            ) : "Not set"}
+                          </span>
+
+                          <span className="text-muted-foreground">IT Staff:</span>
+                          <span>{viewingHospital.itStaffCount || "Not set"}</span>
+                        </div>
+
+                        {viewingHospital.networkInfrastructure && (
+                          <div className="mt-4">
+                            <p className="text-xs text-muted-foreground mb-1">Network Notes:</p>
+                            <p className="text-sm bg-muted p-2 rounded">{viewingHospital.networkInfrastructure}</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
+
+                {/* Implementation Tab */}
+                <TabsContent value="implementation" className="space-y-4 mt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Calendar className="w-4 h-4" />
+                          Project Status
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <span className="text-muted-foreground">Phase:</span>
+                          <span>
+                            {viewingHospital.implementationPhase ? (
+                              <Badge>{viewingHospital.implementationPhase}</Badge>
+                            ) : "Not set"}
+                          </span>
+
+                          <span className="text-muted-foreground">Go-Live Date:</span>
+                          <span>
+                            {viewingHospital.goLiveDate
+                              ? new Date(viewingHospital.goLiveDate).toLocaleDateString()
+                              : "Not scheduled"}
+                          </span>
+
+                          <span className="text-muted-foreground">Contract Value:</span>
+                          <span className="font-semibold text-green-600">
+                            {viewingHospital.contractValue || "Not set"}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Users className="w-4 h-4" />
+                          Key Contacts
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {(viewingHospital.primaryContactName || viewingHospital.primaryContactEmail) && (
+                          <div className="border-l-2 border-blue-500 pl-3">
+                            <p className="text-xs text-muted-foreground">Primary Contact</p>
+                            <p className="font-medium">{viewingHospital.primaryContactName || "No name"}</p>
+                            {viewingHospital.primaryContactEmail && (
+                              <p className="text-sm text-muted-foreground">{viewingHospital.primaryContactEmail}</p>
+                            )}
+                            {viewingHospital.primaryContactPhone && (
+                              <p className="text-sm text-muted-foreground">{viewingHospital.primaryContactPhone}</p>
+                            )}
+                          </div>
+                        )}
+
+                        {viewingHospital.executiveSponsor && (
+                          <div className="border-l-2 border-purple-500 pl-3">
+                            <p className="text-xs text-muted-foreground">Executive Sponsor</p>
+                            <p className="font-medium">{viewingHospital.executiveSponsor}</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {viewingHospital.notes && (
+                      <Card className="md:col-span-2">
+                        <CardHeader>
+                          <CardTitle className="text-base">Notes</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-sm">{viewingHospital.notes}</p>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                </TabsContent>
+
+                {/* Compliance Tab */}
+                <TabsContent value="compliance" className="space-y-4 mt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Shield className="w-4 h-4" />
+                          Accreditation
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                          <div className="flex items-center gap-2">
+                            {viewingHospital.jointCommissionAccredited ? (
+                              <CheckCircle className="w-5 h-5 text-green-500" />
+                            ) : (
+                              <XCircle className="w-5 h-5 text-gray-400" />
+                            )}
+                            <span>Joint Commission Accredited</span>
+                          </div>
+                          <Badge variant={viewingHospital.jointCommissionAccredited ? "default" : "secondary"}>
+                            {viewingHospital.jointCommissionAccredited ? "Yes" : "No"}
+                          </Badge>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <span className="text-muted-foreground">Last Audit:</span>
+                          <span>
+                            {viewingHospital.lastAuditDate
+                              ? new Date(viewingHospital.lastAuditDate).toLocaleDateString()
+                              : "Not recorded"}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Shield className="w-4 h-4" />
+                          HIPAA Officer
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {viewingHospital.hipaaOfficerName || viewingHospital.hipaaOfficerEmail ? (
+                          <div className="border-l-2 border-green-500 pl-3">
+                            <p className="font-medium">{viewingHospital.hipaaOfficerName || "No name"}</p>
+                            {viewingHospital.hipaaOfficerEmail && (
+                              <p className="text-sm text-muted-foreground">{viewingHospital.hipaaOfficerEmail}</p>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-muted-foreground text-sm">No HIPAA officer assigned</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              <DialogFooter className="mt-6">
+                <Button variant="outline" onClick={() => setViewingHospital(null)}>
+                  Close
+                </Button>
+                {isAdmin && (
+                  <Button onClick={() => { handleEdit(viewingHospital); setViewingHospital(null); }}>
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Edit Hospital
+                  </Button>
+                )}
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

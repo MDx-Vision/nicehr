@@ -545,11 +545,57 @@ const demoProjects = [
     description: "Complete Epic implementation for Emergency Department and ICU with focus on clinical documentation and orders management. This phase includes go-live support and optimization.",
     startDate: "2024-11-01",
     endDate: "2025-06-30",
+    originalEndDate: "2025-05-31", // Originally planned 1 month earlier
     status: "active" as const,
     estimatedConsultants: 8,
     actualConsultants: 6,
+
+    // Contract Details
+    contractType: "Fixed Price",
+    contractValue: "2850000.00", // What client pays
+    billingRate: "175.00",
+    paymentTerms: "Milestone-based",
+
+    // Budget Breakdown
+    laborBudget: "1800000.00",
+    travelBudget: "280000.00",
+    softwareBudget: "150000.00",
+    trainingBudget: "120000.00",
+    infrastructureBudget: "100000.00",
+    contingencyBudget: "50000.00",
+
+    // Actual Spend
+    laborActual: "1350000.00",
+    travelActual: "195000.00",
+    softwareActual: "145000.00",
+    trainingActual: "85000.00",
+    infrastructureActual: "75000.00",
+    contingencyActual: "0.00",
+
+    // Totals
     estimatedBudget: "2500000.00",
     actualBudget: "1850000.00",
+
+    // ROI & Savings
+    baselineCost: "4200000.00", // What manual processes / old system would cost over 3 years
+    projectedSavings: "1700000.00",
+    actualSavings: "650000.00", // So far - project not complete
+    roiPercentage: "185.00",
+    paybackPeriodMonths: 14,
+
+    // Savings Breakdown
+    savingsLaborEfficiency: "280000.00", // 2 FTE reduction in data entry
+    savingsErrorReduction: "150000.00", // Fewer medication errors, rework
+    savingsRevenueCycle: "120000.00", // Faster claims processing
+    savingsPatientThroughput: "75000.00", // Increased ED capacity
+    savingsCompliance: "25000.00", // Avoided audit findings
+    savingsOther: "0.00",
+    savingsNotes: "Savings calculated based on pre-implementation baseline study. FTE reduction reflects reallocation of 2 chart abstractors to patient care roles. Revenue cycle improvement from 12% reduction in claim denials.",
+
+    // Financial Status
+    invoicedAmount: "2100000.00",
+    paidAmount: "1900000.00",
+
     savings: "650000.00",
   },
   {
@@ -559,11 +605,57 @@ const demoProjects = [
     description: "System-wide optimization of Cerner Millennium including FirstNet upgrade and PowerChart enhancements for improved clinical workflows.",
     startDate: "2024-10-15",
     endDate: "2025-04-15",
+    originalEndDate: "2025-04-15", // On schedule
     status: "active" as const,
     estimatedConsultants: 6,
     actualConsultants: 5,
+
+    // Contract Details
+    contractType: "Time & Materials",
+    contractValue: "2100000.00",
+    billingRate: "165.00",
+    paymentTerms: "Net 30",
+
+    // Budget Breakdown
+    laborBudget: "1350000.00",
+    travelBudget: "180000.00",
+    softwareBudget: "120000.00",
+    trainingBudget: "80000.00",
+    infrastructureBudget: "50000.00",
+    contingencyBudget: "20000.00",
+
+    // Actual Spend
+    laborActual: "1050000.00",
+    travelActual: "165000.00",
+    softwareActual: "118000.00",
+    trainingActual: "72000.00",
+    infrastructureActual: "45000.00",
+    contingencyActual: "0.00",
+
+    // Totals
     estimatedBudget: "1800000.00",
     actualBudget: "1450000.00",
+
+    // ROI & Savings
+    baselineCost: "2800000.00",
+    projectedSavings: "650000.00",
+    actualSavings: "350000.00",
+    roiPercentage: "156.00",
+    paybackPeriodMonths: 18,
+
+    // Savings Breakdown
+    savingsLaborEfficiency: "145000.00",
+    savingsErrorReduction: "85000.00",
+    savingsRevenueCycle: "75000.00",
+    savingsPatientThroughput: "35000.00",
+    savingsCompliance: "10000.00",
+    savingsOther: "0.00",
+    savingsNotes: "Optimization project focused on workflow efficiency. FirstNet upgrade reduced ED documentation time by 23%. PowerChart enhancements improved order entry speed by 18%.",
+
+    // Financial Status
+    invoicedAmount: "1550000.00",
+    paidAmount: "1400000.00",
+
     savings: "350000.00",
   },
   {
@@ -573,11 +665,57 @@ const demoProjects = [
     description: "Implementation and launch of MyChart patient portal with Care Everywhere integration for improved patient engagement and health information exchange.",
     startDate: "2024-12-01",
     endDate: "2025-03-31",
+    originalEndDate: "2025-03-31",
     status: "active" as const,
     estimatedConsultants: 4,
     actualConsultants: 4,
+
+    // Contract Details
+    contractType: "Fixed Price",
+    contractValue: "1100000.00",
+    billingRate: "155.00",
+    paymentTerms: "50% upfront, 50% at go-live",
+
+    // Budget Breakdown
+    laborBudget: "680000.00",
+    travelBudget: "95000.00",
+    softwareBudget: "85000.00",
+    trainingBudget: "55000.00",
+    infrastructureBudget: "25000.00",
+    contingencyBudget: "10000.00",
+
+    // Actual Spend
+    laborActual: "625000.00",
+    travelActual: "88000.00",
+    softwareActual: "82000.00",
+    trainingActual: "50000.00",
+    infrastructureActual: "22000.00",
+    contingencyActual: "8000.00",
+
+    // Totals
     estimatedBudget: "950000.00",
     actualBudget: "875000.00",
+
+    // ROI & Savings
+    baselineCost: "1400000.00", // Baseline: call center costs, manual appointment scheduling, paper statements
+    projectedSavings: "525000.00",
+    actualSavings: "75000.00", // Early in project
+    roiPercentage: "147.00",
+    paybackPeriodMonths: 22,
+
+    // Savings Breakdown - MyChart specific
+    savingsLaborEfficiency: "32000.00", // Reduced call center volume - 15% decrease
+    savingsErrorReduction: "8000.00", // Fewer scheduling errors
+    savingsRevenueCycle: "18000.00", // Online bill pay, faster collections
+    savingsPatientThroughput: "12000.00", // Self-scheduling reduces no-shows by 8%
+    savingsCompliance: "5000.00", // Better patient communication documentation
+    savingsOther: "0.00",
+    savingsNotes: "ROI based on projected 40% patient adoption rate within 6 months. Call center volume expected to decrease 15% based on peer hospital benchmarks. Self-scheduling projected to reduce no-show rate from 12% to 4%.",
+
+    // Financial Status
+    invoicedAmount: "550000.00", // 50% upfront
+    paidAmount: "550000.00",
+
     savings: "75000.00",
   },
   {
@@ -3222,7 +3360,52 @@ export async function seedDemoData() {
 
     console.log("Seeding projects...");
     for (const project of demoProjects) {
-      await db.insert(projects).values(project).onConflictDoNothing();
+      await db.insert(projects).values(project).onConflictDoUpdate({
+        target: projects.id,
+        set: {
+          name: project.name,
+          description: project.description,
+          startDate: project.startDate,
+          endDate: project.endDate,
+          originalEndDate: project.originalEndDate,
+          status: project.status,
+          estimatedConsultants: project.estimatedConsultants,
+          actualConsultants: project.actualConsultants,
+          contractType: project.contractType,
+          contractValue: project.contractValue,
+          billingRate: project.billingRate,
+          paymentTerms: project.paymentTerms,
+          laborBudget: project.laborBudget,
+          travelBudget: project.travelBudget,
+          softwareBudget: project.softwareBudget,
+          trainingBudget: project.trainingBudget,
+          infrastructureBudget: project.infrastructureBudget,
+          contingencyBudget: project.contingencyBudget,
+          laborActual: project.laborActual,
+          travelActual: project.travelActual,
+          softwareActual: project.softwareActual,
+          trainingActual: project.trainingActual,
+          infrastructureActual: project.infrastructureActual,
+          contingencyActual: project.contingencyActual,
+          estimatedBudget: project.estimatedBudget,
+          actualBudget: project.actualBudget,
+          baselineCost: project.baselineCost,
+          projectedSavings: project.projectedSavings,
+          actualSavings: project.actualSavings,
+          roiPercentage: project.roiPercentage,
+          paybackPeriodMonths: project.paybackPeriodMonths,
+          savingsLaborEfficiency: project.savingsLaborEfficiency,
+          savingsErrorReduction: project.savingsErrorReduction,
+          savingsRevenueCycle: project.savingsRevenueCycle,
+          savingsPatientThroughput: project.savingsPatientThroughput,
+          savingsCompliance: project.savingsCompliance,
+          savingsOther: project.savingsOther,
+          savingsNotes: project.savingsNotes,
+          invoicedAmount: project.invoicedAmount,
+          paidAmount: project.paidAmount,
+          savings: project.savings,
+        },
+      });
     }
 
     console.log("Seeding project phases...");
