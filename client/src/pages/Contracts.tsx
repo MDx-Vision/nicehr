@@ -1208,6 +1208,7 @@ function SigningDialog({
               <div
                 className="border-2 border-dashed rounded-md bg-white"
                 style={{ touchAction: "none" }}
+                data-testid="signature-canvas"
               >
                 <SignatureCanvas
                   ref={sigPadRef}
@@ -1217,7 +1218,6 @@ function SigningDialog({
                   }}
                   penColor="black"
                   backgroundColor="white"
-                  data-testid="signature-canvas"
                 />
               </div>
               <Button size="sm" variant="outline" onClick={handleClear} data-testid="button-clear-signature">
