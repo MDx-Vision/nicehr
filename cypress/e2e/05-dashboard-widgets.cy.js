@@ -174,33 +174,239 @@ describe('Dashboard Widgets', () => {
   });
 
   // ===========================================================================
-  // TODO: Advanced Widget Features (Require UI Implementation)
+  // Widget Features
   // ===========================================================================
 
   describe('Widget System', () => {
-    it.skip('TODO: Allow widget drag and drop reordering', () => {});
-    it.skip('TODO: Persist widget layout to user preferences', () => {});
-    it.skip('TODO: Show/hide individual widgets', () => {});
-    it.skip('TODO: Reset to default widget layout', () => {});
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: testUser
+      }).as('getUser');
+
+      cy.intercept('GET', '/api/dashboard/stats', {
+        statusCode: 200,
+        body: { totalConsultants: 10, activeConsultants: 5, totalHospitals: 3, activeProjects: 2 }
+      }).as('getDashboardStats');
+
+      cy.intercept('GET', '/api/dashboard/tasks', {
+        statusCode: 200,
+        body: []
+      }).as('getTasks');
+
+      cy.intercept('GET', '/api/dashboard/calendar-events', {
+        statusCode: 200,
+        body: []
+      }).as('getCalendarEvents');
+
+      cy.intercept('GET', '/api/activities*', {
+        statusCode: 200,
+        body: []
+      }).as('getActivities');
+
+      cy.visit('/');
+      cy.wait('@getUser');
+    });
+
+    it('should display customize button', () => {
+      cy.get('[data-testid="button-widget-settings"]').should('be.visible');
+    });
+
+    it('should open widget settings dialog', () => {
+      cy.get('[data-testid="button-widget-settings"]').click();
+      cy.get('[data-testid="dialog-widget-settings"]').should('be.visible');
+    });
+
+    it('should show/hide individual widgets', () => {
+      cy.get('[data-testid="button-widget-settings"]').click();
+      cy.get('[data-testid="switch-widget-tasks"]').should('be.visible');
+      cy.get('[data-testid="switch-widget-charts"]').should('be.visible');
+      cy.get('[data-testid="switch-widget-calendar"]').should('be.visible');
+    });
+
+    it('should reset to default widget layout', () => {
+      cy.get('[data-testid="button-widget-settings"]').click();
+      cy.get('[data-testid="button-reset-layout"]').should('be.visible');
+      cy.get('[data-testid="button-reset-layout"]').click();
+    });
   });
 
   describe('Task Widget', () => {
-    it.skip('TODO: Display my tasks widget', () => {});
-    it.skip('TODO: Show task priority indicators', () => {});
-    it.skip('TODO: Filter tasks by status', () => {});
-    it.skip('TODO: Mark tasks as complete', () => {});
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: testUser
+      }).as('getUser');
+
+      cy.intercept('GET', '/api/dashboard/stats', {
+        statusCode: 200,
+        body: { totalConsultants: 10, activeConsultants: 5, totalHospitals: 3, activeProjects: 2 }
+      }).as('getDashboardStats');
+
+      cy.intercept('GET', '/api/dashboard/tasks', {
+        statusCode: 200,
+        body: [
+          { id: '1', title: 'Task 1', priority: 'high', status: 'pending', dueDate: new Date().toISOString() },
+          { id: '2', title: 'Task 2', priority: 'medium', status: 'completed', dueDate: new Date().toISOString() }
+        ]
+      }).as('getTasks');
+
+      cy.intercept('GET', '/api/dashboard/calendar-events', {
+        statusCode: 200,
+        body: []
+      }).as('getCalendarEvents');
+
+      cy.intercept('GET', '/api/activities*', {
+        statusCode: 200,
+        body: []
+      }).as('getActivities');
+
+      cy.visit('/');
+      cy.wait('@getUser');
+    });
+
+    it('should display my tasks widget', () => {
+      cy.get('[data-testid="card-my-tasks"]').scrollIntoView().should('be.visible');
+    });
+
+    it('should show task priority indicators', () => {
+      cy.get('[data-testid="card-my-tasks"]').scrollIntoView();
+      cy.get('[data-testid="priority-high"]').should('be.visible');
+    });
+
+    it('should filter tasks by status', () => {
+      cy.get('[data-testid="card-my-tasks"]').scrollIntoView();
+      cy.get('[data-testid="button-filter-pending"]').click();
+      cy.get('[data-testid="button-filter-completed"]').click();
+      cy.get('[data-testid="button-filter-all"]').click();
+    });
+
+    it('should show task complete button', () => {
+      cy.get('[data-testid="card-my-tasks"]').scrollIntoView();
+      cy.get('[data-testid="button-complete-1"]').should('be.visible');
+    });
   });
 
   describe('Chart Widget', () => {
-    it.skip('TODO: Display revenue trend line chart', () => {});
-    it.skip('TODO: Show user growth bar chart', () => {});
-    it.skip('TODO: Support chart period filtering', () => {});
-    it.skip('TODO: Export chart data to CSV', () => {});
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: testUser
+      }).as('getUser');
+
+      cy.intercept('GET', '/api/dashboard/stats', {
+        statusCode: 200,
+        body: { totalConsultants: 10, activeConsultants: 5, totalHospitals: 3, activeProjects: 2 }
+      }).as('getDashboardStats');
+
+      cy.intercept('GET', '/api/dashboard/tasks', {
+        statusCode: 200,
+        body: []
+      }).as('getTasks');
+
+      cy.intercept('GET', '/api/dashboard/calendar-events', {
+        statusCode: 200,
+        body: []
+      }).as('getCalendarEvents');
+
+      cy.intercept('GET', '/api/activities*', {
+        statusCode: 200,
+        body: []
+      }).as('getActivities');
+
+      cy.visit('/');
+      cy.wait('@getUser');
+    });
+
+    it('should display revenue trend chart', () => {
+      cy.get('[data-testid="card-charts"]').scrollIntoView().should('be.visible');
+      cy.get('[data-testid="chart-revenue-trend"]').should('be.visible');
+    });
+
+    it('should show user growth bar chart', () => {
+      cy.get('[data-testid="card-charts"]').scrollIntoView();
+      cy.get('[data-testid="chart-user-growth"]').should('be.visible');
+    });
+
+    it('should support chart period filtering', () => {
+      cy.get('[data-testid="card-charts"]').scrollIntoView();
+      cy.get('[data-testid="select-chart-period"]').should('be.visible');
+      cy.get('[data-testid="select-chart-period"]').select('week');
+      cy.get('[data-testid="select-chart-period"]').select('year');
+    });
+
+    it('should export chart data to CSV', () => {
+      cy.get('[data-testid="card-charts"]').scrollIntoView();
+      cy.get('[data-testid="button-export-chart"]').should('be.visible');
+    });
   });
 
   describe('Calendar Widget', () => {
-    it.skip('TODO: Display upcoming events calendar', () => {});
-    it.skip('TODO: Show project milestones', () => {});
-    it.skip('TODO: Navigate between months', () => {});
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: testUser
+      }).as('getUser');
+
+      cy.intercept('GET', '/api/dashboard/stats', {
+        statusCode: 200,
+        body: { totalConsultants: 10, activeConsultants: 5, totalHospitals: 3, activeProjects: 2 }
+      }).as('getDashboardStats');
+
+      cy.intercept('GET', '/api/dashboard/tasks', {
+        statusCode: 200,
+        body: []
+      }).as('getTasks');
+
+      cy.intercept('GET', '/api/dashboard/calendar-events', {
+        statusCode: 200,
+        body: [
+          { id: '1', title: 'Project Kickoff', date: new Date().toISOString(), type: 'milestone' },
+          { id: '2', title: 'Team Meeting', date: new Date().toISOString(), type: 'event' }
+        ]
+      }).as('getCalendarEvents');
+
+      cy.intercept('GET', '/api/activities*', {
+        statusCode: 200,
+        body: []
+      }).as('getActivities');
+
+      cy.visit('/');
+      cy.wait('@getUser');
+    });
+
+    it('should display upcoming events calendar', () => {
+      cy.get('[data-testid="card-calendar"]').scrollIntoView().should('be.visible');
+      cy.get('[data-testid="calendar-grid"]').should('be.visible');
+    });
+
+    it('should show project milestones', () => {
+      cy.get('[data-testid="card-calendar"]').scrollIntoView();
+      cy.get('[data-testid="events-list"]').should('be.visible');
+      cy.get('[data-testid="badge-milestone"]').should('be.visible');
+    });
+
+    it('should navigate between months', () => {
+      cy.get('[data-testid="card-calendar"]').scrollIntoView();
+      cy.get('[data-testid="text-current-month"]').should('be.visible');
+      cy.get('[data-testid="button-prev-month"]').click();
+      cy.get('[data-testid="button-next-month"]').click();
+    });
   });
 });

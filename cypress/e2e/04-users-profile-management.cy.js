@@ -206,31 +206,228 @@ describe('User Profile Management', () => {
   });
 
   // ===========================================================================
-  // TODO: Advanced Features (Require Additional Implementation)
+  // Account Settings Features
   // ===========================================================================
 
   describe('Email Change', () => {
-    it.skip('TODO: Change email address', () => {});
-    it.skip('TODO: Email verification flow', () => {});
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: testUser
+      }).as('getUser');
+
+      cy.intercept('GET', '/api/account/settings', {
+        statusCode: 200,
+        body: {
+          id: 'user-1',
+          email: 'test@example.com',
+          firstName: 'Test',
+          lastName: 'User',
+          role: 'consultant',
+          profileVisibility: 'public',
+          emailNotifications: true,
+          showEmail: true,
+          showPhone: false,
+          deletionRequestedAt: null,
+          createdAt: '2024-01-01T00:00:00Z'
+        }
+      }).as('getSettings');
+
+      cy.intercept('GET', '/api/account/sessions', {
+        statusCode: 200,
+        body: []
+      }).as('getSessions');
+
+      cy.visit('/account-settings');
+      cy.wait('@getUser');
+      cy.wait('@getSettings');
+    });
+
+    it('should display email change card', () => {
+      cy.get('[data-testid="card-email-change"]').scrollIntoView().should('be.visible');
+    });
+
+    it('should show email verification flow elements', () => {
+      cy.get('[data-testid="card-email-change"]').scrollIntoView();
+      cy.get('[data-testid="input-current-email"]').should('be.visible');
+      cy.get('[data-testid="input-new-email"]').should('be.visible');
+      cy.get('[data-testid="button-change-email"]').should('be.visible');
+    });
   });
 
   describe('User Preferences', () => {
-    it.skip('TODO: Theme selection (light/dark)', () => {});
-    it.skip('TODO: Language selection', () => {});
-    it.skip('TODO: Notification preferences', () => {});
-    it.skip('TODO: Email digest settings', () => {});
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: testUser
+      }).as('getUser');
+
+      cy.intercept('GET', '/api/account/settings', {
+        statusCode: 200,
+        body: {
+          id: 'user-1',
+          email: 'test@example.com',
+          firstName: 'Test',
+          lastName: 'User',
+          role: 'consultant',
+          profileVisibility: 'public',
+          emailNotifications: true,
+          showEmail: true,
+          showPhone: false,
+          deletionRequestedAt: null,
+          createdAt: '2024-01-01T00:00:00Z'
+        }
+      }).as('getSettings');
+
+      cy.intercept('GET', '/api/account/sessions', {
+        statusCode: 200,
+        body: []
+      }).as('getSessions');
+
+      cy.visit('/account-settings');
+      cy.wait('@getUser');
+      cy.wait('@getSettings');
+    });
+
+    it('should display theme selection', () => {
+      cy.get('[data-testid="card-preferences"]').scrollIntoView().should('be.visible');
+      cy.get('[data-testid="select-theme"]').should('be.visible');
+    });
+
+    it('should display language selection', () => {
+      cy.get('[data-testid="card-preferences"]').scrollIntoView();
+      cy.get('[data-testid="select-language"]').should('be.visible');
+    });
+
+    it('should display notification preferences', () => {
+      cy.get('[data-testid="card-notifications"]').scrollIntoView().should('be.visible');
+      cy.get('[data-testid="switch-email-notifications"]').should('be.visible');
+    });
+
+    it('should display email digest settings', () => {
+      cy.get('[data-testid="card-notifications"]').scrollIntoView();
+      cy.get('[data-testid="switch-email-digest"]').should('be.visible');
+    });
   });
 
   describe('Privacy Settings', () => {
-    it.skip('TODO: Profile visibility options', () => {});
-    it.skip('TODO: Activity tracking preferences', () => {});
-    it.skip('TODO: Data export functionality', () => {});
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: testUser
+      }).as('getUser');
+
+      cy.intercept('GET', '/api/account/settings', {
+        statusCode: 200,
+        body: {
+          id: 'user-1',
+          email: 'test@example.com',
+          firstName: 'Test',
+          lastName: 'User',
+          role: 'consultant',
+          profileVisibility: 'public',
+          emailNotifications: true,
+          showEmail: true,
+          showPhone: false,
+          deletionRequestedAt: null,
+          createdAt: '2024-01-01T00:00:00Z'
+        }
+      }).as('getSettings');
+
+      cy.intercept('GET', '/api/account/sessions', {
+        statusCode: 200,
+        body: []
+      }).as('getSessions');
+
+      cy.visit('/account-settings');
+      cy.wait('@getUser');
+      cy.wait('@getSettings');
+    });
+
+    it('should display profile visibility options', () => {
+      cy.get('[data-testid="select-visibility"]').should('be.visible');
+    });
+
+    it('should display activity tracking preferences', () => {
+      cy.get('[data-testid="card-preferences"]').scrollIntoView();
+      cy.get('[data-testid="switch-activity-tracking"]').should('be.visible');
+    });
+
+    it('should display data export functionality', () => {
+      cy.get('[data-testid="card-data-export"]').scrollIntoView().should('be.visible');
+      cy.get('[data-testid="button-export-data"]').should('be.visible');
+    });
   });
 
   describe('Account Management', () => {
-    it.skip('TODO: Change password', () => {});
-    it.skip('TODO: Two-factor authentication setup', () => {});
-    it.skip('TODO: Account deletion request', () => {});
-    it.skip('TODO: Delete confirmation workflow', () => {});
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: testUser
+      }).as('getUser');
+
+      cy.intercept('GET', '/api/account/settings', {
+        statusCode: 200,
+        body: {
+          id: 'user-1',
+          email: 'test@example.com',
+          firstName: 'Test',
+          lastName: 'User',
+          role: 'consultant',
+          profileVisibility: 'public',
+          emailNotifications: true,
+          showEmail: true,
+          showPhone: false,
+          deletionRequestedAt: null,
+          createdAt: '2024-01-01T00:00:00Z'
+        }
+      }).as('getSettings');
+
+      cy.intercept('GET', '/api/account/sessions', {
+        statusCode: 200,
+        body: []
+      }).as('getSessions');
+
+      cy.visit('/account-settings');
+      cy.wait('@getUser');
+      cy.wait('@getSettings');
+    });
+
+    it('should display change password section', () => {
+      cy.get('[data-testid="card-password-change"]').scrollIntoView().should('be.visible');
+      cy.get('[data-testid="input-current-password"]').should('be.visible');
+      cy.get('[data-testid="input-new-password"]').should('be.visible');
+    });
+
+    it('should display two-factor authentication setup', () => {
+      cy.get('[data-testid="card-two-factor"]').scrollIntoView().should('be.visible');
+      cy.get('[data-testid="switch-two-factor"]').should('be.visible');
+    });
+
+    it('should display account deletion request button', () => {
+      cy.get('[data-testid="button-request-deletion"]').scrollIntoView().should('be.visible');
+    });
+
+    it('should open delete confirmation workflow', () => {
+      cy.get('[data-testid="button-request-deletion"]').scrollIntoView().click();
+      cy.get('[data-testid="button-confirm-deletion"]').should('be.visible');
+      cy.get('[data-testid="button-cancel-confirm"]').should('be.visible');
+    });
   });
 });
