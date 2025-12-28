@@ -28,6 +28,7 @@ import {
   budgetCalculations,
   supportTickets,
   timesheets,
+  userActivities,
   timesheetEntries,
   expenses,
   notifications,
@@ -2117,6 +2118,218 @@ const demoSyncEvents = [
   },
 ];
 
+// Demo Project Tasks for Dashboard
+const demoProjectTasks = [
+  // Epic EHR Implementation tasks
+  {
+    id: "task-1",
+    projectId: "project-1",
+    title: "Complete ED workflow documentation",
+    description: "Document all Emergency Department workflows for Epic implementation",
+    priority: "high" as const,
+    status: "in_progress" as const,
+    dueDate: "2025-01-02",
+    assignedTo: "user-c1", // Sarah Chen
+  },
+  {
+    id: "task-2",
+    projectId: "project-1",
+    title: "Review ICU order sets with clinical team",
+    description: "Validate all ICU-specific order sets with the clinical leadership",
+    priority: "high" as const,
+    status: "pending" as const,
+    dueDate: "2025-01-05",
+    assignedTo: "user-c3", // Emily Davis
+  },
+  {
+    id: "task-3",
+    projectId: "project-1",
+    title: "Configure medication administration records",
+    description: "Set up MAR templates for nursing documentation",
+    priority: "medium" as const,
+    status: "pending" as const,
+    dueDate: "2025-01-08",
+    assignedTo: "user-c4", // David Kim
+  },
+  {
+    id: "task-4",
+    projectId: "project-1",
+    title: "Test physician order entry workflows",
+    description: "Complete end-to-end testing of CPOE functionality",
+    priority: "high" as const,
+    status: "pending" as const,
+    dueDate: "2025-01-10",
+    assignedTo: "user-c1", // Sarah Chen
+  },
+  // Cerner Millennium Optimization tasks
+  {
+    id: "task-5",
+    projectId: "project-2",
+    title: "Analyze FirstNet response time metrics",
+    description: "Review performance data and identify optimization opportunities",
+    priority: "medium" as const,
+    status: "in_progress" as const,
+    dueDate: "2025-01-03",
+    assignedTo: "user-c2", // Michael Johnson
+  },
+  {
+    id: "task-6",
+    projectId: "project-2",
+    title: "Deploy PowerChart enhancements to production",
+    description: "Coordinate deployment of approved workflow improvements",
+    priority: "high" as const,
+    status: "pending" as const,
+    dueDate: "2025-01-06",
+    assignedTo: "user-c2", // Michael Johnson
+  },
+  // MyChart Patient Portal tasks
+  {
+    id: "task-7",
+    projectId: "project-3",
+    title: "Configure patient self-scheduling rules",
+    description: "Set up appointment type availability for patient scheduling",
+    priority: "medium" as const,
+    status: "completed" as const,
+    dueDate: "2024-12-28",
+    completedAt: new Date("2024-12-27T16:30:00Z"),
+    assignedTo: "user-c3", // Emily Davis
+  },
+  {
+    id: "task-8",
+    projectId: "project-3",
+    title: "Test Care Everywhere data exchange",
+    description: "Validate HIE connectivity with external health systems",
+    priority: "high" as const,
+    status: "in_progress" as const,
+    dueDate: "2025-01-04",
+    assignedTo: "user-c10", // Christopher Lee (Integration Architect)
+  },
+  {
+    id: "task-9",
+    projectId: "project-3",
+    title: "Train patient access staff on MyChart activation",
+    description: "Conduct training sessions for front desk staff",
+    priority: "medium" as const,
+    status: "pending" as const,
+    dueDate: "2025-01-07",
+    assignedTo: "user-c11", // Michelle Taylor (Training Lead)
+  },
+  {
+    id: "task-10",
+    projectId: "project-1",
+    title: "Validate lab result routing rules",
+    description: "Ensure lab results route correctly to ordering providers",
+    priority: "low" as const,
+    status: "pending" as const,
+    dueDate: "2025-01-12",
+    assignedTo: "user-c12", // Daniel Wilson (Lab Systems)
+  },
+];
+
+// Demo User Activities for Recent Activity Feed
+const demoUserActivities = [
+  {
+    id: "activity-1",
+    userId: "user-c1",
+    activityType: "update" as const,
+    resourceType: "project",
+    resourceId: "project-1",
+    resourceName: "Epic EHR Implementation - Phase 2",
+    description: "Updated project timeline and milestones",
+    createdAt: new Date(Date.now() - 1000 * 60 * 15), // 15 minutes ago
+  },
+  {
+    id: "activity-2",
+    userId: "user-c3",
+    activityType: "approve" as const,
+    resourceType: "document",
+    resourceId: "doc-1-1",
+    resourceName: "ED Workflow Documentation v2.1",
+    description: "Approved workflow documentation for ED module",
+    createdAt: new Date(Date.now() - 1000 * 60 * 45), // 45 minutes ago
+  },
+  {
+    id: "activity-3",
+    userId: "user-c2",
+    activityType: "create" as const,
+    resourceType: "ticket",
+    resourceId: "ticket-new-1",
+    resourceName: "FirstNet Performance Issue",
+    description: "Created support ticket for performance optimization",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
+  },
+  {
+    id: "activity-4",
+    userId: "user-c10",
+    activityType: "submit" as const,
+    resourceType: "timesheet",
+    resourceId: "ts-weekly-1",
+    resourceName: "Week of Dec 23, 2024",
+    description: "Submitted weekly timesheet for approval",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 3), // 3 hours ago
+  },
+  {
+    id: "activity-5",
+    userId: "user-c11",
+    activityType: "create" as const,
+    resourceType: "training",
+    resourceId: "training-session-1",
+    resourceName: "MyChart Staff Training - Session 3",
+    description: "Scheduled training session for patient access team",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5), // 5 hours ago
+  },
+  {
+    id: "activity-6",
+    userId: "demo-admin",
+    activityType: "assign" as const,
+    resourceType: "consultant",
+    resourceId: "consultant-5",
+    resourceName: "Emily Johnson",
+    description: "Assigned to Epic EHR Implementation project",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 8), // 8 hours ago
+  },
+  {
+    id: "activity-7",
+    userId: "user-c4",
+    activityType: "update" as const,
+    resourceType: "task",
+    resourceId: "task-3",
+    resourceName: "Configure medication administration records",
+    description: "Updated task status and added notes",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 12), // 12 hours ago
+  },
+  {
+    id: "activity-8",
+    userId: "user-c6",
+    activityType: "upload" as const,
+    resourceType: "document",
+    resourceId: "doc-surgery-1",
+    resourceName: "OR Integration Specifications.pdf",
+    description: "Uploaded surgical workflow documentation",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
+  },
+  {
+    id: "activity-9",
+    userId: "user-c8",
+    activityType: "approve" as const,
+    resourceType: "expense",
+    resourceId: "exp-travel-1",
+    resourceName: "Travel Reimbursement - Miami Site Visit",
+    description: "Approved travel expense report",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 36), // 1.5 days ago
+  },
+  {
+    id: "activity-10",
+    userId: "user-c7",
+    activityType: "create" as const,
+    resourceType: "report",
+    resourceId: "eod-report-1",
+    resourceName: "EOD Report - Dec 26, 2024",
+    description: "Submitted end-of-day status report",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48), // 2 days ago
+  },
+];
+
 // EHR Systems Demo Data (matching actual schema)
 const demoEhrSystems = [
   {
@@ -3586,6 +3799,16 @@ export async function seedDemoData() {
     console.log("Seeding project milestones...");
     for (const milestone of demoProjectMilestones) {
       await db.insert(projectMilestones).values(milestone).onConflictDoNothing();
+    }
+
+    console.log("Seeding project tasks...");
+    for (const task of demoProjectTasks) {
+      await db.insert(projectTasks).values(task).onConflictDoNothing();
+    }
+
+    console.log("Seeding user activities...");
+    for (const activity of demoUserActivities) {
+      await db.insert(userActivities).values(activity).onConflictDoNothing();
     }
 
     console.log("Seeding project team assignments...");
