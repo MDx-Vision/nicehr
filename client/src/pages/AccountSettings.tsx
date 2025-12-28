@@ -38,7 +38,12 @@ import {
   CheckCircle,
   AlertTriangle,
   Loader2,
+  Lock,
+  Key,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 
@@ -60,6 +65,9 @@ interface AccountSettingsData {
 export default function AccountSettings() {
   const { toast } = useToast();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const { data: settings, isLoading, error } = useQuery<AccountSettingsData>({
     queryKey: ["/api/account/settings"],
@@ -109,6 +117,46 @@ export default function AccountSettings() {
       toast({ title: "Failed to cancel deletion request", variant: "destructive" });
     },
   });
+
+  const changePasswordMutation = useMutation({
+    mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
+      return await apiRequest("POST", "/api/account/change-password", data);
+    },
+    onSuccess: () => {
+      toast({ title: "Password changed successfully" });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    },
+    onError: (error: any) => {
+      const message = error?.message || "Failed to change password";
+      toast({ title: message, variant: "destructive" });
+    },
+  });
+
+  const calculatePasswordStrength = (password: string): { score: number; label: string; color: string } => {
+    let score = 0;
+    if (password.length >= 8) score += 25;
+    if (password.length >= 12) score += 15;
+    if (/[a-z]/.test(password)) score += 15;
+    if (/[A-Z]/.test(password)) score += 15;
+    if (/[0-9]/.test(password)) score += 15;
+    if (/[^a-zA-Z0-9]/.test(password)) score += 15;
+
+    if (score < 30) return { score, label: "Weak", color: "bg-red-500" };
+    if (score < 60) return { score, label: "Fair", color: "bg-yellow-500" };
+    if (score < 80) return { score, label: "Good", color: "bg-blue-500" };
+    return { score, label: "Strong", color: "bg-green-500" };
+  };
+
+  const passwordStrength = calculatePasswordStrength(newPassword);
+  const passwordsMatch = newPassword === confirmPassword;
+  const canChangePassword = currentPassword && newPassword.length >= 8 && passwordsMatch;
+
+  const handlePasswordChange = () => {
+    if (!canChangePassword) return;
+    changePasswordMutation.mutate({ currentPassword, newPassword });
+  };
 
   const handleVisibilityChange = (value: "public" | "members_only" | "private") => {
     updateSettingsMutation.mutate({ profileVisibility: value });
@@ -369,6 +417,91 @@ export default function AccountSettings() {
                 data-testid="switch-email-notifications"
               />
             </div>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-password-change">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lock className="w-5 h-5" />
+              Change Password
+            </CardTitle>
+            <CardDescription>
+              Update your account password
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="current-password">Current Password</Label>
+              <Input
+                id="current-password"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Enter current password"
+                data-testid="input-current-password"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="new-password">New Password</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password"
+                data-testid="input-new-password"
+              />
+              {newPassword && (
+                <div className="space-y-1" data-testid="password-strength">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Password strength</span>
+                    <span className={`font-medium ${
+                      passwordStrength.label === "Weak" ? "text-red-500" :
+                      passwordStrength.label === "Fair" ? "text-yellow-500" :
+                      passwordStrength.label === "Good" ? "text-blue-500" :
+                      "text-green-500"
+                    }`} data-testid="password-strength-label">
+                      {passwordStrength.label}
+                    </span>
+                  </div>
+                  <Progress value={passwordStrength.score} className="h-2" data-testid="password-strength-bar" />
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground" data-testid="password-requirements">
+                Must be at least 8 characters with uppercase, lowercase, number, and special character
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Confirm New Password</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+                data-testid="input-confirm-password"
+              />
+              {confirmPassword && !passwordsMatch && (
+                <p className="text-xs text-red-500" data-testid="password-mismatch">
+                  Passwords do not match
+                </p>
+              )}
+            </div>
+
+            <Button
+              onClick={handlePasswordChange}
+              disabled={!canChangePassword || changePasswordMutation.isPending}
+              data-testid="button-change-password"
+            >
+              {changePasswordMutation.isPending && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
+              <Key className="w-4 h-4 mr-2" />
+              Change Password
+            </Button>
           </CardContent>
         </Card>
 

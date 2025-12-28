@@ -1163,8 +1163,67 @@ describe('Financial Module', () => {
       cy.get('[data-testid="button-process-batch"]').should('be.visible');
     });
 
-    it.skip('TODO: Auto-calculate consultant payments from timesheets', () => {});
-    it.skip('TODO: Process batch for payment', () => {});
+    it('should auto-calculate consultant payments from timesheets', () => {
+      const mockBatchDetails = {
+        ...mockPayrollBatches[0],
+        status: 'draft',
+        totalHours: '0'
+      };
+
+      cy.intercept('GET', '/api/payroll-batches/batch-1', {
+        statusCode: 200,
+        body: mockBatchDetails
+      }).as('getBatchDetails');
+
+      cy.intercept('GET', '/api/payroll-entries?*', {
+        statusCode: 200,
+        body: []
+      }).as('getEntries');
+
+      cy.intercept('POST', '/api/payroll-batches/batch-1/auto-calculate', {
+        statusCode: 200,
+        body: { entriesCreated: 5 }
+      }).as('autoCalculate');
+
+      cy.get('[data-testid="batch-row-batch-1"]').click();
+      cy.wait('@getBatchDetails');
+      cy.wait('@getEntries');
+
+      cy.get('[data-testid="button-auto-calculate"]').should('be.visible');
+      cy.get('[data-testid="button-auto-calculate"]').click();
+      cy.wait('@autoCalculate');
+    });
+
+    it('should process batch for payment', () => {
+      const mockBatchDetails = {
+        ...mockPayrollBatches[0],
+        status: 'approved',
+        totalHours: '80.00'
+      };
+
+      cy.intercept('GET', '/api/payroll-batches/batch-1', {
+        statusCode: 200,
+        body: mockBatchDetails
+      }).as('getBatchDetails');
+
+      cy.intercept('GET', '/api/payroll-entries?*', {
+        statusCode: 200,
+        body: []
+      }).as('getEntries');
+
+      cy.intercept('POST', '/api/payroll-batches/batch-1/process', {
+        statusCode: 200,
+        body: { success: true }
+      }).as('processBatch');
+
+      cy.get('[data-testid="batch-row-batch-1"]').click();
+      cy.wait('@getBatchDetails');
+      cy.wait('@getEntries');
+
+      cy.get('[data-testid="button-process-batch"]').should('be.visible');
+      cy.get('[data-testid="button-process-batch"]').click();
+      cy.wait('@processBatch');
+    });
 
     // Phase 6: Pay Rates Management Tests
     it('should display pay rates tab', () => {

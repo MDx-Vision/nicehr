@@ -156,7 +156,7 @@ describe('User Management', () => {
     });
 
     it('should have account deletion request button', () => {
-      cy.get('[data-testid="button-request-deletion"]').should('be.visible');
+      cy.get('[data-testid="button-request-deletion"]').scrollIntoView().should('be.visible');
     });
   });
 
@@ -236,10 +236,97 @@ describe('User Management', () => {
   // ===========================================================================
 
   describe('Password Management', () => {
-    it.skip('TODO: Change password successfully', () => {});
-    it.skip('TODO: Show error for incorrect current password', () => {});
-    it.skip('TODO: Show validation for password requirements', () => {});
-    it.skip('TODO: Password strength indicator', () => {});
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: testUser
+      }).as('getUser');
+
+      cy.intercept('GET', '/api/account/settings', {
+        statusCode: 200,
+        body: mockAccountSettings
+      }).as('getAccountSettings');
+
+      cy.visit('/account');
+      cy.wait('@getUser');
+      cy.wait('@getAccountSettings');
+    });
+
+    it('should display password change card', () => {
+      cy.get('[data-testid="card-password-change"]').scrollIntoView().should('be.visible');
+    });
+
+    it('should display password input fields', () => {
+      cy.get('[data-testid="card-password-change"]').scrollIntoView();
+      cy.get('[data-testid="input-current-password"]').should('be.visible');
+      cy.get('[data-testid="input-new-password"]').should('be.visible');
+      cy.get('[data-testid="input-confirm-password"]').should('be.visible');
+    });
+
+    it('should display password requirements', () => {
+      cy.get('[data-testid="card-password-change"]').scrollIntoView();
+      cy.get('[data-testid="password-requirements"]').should('contain', 'at least 8 characters');
+    });
+
+    it('should show password strength indicator when typing', () => {
+      cy.get('[data-testid="card-password-change"]').scrollIntoView();
+      cy.get('[data-testid="input-new-password"]').type('weak');
+      cy.get('[data-testid="password-strength"]').should('be.visible');
+      cy.get('[data-testid="password-strength-label"]').should('contain', 'Weak');
+    });
+
+    it('should show Strong password strength for complex password', () => {
+      cy.get('[data-testid="card-password-change"]').scrollIntoView();
+      cy.get('[data-testid="input-new-password"]').type('StrongP@ss123!');
+      cy.get('[data-testid="password-strength-label"]').should('contain', 'Strong');
+    });
+
+    it('should show password mismatch error', () => {
+      cy.get('[data-testid="card-password-change"]').scrollIntoView();
+      cy.get('[data-testid="input-new-password"]').type('StrongP@ss123!');
+      cy.get('[data-testid="input-confirm-password"]').type('DifferentPass123!');
+      cy.get('[data-testid="password-mismatch"]').should('contain', 'Passwords do not match');
+    });
+
+    it('should enable change button when all fields valid', () => {
+      cy.get('[data-testid="card-password-change"]').scrollIntoView();
+      cy.get('[data-testid="input-current-password"]').type('currentPass123');
+      cy.get('[data-testid="input-new-password"]').type('StrongP@ss123!');
+      cy.get('[data-testid="input-confirm-password"]').type('StrongP@ss123!');
+      cy.get('[data-testid="button-change-password"]').should('not.be.disabled');
+    });
+
+    it('should change password successfully', () => {
+      cy.intercept('POST', '/api/account/change-password', {
+        statusCode: 200,
+        body: { success: true }
+      }).as('changePassword');
+
+      cy.get('[data-testid="card-password-change"]').scrollIntoView();
+      cy.get('[data-testid="input-current-password"]').type('currentPass123');
+      cy.get('[data-testid="input-new-password"]').type('StrongP@ss123!');
+      cy.get('[data-testid="input-confirm-password"]').type('StrongP@ss123!');
+      cy.get('[data-testid="button-change-password"]').click();
+      cy.wait('@changePassword');
+    });
+
+    it('should show error for incorrect current password', () => {
+      cy.intercept('POST', '/api/account/change-password', {
+        statusCode: 400,
+        body: { message: 'Current password is incorrect' }
+      }).as('changePasswordError');
+
+      cy.get('[data-testid="card-password-change"]').scrollIntoView();
+      cy.get('[data-testid="input-current-password"]').type('wrongPassword');
+      cy.get('[data-testid="input-new-password"]').type('StrongP@ss123!');
+      cy.get('[data-testid="input-confirm-password"]').type('StrongP@ss123!');
+      cy.get('[data-testid="button-change-password"]').click();
+      cy.wait('@changePasswordError');
+    });
   });
 
   describe('Session Management', () => {

@@ -250,6 +250,24 @@ function PayrollBatchDetailPanel({
     }
   });
 
+  const autoCalculateMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", `/api/payroll-batches/${batchId}/auto-calculate`, {});
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/payroll-entries'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/payroll-batches', batchId] });
+      const entriesCreated = data?.entriesCreated || 0;
+      toast({
+        title: "Auto-calculation complete",
+        description: `Created ${entriesCreated} entries from timesheet data.`
+      });
+    },
+    onError: () => {
+      toast({ title: "Failed to auto-calculate", variant: "destructive" });
+    }
+  });
+
   const updateEntryMutation = useMutation({
     mutationFn: async (data: typeof editFormData & { entryId: string }) => {
       const regularHours = parseFloat(data.regularHours) || 0;
@@ -391,10 +409,22 @@ function PayrollBatchDetailPanel({
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium">Payroll Entries</h3>
               {isAdmin && batch.status === "draft" && (
-                <Button size="sm" onClick={() => setShowAddEntryDialog(true)} data-testid="button-add-entry">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Entry
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => autoCalculateMutation.mutate()}
+                    disabled={autoCalculateMutation.isPending}
+                    data-testid="button-auto-calculate"
+                  >
+                    <Clock className="h-4 w-4 mr-2" />
+                    Auto-Calculate from Timesheets
+                  </Button>
+                  <Button size="sm" onClick={() => setShowAddEntryDialog(true)} data-testid="button-add-entry">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Entry
+                  </Button>
+                </div>
               )}
             </div>
             {entries.length === 0 ? (
