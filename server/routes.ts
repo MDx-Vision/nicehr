@@ -484,6 +484,77 @@ export async function registerRoutes(
     }
   });
 
+  // Quick search API for command menu
+  app.get('/api/search/quick', isAuthenticated, async (req: any, res) => {
+    try {
+      const query = (req.query.q as string || '').toLowerCase().trim();
+      if (query.length < 2) {
+        return res.json([]);
+      }
+
+      const results: Array<{
+        id: string;
+        title: string;
+        type: 'project' | 'consultant' | 'hospital' | 'document';
+        url: string;
+        description?: string;
+      }> = [];
+
+      // Search projects
+      const projects = await storage.getAllProjects();
+      const matchingProjects = projects
+        .filter(p => p.name?.toLowerCase().includes(query))
+        .slice(0, 3);
+      for (const project of matchingProjects) {
+        results.push({
+          id: project.id,
+          title: project.name || 'Unnamed Project',
+          type: 'project',
+          url: `/projects`,
+          description: project.status || undefined,
+        });
+      }
+
+      // Search consultants
+      const consultants = await storage.getAllConsultants();
+      const matchingConsultants = consultants
+        .filter(c => {
+          const fullName = `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase();
+          return fullName.includes(query) || c.email?.toLowerCase().includes(query);
+        })
+        .slice(0, 3);
+      for (const consultant of matchingConsultants) {
+        results.push({
+          id: consultant.id,
+          title: `${consultant.firstName || ''} ${consultant.lastName || ''}`.trim() || consultant.email || 'Unknown',
+          type: 'consultant',
+          url: `/consultants`,
+          description: consultant.specialization || undefined,
+        });
+      }
+
+      // Search hospitals
+      const hospitals = await storage.getAllHospitals();
+      const matchingHospitals = hospitals
+        .filter(h => h.name?.toLowerCase().includes(query) || h.city?.toLowerCase().includes(query))
+        .slice(0, 3);
+      for (const hospital of matchingHospitals) {
+        results.push({
+          id: hospital.id,
+          title: hospital.name || 'Unknown Hospital',
+          type: 'hospital',
+          url: `/hospitals`,
+          description: hospital.city && hospital.state ? `${hospital.city}, ${hospital.state}` : undefined,
+        });
+      }
+
+      res.json(results.slice(0, 10));
+    } catch (error) {
+      console.error("Error in quick search:", error);
+      res.status(500).json({ message: "Search failed" });
+    }
+  });
+
   // Hospital routes
   app.get('/api/hospitals', isAuthenticated, async (req, res) => {
     try {

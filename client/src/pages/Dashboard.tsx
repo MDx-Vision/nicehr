@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -6,11 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Building2, Users, FolderKanban, FileText, DollarSign, UserCheck, Settings2, CheckCircle2, Circle, ChevronLeft, ChevronRight, Calendar, TrendingUp, BarChart3, Download, RotateCcw, Loader2 } from "lucide-react";
+import { Building2, Users, FolderKanban, FileText, DollarSign, UserCheck, Settings2, CheckCircle2, Circle, ChevronLeft, ChevronRight, Calendar, TrendingUp, BarChart3, Download, RotateCcw, Loader2, GripVertical, Wifi, WifiOff } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { ActivityFeed } from "@/components/ActivityFeed";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isSameMonth, isToday } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
+import { useDashboardWebSocket } from "@/hooks/useDashboardWebSocket";
+import { DraggableWidgets, useWidgetOrder } from "@/components/DraggableWidgets";
+import { GaugeGrid } from "@/components/PerformanceGauge";
 
 interface DashboardStats {
   totalConsultants: number;
@@ -19,6 +22,10 @@ interface DashboardStats {
   activeProjects: number;
   pendingDocuments: number;
   totalSavings: string;
+  totalHoursLogged?: number;
+  ticketResolutionRate?: number;
+  projectCompletionRate?: number;
+  consultantUtilization?: number;
 }
 
 interface Task {
@@ -45,7 +52,10 @@ interface WidgetSettings {
   charts: boolean;
   calendar: boolean;
   activity: boolean;
+  gauges: boolean;
 }
+
+const DEFAULT_WIDGET_ORDER = ["tasks", "charts", "calendar", "activity", "gauges"];
 
 export default function Dashboard() {
   const { user, isAdmin, isConsultant, isHospitalStaff } = useAuth();
@@ -56,14 +66,53 @@ export default function Dashboard() {
     charts: true,
     calendar: true,
     activity: true,
+    gauges: true,
   });
   const [taskFilter, setTaskFilter] = useState<"all" | "pending" | "completed">("all");
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [chartPeriod, setChartPeriod] = useState<"week" | "month" | "year">("month");
+  const [isDragMode, setIsDragMode] = useState(false);
 
-  const { data: stats, isLoading } = useQuery<DashboardStats>({
+  // WebSocket for live stats
+  const { isConnected, liveStats } = useDashboardWebSocket();
+
+  // Widget order with persistence
+  const { order: widgetOrder, updateOrder, resetOrder: resetWidgetOrder } = useWidgetOrder(DEFAULT_WIDGET_ORDER);
+
+  const { data: fetchedStats, isLoading } = useQuery<DashboardStats>({
     queryKey: ["/api/dashboard/stats"],
   });
+
+  // Merge live stats with fetched stats (live takes precedence)
+  const stats = useMemo(() => {
+    if (liveStats) return liveStats;
+    return fetchedStats;
+  }, [liveStats, fetchedStats]);
+
+  // Performance gauges data
+  const performanceGauges = useMemo(() => [
+    {
+      value: stats?.ticketResolutionRate || 0,
+      label: "Ticket Resolution",
+      description: "Support tickets resolved",
+    },
+    {
+      value: stats?.projectCompletionRate || 0,
+      label: "Project Completion",
+      description: "Projects delivered",
+    },
+    {
+      value: stats?.consultantUtilization || 0,
+      label: "Utilization",
+      description: "Consultant capacity used",
+    },
+    {
+      value: Math.min(100, (stats?.totalHoursLogged || 0) / 10),
+      max: 100,
+      label: "Hours Logged",
+      description: `${stats?.totalHoursLogged || 0} total hours`,
+    },
+  ], [stats]);
 
   const { data: tasks = [], isLoading: isLoadingTasks } = useQuery<Task[]>({
     queryKey: ["/api/dashboard/tasks"],
@@ -100,7 +149,9 @@ export default function Dashboard() {
   };
 
   const resetWidgetLayout = () => {
-    setWidgetSettings({ tasks: true, charts: true, calendar: true, activity: true });
+    setWidgetSettings({ tasks: true, charts: true, calendar: true, activity: true, gauges: true });
+    resetWidgetOrder();
+    setIsDragMode(false);
   };
 
   const exportChartData = () => {
@@ -131,19 +182,41 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold" data-testid="text-dashboard-title">Dashboard</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold" data-testid="text-dashboard-title">Dashboard</h1>
+            {isConnected ? (
+              <Badge variant="outline" className="gap-1 text-green-600 border-green-600" data-testid="badge-live">
+                <Wifi className="h-3 w-3" />
+                Live
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="gap-1 text-muted-foreground" data-testid="badge-offline">
+                <WifiOff className="h-3 w-3" />
+                Offline
+              </Badge>
+            )}
+          </div>
           <p className="text-muted-foreground">
             Welcome back, {user?.firstName || "User"}! Here's an overview of your platform.
           </p>
         </div>
         {isAdmin && (
-          <Dialog open={showWidgetSettings} onOpenChange={setShowWidgetSettings}>
-            <DialogTrigger asChild>
-              <Button variant="outline" data-testid="button-widget-settings">
-                <Settings2 className="h-4 w-4 mr-2" />
-                Customize
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <Button
+              variant={isDragMode ? "secondary" : "outline"}
+              onClick={() => setIsDragMode(!isDragMode)}
+              data-testid="button-drag-mode"
+            >
+              <GripVertical className="h-4 w-4 mr-2" />
+              {isDragMode ? "Done" : "Reorder"}
+            </Button>
+            <Dialog open={showWidgetSettings} onOpenChange={setShowWidgetSettings}>
+              <DialogTrigger asChild>
+                <Button variant="outline" data-testid="button-widget-settings">
+                  <Settings2 className="h-4 w-4 mr-2" />
+                  Customize
+                </Button>
+              </DialogTrigger>
             <DialogContent data-testid="dialog-widget-settings">
               <DialogHeader>
                 <DialogTitle>Dashboard Widgets</DialogTitle>
@@ -184,6 +257,14 @@ export default function Dashboard() {
                     data-testid="switch-widget-activity"
                   />
                 </div>
+                <div className="flex items-center justify-between">
+                  <span>Performance Gauges</span>
+                  <Switch
+                    checked={widgetSettings.gauges}
+                    onCheckedChange={(checked) => setWidgetSettings({ ...widgetSettings, gauges: checked })}
+                    data-testid="switch-widget-gauges"
+                  />
+                </div>
                 <Button variant="outline" className="w-full" onClick={resetWidgetLayout} data-testid="button-reset-layout">
                   <RotateCcw className="h-4 w-4 mr-2" />
                   Reset to Default
@@ -191,6 +272,7 @@ export default function Dashboard() {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         )}
       </div>
 
@@ -533,6 +615,22 @@ export default function Dashboard() {
           {/* Activity Feed */}
           {widgetSettings.activity && <ActivityFeed limit={10} />}
         </div>
+
+        {/* Performance Gauges */}
+        {widgetSettings.gauges && (
+          <Card data-testid="card-performance-gauges">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Performance Metrics
+              </CardTitle>
+              <CardDescription>Real-time performance indicators</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <GaugeGrid gauges={performanceGauges} size="sm" />
+            </CardContent>
+          </Card>
+        )}
         </>
       )}
 

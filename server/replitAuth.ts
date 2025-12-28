@@ -239,6 +239,67 @@ export async function setupAuth(app: Express) {
     return;
   }
 
+  // Skip Replit auth in local development when REPL_ID is not available
+  if (process.env.NODE_ENV === 'development' && !process.env.REPL_ID) {
+    console.log('[DEV MODE] Skipping Replit auth, using mock session for local development');
+    app.set("trust proxy", 1);
+    app.use(session({
+      secret: process.env.SESSION_SECRET || 'dev-session-secret',
+      resave: false,
+      saveUninitialized: false,
+      cookie: { secure: false, sameSite: 'lax' }
+    }));
+    app.use(passport.initialize());
+    app.use(passport.session());
+
+    // Create mock dev user
+    const devUser = {
+      claims: {
+        sub: 'dev-user-local',
+        email: 'dev@nicehr.local',
+        first_name: 'Dev',
+        last_name: 'User'
+      },
+      expires_at: Math.floor(Date.now() / 1000) + 86400 // 24 hours
+    };
+
+    app.use((req, res, next) => {
+      (req as any).user = devUser;
+      req.isAuthenticated = () => true;
+      next();
+    });
+
+    // Mock login/logout routes for dev mode
+    app.get("/api/login", (req, res) => {
+      res.redirect("/");
+    });
+
+    app.get("/api/logout", (req, res) => {
+      res.redirect("/");
+    });
+
+    passport.serializeUser((user: Express.User, cb) => cb(null, user));
+    passport.deserializeUser((user: Express.User, cb) => cb(null, user));
+
+    // Ensure dev user exists in database
+    try {
+      await storage.upsertUser({
+        id: 'dev-user-local',
+        email: 'dev@nicehr.local',
+        firstName: 'Dev',
+        lastName: 'User',
+        profileImageUrl: null,
+        accessStatus: 'active',
+        invitationId: null,
+      });
+      console.log('[DEV MODE] Dev user created/updated in database');
+    } catch (error) {
+      console.warn('[DEV MODE] Could not create dev user:', error);
+    }
+
+    return;
+  }
+
   app.set("trust proxy", 1);
   app.use(getSession());
   app.use(passport.initialize());

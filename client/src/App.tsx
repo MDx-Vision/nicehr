@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PermissionsProvider } from "@/hooks/use-permissions";
 import { ProjectContextProvider } from "@/hooks/use-project-context";
 
+import { CommandMenu, SearchTrigger } from "@/components/CommandMenu";
 import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
 import Hospitals from "@/pages/Hospitals";
@@ -92,6 +93,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           <header className="flex items-center justify-between gap-2 p-3 border-b bg-card">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
             <div className="flex items-center gap-2">
+              <SearchTrigger />
               <DevRoleSwitcher />
               <NotificationCenter />
               <ThemeToggle />
@@ -253,12 +255,14 @@ function Router() {
 }
 
 function App() {
+  console.log('[App] Rendering App component');
   return (
     <QueryClientProvider client={queryClient}>
       <PermissionsProvider>
         <ProjectContextProvider>
           <TooltipProvider>
             <Toaster />
+            <CommandMenu />
             <Router />
           </TooltipProvider>
         </ProjectContextProvider>

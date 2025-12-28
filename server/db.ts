@@ -20,10 +20,11 @@ let pool: any;
 // - Connection pooling with secure defaults
 
 const isProduction = process.env.NODE_ENV === 'production';
+const isLocalDb = process.env.DATABASE_URL?.includes('localhost') || process.env.DATABASE_URL?.includes('127.0.0.1');
 
 // Use standard pg driver for better connection stability
 // Neon serverless WebSocket can be unreliable
-console.log('[DB] Using standard PostgreSQL connection with SSL');
+console.log(`[DB] Using standard PostgreSQL connection ${isLocalDb ? '(local, no SSL)' : 'with SSL'}`);
 const pg = require('pg');
 const { drizzle } = require('drizzle-orm/node-postgres');
 
@@ -32,10 +33,12 @@ pool = new pg.Pool({
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
-  // SSL/TLS configuration for encrypted connections
-  ssl: isProduction
-    ? { rejectUnauthorized: true } // Strict certificate validation in production
-    : { rejectUnauthorized: false }, // Allow self-signed certs in development
+  // SSL/TLS configuration - disabled for local development
+  ssl: isLocalDb
+    ? false // No SSL for local PostgreSQL
+    : isProduction
+      ? { rejectUnauthorized: true } // Strict certificate validation in production
+      : { rejectUnauthorized: false }, // Allow self-signed certs in development
 });
 
 db = drizzle(pool, { schema });
