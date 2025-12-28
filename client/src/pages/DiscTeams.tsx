@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,8 @@ import {
   Target,
   Calendar,
   Users,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -41,6 +44,14 @@ interface Team {
     name: string;
   } | null;
   assignments?: TeamAssignment[];
+}
+
+interface PaginatedTeamsResponse {
+  teams: Team[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 const DISC_COLORS: Record<string, string> = {
@@ -176,14 +187,21 @@ function TeamCard({ team }: { team: Team }) {
 }
 
 export default function DiscTeams() {
-  const { data: teams, isLoading } = useQuery<Team[]>({
-    queryKey: ["/api/disc/teams"],
+  const [page, setPage] = useState(1);
+  const limit = 12;
+
+  const { data, isLoading } = useQuery<PaginatedTeamsResponse>({
+    queryKey: ["/api/disc/teams", { page, limit }],
   });
 
+  const teams = data?.teams || [];
+  const totalPages = data?.totalPages || 1;
+  const total = data?.total || 0;
+
   // Group teams by status
-  const activeTeams = teams?.filter((t) => t.disc_teams.status === "active") || [];
-  const formingTeams = teams?.filter((t) => t.disc_teams.status === "forming") || [];
-  const completedTeams = teams?.filter((t) => t.disc_teams.status === "completed" || t.disc_teams.status === "archived") || [];
+  const activeTeams = teams.filter((t) => t.disc_teams.status === "active");
+  const formingTeams = teams.filter((t) => t.disc_teams.status === "forming");
+  const completedTeams = teams.filter((t) => t.disc_teams.status === "completed" || t.disc_teams.status === "archived");
 
   return (
     <div className="space-y-6">
@@ -216,7 +234,7 @@ export default function DiscTeams() {
             <Skeleton key={i} className="h-64" />
           ))}
         </div>
-      ) : teams && teams.length > 0 ? (
+      ) : teams.length > 0 ? (
         <div className="space-y-8">
           {/* Active Teams */}
           {activeTeams.length > 0 && (
@@ -259,6 +277,54 @@ export default function DiscTeams() {
                 {completedTeams.map((team) => (
                   <TeamCard key={team.disc_teams.id} team={team} />
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border-t pt-6">
+              <p className="text-sm text-muted-foreground">
+                Showing {(page - 1) * limit + 1} - {Math.min(page * limit, total)} of {total} teams
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Previous
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                    .map((p, idx, arr) => (
+                      <span key={p} className="flex items-center">
+                        {idx > 0 && arr[idx - 1] !== p - 1 && (
+                          <span className="px-2 text-muted-foreground">...</span>
+                        )}
+                        <Button
+                          variant={p === page ? "default" : "outline"}
+                          size="sm"
+                          className="w-8 h-8 p-0"
+                          onClick={() => setPage(p)}
+                        >
+                          {p}
+                        </Button>
+                      </span>
+                    ))}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
               </div>
             </div>
           )}

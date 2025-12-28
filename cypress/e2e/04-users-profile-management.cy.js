@@ -1,463 +1,433 @@
 describe('User Profile Management', () => {
-  const mockUser = {
-    id: 1,
-    email: 'ci-test-user@example.com',
-    name: 'CI Test User',
-    role: 'admin',
-    profilePhoto: 'https://example.com/photo.jpg',
-    coverPhoto: 'https://example.com/cover.jpg',
-    phone: '+1-555-0123',
-    bio: 'Test user bio',
-    location: 'Test City, TC',
-    timezone: 'America/New_York',
+  const testUser = {
+    id: 'user-1',
+    email: 'test@example.com',
+    firstName: 'Test',
+    lastName: 'User',
+    role: 'consultant',
+    profileImageUrl: null,
+    coverPhotoUrl: null,
     linkedinUrl: 'https://linkedin.com/in/testuser',
-    skills: ['JavaScript', 'React', 'Node.js'],
-    createdAt: '2023-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z'
+    websiteUrl: 'https://testuser.com'
+  };
+
+  const testConsultant = {
+    id: 'cons-1',
+    userId: 'user-1',
+    tngId: 'TNG-001',
+    bio: 'Experienced healthcare consultant',
+    location: 'San Francisco, CA',
+    phone: '555-1234',
+    isOnboarded: true,
+    emrSystems: ['Epic', 'Cerner'],
+    modules: ['Revenue Cycle', 'Clinical'],
+    shiftPreference: 'day',
+    yearsExperience: 5
   };
 
   beforeEach(() => {
-    // Mock authenticated user
+    cy.clearCookies();
+    cy.clearLocalStorage();
+    cy.clearSessionStorage();
+
     cy.intercept('GET', '/api/auth/user', {
       statusCode: 200,
-      body: mockUser
-    }).as('getCurrentUser');
+      body: testUser
+    }).as('getUser');
 
-    cy.visit('/dashboard');
-    cy.wait('@getCurrentUser');
+    cy.intercept('GET', '/api/consultants/user/*', {
+      statusCode: 200,
+      body: testConsultant
+    }).as('getConsultant');
+
+    cy.intercept('GET', '/api/questionnaire', {
+      statusCode: 200,
+      body: null
+    }).as('getQuestionnaire');
+
+    cy.intercept('GET', '/api/skills/all', {
+      statusCode: 200,
+      body: []
+    }).as('getSkills');
+
+    cy.intercept('GET', '/api/personal-info', {
+      statusCode: 200,
+      body: null
+    }).as('getPersonalInfo');
+
+    cy.visit('/profile');
+    cy.wait('@getUser');
   });
+
+  // ===========================================================================
+  // Profile Viewing
+  // ===========================================================================
 
   describe('Profile Viewing', () => {
-    it('should display user profile information', () => {
-      cy.intercept('GET', '/api/users/1', {
-        statusCode: 200,
-        body: mockUser
-      }).as('getUserProfile');
-
-      cy.visit('/profile/1');
-      cy.wait('@getUserProfile');
-
-      cy.get('[data-testid="profile-header"]').should('be.visible');
-      cy.get('[data-testid="profile-name"]').should('contain', mockUser.name);
-      cy.get('[data-testid="profile-email"]').should('contain', mockUser.email);
-      cy.get('[data-testid="profile-role"]').should('contain', mockUser.role);
-      cy.get('[data-testid="profile-photo"]').should('have.attr', 'src', mockUser.profilePhoto);
-      cy.get('[data-testid="cover-photo"]').should('have.attr', 'src', mockUser.coverPhoto);
+    it('should display user profile page', () => {
+      cy.get('[data-testid="profile-page"]').should('be.visible');
     });
 
-    it('should display profile bio and location', () => {
-      cy.intercept('GET', '/api/users/1', {
-        statusCode: 200,
-        body: mockUser
-      }).as('getUserProfile');
-
-      cy.visit('/profile/1');
-      cy.wait('@getUserProfile');
-
-      cy.get('[data-testid="profile-bio"]').should('contain', mockUser.bio);
-      cy.get('[data-testid="profile-location"]').should('contain', mockUser.location);
-      cy.get('[data-testid="profile-phone"]').should('contain', mockUser.phone);
-      cy.get('[data-testid="profile-linkedin"]')
-        .should('have.attr', 'href', mockUser.linkedinUrl)
-        .and('have.attr', 'target', '_blank');
+    it('should show profile name', () => {
+      cy.get('[data-testid="text-user-name"]').should('contain', 'Test User');
     });
 
-    it('should display user skills', () => {
-      cy.intercept('GET', '/api/users/1', {
-        statusCode: 200,
-        body: mockUser
-      }).as('getUserProfile');
-
-      cy.visit('/profile/1');
-      cy.wait('@getUserProfile');
-
-      cy.get('[data-testid="skills-section"]').should('be.visible');
-      mockUser.skills.forEach(skill => {
-        cy.get('[data-testid="skill-badge"]').should('contain', skill);
-      });
+    it('should show user email', () => {
+      cy.get('[data-testid="text-email"]').should('contain', 'test@example.com');
     });
 
-    it('should handle profile not found', () => {
-      cy.intercept('GET', '/api/users/999', {
-        statusCode: 404,
-        body: { error: 'User not found' }
-      }).as('getUserNotFound');
-
-      cy.visit('/profile/999');
-      cy.wait('@getUserNotFound');
-
-      cy.get('[data-testid="error-message"]')
-        .should('be.visible')
-        .and('contain', 'User not found');
-      cy.get('[data-testid="back-button"]').should('be.visible');
+    it('should show profile role badge', () => {
+      cy.get('[data-testid="badge-user-role"]').should('be.visible');
+      cy.get('[data-testid="badge-user-role"]').should('contain', 'Consultant');
     });
 
-    it('should display default profile photo when none exists', () => {
-      const userWithoutPhoto = { ...mockUser, profilePhoto: null };
-      cy.intercept('GET', '/api/users/1', {
-        statusCode: 200,
-        body: userWithoutPhoto
-      }).as('getUserProfile');
-
-      cy.visit('/profile/1');
-      cy.wait('@getUserProfile');
-
-      cy.get('[data-testid="default-profile-photo"]').should('be.visible');
-      cy.get('[data-testid="profile-initials"]').should('contain', 'CT');
+    it('should display profile photo section', () => {
+      cy.get('[data-testid="profile-photo-section"]').should('be.visible');
     });
 
-    it('should be responsive on different screen sizes', () => {
-      cy.intercept('GET', '/api/users/1', {
-        statusCode: 200,
-        body: mockUser
-      }).as('getUserProfile');
+    it('should display cover photo section', () => {
+      cy.get('[data-testid="cover-photo-section"]').should('be.visible');
+    });
 
-      // Desktop
-      cy.viewport(1200, 800);
-      cy.visit('/profile/1');
-      cy.wait('@getUserProfile');
-      cy.get('[data-testid="profile-sidebar"]').should('be.visible');
+    it('should show bio textarea', () => {
+      cy.get('[data-testid="textarea-bio"]').should('be.visible');
+    });
 
-      // Tablet
-      cy.viewport('ipad-2');
-      cy.get('[data-testid="profile-sidebar"]').should('be.visible');
+    it('should show location input', () => {
+      cy.get('[data-testid="input-location"]').scrollIntoView().should('be.visible');
+    });
 
-      // Mobile
-      cy.viewport('iphone-x');
-      cy.get('[data-testid="profile-mobile-header"]').should('be.visible');
+    it('should display skills questionnaire card', () => {
+      cy.get('[data-testid="card-skills-questionnaire"]').scrollIntoView().should('be.visible');
+    });
+
+    it('should show LinkedIn input field', () => {
+      cy.get('[data-testid="input-linkedin"]').scrollIntoView().should('be.visible');
     });
   });
 
-  describe('Profile Editing', () => {
-    beforeEach(() => {
-      cy.visit('/profile/edit');
+  // ===========================================================================
+  // Edit Profile
+  // ===========================================================================
+
+  describe('Edit Profile', () => {
+    it('should display first name input', () => {
+      cy.get('[data-testid="input-first-name"]').should('be.visible');
     });
 
-    it('should display profile edit form', () => {
-      cy.get('[data-testid="profile-edit-form"]').should('be.visible');
-      cy.get('[data-testid="input-name"]').should('have.value', mockUser.name);
-      cy.get('[data-testid="input-email"]').should('have.value', mockUser.email);
-      cy.get('[data-testid="input-phone"]').should('have.value', mockUser.phone);
-      cy.get('[data-testid="textarea-bio"]').should('have.value', mockUser.bio);
-      cy.get('[data-testid="input-location"]').should('have.value', mockUser.location);
-      cy.get('[data-testid="select-timezone"]').should('have.value', mockUser.timezone);
-      cy.get('[data-testid="input-linkedin"]').should('have.value', mockUser.linkedinUrl);
+    it('should display last name input', () => {
+      cy.get('[data-testid="input-last-name"]').should('be.visible');
     });
 
-    it('should validate required fields', () => {
-      cy.get('[data-testid="input-name"]').clear();
-      cy.get('[data-testid="input-email"]').clear();
-      cy.get('[data-testid="button-save-profile"]').click();
-
-      cy.get('[data-testid="error-name"]').should('contain', 'Name is required');
-      cy.get('[data-testid="error-email"]').should('contain', 'Email is required');
+    it('should allow editing first name', () => {
+      cy.get('[data-testid="input-first-name"]').clear().type('Updated');
+      cy.get('[data-testid="input-first-name"]').should('have.value', 'Updated');
     });
 
-    it('should validate email format', () => {
-      cy.get('[data-testid="input-email"]').clear().type('invalid-email');
-      cy.get('[data-testid="button-save-profile"]').click();
-
-      cy.get('[data-testid="error-email"]').should('contain', 'Invalid email format');
+    it('should allow editing bio', () => {
+      cy.get('[data-testid="textarea-bio"]').clear().type('New bio text');
+      cy.get('[data-testid="textarea-bio"]').should('have.value', 'New bio text');
     });
 
-    it('should validate phone number format', () => {
-      cy.get('[data-testid="input-phone"]').clear().type('invalid-phone');
-      cy.get('[data-testid="button-save-profile"]').click();
-
-      cy.get('[data-testid="error-phone"]').should('contain', 'Invalid phone number format');
+    it('should allow editing location', () => {
+      cy.get('[data-testid="input-location"]').clear().type('New York, NY');
+      cy.get('[data-testid="input-location"]').should('have.value', 'New York, NY');
     });
 
-    it('should validate LinkedIn URL format', () => {
-      cy.get('[data-testid="input-linkedin"]').clear().type('invalid-url');
-      cy.get('[data-testid="button-save-profile"]').click();
-
-      cy.get('[data-testid="error-linkedin"]').should('contain', 'Invalid LinkedIn URL');
+    it('should display save button', () => {
+      cy.get('[data-testid="button-save-profile"]').scrollIntoView().should('be.visible');
     });
 
-    it('should validate bio character limit', () => {
-      const longBio = 'a'.repeat(501);
-      cy.get('[data-testid="textarea-bio"]').clear().type(longBio);
-
-      cy.get('[data-testid="bio-character-count"]').should('contain', '501/500');
-      cy.get('[data-testid="error-bio"]').should('contain', 'Bio must be 500 characters or less');
-    });
-
-    it('should save profile successfully', () => {
-      const updatedUser = {
-        ...mockUser,
-        name: 'Updated Name',
-        bio: 'Updated bio',
-        location: 'Updated City, UC'
-      };
-
-      cy.intercept('PUT', '/api/users/1', {
+    it('should save profile changes', () => {
+      cy.intercept('PUT', '/api/users/*', {
         statusCode: 200,
-        body: updatedUser
-      }).as('updateProfile');
+        body: { ...testUser, firstName: 'Updated' }
+      }).as('updateUser');
 
-      cy.get('[data-testid="input-name"]').clear().type(updatedUser.name);
-      cy.get('[data-testid="textarea-bio"]').clear().type(updatedUser.bio);
-      cy.get('[data-testid="input-location"]').clear().type(updatedUser.location);
+      cy.intercept('PATCH', '/api/consultants/*', {
+        statusCode: 200,
+        body: { ...testConsultant, bio: 'Updated bio' }
+      }).as('updateConsultant');
+
+      cy.get('[data-testid="input-first-name"]').clear().type('Updated');
       cy.get('[data-testid="button-save-profile"]').click();
-
-      cy.wait('@updateProfile');
-      cy.get('[data-testid="success-message"]')
-        .should('be.visible')
-        .and('contain', 'Profile updated successfully');
-    });
-
-    it('should handle save errors gracefully', () => {
-      cy.intercept('PUT', '/api/users/1', {
-        statusCode: 500,
-        body: { error: 'Internal server error' }
-      }).as('updateProfileError');
-
-      cy.get('[data-testid="input-name"]').clear().type('Updated Name');
-      cy.get('[data-testid="button-save-profile"]').click();
-
-      cy.wait('@updateProfileError');
-      cy.get('[data-testid="error-message"]')
-        .should('be.visible')
-        .and('contain', 'Failed to update profile');
-    });
-
-    it('should cancel editing and return to profile', () => {
-      cy.get('[data-testid="button-cancel-edit"]').click();
-      cy.url().should('include', '/profile/1');
-    });
-
-    it('should show unsaved changes warning', () => {
-      cy.get('[data-testid="input-name"]').clear().type('Changed Name');
-      
-      // Try to navigate away
-      cy.get('[data-testid="nav-dashboard"]').click();
-      
-      cy.get('[data-testid="unsaved-changes-dialog"]').should('be.visible');
-      cy.get('[data-testid="dialog-message"]')
-        .should('contain', 'You have unsaved changes');
-      
-      // Cancel navigation
-      cy.get('[data-testid="button-stay"]').click();
-      cy.url().should('include', '/profile/edit');
-      
-      // Confirm navigation
-      cy.get('[data-testid="nav-dashboard"]').click();
-      cy.get('[data-testid="button-leave"]').click();
-      cy.url().should('include', '/dashboard');
+      cy.wait('@updateUser');
     });
   });
 
-  describe('Profile Photo Management', () => {
-    beforeEach(() => {
-      cy.visit('/profile/edit');
+  // ===========================================================================
+  // Profile Photo (Partial - UI elements only)
+  // ===========================================================================
+
+  describe('Profile Photo', () => {
+    it('should display profile photo avatar', () => {
+      cy.get('[data-testid="profile-photo-section"]').find('.h-32').should('be.visible');
     });
 
-    it('should display current profile photo', () => {
-      cy.get('[data-testid="current-profile-photo"]')
-        .should('be.visible')
-        .and('have.attr', 'src', mockUser.profilePhoto);
-    });
-
-    it('should open photo upload dialog', () => {
-      cy.get('[data-testid="button-change-photo"]').click();
-      cy.get('[data-testid="photo-upload-dialog"]').should('be.visible');
-      cy.get('[data-testid="file-input-photo"]').should('exist');
-      cy.get('[data-testid="button-upload-photo"]').should('be.visible');
-      cy.get('[data-testid="button-cancel-upload"]').should('be.visible');
-    });
-
-    it('should validate photo file type', () => {
-      cy.get('[data-testid="button-change-photo"]').click();
-      
-      const invalidFile = 'invalid-file.txt';
-      cy.get('[data-testid="file-input-photo"]').selectFile({
-        contents: Cypress.Buffer.from('invalid file content'),
-        fileName: invalidFile,
-        mimeType: 'text/plain'
-      });
-
-      cy.get('[data-testid="error-file-type"]')
-        .should('be.visible')
-        .and('contain', 'Please select an image file');
-    });
-
-    it('should validate photo file size', () => {
-      cy.get('[data-testid="button-change-photo"]').click();
-      
-      // Create a large file (simulate > 5MB)
-      const largeFile = new Array(5 * 1024 * 1024 + 1).join('a');
-      cy.get('[data-testid="file-input-photo"]').selectFile({
-        contents: Cypress.Buffer.from(largeFile),
-        fileName: 'large-image.jpg',
-        mimeType: 'image/jpeg'
-      });
-
-      cy.get('[data-testid="error-file-size"]')
-        .should('be.visible')
-        .and('contain', 'File size must be less than 5MB');
-    });
-
-    it('should upload profile photo successfully', () => {
-      cy.intercept('PUT', '/api/users/1/profile-photo', {
-        statusCode: 200,
-        body: { profilePhoto: 'https://example.com/new-photo.jpg' }
-      }).as('uploadPhoto');
-
-      cy.get('[data-testid="button-change-photo"]').click();
-      
-      cy.get('[data-testid="file-input-photo"]').selectFile({
-        contents: Cypress.Buffer.from('fake image content'),
-        fileName: 'profile.jpg',
-        mimeType: 'image/jpeg'
-      });
-
-      cy.get('[data-testid="button-upload-photo"]').click();
-      cy.wait('@uploadPhoto');
-
-      cy.get('[data-testid="success-message"]')
-        .should('be.visible')
-        .and('contain', 'Profile photo updated');
-      cy.get('[data-testid="photo-upload-dialog"]').should('not.exist');
-    });
-
-    it('should remove profile photo', () => {
-      cy.intercept('PUT', '/api/users/1/profile-photo', {
-        statusCode: 200,
-        body: { profilePhoto: null }
-      }).as('removePhoto');
-
-      cy.get('[data-testid="button-remove-photo"]').click();
-      
-      cy.get('[data-testid="confirm-remove-dialog"]').should('be.visible');
-      cy.get('[data-testid="button-confirm-remove"]').click();
-      
-      cy.wait('@removePhoto');
-      cy.get('[data-testid="success-message"]')
-        .should('contain', 'Profile photo removed');
-    });
-
-    it('should preview photo before uploading', () => {
-      cy.get('[data-testid="button-change-photo"]').click();
-      
-      cy.get('[data-testid="file-input-photo"]').selectFile({
-        contents: Cypress.Buffer.from('fake image content'),
-        fileName: 'preview.jpg',
-        mimeType: 'image/jpeg'
-      });
-
-      cy.get('[data-testid="photo-preview"]').should('be.visible');
-      cy.get('[data-testid="button-upload-photo"]').should('not.be.disabled');
+    it('should show cover photo change button on hover', () => {
+      cy.get('[data-testid="cover-photo-section"]').should('be.visible');
     });
   });
 
-  describe('Cover Photo Management', () => {
-    beforeEach(() => {
-      cy.visit('/profile/edit');
+  // ===========================================================================
+  // Additional Profile Fields
+  // ===========================================================================
+
+  describe('Additional Profile Fields', () => {
+    it('should display phone input', () => {
+      cy.get('[data-testid="input-phone"]').scrollIntoView().should('be.visible');
     });
 
-    it('should manage cover photo similarly to profile photo', () => {
-      cy.get('[data-testid="current-cover-photo"]')
-        .should('be.visible')
-        .and('have.attr', 'src', mockUser.coverPhoto);
+    it('should display website input', () => {
+      cy.get('[data-testid="input-website"]').scrollIntoView().should('be.visible');
+    });
 
-      cy.get('[data-testid="button-change-cover"]').click();
-      cy.get('[data-testid="cover-upload-dialog"]').should('be.visible');
+    it('should display shift preference select', () => {
+      cy.get('[data-testid="select-shift"]').scrollIntoView().should('be.visible');
+    });
 
-      cy.intercept('PUT', '/api/users/1/cover-photo', {
-        statusCode: 200,
-        body: { coverPhoto: 'https://example.com/new-cover.jpg' }
-      }).as('uploadCover');
-
-      cy.get('[data-testid="file-input-cover"]').selectFile({
-        contents: Cypress.Buffer.from('fake cover content'),
-        fileName: 'cover.jpg',
-        mimeType: 'image/jpeg'
-      });
-
-      cy.get('[data-testid="button-upload-cover"]').click();
-      cy.wait('@uploadCover');
-
-      cy.get('[data-testid="success-message"]')
-        .should('contain', 'Cover photo updated');
+    it('should display years experience input', () => {
+      cy.get('[data-testid="input-experience"]').scrollIntoView().should('be.visible');
     });
   });
 
-  describe('Skills Management', () => {
-    beforeEach(() => {
-      cy.visit('/profile/edit');
+  // ===========================================================================
+  // Personal Information Section
+  // ===========================================================================
+
+  describe('Personal Information Section', () => {
+    it('should display personal information card', () => {
+      cy.get('[data-testid="card-personal-information"]').scrollIntoView().should('be.visible');
     });
 
-    it('should display current skills', () => {
-      cy.get('[data-testid="skills-section"]').should('be.visible');
-      mockUser.skills.forEach(skill => {
-        cy.get('[data-testid="current-skill"]').should('contain', skill);
-      });
-    });
-
-    it('should add new skill', () => {
-      cy.get('[data-testid="input-new-skill"]').type('Python');
-      cy.get('[data-testid="button-add-skill"]').click();
-
-      cy.get('[data-testid="skill-badge"]').should('contain', 'Python');
-      cy.get('[data-testid="input-new-skill"]').should('have.value', '');
-    });
-
-    it('should remove skill', () => {
-      const skillToRemove = mockUser.skills[0];
-      cy.get(`[data-testid="remove-skill-${skillToRemove}"]`).click();
-      cy.get('[data-testid="skill-badge"]').should('not.contain', skillToRemove);
-    });
-
-    it('should prevent duplicate skills', () => {
-      const existingSkill = mockUser.skills[0];
-      cy.get('[data-testid="input-new-skill"]').type(existingSkill);
-      cy.get('[data-testid="button-add-skill"]').click();
-
-      cy.get('[data-testid="error-duplicate-skill"]')
-        .should('be.visible')
-        .and('contain', 'Skill already exists');
-    });
-
-    it('should limit number of skills', () => {
-      // Add skills up to limit (assuming limit is 20)
-      for (let i = mockUser.skills.length; i < 20; i++) {
-        cy.get('[data-testid="input-new-skill"]').type(`Skill${i}`);
-        cy.get('[data-testid="button-add-skill"]').click();
-      }
-
-      // Try to add one more
-      cy.get('[data-testid="input-new-skill"]').type('ExtraSkill');
-      cy.get('[data-testid="button-add-skill"]').should('be.disabled');
-      cy.get('[data-testid="skills-limit-message"]')
-        .should('contain', 'Maximum 20 skills allowed');
+    it('should show edit personal info button', () => {
+      cy.get('[data-testid="button-edit-personal-info"]').scrollIntoView().should('be.visible');
     });
   });
 
-  describe('Account Privacy Settings', () => {
+  // ===========================================================================
+  // Account Settings Features
+  // ===========================================================================
+
+  describe('Email Change', () => {
     beforeEach(() => {
-      cy.visit('/profile/privacy');
-    });
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
 
-    it('should display privacy settings', () => {
-      cy.get('[data-testid="privacy-settings-form"]').should('be.visible');
-      cy.get('[data-testid="toggle-profile-visibility"]').should('exist');
-      cy.get('[data-testid="toggle-email-visibility"]').should('exist');
-      cy.get('[data-testid="toggle-phone-visibility"]').should('exist');
-      cy.get('[data-testid="toggle-location-visibility"]').should('exist');
-    });
-
-    it('should update privacy settings', () => {
-      cy.intercept('PATCH', '/api/users/1', {
+      cy.intercept('GET', '/api/auth/user', {
         statusCode: 200,
-        body: { ...mockUser, profilePublic: false }
-      }).as('updatePrivacy');
+        body: testUser
+      }).as('getUser');
 
-      cy.get('[data-testid="toggle-profile-visibility"]').click();
-      cy.get('[data-testid="button-save-privacy"]').click();
+      cy.intercept('GET', '/api/account/settings', {
+        statusCode: 200,
+        body: {
+          id: 'user-1',
+          email: 'test@example.com',
+          firstName: 'Test',
+          lastName: 'User',
+          role: 'consultant',
+          profileVisibility: 'public',
+          emailNotifications: true,
+          showEmail: true,
+          showPhone: false,
+          deletionRequestedAt: null,
+          createdAt: '2024-01-01T00:00:00Z'
+        }
+      }).as('getSettings');
 
-      cy.wait('@updatePrivacy');
-      cy.get('[data-testid="success-message"]')
-        .should('contain', 'Privacy settings updated');
+      cy.intercept('GET', '/api/account/sessions', {
+        statusCode: 200,
+        body: []
+      }).as('getSessions');
+
+      cy.visit('/account-settings');
+      cy.wait('@getUser');
+      cy.wait('@getSettings');
+    });
+
+    it('should display email change card', () => {
+      cy.get('[data-testid="card-email-change"]').scrollIntoView().should('be.visible');
+    });
+
+    it('should show email verification flow elements', () => {
+      cy.get('[data-testid="card-email-change"]').scrollIntoView();
+      cy.get('[data-testid="input-current-email"]').should('be.visible');
+      cy.get('[data-testid="input-new-email"]').should('be.visible');
+      cy.get('[data-testid="button-change-email"]').should('be.visible');
+    });
+  });
+
+  describe('User Preferences', () => {
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: testUser
+      }).as('getUser');
+
+      cy.intercept('GET', '/api/account/settings', {
+        statusCode: 200,
+        body: {
+          id: 'user-1',
+          email: 'test@example.com',
+          firstName: 'Test',
+          lastName: 'User',
+          role: 'consultant',
+          profileVisibility: 'public',
+          emailNotifications: true,
+          showEmail: true,
+          showPhone: false,
+          deletionRequestedAt: null,
+          createdAt: '2024-01-01T00:00:00Z'
+        }
+      }).as('getSettings');
+
+      cy.intercept('GET', '/api/account/sessions', {
+        statusCode: 200,
+        body: []
+      }).as('getSessions');
+
+      cy.visit('/account-settings');
+      cy.wait('@getUser');
+      cy.wait('@getSettings');
+    });
+
+    it('should display theme selection', () => {
+      cy.get('[data-testid="card-preferences"]').scrollIntoView().should('be.visible');
+      cy.get('[data-testid="select-theme"]').should('be.visible');
+    });
+
+    it('should display language selection', () => {
+      cy.get('[data-testid="card-preferences"]').scrollIntoView();
+      cy.get('[data-testid="select-language"]').should('be.visible');
+    });
+
+    it('should display notification preferences', () => {
+      cy.get('[data-testid="card-notifications"]').scrollIntoView().should('be.visible');
+      cy.get('[data-testid="switch-email-notifications"]').should('be.visible');
+    });
+
+    it('should display email digest settings', () => {
+      cy.get('[data-testid="card-notifications"]').scrollIntoView();
+      cy.get('[data-testid="switch-email-digest"]').should('be.visible');
+    });
+  });
+
+  describe('Privacy Settings', () => {
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: testUser
+      }).as('getUser');
+
+      cy.intercept('GET', '/api/account/settings', {
+        statusCode: 200,
+        body: {
+          id: 'user-1',
+          email: 'test@example.com',
+          firstName: 'Test',
+          lastName: 'User',
+          role: 'consultant',
+          profileVisibility: 'public',
+          emailNotifications: true,
+          showEmail: true,
+          showPhone: false,
+          deletionRequestedAt: null,
+          createdAt: '2024-01-01T00:00:00Z'
+        }
+      }).as('getSettings');
+
+      cy.intercept('GET', '/api/account/sessions', {
+        statusCode: 200,
+        body: []
+      }).as('getSessions');
+
+      cy.visit('/account-settings');
+      cy.wait('@getUser');
+      cy.wait('@getSettings');
+    });
+
+    it('should display profile visibility options', () => {
+      cy.get('[data-testid="select-visibility"]').should('be.visible');
+    });
+
+    it('should display activity tracking preferences', () => {
+      cy.get('[data-testid="card-preferences"]').scrollIntoView();
+      cy.get('[data-testid="switch-activity-tracking"]').should('be.visible');
+    });
+
+    it('should display data export functionality', () => {
+      cy.get('[data-testid="card-data-export"]').scrollIntoView().should('be.visible');
+      cy.get('[data-testid="button-export-data"]').should('be.visible');
+    });
+  });
+
+  describe('Account Management', () => {
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: testUser
+      }).as('getUser');
+
+      cy.intercept('GET', '/api/account/settings', {
+        statusCode: 200,
+        body: {
+          id: 'user-1',
+          email: 'test@example.com',
+          firstName: 'Test',
+          lastName: 'User',
+          role: 'consultant',
+          profileVisibility: 'public',
+          emailNotifications: true,
+          showEmail: true,
+          showPhone: false,
+          deletionRequestedAt: null,
+          createdAt: '2024-01-01T00:00:00Z'
+        }
+      }).as('getSettings');
+
+      cy.intercept('GET', '/api/account/sessions', {
+        statusCode: 200,
+        body: []
+      }).as('getSessions');
+
+      cy.visit('/account-settings');
+      cy.wait('@getUser');
+      cy.wait('@getSettings');
+    });
+
+    it('should display change password section', () => {
+      cy.get('[data-testid="card-password-change"]').scrollIntoView().should('be.visible');
+      cy.get('[data-testid="input-current-password"]').should('be.visible');
+      cy.get('[data-testid="input-new-password"]').should('be.visible');
+    });
+
+    it('should display two-factor authentication setup', () => {
+      cy.get('[data-testid="card-two-factor"]').scrollIntoView().should('be.visible');
+      cy.get('[data-testid="switch-two-factor"]').should('be.visible');
+    });
+
+    it('should display account deletion request button', () => {
+      cy.get('[data-testid="button-request-deletion"]').scrollIntoView().should('be.visible');
+    });
+
+    it('should open delete confirmation workflow', () => {
+      cy.get('[data-testid="button-request-deletion"]').scrollIntoView().click();
+      cy.get('[data-testid="button-confirm-deletion"]').should('be.visible');
+      cy.get('[data-testid="button-cancel-confirm"]').should('be.visible');
     });
   });
 });

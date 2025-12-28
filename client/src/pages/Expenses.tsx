@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
@@ -18,9 +19,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useProjectContext } from "@/hooks/use-project-context";
 import { ProjectSelector } from "@/components/ProjectSelector";
+import { ObjectUploader } from "@/components/ObjectUploader";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { UploadResult } from "@uppy/core";
 import { format, formatDistanceToNow } from "date-fns";
-import { 
+import {
   Receipt,
   Plus,
   Clock,
@@ -41,13 +44,22 @@ import {
   Eye,
   Settings,
   MapPin,
-  X
+  X,
+  Search,
+  Download,
+  Pencil,
+  Upload,
+  FileUp,
+  ExternalLink,
+  Trash2,
+  Tags
 } from "lucide-react";
-import type { 
-  Project, 
+import type {
+  Project,
   Consultant,
   Expense,
   ExpenseWithDetails,
+  ExpenseCategory,
   PerDiemPolicy,
   MileageRate
 } from "@shared/schema";
@@ -153,19 +165,35 @@ function ExpenseStats({ expenses }: { expenses: ExpenseWithDetails[] }) {
   );
 }
 
-function ExpenseRow({ 
+function ExpenseRow({
   expense,
-  onClick 
-}: { 
+  onClick,
+  showCheckbox,
+  isSelected,
+  onSelect
+}: {
   expense: ExpenseWithDetails;
   onClick: () => void;
+  showCheckbox?: boolean;
+  isSelected?: boolean;
+  onSelect?: (id: string, checked: boolean) => void;
 }) {
   return (
-    <TableRow 
-      className="cursor-pointer hover-elevate" 
+    <TableRow
+      className="cursor-pointer hover-elevate"
       onClick={onClick}
       data-testid={`expense-row-${expense.id}`}
     >
+      {showCheckbox && (
+        <TableCell onClick={(e) => e.stopPropagation()}>
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={(checked) => onSelect?.(expense.id, checked as boolean)}
+            disabled={expense.status !== "submitted"}
+            data-testid={`checkbox-expense-${expense.id}`}
+          />
+        </TableCell>
+      )}
       <TableCell className="font-medium">
         <div className="flex items-center gap-2">
           {getCategoryIcon(expense.category)}
@@ -213,15 +241,70 @@ function ExpenseRow({
 function ExpenseDetailPanel({
   expenseId,
   onClose,
-  isAdmin
+  isAdmin,
+  projects = [],
+  consultants = [],
+  mileageRates = [],
+  perDiemPolicies = []
 }: {
   expenseId: string;
   onClose: () => void;
   isAdmin: boolean;
+  projects?: Project[];
+  consultants?: Consultant[];
+  mileageRates?: MileageRate[];
+  perDiemPolicies?: PerDiemPolicy[];
 }) {
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    description: "",
+    amount: "",
+    category: "",
+    expenseDate: "",
+    receiptUrl: "",
+    mileageStart: "",
+    mileageEnd: "",
+    mileageDistance: "",
+  });
+  const [uploadedReceiptUrl, setUploadedReceiptUrl] = useState<string | null>(null);
+  const [uploadedFileName, setUploadedFileName] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
+
+  const handleGetUploadParameters = async () => {
+    const res = await fetch('/api/objects/upload', {
+      method: 'POST',
+      credentials: 'include'
+    });
+    const { uploadURL } = await res.json();
+    return { method: 'PUT' as const, url: uploadURL };
+  };
+
+  const handleUploadComplete = async (result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
+    if (result.successful?.[0]) {
+      const uploadedFile = result.successful[0];
+      const fileName = uploadedFile.name || 'Receipt';
+      const uploadUrl = uploadedFile.uploadURL;
+
+      setIsUploading(true);
+      try {
+        // Extract the object path from the upload URL
+        const url = new URL(uploadUrl as string);
+        const objectPath = url.pathname;
+        setUploadedReceiptUrl(objectPath);
+        setUploadedFileName(fileName);
+        setEditFormData(prev => ({ ...prev, receiptUrl: objectPath }));
+        toast({ title: "Receipt uploaded successfully" });
+      } catch (error) {
+        console.error('Failed to process upload:', error);
+        toast({ title: "Failed to process upload", variant: "destructive" });
+      } finally {
+        setIsUploading(false);
+      }
+    }
+  };
 
   const { data: expense, isLoading } = useQuery<ExpenseWithDetails>({
     queryKey: ['/api/expenses', expenseId],
@@ -271,6 +354,57 @@ function ExpenseDetailPanel({
       toast({ title: "Failed to reject expense", variant: "destructive" });
     }
   });
+
+  const updateMutation = useMutation({
+    mutationFn: async (data: typeof editFormData) => {
+      const payload: Record<string, unknown> = {
+        description: data.description,
+        amount: data.amount,
+        category: data.category,
+        expenseDate: data.expenseDate,
+        receiptUrl: data.receiptUrl || undefined,
+      };
+      if (data.category === "mileage") {
+        payload.mileageStart = data.mileageStart;
+        payload.mileageEnd = data.mileageEnd;
+        payload.mileageDistance = data.mileageDistance || undefined;
+      }
+      return apiRequest("PATCH", `/api/expenses/${expenseId}`, payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses', expenseId] });
+      setShowEditDialog(false);
+      toast({ title: "Expense updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update expense", variant: "destructive" });
+    }
+  });
+
+  const openEditDialog = () => {
+    if (expense) {
+      setEditFormData({
+        description: expense.description || "",
+        amount: expense.amount || "",
+        category: expense.category || "other",
+        expenseDate: expense.expenseDate ? format(new Date(expense.expenseDate), "yyyy-MM-dd") : "",
+        receiptUrl: expense.receiptUrl || "",
+        mileageStart: expense.mileageStart || "",
+        mileageEnd: expense.mileageEnd || "",
+        mileageDistance: expense.mileageDistance || "",
+      });
+      // Reset upload state and pre-populate if expense has a receipt
+      if (expense.receiptUrl) {
+        setUploadedReceiptUrl(expense.receiptUrl);
+        setUploadedFileName("Current receipt");
+      } else {
+        setUploadedReceiptUrl(null);
+        setUploadedFileName("");
+      }
+      setShowEditDialog(true);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -430,14 +564,24 @@ function ExpenseDetailPanel({
         </Button>
         <div className="flex gap-2">
           {expense.status === "draft" && (
-            <Button 
-              onClick={() => submitMutation.mutate()}
-              disabled={submitMutation.isPending}
-              data-testid="button-submit-expense"
-            >
-              <Send className="h-4 w-4 mr-2" />
-              Submit for Approval
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                onClick={openEditDialog}
+                data-testid="button-edit-expense"
+              >
+                <Pencil className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+              <Button
+                onClick={() => submitMutation.mutate()}
+                disabled={submitMutation.isPending}
+                data-testid="button-submit-expense"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Submit for Approval
+              </Button>
+            </>
           )}
           {isAdmin && expense.status === "submitted" && (
             <>
@@ -494,7 +638,531 @@ function ExpenseDetailPanel({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Expense</DialogTitle>
+            <DialogDescription>
+              Update the expense details.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-category">Category</Label>
+              <Select
+                value={editFormData.category}
+                onValueChange={(value) => setEditFormData({ ...editFormData, category: value })}
+              >
+                <SelectTrigger data-testid="edit-select-category">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {EXPENSE_CATEGORIES.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description *</Label>
+              <Textarea
+                id="edit-description"
+                value={editFormData.description}
+                onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                placeholder="Enter expense description"
+                data-testid="edit-input-description"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-amount">Amount *</Label>
+                <Input
+                  id="edit-amount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={editFormData.amount}
+                  onChange={(e) => setEditFormData({ ...editFormData, amount: e.target.value })}
+                  placeholder="0.00"
+                  data-testid="edit-input-amount"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-date">Date *</Label>
+                <Input
+                  id="edit-date"
+                  type="date"
+                  value={editFormData.expenseDate}
+                  onChange={(e) => setEditFormData({ ...editFormData, expenseDate: e.target.value })}
+                  data-testid="edit-input-date"
+                />
+              </div>
+            </div>
+
+            {editFormData.category === "mileage" && (
+              <>
+                <Separator />
+                <div className="space-y-4">
+                  <h4 className="font-medium">Mileage Details</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-mileage-start">Start Location</Label>
+                      <Input
+                        id="edit-mileage-start"
+                        value={editFormData.mileageStart}
+                        onChange={(e) => setEditFormData({ ...editFormData, mileageStart: e.target.value })}
+                        placeholder="e.g., 123 Main St"
+                        data-testid="edit-input-mileage-start"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-mileage-end">End Location</Label>
+                      <Input
+                        id="edit-mileage-end"
+                        value={editFormData.mileageEnd}
+                        onChange={(e) => setEditFormData({ ...editFormData, mileageEnd: e.target.value })}
+                        placeholder="e.g., 456 Oak Ave"
+                        data-testid="edit-input-mileage-end"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-mileage-distance">Distance (miles)</Label>
+                    <Input
+                      id="edit-mileage-distance"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={editFormData.mileageDistance}
+                      onChange={(e) => setEditFormData({ ...editFormData, mileageDistance: e.target.value })}
+                      placeholder="0.0"
+                      data-testid="edit-input-mileage-distance"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            <Separator />
+
+            <div className="space-y-2">
+              <Label>Receipt</Label>
+              <div className="space-y-2">
+                <ObjectUploader
+                  maxNumberOfFiles={1}
+                  maxFileSize={10485760}
+                  onGetUploadParameters={handleGetUploadParameters}
+                  onComplete={handleUploadComplete}
+                  buttonClassName="w-full"
+                >
+                  <FileUp className="w-4 h-4 mr-2" />
+                  {uploadedFileName ? `Replace: ${uploadedFileName}` : "Upload Receipt"}
+                </ObjectUploader>
+                {uploadedReceiptUrl && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-green-600" data-testid="text-receipt-uploaded">Receipt uploaded</span>
+                    <a
+                      href={uploadedReceiptUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline flex items-center gap-1"
+                      data-testid="link-view-receipt"
+                    >
+                      View <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                )}
+                {isUploading && (
+                  <p className="text-xs text-muted-foreground">Uploading...</p>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Upload a photo or PDF of the receipt (max 10MB)
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => updateMutation.mutate(editFormData)}
+              disabled={!editFormData.description || !editFormData.amount || updateMutation.isPending}
+              data-testid="button-save-expense"
+            >
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+const ICON_OPTIONS = [
+  { value: "Plane", label: "Plane" },
+  { value: "Hotel", label: "Hotel" },
+  { value: "Utensils", label: "Meals" },
+  { value: "Car", label: "Car" },
+  { value: "MapPin", label: "Location" },
+  { value: "DollarSign", label: "Dollar" },
+  { value: "Package", label: "Package" },
+  { value: "FileText", label: "Document" },
+  { value: "Receipt", label: "Receipt" },
+];
+
+const COLOR_OPTIONS = [
+  { value: "bg-blue-100 text-blue-800", label: "Blue" },
+  { value: "bg-green-100 text-green-800", label: "Green" },
+  { value: "bg-orange-100 text-orange-800", label: "Orange" },
+  { value: "bg-purple-100 text-purple-800", label: "Purple" },
+  { value: "bg-red-100 text-red-800", label: "Red" },
+  { value: "bg-yellow-100 text-yellow-800", label: "Yellow" },
+  { value: "bg-pink-100 text-pink-800", label: "Pink" },
+  { value: "bg-indigo-100 text-indigo-800", label: "Indigo" },
+  { value: "bg-teal-100 text-teal-800", label: "Teal" },
+  { value: "bg-gray-100 text-gray-800", label: "Gray" },
+];
+
+function ManageCategoriesDialog({
+  open,
+  onOpenChange,
+  categories
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  categories: ExpenseCategory[];
+}) {
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<ExpenseCategory | null>(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    code: "",
+    description: "",
+    icon: "FileText",
+    color: "bg-gray-100 text-gray-800",
+  });
+  const { toast } = useToast();
+
+  const createMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
+      return apiRequest("POST", "/api/expense-categories", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expense-categories'] });
+      setShowCreateForm(false);
+      setFormData({ name: "", code: "", description: "", icon: "FileText", color: "bg-gray-100 text-gray-800" });
+      toast({ title: "Category created successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to create category", variant: "destructive" });
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<typeof formData> }) => {
+      return apiRequest("PATCH", `/api/expense-categories/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expense-categories'] });
+      setEditingCategory(null);
+      toast({ title: "Category updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update category", variant: "destructive" });
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/expense-categories/${id}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expense-categories'] });
+      toast({ title: "Category deleted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete category", variant: "destructive" });
+    }
+  });
+
+  const seedMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/expense-categories/seed", {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expense-categories'] });
+      toast({ title: "Default categories seeded successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to seed categories", variant: "destructive" });
+    }
+  });
+
+  const handleCreate = () => {
+    if (!formData.name.trim() || !formData.code.trim()) {
+      toast({ title: "Name and code are required", variant: "destructive" });
+      return;
+    }
+    createMutation.mutate(formData);
+  };
+
+  const handleUpdate = () => {
+    if (!editingCategory) return;
+    updateMutation.mutate({
+      id: editingCategory.id,
+      data: {
+        name: formData.name,
+        description: formData.description,
+        icon: formData.icon,
+        color: formData.color,
+      }
+    });
+  };
+
+  const handleStartEdit = (category: ExpenseCategory) => {
+    setEditingCategory(category);
+    setFormData({
+      name: category.name,
+      code: category.code,
+      description: category.description || "",
+      icon: category.icon || "FileText",
+      color: category.color || "bg-gray-100 text-gray-800",
+    });
+    setShowCreateForm(false);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCategory(null);
+    setShowCreateForm(false);
+    setFormData({ name: "", code: "", description: "", icon: "FileText", color: "bg-gray-100 text-gray-800" });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Tags className="h-5 w-5" />
+            Manage Expense Categories
+          </DialogTitle>
+          <DialogDescription>
+            Create, edit, and manage expense categories for your organization.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Actions */}
+          <div className="flex gap-2">
+            {!showCreateForm && !editingCategory && (
+              <>
+                <Button
+                  size="sm"
+                  onClick={() => setShowCreateForm(true)}
+                  data-testid="button-add-category"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Category
+                </Button>
+                {categories.length === 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => seedMutation.mutate()}
+                    disabled={seedMutation.isPending}
+                    data-testid="button-seed-categories"
+                  >
+                    Seed Default Categories
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Create/Edit Form */}
+          {(showCreateForm || editingCategory) && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">
+                  {editingCategory ? "Edit Category" : "New Category"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="cat-name">Name *</Label>
+                    <Input
+                      id="cat-name"
+                      placeholder="e.g., Office Supplies"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      data-testid="input-category-name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cat-code">Code *</Label>
+                    <Input
+                      id="cat-code"
+                      placeholder="e.g., office_supplies"
+                      value={formData.code}
+                      onChange={(e) => setFormData({ ...formData, code: e.target.value.toLowerCase().replace(/\s+/g, '_') })}
+                      disabled={!!editingCategory}
+                      data-testid="input-category-code"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cat-description">Description</Label>
+                  <Input
+                    id="cat-description"
+                    placeholder="Optional description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    data-testid="input-category-description"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="cat-icon">Icon</Label>
+                    <Select
+                      value={formData.icon}
+                      onValueChange={(value) => setFormData({ ...formData, icon: value })}
+                    >
+                      <SelectTrigger data-testid="select-category-icon">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ICON_OPTIONS.map((icon) => (
+                          <SelectItem key={icon.value} value={icon.value}>
+                            {icon.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cat-color">Color</Label>
+                    <Select
+                      value={formData.color}
+                      onValueChange={(value) => setFormData({ ...formData, color: value })}
+                    >
+                      <SelectTrigger data-testid="select-category-color">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COLOR_OPTIONS.map((color) => (
+                          <SelectItem key={color.value} value={color.value}>
+                            <div className="flex items-center gap-2">
+                              <div className={`w-4 h-4 rounded ${color.value.split(' ')[0]}`} />
+                              {color.label}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    size="sm"
+                    onClick={editingCategory ? handleUpdate : handleCreate}
+                    disabled={createMutation.isPending || updateMutation.isPending}
+                    data-testid="button-save-category"
+                  >
+                    {editingCategory ? "Update" : "Create"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCancelEdit}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Categories List */}
+          <div className="border rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-[100px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {categories.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                      No categories defined. Add a category or seed defaults.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  categories.map((category) => (
+                    <TableRow key={category.id} data-testid={`category-row-${category.id}`}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Badge className={category.color || ""}>
+                            {category.name}
+                          </Badge>
+                          {category.isDefault && (
+                            <Badge variant="outline" className="text-xs">Default</Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">{category.code}</TableCell>
+                      <TableCell>
+                        <Badge variant={category.isActive ? "default" : "secondary"}>
+                          {category.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleStartEdit(category)}
+                            data-testid={`button-edit-category-${category.id}`}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          {!category.isDefault && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => deleteMutation.mutate(category.id)}
+                              disabled={deleteMutation.isPending}
+                              data-testid={`button-delete-category-${category.id}`}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -528,7 +1196,42 @@ function CreateExpenseDialog({
     perDiemPolicyId: "",
     perDiemDays: "",
   });
+  const [uploadedReceiptUrl, setUploadedReceiptUrl] = useState<string | null>(null);
+  const [uploadedFileName, setUploadedFileName] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
+
+  const handleGetUploadParameters = async () => {
+    const res = await fetch('/api/objects/upload', {
+      method: 'POST',
+      credentials: 'include'
+    });
+    const { uploadURL } = await res.json();
+    return { method: 'PUT' as const, url: uploadURL };
+  };
+
+  const handleUploadComplete = async (result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
+    if (result.successful?.[0]) {
+      const uploadedFile = result.successful[0];
+      const fileName = uploadedFile.name || 'Receipt';
+      const uploadUrl = uploadedFile.uploadURL;
+
+      setIsUploading(true);
+      try {
+        const url = new URL(uploadUrl as string);
+        const objectPath = url.pathname;
+        setUploadedReceiptUrl(objectPath);
+        setUploadedFileName(fileName);
+        setFormData(prev => ({ ...prev, receiptUrl: objectPath }));
+        toast({ title: "Receipt uploaded successfully" });
+      } catch (error) {
+        console.error('Failed to process upload:', error);
+        toast({ title: "Failed to process upload", variant: "destructive" });
+      } finally {
+        setIsUploading(false);
+      }
+    }
+  };
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -574,6 +1277,9 @@ function CreateExpenseDialog({
         perDiemPolicyId: "",
         perDiemDays: "",
       });
+      // Reset upload state
+      setUploadedReceiptUrl(null);
+      setUploadedFileName("");
       toast({ title: "Expense created successfully" });
     },
     onError: () => {
@@ -839,19 +1545,40 @@ function CreateExpenseDialog({
           )}
 
           <Separator />
-          
+
           <div className="space-y-2">
-            <Label htmlFor="receiptUrl">Receipt URL</Label>
-            <Input
-              id="receiptUrl"
-              type="url"
-              value={formData.receiptUrl}
-              onChange={(e) => setFormData({ ...formData, receiptUrl: e.target.value })}
-              placeholder="https://..."
-              data-testid="input-receipt-url"
-            />
+            <Label>Receipt</Label>
+            <div className="space-y-2">
+              <ObjectUploader
+                maxNumberOfFiles={1}
+                maxFileSize={10485760}
+                onGetUploadParameters={handleGetUploadParameters}
+                onComplete={handleUploadComplete}
+                buttonClassName="w-full"
+              >
+                <FileUp className="w-4 h-4 mr-2" />
+                {uploadedFileName ? `Selected: ${uploadedFileName}` : "Upload Receipt"}
+              </ObjectUploader>
+              {uploadedReceiptUrl && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-green-600" data-testid="text-receipt-uploaded">Receipt uploaded</span>
+                  <a
+                    href={uploadedReceiptUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline flex items-center gap-1"
+                    data-testid="link-view-receipt"
+                  >
+                    View <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              )}
+              {isUploading && (
+                <p className="text-xs text-muted-foreground">Uploading...</p>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground">
-              Enter a URL to the uploaded receipt image or document
+              Upload a photo or PDF of the receipt (max 10MB)
             </p>
           </div>
         </div>
@@ -1404,7 +2131,14 @@ export default function Expenses() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [selectedExpenses, setSelectedExpenses] = useState<Set<string>>(new Set());
+  const [showBulkActions, setShowBulkActions] = useState(false);
+  const [showCategoriesDialog, setShowCategoriesDialog] = useState(false);
   const { user, isAdmin } = useAuth();
+  const { toast } = useToast();
   const { filterByProject, isAdmin: isAdminContext } = useProjectContext();
 
   const { data: expensesRaw = [], isLoading: expensesLoading } = useQuery<ExpenseWithDetails[]>({
@@ -1427,13 +2161,180 @@ export default function Expenses() {
     queryKey: ['/api/per-diem-policies'],
   });
 
+  const { data: expenseCategories = [] } = useQuery<ExpenseCategory[]>({
+    queryKey: ['/api/expense-categories'],
+  });
+
   const expenses = filterByProject(expensesRaw);
 
   const filteredExpenses = expenses.filter(expense => {
     if (statusFilter !== "all" && expense.status !== statusFilter) return false;
     if (categoryFilter !== "all" && expense.category !== categoryFilter) return false;
+
+    // Search filter - search in description and vendor name
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchesDescription = expense.description?.toLowerCase().includes(query);
+      const matchesProject = expense.project?.name?.toLowerCase().includes(query);
+      const matchesConsultant = expense.consultant?.user
+        ? `${expense.consultant.user.firstName} ${expense.consultant.user.lastName}`.toLowerCase().includes(query)
+        : false;
+      if (!matchesDescription && !matchesProject && !matchesConsultant) return false;
+    }
+
+    // Date range filter
+    if (dateFrom && expense.expenseDate) {
+      const expenseDate = new Date(expense.expenseDate);
+      const fromDate = new Date(dateFrom);
+      if (expenseDate < fromDate) return false;
+    }
+    if (dateTo && expense.expenseDate) {
+      const expenseDate = new Date(expense.expenseDate);
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999); // Include the entire end date
+      if (expenseDate > toDate) return false;
+    }
+
     return true;
   });
+
+  // CSV Export function
+  const exportToCSV = () => {
+    const headers = ["Category", "Description", "Status", "Amount", "Project", "Submitted By", "Date"];
+    const rows = filteredExpenses.map(expense => [
+      getCategoryLabel(expense.category),
+      expense.description || "",
+      expense.status,
+      expense.amount || "0",
+      expense.project?.name || "",
+      expense.consultant?.user
+        ? `${expense.consultant.user.firstName || ""} ${expense.consultant.user.lastName || ""}`.trim()
+        : "",
+      expense.expenseDate ? format(new Date(expense.expenseDate), "yyyy-MM-dd") : ""
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `expenses-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
+  // Bulk selection helpers
+  const submittedExpenses = filteredExpenses.filter(e => e.status === "submitted");
+  const allSubmittedSelected = submittedExpenses.length > 0 &&
+    submittedExpenses.every(e => selectedExpenses.has(e.id));
+
+  const handleSelectExpense = (id: string, checked: boolean) => {
+    setSelectedExpenses(prev => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const newSelected = new Set(selectedExpenses);
+      submittedExpenses.forEach(e => newSelected.add(e.id));
+      setSelectedExpenses(newSelected);
+    } else {
+      const newSelected = new Set(selectedExpenses);
+      submittedExpenses.forEach(e => newSelected.delete(e.id));
+      setSelectedExpenses(newSelected);
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedExpenses(new Set());
+    setShowBulkActions(false);
+  };
+
+  // Bulk approval mutation
+  const bulkApproveMutation = useMutation({
+    mutationFn: async (expenseIds: string[]) => {
+      const results = await Promise.all(
+        expenseIds.map(id =>
+          apiRequest("PATCH", `/api/expenses/${id}`, {
+            status: "approved",
+            approvedAt: new Date().toISOString(),
+            approvedById: user?.id
+          })
+        )
+      );
+      return results;
+    },
+    onSuccess: (_, expenseIds) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      clearSelection();
+      toast({
+        title: "Expenses approved",
+        description: `Successfully approved ${expenseIds.length} expense(s)`
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Failed to approve expenses",
+        description: "Some expenses could not be approved",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Bulk reject mutation
+  const bulkRejectMutation = useMutation({
+    mutationFn: async (expenseIds: string[]) => {
+      const results = await Promise.all(
+        expenseIds.map(id =>
+          apiRequest("PATCH", `/api/expenses/${id}`, {
+            status: "rejected",
+            rejectedAt: new Date().toISOString(),
+            rejectedById: user?.id
+          })
+        )
+      );
+      return results;
+    },
+    onSuccess: (_, expenseIds) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      clearSelection();
+      toast({
+        title: "Expenses rejected",
+        description: `Rejected ${expenseIds.length} expense(s)`
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Failed to reject expenses",
+        description: "Some expenses could not be rejected",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleBulkApprove = () => {
+    const ids = Array.from(selectedExpenses);
+    if (ids.length > 0) {
+      bulkApproveMutation.mutate(ids);
+    }
+  };
+
+  const handleBulkReject = () => {
+    const ids = Array.from(selectedExpenses);
+    if (ids.length > 0) {
+      bulkRejectMutation.mutate(ids);
+    }
+  };
 
   if (expensesLoading) {
     return (
@@ -1482,6 +2383,12 @@ export default function Expenses() {
               Rate Management
             </TabsTrigger>
           )}
+          {isAdmin && (
+            <TabsTrigger value="categories" data-testid="tab-categories">
+              <Tags className="h-4 w-4 mr-2" />
+              Categories
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="expenses" className="space-y-4">
@@ -1489,32 +2396,140 @@ export default function Expenses() {
             <CardHeader>
               <div className="flex items-center justify-between gap-4 flex-wrap">
                 <CardTitle>Expense Reports</CardTitle>
-                <div className="flex gap-2 flex-wrap">
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-[140px]" data-testid="filter-status">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      {EXPENSE_STATUSES.map(s => (
-                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                    <SelectTrigger className="w-[150px]" data-testid="filter-category">
-                      <SelectValue placeholder="Category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
-                      {EXPENSE_CATEGORIES.map(c => (
-                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={exportToCSV}
+                  disabled={filteredExpenses.length === 0}
+                  data-testid="button-export-csv"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export CSV
+                </Button>
+              </div>
+              <div className="flex gap-2 flex-wrap mt-4">
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search expenses..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                    data-testid="input-search-expenses"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm text-muted-foreground whitespace-nowrap">From:</Label>
+                  <Input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="w-[150px]"
+                    data-testid="input-date-from"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm text-muted-foreground whitespace-nowrap">To:</Label>
+                  <Input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="w-[150px]"
+                    data-testid="input-date-to"
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[140px]" data-testid="filter-status">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    {EXPENSE_STATUSES.map(s => (
+                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-[150px]" data-testid="filter-category">
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {EXPENSE_CATEGORIES.map(c => (
+                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {(searchQuery || dateFrom || dateTo || statusFilter !== "all" || categoryFilter !== "all") && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setDateFrom("");
+                      setDateTo("");
+                      setStatusFilter("all");
+                      setCategoryFilter("all");
+                    }}
+                    data-testid="button-clear-filters"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Clear
+                  </Button>
+                )}
+              </div>
+              {isAdmin && (
+                <Button
+                  variant={showBulkActions ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setShowBulkActions(!showBulkActions);
+                    if (showBulkActions) clearSelection();
+                  }}
+                  data-testid="button-toggle-bulk"
+                >
+                  {showBulkActions ? "Cancel Selection" : "Bulk Actions"}
+                </Button>
+              )}
+            </CardHeader>
+
+            {/* Bulk Actions Bar */}
+            {showBulkActions && selectedExpenses.size > 0 && (
+              <div className="mx-6 mb-4 p-3 bg-muted rounded-lg flex items-center justify-between" data-testid="bulk-actions-bar">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={allSubmittedSelected}
+                    onCheckedChange={handleSelectAll}
+                    data-testid="checkbox-select-all"
+                  />
+                  <span className="text-sm font-medium">
+                    {selectedExpenses.size} expense(s) selected
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleBulkReject}
+                    disabled={bulkRejectMutation.isPending}
+                    data-testid="button-bulk-reject"
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Reject Selected
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleBulkApprove}
+                    disabled={bulkApproveMutation.isPending}
+                    data-testid="button-bulk-approve"
+                  >
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Approve Selected
+                  </Button>
                 </div>
               </div>
-            </CardHeader>
+            )}
+
             <CardContent>
               {filteredExpenses.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
@@ -1526,6 +2541,16 @@ export default function Expenses() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      {showBulkActions && (
+                        <TableHead className="w-12">
+                          <Checkbox
+                            checked={allSubmittedSelected}
+                            onCheckedChange={handleSelectAll}
+                            disabled={submittedExpenses.length === 0}
+                            data-testid="checkbox-header-select-all"
+                          />
+                        </TableHead>
+                      )}
                       <TableHead>Category</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead>Status</TableHead>
@@ -1542,6 +2567,9 @@ export default function Expenses() {
                         key={expense.id}
                         expense={expense}
                         onClick={() => setSelectedExpenseId(expense.id)}
+                        showCheckbox={showBulkActions}
+                        isSelected={selectedExpenses.has(expense.id)}
+                        onSelect={handleSelectExpense}
                       />
                     ))}
                   </TableBody>
@@ -1578,6 +2606,77 @@ export default function Expenses() {
             </Card>
           </TabsContent>
         )}
+
+        {isAdmin && (
+          <TabsContent value="categories" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Expense Categories</CardTitle>
+                    <CardDescription>
+                      Manage the categories available for expense reports
+                    </CardDescription>
+                  </div>
+                  <Button
+                    onClick={() => setShowCategoriesDialog(true)}
+                    data-testid="button-manage-categories"
+                  >
+                    <Tags className="h-4 w-4 mr-2" />
+                    Manage Categories
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="border rounded-md">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Code</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {expenseCategories.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                            No categories defined. Click "Manage Categories" to add some.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        expenseCategories.map((category) => (
+                          <TableRow key={category.id} data-testid={`category-list-${category.id}`}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Badge className={category.color || ""}>
+                                  {category.name}
+                                </Badge>
+                                {category.isDefault && (
+                                  <Badge variant="outline" className="text-xs">Default</Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-mono text-sm">{category.code}</TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {category.description || "—"}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={category.isActive ? "default" : "secondary"}>
+                                {category.isActive ? "Active" : "Inactive"}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
 
       <Dialog open={!!selectedExpenseId} onOpenChange={(open) => !open && setSelectedExpenseId(null)}>
@@ -1587,6 +2686,10 @@ export default function Expenses() {
               expenseId={selectedExpenseId}
               onClose={() => setSelectedExpenseId(null)}
               isAdmin={isAdmin}
+              projects={projects}
+              consultants={consultants}
+              mileageRates={mileageRates}
+              perDiemPolicies={perDiemPolicies}
             />
           )}
         </DialogContent>
@@ -1599,6 +2702,12 @@ export default function Expenses() {
         consultants={consultants}
         mileageRates={mileageRates}
         perDiemPolicies={perDiemPolicies}
+      />
+
+      <ManageCategoriesDialog
+        open={showCategoriesDialog}
+        onOpenChange={setShowCategoriesDialog}
+        categories={expenseCategories}
       />
     </div>
   );

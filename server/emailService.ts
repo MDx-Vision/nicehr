@@ -55,7 +55,8 @@ export type EmailTemplateType =
   | 'project_invitation'
   | 'account_deletion_requested'
   | 'account_deletion_completed'
-  | 'staff_invitation';
+  | 'staff_invitation'
+  | 'invoice_sent';
 
 // Template data interfaces
 export interface WelcomeEmailData {
@@ -99,6 +100,23 @@ export interface StaffInvitationData {
   role: string;
   message?: string;
   expiresAt: Date;
+}
+
+export interface InvoiceEmailData {
+  recipientName: string;
+  invoiceNumber: string;
+  invoiceDate: string;
+  dueDate: string;
+  totalAmount: string;
+  hospitalName?: string;
+  projectName?: string;
+  lineItems: Array<{
+    description: string;
+    quantity: number;
+    unitPrice: string;
+    amount: string;
+  }>;
+  message?: string;
 }
 
 // Email templates with subject and body
@@ -471,6 +489,93 @@ const emailTemplates: Record<EmailTemplateType, { subject: string; getHtml: (dat
 </body>
 </html>`;
     }
+  },
+  invoice_sent: {
+    subject: 'Invoice from NICEHR',
+    getHtml: (data: InvoiceEmailData) => {
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN
+        ? 'https://' + process.env.REPLIT_DEV_DOMAIN
+        : 'https://nicehr.replit.app';
+
+      const lineItemsHtml = data.lineItems && data.lineItems.length > 0
+        ? data.lineItems.map(item => `
+            <tr>
+              <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${item.description}</td>
+              <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center;">${item.quantity}</td>
+              <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: right;">${item.unitPrice}</td>
+              <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: right;">${item.amount}</td>
+            </tr>
+          `).join('')
+        : '<tr><td colspan="4" style="padding: 10px; text-align: center; color: #64748b;">No line items</td></tr>';
+
+      return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 700px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">Invoice</h1>
+    <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">#${data.invoiceNumber}</p>
+  </div>
+  <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e2e8f0; border-top: none;">
+    <p style="font-size: 16px;">Dear ${data.recipientName},</p>
+    ${data.message ? `<p style="font-size: 16px;">${data.message}</p>` : '<p style="font-size: 16px;">Please find your invoice details below.</p>'}
+
+    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+      <table style="width: 100%; font-size: 14px; margin-bottom: 15px;">
+        <tr>
+          <td style="padding: 5px 0; color: #64748b;">Invoice Number:</td>
+          <td style="padding: 5px 0; font-weight: 600; text-align: right;">${data.invoiceNumber}</td>
+        </tr>
+        <tr>
+          <td style="padding: 5px 0; color: #64748b;">Invoice Date:</td>
+          <td style="padding: 5px 0; font-weight: 600; text-align: right;">${data.invoiceDate}</td>
+        </tr>
+        <tr>
+          <td style="padding: 5px 0; color: #64748b;">Due Date:</td>
+          <td style="padding: 5px 0; font-weight: 600; text-align: right;">${data.dueDate}</td>
+        </tr>
+        ${data.hospitalName ? `<tr><td style="padding: 5px 0; color: #64748b;">Hospital:</td><td style="padding: 5px 0; font-weight: 600; text-align: right;">${data.hospitalName}</td></tr>` : ''}
+        ${data.projectName ? `<tr><td style="padding: 5px 0; color: #64748b;">Project:</td><td style="padding: 5px 0; font-weight: 600; text-align: right;">${data.projectName}</td></tr>` : ''}
+      </table>
+    </div>
+
+    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin: 20px 0;">
+      <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
+        <thead>
+          <tr style="background: #f1f5f9;">
+            <th style="padding: 12px; text-align: left; font-weight: 600;">Description</th>
+            <th style="padding: 12px; text-align: center; font-weight: 600;">Qty</th>
+            <th style="padding: 12px; text-align: right; font-weight: 600;">Unit Price</th>
+            <th style="padding: 12px; text-align: right; font-weight: 600;">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${lineItemsHtml}
+        </tbody>
+        <tfoot>
+          <tr style="background: #f1f5f9;">
+            <td colspan="3" style="padding: 12px; text-align: right; font-weight: 700;">Total:</td>
+            <td style="padding: 12px; text-align: right; font-weight: 700; color: #0891b2;">${data.totalAmount}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${baseUrl}/invoices" style="background: #0891b2; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">View Invoice Online</a>
+    </div>
+
+    <p style="font-size: 14px; color: #64748b;">If you have any questions about this invoice, please contact us.</p>
+    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+    <p style="font-size: 12px; color: #94a3b8; text-align: center;">NICEHR Group - Healthcare Consultant Management Platform</p>
+  </div>
+</body>
+</html>`;
+    }
   }
 };
 
@@ -716,5 +821,16 @@ export async function sendAccountDeletionCompletedEmail(
     'account_deletion_completed',
     { firstName: firstName || 'User' },
     userId
+  );
+}
+
+export async function sendInvoiceEmailToRecipient(
+  recipientEmail: string,
+  invoiceData: InvoiceEmailData
+): Promise<{ success: boolean; error?: string }> {
+  return await sendEmail(
+    recipientEmail,
+    'invoice_sent',
+    invoiceData
   );
 }

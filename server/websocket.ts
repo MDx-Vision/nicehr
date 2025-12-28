@@ -6,7 +6,7 @@ import cookie from 'cookie';
 import cookieSignature from 'cookie-signature';
 
 interface WebSocketMessage {
-  type: 'message' | 'join' | 'leave' | 'typing' | 'read' | 'subscribe_notifications' | 'unsubscribe_notifications';
+  type: 'message' | 'join' | 'leave' | 'typing' | 'read' | 'subscribe_notifications' | 'unsubscribe_notifications' | 'subscribe_dashboard' | 'unsubscribe_dashboard';
   channelId?: string;
   content?: string;
   messageId?: string;
@@ -17,6 +17,7 @@ interface AuthenticatedWebSocket extends WebSocket {
   userRole?: string;
   channels: Set<string>;
   subscribedToNotifications: boolean;
+  subscribedToDashboard: boolean;
   isAlive: boolean;
 }
 
@@ -131,6 +132,7 @@ export function setupWebSocket(server: Server) {
     client.channels = new Set();
     client.isAlive = true;
     client.subscribedToNotifications = false;
+    client.subscribedToDashboard = false;
     client.userId = (req as any).userId;
     client.userRole = (req as any).userRole;
 
@@ -285,6 +287,20 @@ export function setupWebSocket(server: Server) {
 
           case 'unsubscribe_notifications':
             client.subscribedToNotifications = false;
+            break;
+
+          case 'subscribe_dashboard':
+            client.subscribedToDashboard = true;
+            // Send initial dashboard stats
+            const dashboardStats = await getDashboardStatsForUser(client.userId, client.userRole || 'consultant');
+            client.send(JSON.stringify({
+              type: 'dashboard_stats',
+              stats: dashboardStats
+            }));
+            break;
+
+          case 'unsubscribe_dashboard':
+            client.subscribedToDashboard = false;
             break;
         }
       } catch (error) {
@@ -453,6 +469,91 @@ export async function broadcastNotificationUpdateToUsers(userIds: string[], affe
           updatePromises.push(promise);
         }
       });
+    }
+  });
+
+  await Promise.all(updatePromises);
+}
+
+// Get dashboard stats for a specific user based on their role
+async function getDashboardStatsForUser(userId: string, userRole: string): Promise<Record<string, any>> {
+  try {
+    const stats: Record<string, any> = {};
+
+    // Get consultants count
+    const consultants = await storage.getAllConsultants();
+    stats.totalConsultants = consultants.length;
+    stats.activeConsultants = consultants.filter(c => c.status === 'active').length;
+
+    // Get hospitals count
+    const hospitals = await storage.getAllHospitals();
+    stats.totalHospitals = hospitals.length;
+
+    // Get active projects
+    const projects = await storage.getAllProjects();
+    stats.activeProjects = projects.filter(p => p.status === 'active' || p.status === 'in_progress').length;
+
+    // Get pending documents
+    const documents = await storage.getAllDocuments();
+    stats.pendingDocuments = documents.filter(d => d.status === 'pending').length;
+
+    // Calculate total savings from ROI data
+    const roiRecords = await storage.getAllRoiRecords();
+    const totalSavings = roiRecords.reduce((sum, roi) => {
+      const savings = parseFloat(roi.calculatedSavings || '0');
+      return sum + (isNaN(savings) ? 0 : savings);
+    }, 0);
+    stats.totalSavings = totalSavings.toString();
+
+    // Performance metrics
+    const timesheets = await storage.getAllTimesheets();
+    const approvedTimesheets = timesheets.filter(t => t.status === 'approved');
+    const totalHours = approvedTimesheets.reduce((sum, t) => sum + (t.regularHours || 0), 0);
+    stats.totalHoursLogged = totalHours;
+
+    // Ticket resolution rate
+    const allTickets = await storage.getAllSupportTickets();
+    const resolvedTickets = allTickets.filter(t => t.status === 'resolved' || t.status === 'closed');
+    stats.ticketResolutionRate = allTickets.length > 0
+      ? Math.round((resolvedTickets.length / allTickets.length) * 100)
+      : 100;
+
+    // Project completion rate
+    const completedProjects = projects.filter(p => p.status === 'completed');
+    stats.projectCompletionRate = projects.length > 0
+      ? Math.round((completedProjects.length / projects.length) * 100)
+      : 0;
+
+    // Consultant utilization (simplified)
+    stats.consultantUtilization = stats.activeConsultants > 0 && stats.activeProjects > 0
+      ? Math.min(Math.round((stats.activeProjects / stats.activeConsultants) * 50), 100)
+      : 0;
+
+    return stats;
+  } catch (error) {
+    console.error('Error getting dashboard stats:', error);
+    return {};
+  }
+}
+
+// Broadcast dashboard stats updates to all subscribed clients
+export async function broadcastDashboardUpdate() {
+  const updatePromises: Promise<void>[] = [];
+
+  allClients.forEach(client => {
+    if (client.subscribedToDashboard && client.userId && client.readyState === WebSocket.OPEN) {
+      const promise = (async () => {
+        try {
+          const stats = await getDashboardStatsForUser(client.userId!, client.userRole || 'consultant');
+          client.send(JSON.stringify({
+            type: 'dashboard_stats',
+            stats
+          }));
+        } catch (error) {
+          console.error('Error broadcasting dashboard update:', error);
+        }
+      })();
+      updatePromises.push(promise);
     }
   });
 

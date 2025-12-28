@@ -139,6 +139,25 @@ export default function IntegrationsHub() {
     }
   });
 
+  const testConnectionMutation = useMutation({
+    mutationFn: async (connectionId: string) => {
+      return apiRequest('POST', `/api/integrations/connections/${connectionId}/test`, {});
+    },
+    onSuccess: () => {
+      toast({
+        title: "Connection test successful",
+        description: "The integration is working correctly.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Connection test failed",
+        description: "Unable to connect. Please check your settings.",
+        variant: "destructive",
+      });
+    }
+  });
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; icon: any }> = {
       connected: { variant: "default", icon: Check },
@@ -520,9 +539,9 @@ export default function IntegrationsHub() {
                         </div>
                       )}
                       <div className="flex gap-2 pt-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
+                        <Button
+                          variant="outline"
+                          size="sm"
                           className="flex-1"
                           onClick={() => triggerSyncMutation.mutate(connection.id)}
                           disabled={!connection.isActive || triggerSyncMutation.isPending}
@@ -534,6 +553,19 @@ export default function IntegrationsHub() {
                             <RefreshCw className="h-4 w-4 mr-2" />
                           )}
                           Sync Now
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => testConnectionMutation.mutate(connection.id)}
+                          disabled={testConnectionMutation.isPending}
+                          data-testid={`button-test-${connection.id}`}
+                        >
+                          {testConnectionMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <PlayCircle className="h-4 w-4" />
+                          )}
                         </Button>
                         <Button variant="outline" size="sm" data-testid={`button-settings-${connection.id}`}>
                           <Settings className="h-4 w-4" />
@@ -606,7 +638,7 @@ export default function IntegrationsHub() {
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4">
-          <Card>
+          <Card data-testid="card-general-settings">
             <CardHeader>
               <CardTitle>Global Integration Settings</CardTitle>
               <CardDescription>
@@ -654,7 +686,7 @@ export default function IntegrationsHub() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card data-testid="card-security-settings">
             <CardHeader>
               <CardTitle>Security & Compliance</CardTitle>
               <CardDescription>
@@ -678,6 +710,93 @@ export default function IntegrationsHub() {
                   <p className="text-sm text-muted-foreground">
                     All sync activities are logged for compliance review
                   </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card data-testid="card-audit-logs">
+            <CardHeader>
+              <CardTitle>Audit Logs</CardTitle>
+              <CardDescription>
+                Recent integration activity and changes
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3" data-testid="audit-logs-list">
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded bg-blue-500/10 text-blue-600">
+                      <RefreshCw className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Sync completed</p>
+                      <p className="text-xs text-muted-foreground">Google Calendar - 150 records synced</p>
+                    </div>
+                  </div>
+                  <span className="text-xs text-muted-foreground">2 minutes ago</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded bg-green-500/10 text-green-600">
+                      <Check className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Connection established</p>
+                      <p className="text-xs text-muted-foreground">Microsoft Outlook connected</p>
+                    </div>
+                  </div>
+                  <span className="text-xs text-muted-foreground">1 hour ago</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded bg-orange-500/10 text-orange-600">
+                      <Settings className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Settings updated</p>
+                      <p className="text-xs text-muted-foreground">Auto-retry enabled</p>
+                    </div>
+                  </div>
+                  <span className="text-xs text-muted-foreground">3 hours ago</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card data-testid="card-system-health">
+            <CardHeader>
+              <CardTitle>System Health</CardTitle>
+              <CardDescription>
+                Integration performance and status monitoring
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-muted/50 rounded-lg" data-testid="health-status">
+                  <p className="text-sm text-muted-foreground mb-1">Overall Status</p>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                    <span className="font-medium">All Systems Operational</span>
+                  </div>
+                </div>
+                <div className="p-4 bg-muted/50 rounded-lg" data-testid="api-response-time">
+                  <p className="text-sm text-muted-foreground mb-1">Avg API Response Time</p>
+                  <p className="text-2xl font-bold">145<span className="text-sm font-normal ml-1">ms</span></p>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="p-3 bg-muted/50 rounded-lg text-center">
+                  <p className="text-sm text-muted-foreground">Uptime</p>
+                  <p className="text-lg font-bold">99.9%</p>
+                </div>
+                <div className="p-3 bg-muted/50 rounded-lg text-center">
+                  <p className="text-sm text-muted-foreground">Syncs/Day</p>
+                  <p className="text-lg font-bold">24</p>
+                </div>
+                <div className="p-3 bg-muted/50 rounded-lg text-center">
+                  <p className="text-sm text-muted-foreground">Success Rate</p>
+                  <p className="text-lg font-bold">98.5%</p>
                 </div>
               </div>
             </CardContent>

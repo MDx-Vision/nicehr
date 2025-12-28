@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, and, desc, sql, inArray } from "drizzle-orm";
+import { eq, and, desc, sql, inArray, count } from "drizzle-orm";
 import {
   discAssessments,
   discSkills,
@@ -261,12 +261,38 @@ export async function removeDiscPersonSkill(id: string) {
 // DiSC TEAMS
 // ==========================================
 
-export async function getDiscTeams() {
-  return db
+export interface PaginatedTeamsResult {
+  teams: any[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export async function getDiscTeams(page: number = 1, limit: number = 12): Promise<PaginatedTeamsResult> {
+  const offset = (page - 1) * limit;
+
+  // Get total count
+  const [{ total }] = await db
+    .select({ total: count() })
+    .from(discTeams);
+
+  // Get paginated teams
+  const teams = await db
     .select()
     .from(discTeams)
     .leftJoin(projects, eq(discTeams.projectId, projects.id))
-    .orderBy(desc(discTeams.createdAt));
+    .orderBy(desc(discTeams.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+  return {
+    teams,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  };
 }
 
 export async function getDiscTeam(id: string): Promise<DiscTeamWithDetails | null> {

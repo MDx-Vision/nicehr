@@ -38,7 +38,16 @@ import {
   CheckCircle,
   AlertTriangle,
   Loader2,
+  Lock,
+  Key,
+  Monitor,
+  Smartphone,
+  LogOut,
+  Globe,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 
@@ -57,9 +66,28 @@ interface AccountSettingsData {
   createdAt: string | null;
 }
 
+interface Session {
+  id: string;
+  deviceType: "desktop" | "mobile" | "tablet";
+  browser: string;
+  location: string;
+  ipAddress: string;
+  lastActive: string;
+  isCurrent: boolean;
+}
+
 export default function AccountSettings() {
   const { toast } = useToast();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
+  const [language, setLanguage] = useState("en");
+  const [emailDigest, setEmailDigest] = useState(true);
+  const [activityTracking, setActivityTracking] = useState(true);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
 
   const { data: settings, isLoading, error } = useQuery<AccountSettingsData>({
     queryKey: ["/api/account/settings"],
@@ -109,6 +137,125 @@ export default function AccountSettings() {
       toast({ title: "Failed to cancel deletion request", variant: "destructive" });
     },
   });
+
+  const changePasswordMutation = useMutation({
+    mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
+      return await apiRequest("POST", "/api/account/change-password", data);
+    },
+    onSuccess: () => {
+      toast({ title: "Password changed successfully" });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    },
+    onError: (error: any) => {
+      const message = error?.message || "Failed to change password";
+      toast({ title: message, variant: "destructive" });
+    },
+  });
+
+  const { data: sessions = [] } = useQuery<Session[]>({
+    queryKey: ["/api/account/sessions"],
+  });
+
+  const terminateSessionMutation = useMutation({
+    mutationFn: async (sessionId: string) => {
+      return await apiRequest("DELETE", `/api/account/sessions/${sessionId}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/account/sessions"] });
+      toast({ title: "Session terminated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to terminate session", variant: "destructive" });
+    },
+  });
+
+  const terminateAllOtherSessionsMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("DELETE", "/api/account/sessions", {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/account/sessions"] });
+      toast({ title: "All other sessions terminated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to terminate sessions", variant: "destructive" });
+    },
+  });
+
+  const changeEmailMutation = useMutation({
+    mutationFn: async (email: string) => {
+      return await apiRequest("POST", "/api/account/change-email", { email });
+    },
+    onSuccess: () => {
+      toast({ title: "Verification email sent", description: "Please check your inbox to confirm the email change." });
+      setNewEmail("");
+    },
+    onError: () => {
+      toast({ title: "Failed to change email", variant: "destructive" });
+    },
+  });
+
+  const toggleTwoFactorMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      return await apiRequest("POST", "/api/account/two-factor", { enabled });
+    },
+    onSuccess: (_, enabled) => {
+      setTwoFactorEnabled(enabled);
+      toast({ title: enabled ? "Two-factor authentication enabled" : "Two-factor authentication disabled" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update two-factor authentication", variant: "destructive" });
+    },
+  });
+
+  const exportDataMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/account/export-data", {});
+    },
+    onSuccess: () => {
+      toast({ title: "Data export started", description: "You will receive an email when your data is ready." });
+    },
+    onError: () => {
+      toast({ title: "Failed to export data", variant: "destructive" });
+    },
+  });
+
+  const getDeviceIcon = (deviceType: string) => {
+    switch (deviceType) {
+      case "mobile":
+        return <Smartphone className="w-4 h-4" />;
+      case "tablet":
+        return <Monitor className="w-4 h-4" />;
+      default:
+        return <Monitor className="w-4 h-4" />;
+    }
+  };
+
+  const calculatePasswordStrength = (password: string): { score: number; label: string; color: string } => {
+    let score = 0;
+    if (password.length >= 8) score += 25;
+    if (password.length >= 12) score += 15;
+    if (/[a-z]/.test(password)) score += 15;
+    if (/[A-Z]/.test(password)) score += 15;
+    if (/[0-9]/.test(password)) score += 15;
+    if (/[^a-zA-Z0-9]/.test(password)) score += 15;
+
+    if (score < 30) return { score, label: "Weak", color: "bg-red-500" };
+    if (score < 60) return { score, label: "Fair", color: "bg-yellow-500" };
+    if (score < 80) return { score, label: "Good", color: "bg-blue-500" };
+    return { score, label: "Strong", color: "bg-green-500" };
+  };
+
+  const passwordStrength = calculatePasswordStrength(newPassword);
+  const passwordsMatch = newPassword === confirmPassword;
+  const canChangePassword = currentPassword && newPassword.length >= 8 && passwordsMatch;
+
+  const handlePasswordChange = () => {
+    if (!canChangePassword) return;
+    changePasswordMutation.mutate({ currentPassword, newPassword });
+  };
 
   const handleVisibilityChange = (value: "public" | "members_only" | "private") => {
     updateSettingsMutation.mutate({ profileVisibility: value });
@@ -344,7 +491,7 @@ export default function AccountSettings() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card data-testid="card-notifications">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Bell className="w-5 h-5" />
@@ -369,6 +516,367 @@ export default function AccountSettings() {
                 data-testid="switch-email-notifications"
               />
             </div>
+
+            <Separator />
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <label className="text-sm font-medium">Email Digest</label>
+                <p className="text-xs text-muted-foreground">
+                  Receive a daily summary of activity instead of individual notifications
+                </p>
+              </div>
+              <Switch
+                checked={emailDigest}
+                onCheckedChange={setEmailDigest}
+                disabled={isPending}
+                data-testid="switch-email-digest"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-preferences">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Eye className="w-5 h-5" />
+              User Preferences
+            </CardTitle>
+            <CardDescription>
+              Customize your experience
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Theme</label>
+              <Select
+                value={theme}
+                onValueChange={(value: "light" | "dark" | "system") => setTheme(value)}
+              >
+                <SelectTrigger data-testid="select-theme">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="light">Light</SelectItem>
+                  <SelectItem value="dark">Dark</SelectItem>
+                  <SelectItem value="system">System</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Language</label>
+              <Select
+                value={language}
+                onValueChange={setLanguage}
+              >
+                <SelectTrigger data-testid="select-language">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="es">Español</SelectItem>
+                  <SelectItem value="fr">Français</SelectItem>
+                  <SelectItem value="de">Deutsch</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Separator />
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <label className="text-sm font-medium">Activity Tracking</label>
+                <p className="text-xs text-muted-foreground">
+                  Allow tracking of your activity for personalized recommendations
+                </p>
+              </div>
+              <Switch
+                checked={activityTracking}
+                onCheckedChange={setActivityTracking}
+                data-testid="switch-activity-tracking"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-email-change">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="w-5 h-5" />
+              Change Email Address
+            </CardTitle>
+            <CardDescription>
+              Update your email address (requires verification)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="current-email">Current Email</Label>
+              <Input
+                id="current-email"
+                type="email"
+                value={settings.email || ""}
+                disabled
+                data-testid="input-current-email"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="new-email">New Email Address</Label>
+              <Input
+                id="new-email"
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="Enter new email address"
+                data-testid="input-new-email"
+              />
+            </div>
+
+            <Button
+              onClick={() => changeEmailMutation.mutate(newEmail)}
+              disabled={!newEmail || changeEmailMutation.isPending}
+              data-testid="button-change-email"
+            >
+              {changeEmailMutation.isPending && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
+              <Mail className="w-4 h-4 mr-2" />
+              Send Verification Email
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-two-factor">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5" />
+              Two-Factor Authentication
+            </CardTitle>
+            <CardDescription>
+              Add an extra layer of security to your account
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <label className="text-sm font-medium">Enable 2FA</label>
+                <p className="text-xs text-muted-foreground">
+                  Require a verification code when signing in
+                </p>
+              </div>
+              <Switch
+                checked={twoFactorEnabled}
+                onCheckedChange={(checked) => toggleTwoFactorMutation.mutate(checked)}
+                disabled={toggleTwoFactorMutation.isPending}
+                data-testid="switch-two-factor"
+              />
+            </div>
+
+            {twoFactorEnabled && (
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  Two-factor authentication is enabled. You will need to enter a verification code from your authenticator app when signing in.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-data-export">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Globe className="w-5 h-5" />
+              Data Export
+            </CardTitle>
+            <CardDescription>
+              Download a copy of your personal data
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Request a complete export of your account data. This includes your profile information, activity history, and any documents you've uploaded.
+            </p>
+
+            <Button
+              variant="outline"
+              onClick={() => exportDataMutation.mutate()}
+              disabled={exportDataMutation.isPending}
+              data-testid="button-export-data"
+            >
+              {exportDataMutation.isPending && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
+              Export My Data
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-password-change">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lock className="w-5 h-5" />
+              Change Password
+            </CardTitle>
+            <CardDescription>
+              Update your account password
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="current-password">Current Password</Label>
+              <Input
+                id="current-password"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Enter current password"
+                data-testid="input-current-password"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="new-password">New Password</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password"
+                data-testid="input-new-password"
+              />
+              {newPassword && (
+                <div className="space-y-1" data-testid="password-strength">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Password strength</span>
+                    <span className={`font-medium ${
+                      passwordStrength.label === "Weak" ? "text-red-500" :
+                      passwordStrength.label === "Fair" ? "text-yellow-500" :
+                      passwordStrength.label === "Good" ? "text-blue-500" :
+                      "text-green-500"
+                    }`} data-testid="password-strength-label">
+                      {passwordStrength.label}
+                    </span>
+                  </div>
+                  <Progress value={passwordStrength.score} className="h-2" data-testid="password-strength-bar" />
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground" data-testid="password-requirements">
+                Must be at least 8 characters with uppercase, lowercase, number, and special character
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Confirm New Password</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+                data-testid="input-confirm-password"
+              />
+              {confirmPassword && !passwordsMatch && (
+                <p className="text-xs text-red-500" data-testid="password-mismatch">
+                  Passwords do not match
+                </p>
+              )}
+            </div>
+
+            <Button
+              onClick={handlePasswordChange}
+              disabled={!canChangePassword || changePasswordMutation.isPending}
+              data-testid="button-change-password"
+            >
+              {changePasswordMutation.isPending && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
+              <Key className="w-4 h-4 mr-2" />
+              Change Password
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-session-management">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Monitor className="w-5 h-5" />
+              Active Sessions
+            </CardTitle>
+            <CardDescription>
+              Manage your active sessions across devices
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {sessions.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No active sessions found
+              </p>
+            ) : (
+              <>
+                <div className="space-y-3" data-testid="sessions-list">
+                  {sessions.map((session) => (
+                    <div
+                      key={session.id}
+                      className="flex items-center justify-between p-3 rounded-lg border"
+                      data-testid={`session-row-${session.id}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-full bg-muted">
+                          {getDeviceIcon(session.deviceType)}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">{session.browser}</span>
+                            {session.isCurrent && (
+                              <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                                Current
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Globe className="w-3 h-3" />
+                            <span>{session.location}</span>
+                            <span>•</span>
+                            <span>{session.ipAddress}</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Last active: {format(new Date(session.lastActive), "MMM d, yyyy 'at' h:mm a")}
+                          </div>
+                        </div>
+                      </div>
+                      {!session.isCurrent && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => terminateSessionMutation.mutate(session.id)}
+                          disabled={terminateSessionMutation.isPending}
+                          data-testid={`button-terminate-session-${session.id}`}
+                        >
+                          <LogOut className="w-4 h-4 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {sessions.filter(s => !s.isCurrent).length > 0 && (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => terminateAllOtherSessionsMutation.mutate()}
+                    disabled={terminateAllOtherSessionsMutation.isPending}
+                    data-testid="button-terminate-all-sessions"
+                  >
+                    {terminateAllOtherSessionsMutation.isPending && (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    )}
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out All Other Sessions
+                  </Button>
+                )}
+              </>
+            )}
           </CardContent>
         </Card>
 

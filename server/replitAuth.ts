@@ -19,13 +19,20 @@ const getOidcConfig = memoize(
   { maxAge: 3600 * 1000 }
 );
 
-const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
+// =============================================================================
+// HIPAA-COMPLIANT SESSION CONFIGURATION
+// =============================================================================
+// HIPAA requires automatic logoff after period of inactivity (15 minutes recommended)
+const sessionTtl = 15 * 60 * 1000; // 15 minutes - HIPAA automatic logoff requirement
+
 const pgStore = connectPg(session);
 export const sessionStore = new pgStore({
   conString: process.env.DATABASE_URL,
   createTableIfMissing: false,
-  ttl: sessionTtl,
+  ttl: Math.floor(sessionTtl / 1000), // connect-pg-simple expects seconds
   tableName: "sessions",
+  // Prune expired sessions every 5 minutes
+  pruneSessionInterval: 5 * 60,
 });
 
 export function getSession() {
@@ -35,13 +42,30 @@ export function getSession() {
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
+    // Rolling sessions: reset expiration on each request
+    rolling: true,
     cookie: {
-      httpOnly: true,
-      secure: isProduction, // Only require HTTPS in production
-      sameSite: isProduction ? 'strict' : 'lax',
-      maxAge: sessionTtl,
+      httpOnly: true, // Prevent XSS access to cookies
+      secure: isProduction, // Only transmit over HTTPS in production
+      sameSite: 'strict', // Prevent CSRF attacks
+      maxAge: sessionTtl, // 15 minute expiration
     },
   });
+}
+
+/**
+ * Middleware to touch/extend active sessions on each request
+ * This resets the session expiration timer for active users
+ * Combined with rolling: true, this ensures sessions stay alive during activity
+ */
+export function sessionTouchMiddleware() {
+  return (req: any, res: any, next: any) => {
+    if (req.session) {
+      // Touch the session to extend its expiration
+      req.session.touch();
+    }
+    next();
+  };
 }
 
 function updateUserSession(
@@ -215,6 +239,67 @@ export async function setupAuth(app: Express) {
     return;
   }
 
+  // Skip Replit auth in local development when REPL_ID is not available
+  if (process.env.NODE_ENV === 'development' && !process.env.REPL_ID) {
+    console.log('[DEV MODE] Skipping Replit auth, using mock session for local development');
+    app.set("trust proxy", 1);
+    app.use(session({
+      secret: process.env.SESSION_SECRET || 'dev-session-secret',
+      resave: false,
+      saveUninitialized: false,
+      cookie: { secure: false, sameSite: 'lax' }
+    }));
+    app.use(passport.initialize());
+    app.use(passport.session());
+
+    // Create mock dev user
+    const devUser = {
+      claims: {
+        sub: 'dev-user-local',
+        email: 'dev@nicehr.local',
+        first_name: 'Dev',
+        last_name: 'User'
+      },
+      expires_at: Math.floor(Date.now() / 1000) + 86400 // 24 hours
+    };
+
+    app.use((req, res, next) => {
+      (req as any).user = devUser;
+      req.isAuthenticated = () => true;
+      next();
+    });
+
+    // Mock login/logout routes for dev mode
+    app.get("/api/login", (req, res) => {
+      res.redirect("/");
+    });
+
+    app.get("/api/logout", (req, res) => {
+      res.redirect("/");
+    });
+
+    passport.serializeUser((user: Express.User, cb) => cb(null, user));
+    passport.deserializeUser((user: Express.User, cb) => cb(null, user));
+
+    // Ensure dev user exists in database
+    try {
+      await storage.upsertUser({
+        id: 'dev-user-local',
+        email: 'dev@nicehr.local',
+        firstName: 'Dev',
+        lastName: 'User',
+        profileImageUrl: null,
+        accessStatus: 'active',
+        invitationId: null,
+      });
+      console.log('[DEV MODE] Dev user created/updated in database');
+    } catch (error) {
+      console.warn('[DEV MODE] Could not create dev user:', error);
+    }
+
+    return;
+  }
+
   app.set("trust proxy", 1);
   app.use(getSession());
   app.use(passport.initialize());
@@ -300,17 +385,27 @@ export async function setupAuth(app: Express) {
       if (!user) {
         return res.redirect("/api/login");
       }
-      req.login(user, async (loginErr) => {
-        if (loginErr) {
-          return next(loginErr);
+
+      // HIPAA Security: Regenerate session ID on login to prevent session fixation attacks
+      // This creates a new session ID while preserving session data
+      req.session.regenerate((regenerateErr) => {
+        if (regenerateErr) {
+          console.error("Session regeneration error:", regenerateErr);
+          return next(regenerateErr);
         }
-        if (user?.claims?.sub) {
-          await logActivity(user.claims.sub, {
-            activityType: "login",
-            description: "User logged in successfully",
-          }, req);
-        }
-        return res.redirect("/");
+
+        req.login(user, async (loginErr) => {
+          if (loginErr) {
+            return next(loginErr);
+          }
+          if (user?.claims?.sub) {
+            await logActivity(user.claims.sub, {
+              activityType: "login",
+              description: "User logged in successfully",
+            }, req);
+          }
+          return res.redirect("/");
+        });
       });
     })(req, res, next);
   });

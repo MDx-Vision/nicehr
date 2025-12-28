@@ -206,10 +206,12 @@ import {
   HOSPITAL_TEAM_ROLES,
   perDiemPolicies,
   mileageRates,
+  expenseCategories,
   expenses,
   invoiceTemplates,
   invoices,
   invoiceLineItems,
+  invoicePayments,
   payRates,
   payrollBatches,
   payrollEntries,
@@ -228,6 +230,8 @@ import {
   type InsertPerDiemPolicy,
   type MileageRate,
   type InsertMileageRate,
+  type ExpenseCategory,
+  type InsertExpenseCategory,
   type Expense,
   type InsertExpense,
   type InvoiceTemplate,
@@ -236,6 +240,8 @@ import {
   type InsertInvoice,
   type InvoiceLineItem,
   type InsertInvoiceLineItem,
+  type InvoicePayment,
+  type InsertInvoicePayment,
   type PayRate,
   type InsertPayRate,
   type PayrollBatch,
@@ -666,6 +672,9 @@ export interface IStorage {
 
   // Dashboard stats
   getDashboardStats(): Promise<DashboardStats>;
+  getDashboardTasks(userId: string, role: string): Promise<{ id: string; title: string; priority: string; status: string; dueDate: string | null; projectId: string; projectName?: string }[]>;
+  getDashboardCalendarEvents(userId: string, role: string): Promise<{ id: string; title: string; date: string; type: 'milestone' | 'event'; projectId?: string; projectName?: string }[]>;
+  completeDashboardTask(taskId: string): Promise<ProjectTask | undefined>;
 
   // Directory operations
   searchConsultantsDirectory(params: DirectorySearchParams): Promise<ConsultantDirectoryResult>;
@@ -985,11 +994,17 @@ export interface IStorage {
   updateInvoiceLineItem(id: string, data: Partial<InsertInvoiceLineItem>): Promise<InvoiceLineItem | undefined>;
   deleteInvoiceLineItem(id: string): Promise<void>;
 
+  // Invoice Payment Operations
+  getInvoicePayments(invoiceId: string): Promise<InvoicePayment[]>;
+  createInvoicePayment(payment: InsertInvoicePayment): Promise<InvoicePayment>;
+  deleteInvoicePayment(id: string): Promise<void>;
+
   // Pay Rate Operations
   listPayRates(consultantId?: string): Promise<PayRate[]>;
   getPayRate(id: string): Promise<PayRate | undefined>;
   createPayRate(rate: InsertPayRate): Promise<PayRate>;
   updatePayRate(id: string, data: Partial<InsertPayRate>): Promise<PayRate | undefined>;
+  deletePayRate(id: string): Promise<void>;
   getCurrentPayRate(consultantId: string): Promise<PayRate | undefined>;
 
   // Payroll Batch Operations
@@ -2557,6 +2572,169 @@ export class DatabaseStorage implements IStorage {
       pendingDocuments: Number(pendingDocCount?.count || 0),
       totalSavings: savingsSum?.total || "0",
     };
+  }
+
+  async getDashboardTasks(userId: string, role: string): Promise<{ id: string; title: string; priority: string; status: string; dueDate: string | null; projectId: string; projectName?: string }[]> {
+    // For admins, get all tasks from active projects
+    // For consultants, get tasks assigned to them
+    let tasksQuery;
+
+    if (role === 'admin') {
+      // Get all tasks from active projects
+      tasksQuery = await db
+        .select({
+          id: projectTasks.id,
+          title: projectTasks.title,
+          priority: projectTasks.priority,
+          status: projectTasks.status,
+          dueDate: projectTasks.dueDate,
+          projectId: projectTasks.projectId,
+          projectName: projects.name,
+        })
+        .from(projectTasks)
+        .leftJoin(projects, eq(projectTasks.projectId, projects.id))
+        .where(eq(projects.status, 'active'))
+        .orderBy(asc(projectTasks.dueDate))
+        .limit(20);
+    } else {
+      // Get tasks assigned to this user
+      tasksQuery = await db
+        .select({
+          id: projectTasks.id,
+          title: projectTasks.title,
+          priority: projectTasks.priority,
+          status: projectTasks.status,
+          dueDate: projectTasks.dueDate,
+          projectId: projectTasks.projectId,
+          projectName: projects.name,
+        })
+        .from(projectTasks)
+        .leftJoin(projects, eq(projectTasks.projectId, projects.id))
+        .where(eq(projectTasks.assignedTo, userId))
+        .orderBy(asc(projectTasks.dueDate))
+        .limit(20);
+    }
+
+    return tasksQuery.map(task => ({
+      id: task.id,
+      title: task.title,
+      priority: task.priority,
+      status: task.status,
+      dueDate: task.dueDate,
+      projectId: task.projectId,
+      projectName: task.projectName || undefined,
+    }));
+  }
+
+  async getDashboardCalendarEvents(userId: string, role: string): Promise<{ id: string; title: string; date: string; type: 'milestone' | 'event'; projectId?: string; projectName?: string }[]> {
+    const events: { id: string; title: string; date: string; type: 'milestone' | 'event'; projectId?: string; projectName?: string }[] = [];
+
+    // Get milestones from active projects
+    const milestonesQuery = role === 'admin'
+      ? db
+          .select({
+            id: projectMilestones.id,
+            title: projectMilestones.title,
+            dueDate: projectMilestones.dueDate,
+            projectId: projectMilestones.projectId,
+            projectName: projects.name,
+          })
+          .from(projectMilestones)
+          .leftJoin(projects, eq(projectMilestones.projectId, projects.id))
+          .where(eq(projects.status, 'active'))
+          .orderBy(asc(projectMilestones.dueDate))
+          .limit(10)
+      : db
+          .select({
+            id: projectMilestones.id,
+            title: projectMilestones.title,
+            dueDate: projectMilestones.dueDate,
+            projectId: projectMilestones.projectId,
+            projectName: projects.name,
+          })
+          .from(projectMilestones)
+          .leftJoin(projects, eq(projectMilestones.projectId, projects.id))
+          .innerJoin(scheduleAssignments, eq(scheduleAssignments.scheduleId, projectSchedules.id))
+          .innerJoin(projectSchedules, eq(projectSchedules.projectId, projects.id))
+          .innerJoin(consultants, eq(scheduleAssignments.consultantId, consultants.id))
+          .where(eq(consultants.userId, userId))
+          .orderBy(asc(projectMilestones.dueDate))
+          .limit(10);
+
+    const milestones = await milestonesQuery;
+
+    for (const m of milestones) {
+      events.push({
+        id: m.id,
+        title: m.title,
+        date: m.dueDate,
+        type: 'milestone',
+        projectId: m.projectId,
+        projectName: m.projectName || undefined,
+      });
+    }
+
+    // Get upcoming schedule events (project schedules)
+    const schedulesQuery = role === 'admin'
+      ? db
+          .select({
+            id: projectSchedules.id,
+            scheduleDate: projectSchedules.scheduleDate,
+            shiftType: projectSchedules.shiftType,
+            projectId: projectSchedules.projectId,
+            projectName: projects.name,
+          })
+          .from(projectSchedules)
+          .leftJoin(projects, eq(projectSchedules.projectId, projects.id))
+          .where(eq(projects.status, 'active'))
+          .orderBy(asc(projectSchedules.scheduleDate))
+          .limit(10)
+      : db
+          .select({
+            id: projectSchedules.id,
+            scheduleDate: projectSchedules.scheduleDate,
+            shiftType: projectSchedules.shiftType,
+            projectId: projectSchedules.projectId,
+            projectName: projects.name,
+          })
+          .from(projectSchedules)
+          .leftJoin(projects, eq(projectSchedules.projectId, projects.id))
+          .innerJoin(scheduleAssignments, eq(scheduleAssignments.scheduleId, projectSchedules.id))
+          .innerJoin(consultants, eq(scheduleAssignments.consultantId, consultants.id))
+          .where(eq(consultants.userId, userId))
+          .orderBy(asc(projectSchedules.scheduleDate))
+          .limit(10);
+
+    const schedules = await schedulesQuery;
+
+    for (const s of schedules) {
+      events.push({
+        id: s.id,
+        title: `${s.projectName || 'Project'} - ${s.shiftType} shift`,
+        date: s.scheduleDate,
+        type: 'event',
+        projectId: s.projectId,
+        projectName: s.projectName || undefined,
+      });
+    }
+
+    // Sort all events by date
+    events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    return events.slice(0, 20);
+  }
+
+  async completeDashboardTask(taskId: string): Promise<ProjectTask | undefined> {
+    const [updated] = await db
+      .update(projectTasks)
+      .set({
+        status: 'completed',
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(projectTasks.id, taskId))
+      .returning();
+    return updated;
   }
 
   // Directory operations
@@ -6289,6 +6467,69 @@ export class DatabaseStorage implements IStorage {
     await db.delete(mileageRates).where(eq(mileageRates.id, id));
   }
 
+  // Expense Categories Operations
+  async listExpenseCategories(filters?: { isActive?: boolean }): Promise<ExpenseCategory[]> {
+    const conditions: any[] = [];
+    if (filters?.isActive !== undefined) {
+      conditions.push(eq(expenseCategories.isActive, filters.isActive));
+    }
+
+    return conditions.length > 0
+      ? await db.select().from(expenseCategories).where(and(...conditions)).orderBy(expenseCategories.sortOrder)
+      : await db.select().from(expenseCategories).orderBy(expenseCategories.sortOrder);
+  }
+
+  async getExpenseCategory(id: string): Promise<ExpenseCategory | undefined> {
+    const results = await db.select().from(expenseCategories).where(eq(expenseCategories.id, id));
+    return results[0];
+  }
+
+  async getExpenseCategoryByCode(code: string): Promise<ExpenseCategory | undefined> {
+    const results = await db.select().from(expenseCategories).where(eq(expenseCategories.code, code));
+    return results[0];
+  }
+
+  async createExpenseCategory(category: InsertExpenseCategory): Promise<ExpenseCategory> {
+    const results = await db.insert(expenseCategories).values(category).returning();
+    return results[0];
+  }
+
+  async updateExpenseCategory(id: string, data: Partial<InsertExpenseCategory>): Promise<ExpenseCategory | undefined> {
+    const results = await db
+      .update(expenseCategories)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(expenseCategories.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteExpenseCategory(id: string): Promise<void> {
+    await db.delete(expenseCategories).where(eq(expenseCategories.id, id));
+  }
+
+  async seedDefaultExpenseCategories(): Promise<void> {
+    const defaultCategories = [
+      { code: "travel", name: "Travel", icon: "Plane", color: "bg-blue-100 text-blue-800", isDefault: true, sortOrder: 1 },
+      { code: "lodging", name: "Lodging", icon: "Hotel", color: "bg-indigo-100 text-indigo-800", isDefault: true, sortOrder: 2 },
+      { code: "meals", name: "Meals", icon: "Utensils", color: "bg-orange-100 text-orange-800", isDefault: true, sortOrder: 3 },
+      { code: "transportation", name: "Transportation", icon: "Car", color: "bg-green-100 text-green-800", isDefault: true, sortOrder: 4 },
+      { code: "parking", name: "Parking", icon: "Car", color: "bg-teal-100 text-teal-800", isDefault: true, sortOrder: 5 },
+      { code: "mileage", name: "Mileage", icon: "MapPin", color: "bg-cyan-100 text-cyan-800", isDefault: true, sortOrder: 6 },
+      { code: "per_diem", name: "Per Diem", icon: "DollarSign", color: "bg-emerald-100 text-emerald-800", isDefault: true, sortOrder: 7 },
+      { code: "equipment", name: "Equipment", icon: "Package", color: "bg-purple-100 text-purple-800", isDefault: true, sortOrder: 8 },
+      { code: "supplies", name: "Supplies", icon: "Package", color: "bg-pink-100 text-pink-800", isDefault: true, sortOrder: 9 },
+      { code: "training", name: "Training", icon: "FileText", color: "bg-yellow-100 text-yellow-800", isDefault: true, sortOrder: 10 },
+      { code: "other", name: "Other", icon: "FileText", color: "bg-gray-100 text-gray-800", isDefault: true, sortOrder: 99 },
+    ];
+
+    for (const cat of defaultCategories) {
+      const existing = await this.getExpenseCategoryByCode(cat.code);
+      if (!existing) {
+        await this.createExpenseCategory(cat);
+      }
+    }
+  }
+
   // Expense Operations
   async listExpenses(filters?: {
     consultantId?: string;
@@ -6653,6 +6894,63 @@ export class DatabaseStorage implements IStorage {
     await db.delete(invoiceLineItems).where(eq(invoiceLineItems.id, id));
   }
 
+  // Invoice Payment Operations
+  async getInvoicePayments(invoiceId: string): Promise<InvoicePayment[]> {
+    return await db
+      .select()
+      .from(invoicePayments)
+      .where(eq(invoicePayments.invoiceId, invoiceId))
+      .orderBy(desc(invoicePayments.createdAt));
+  }
+
+  async createInvoicePayment(payment: InsertInvoicePayment): Promise<InvoicePayment> {
+    // Create the payment record
+    const results = await db.insert(invoicePayments).values(payment).returning();
+    const newPayment = results[0];
+
+    // Update the invoice's paidAmount and paidAt
+    const invoice = await db.select().from(invoices).where(eq(invoices.id, payment.invoiceId));
+    if (invoice[0]) {
+      const currentPaid = parseFloat(invoice[0].paidAmount || "0");
+      const newPaidAmount = currentPaid + parseFloat(payment.amount);
+      const totalAmount = parseFloat(invoice[0].totalAmount || "0");
+
+      await db
+        .update(invoices)
+        .set({
+          paidAmount: newPaidAmount.toFixed(2),
+          paidAt: new Date(),
+          status: newPaidAmount >= totalAmount ? "paid" : invoice[0].status,
+        })
+        .where(eq(invoices.id, payment.invoiceId));
+    }
+
+    return newPayment;
+  }
+
+  async deleteInvoicePayment(id: string): Promise<void> {
+    // Get the payment first to update the invoice
+    const payment = await db.select().from(invoicePayments).where(eq(invoicePayments.id, id));
+    if (payment[0]) {
+      const invoice = await db.select().from(invoices).where(eq(invoices.id, payment[0].invoiceId));
+      if (invoice[0]) {
+        const currentPaid = parseFloat(invoice[0].paidAmount || "0");
+        const newPaidAmount = Math.max(0, currentPaid - parseFloat(payment[0].amount));
+        const totalAmount = parseFloat(invoice[0].totalAmount || "0");
+
+        await db
+          .update(invoices)
+          .set({
+            paidAmount: newPaidAmount.toFixed(2),
+            status: newPaidAmount >= totalAmount ? "paid" : "sent",
+          })
+          .where(eq(invoices.id, payment[0].invoiceId));
+      }
+    }
+
+    await db.delete(invoicePayments).where(eq(invoicePayments.id, id));
+  }
+
   // Pay Rate Operations
   async listPayRates(consultantId?: string): Promise<PayRate[]> {
     if (consultantId) {
@@ -6685,6 +6983,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(payRates.id, id))
       .returning();
     return results[0];
+  }
+
+  async deletePayRate(id: string): Promise<void> {
+    await db.delete(payRates).where(eq(payRates.id, id));
   }
 
   async getCurrentPayRate(consultantId: string): Promise<PayRate | undefined> {

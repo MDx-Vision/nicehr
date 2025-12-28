@@ -18,7 +18,9 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Enums
-export const userRoleEnum = pgEnum("user_role", ["admin", "hospital_staff", "consultant"]);
+// User roles for RBAC - ordered by permission level (highest to lowest)
+// Note: 'hospital_staff' kept for backwards compatibility, maps to 'manager' level
+export const userRoleEnum = pgEnum("user_role", ["admin", "manager", "hospital_staff", "consultant", "viewer"]);
 export const documentStatusEnum = pgEnum("document_status", ["pending", "approved", "rejected", "expired"]);
 export const projectStatusEnum = pgEnum("project_status", ["draft", "active", "completed", "cancelled"]);
 export const scheduleStatusEnum = pgEnum("schedule_status", ["pending", "approved", "rejected"]);
@@ -3723,6 +3725,24 @@ export const mileageRates = pgTable("mileage_rates", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Expense Categories (for admin management)
+export const expenseCategories = pgTable("expense_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  code: varchar("code").notNull().unique(),
+  description: text("description"),
+  icon: varchar("icon").default("FileText"),
+  color: varchar("color").default("bg-gray-100 text-gray-800"),
+  isActive: boolean("is_active").default(true).notNull(),
+  isDefault: boolean("is_default").default(false).notNull(),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type ExpenseCategory = typeof expenseCategories.$inferSelect;
+export type InsertExpenseCategory = typeof expenseCategories.$inferInsert;
+
 // Expenses
 export const expenses = pgTable("expenses", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -3850,6 +3870,31 @@ export const invoicesRelations = relations(invoices, ({ one, many }) => ({
     references: [users.id],
   }),
   lineItems: many(invoiceLineItems),
+  payments: many(invoicePayments),
+}));
+
+// Invoice Payments - Track individual payment records
+export const invoicePayments = pgTable("invoice_payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  invoiceId: varchar("invoice_id").references(() => invoices.id).notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  paymentMethod: varchar("payment_method"), // check, ach, wire, credit_card, other
+  referenceNumber: varchar("reference_number"),
+  paymentDate: date("payment_date"),
+  notes: text("notes"),
+  recordedBy: varchar("recorded_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const invoicePaymentsRelations = relations(invoicePayments, ({ one }) => ({
+  invoice: one(invoices, {
+    fields: [invoicePayments.invoiceId],
+    references: [invoices.id],
+  }),
+  recorder: one(users, {
+    fields: [invoicePayments.recordedBy],
+    references: [users.id],
+  }),
 }));
 
 // Invoice Line Items
@@ -4131,6 +4176,11 @@ export const insertInvoiceLineItemSchema = createInsertSchema(invoiceLineItems).
   createdAt: true,
 });
 
+export const insertInvoicePaymentSchema = createInsertSchema(invoicePayments).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertPayRateSchema = createInsertSchema(payRates).omit({
   id: true,
   createdAt: true,
@@ -4186,6 +4236,9 @@ export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
 
 export type InvoiceLineItem = typeof invoiceLineItems.$inferSelect;
 export type InsertInvoiceLineItem = z.infer<typeof insertInvoiceLineItemSchema>;
+
+export type InvoicePayment = typeof invoicePayments.$inferSelect;
+export type InsertInvoicePayment = z.infer<typeof insertInvoicePaymentSchema>;
 
 export type PayRate = typeof payRates.$inferSelect;
 export type InsertPayRate = z.infer<typeof insertPayRateSchema>;
@@ -7136,6 +7189,34 @@ export interface EscalationAnalytics {
   acknowledgementRate: number;
   recentEvents: EscalationEventWithDetails[];
 }
+
+// ==========================================
+// HIPAA AUDIT LOGGING
+// ==========================================
+
+export const httpMethodEnum = pgEnum("http_method", ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"]);
+
+export const auditLogs = pgTable("audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  userId: varchar("user_id").references(() => users.id),
+  action: varchar("action", { length: 255 }).notNull(),
+  resource: varchar("resource", { length: 500 }).notNull(),
+  method: httpMethodEnum("method"),
+  ipAddress: varchar("ip_address", { length: 45 }), // IPv6 max length
+  userAgent: varchar("user_agent", { length: 500 }),
+  statusCode: integer("status_code"),
+  responseTimeMs: integer("response_time_ms"),
+}, (table) => [
+  index("idx_audit_logs_timestamp").on(table.timestamp),
+  index("idx_audit_logs_user_id").on(table.userId),
+  index("idx_audit_logs_action").on(table.action),
+  index("idx_audit_logs_resource").on(table.resource),
+]);
+
+export const insertAuditLogSchema = createInsertSchema(auditLogs);
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = typeof auditLogs.$inferInsert;
 
 // ==========================================
 // PHASE 4: ADVANCED ANALYTICS SUMMARY TYPES

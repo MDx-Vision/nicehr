@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated, requireRole, requirePermission, requireAnyPermission, optionalAuth } from "./replitAuth";
+import { setupAuth, isAuthenticated, requireRole, requirePermission, requireAnyPermission, optionalAuth, sessionTouchMiddleware } from "./replitAuth";
 import {
   ObjectStorageService,
   ObjectNotFoundError,
@@ -120,6 +120,7 @@ import {
   sendDocumentRejectedEmail,
   sendScheduleAssignedEmail,
   sendAccountDeletionRequestedEmail,
+  sendInvoiceEmailToRecipient,
 } from "./emailService";
 import discRoutes from "./discRoutes";
 
@@ -127,8 +128,36 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // =============================================================================
+  // HEALTH CHECK ENDPOINT
+  // =============================================================================
+  // Used by load balancers, Kubernetes, and monitoring systems
+  // Returns 200 OK if the server is healthy, 503 if database is unreachable
+  app.get("/api/health", async (_req, res) => {
+    try {
+      // Check database connectivity
+      await storage.getUser("health-check-probe");
+      res.status(200).json({
+        status: "healthy",
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        version: process.env.npm_package_version || "1.0.0",
+      });
+    } catch (error) {
+      res.status(503).json({
+        status: "unhealthy",
+        timestamp: new Date().toISOString(),
+        error: "Database connection failed",
+      });
+    }
+  });
+
   // Setup Replit Auth
   await setupAuth(app);
+
+// HIPAA: Touch session on each request to extend active sessions
+  // This works with rolling: true to reset the 15-minute inactivity timer
+  app.use(sessionTouchMiddleware());
 
   // Mount DiSC routes
   app.use('/api/disc', discRoutes);
@@ -389,6 +418,144 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
       res.status(500).json({ message: "Failed to fetch dashboard stats" });
+    }
+  });
+
+  // Dashboard tasks
+  app.get('/api/dashboard/tasks', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      const role = user?.role || 'consultant';
+      const tasks = await storage.getDashboardTasks(userId, role);
+      res.json(tasks);
+    } catch (error) {
+      console.error("Error fetching dashboard tasks:", error);
+      res.status(500).json({ message: "Failed to fetch dashboard tasks" });
+    }
+  });
+
+  // Dashboard calendar events
+  app.get('/api/dashboard/calendar-events', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      const role = user?.role || 'consultant';
+      const events = await storage.getDashboardCalendarEvents(userId, role);
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching calendar events:", error);
+      res.status(500).json({ message: "Failed to fetch calendar events" });
+    }
+  });
+
+  // Complete dashboard task
+  app.post('/api/dashboard/tasks/:id/complete', isAuthenticated, async (req: any, res) => {
+    try {
+      const taskId = req.params.id;
+      const userId = req.user?.claims?.sub;
+
+      // Verify user has access to complete this task
+      const task = await storage.getProjectTask(taskId);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+
+      const user = await storage.getUser(userId);
+      // Only allow completion if admin or task is assigned to user
+      if (user?.role !== 'admin' && task.assignedTo !== userId) {
+        return res.status(403).json({ message: "Not authorized to complete this task" });
+      }
+
+      const updated = await storage.completeDashboardTask(taskId);
+      if (!updated) {
+        return res.status(500).json({ message: "Failed to complete task" });
+      }
+
+      if (userId) {
+        await logActivity(userId, {
+          activityType: "update",
+          resourceType: "task",
+          resourceId: taskId,
+          details: { action: "completed" },
+        });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error completing task:", error);
+      res.status(500).json({ message: "Failed to complete task" });
+    }
+  });
+
+  // Quick search API for command menu
+  app.get('/api/search/quick', isAuthenticated, async (req: any, res) => {
+    try {
+      const query = (req.query.q as string || '').toLowerCase().trim();
+      if (query.length < 2) {
+        return res.json([]);
+      }
+
+      const results: Array<{
+        id: string;
+        title: string;
+        type: 'project' | 'consultant' | 'hospital' | 'document';
+        url: string;
+        description?: string;
+      }> = [];
+
+      // Search projects
+      const projects = await storage.getAllProjects();
+      const matchingProjects = projects
+        .filter(p => p.name?.toLowerCase().includes(query))
+        .slice(0, 3);
+      for (const project of matchingProjects) {
+        results.push({
+          id: project.id,
+          title: project.name || 'Unnamed Project',
+          type: 'project',
+          url: `/projects`,
+          description: project.status || undefined,
+        });
+      }
+
+      // Search consultants
+      const consultants = await storage.getAllConsultants();
+      const matchingConsultants = consultants
+        .filter(c => {
+          const fullName = `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase();
+          return fullName.includes(query) || c.email?.toLowerCase().includes(query);
+        })
+        .slice(0, 3);
+      for (const consultant of matchingConsultants) {
+        results.push({
+          id: consultant.id,
+          title: `${consultant.firstName || ''} ${consultant.lastName || ''}`.trim() || consultant.email || 'Unknown',
+          type: 'consultant',
+          url: `/consultants`,
+          description: consultant.specialization || undefined,
+        });
+      }
+
+      // Search hospitals
+      const hospitals = await storage.getAllHospitals();
+      const matchingHospitals = hospitals
+        .filter(h => h.name?.toLowerCase().includes(query) || h.city?.toLowerCase().includes(query))
+        .slice(0, 3);
+      for (const hospital of matchingHospitals) {
+        results.push({
+          id: hospital.id,
+          title: hospital.name || 'Unknown Hospital',
+          type: 'hospital',
+          url: `/hospitals`,
+          description: hospital.city && hospital.state ? `${hospital.city}, ${hospital.state}` : undefined,
+        });
+      }
+
+      res.json(results.slice(0, 10));
+    } catch (error) {
+      console.error("Error in quick search:", error);
+      res.status(500).json({ message: "Search failed" });
     }
   });
 
@@ -6133,6 +6300,117 @@ export async function registerRoutes(
     }
   });
 
+  // Expense Categories Routes
+  app.get('/api/expense-categories', isAuthenticated, async (req, res) => {
+    try {
+      const isActive = req.query.isActive === 'true' ? true : req.query.isActive === 'false' ? false : undefined;
+      const categories = await storage.listExpenseCategories({ isActive });
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching expense categories:", error);
+      res.status(500).json({ message: "Failed to fetch expense categories" });
+    }
+  });
+
+  app.get('/api/expense-categories/:id', isAuthenticated, async (req, res) => {
+    try {
+      const category = await storage.getExpenseCategory(req.params.id);
+      if (!category) {
+        return res.status(404).json({ message: "Expense category not found" });
+      }
+      res.json(category);
+    } catch (error) {
+      console.error("Error fetching expense category:", error);
+      res.status(500).json({ message: "Failed to fetch expense category" });
+    }
+  });
+
+  app.post('/api/expense-categories', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const { name, code, description, icon, color, sortOrder } = req.body;
+
+      if (!name || !code) {
+        return res.status(400).json({ message: "Name and code are required" });
+      }
+
+      // Check if code already exists
+      const existing = await storage.getExpenseCategoryByCode(code);
+      if (existing) {
+        return res.status(400).json({ message: "Category code already exists" });
+      }
+
+      const category = await storage.createExpenseCategory({
+        name,
+        code,
+        description,
+        icon: icon || "FileText",
+        color: color || "bg-gray-100 text-gray-800",
+        sortOrder: sortOrder || 0,
+        isDefault: false,
+        isActive: true,
+      });
+
+      res.status(201).json(category);
+    } catch (error) {
+      console.error("Error creating expense category:", error);
+      res.status(500).json({ message: "Failed to create expense category" });
+    }
+  });
+
+  app.patch('/api/expense-categories/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const { name, description, icon, color, isActive, sortOrder } = req.body;
+
+      const existing = await storage.getExpenseCategory(req.params.id);
+      if (!existing) {
+        return res.status(404).json({ message: "Expense category not found" });
+      }
+
+      const updated = await storage.updateExpenseCategory(req.params.id, {
+        name,
+        description,
+        icon,
+        color,
+        isActive,
+        sortOrder,
+      });
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating expense category:", error);
+      res.status(500).json({ message: "Failed to update expense category" });
+    }
+  });
+
+  app.delete('/api/expense-categories/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const existing = await storage.getExpenseCategory(req.params.id);
+      if (!existing) {
+        return res.status(404).json({ message: "Expense category not found" });
+      }
+
+      if (existing.isDefault) {
+        return res.status(400).json({ message: "Cannot delete default expense category" });
+      }
+
+      await storage.deleteExpenseCategory(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting expense category:", error);
+      res.status(500).json({ message: "Failed to delete expense category" });
+    }
+  });
+
+  app.post('/api/expense-categories/seed', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      await storage.seedDefaultExpenseCategories();
+      res.json({ message: "Default expense categories seeded successfully" });
+    } catch (error) {
+      console.error("Error seeding expense categories:", error);
+      res.status(500).json({ message: "Failed to seed expense categories" });
+    }
+  });
+
   // Expenses Routes
   app.get('/api/expenses', isAuthenticated, async (req, res) => {
     try {
@@ -6485,7 +6763,7 @@ export async function registerRoutes(
     try {
       const userId = req.user?.claims?.sub;
       await storage.deleteInvoice(req.params.id);
-      
+
       if (userId) {
         await logActivity(userId, {
           activityType: 'delete',
@@ -6495,11 +6773,70 @@ export async function registerRoutes(
           description: 'Deleted invoice',
         }, req);
       }
-      
+
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting invoice:", error);
       res.status(500).json({ message: "Failed to delete invoice" });
+    }
+  });
+
+  // Invoice Payments Routes
+  app.get('/api/invoices/:id/payments', isAuthenticated, async (req, res) => {
+    try {
+      const payments = await storage.getInvoicePayments(req.params.id);
+      res.json(payments);
+    } catch (error) {
+      console.error("Error fetching invoice payments:", error);
+      res.status(500).json({ message: "Failed to fetch invoice payments" });
+    }
+  });
+
+  app.post('/api/invoices/:id/payments', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const invoiceId = req.params.id;
+
+      const payment = await storage.createInvoicePayment({
+        ...req.body,
+        invoiceId,
+        recordedBy: userId,
+      });
+
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'invoice_payment',
+        resourceId: payment.id,
+        resourceName: `Payment for Invoice`,
+        description: `Recorded payment of ${req.body.amount}`,
+      }, req);
+
+      res.status(201).json(payment);
+    } catch (error) {
+      console.error("Error creating invoice payment:", error);
+      res.status(500).json({ message: "Failed to create invoice payment" });
+    }
+  });
+
+  app.delete('/api/invoices/:invoiceId/payments/:paymentId', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      await storage.deleteInvoicePayment(req.params.paymentId);
+
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'invoice_payment',
+          resourceId: req.params.paymentId,
+          resourceName: 'Payment',
+          description: 'Deleted invoice payment',
+        }, req);
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting invoice payment:", error);
+      res.status(500).json({ message: "Failed to delete invoice payment" });
     }
   });
 
@@ -6529,6 +6866,82 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error generating invoice from timesheet:", error);
       res.status(500).json({ message: "Failed to generate invoice from timesheet" });
+    }
+  });
+
+  // Send invoice via email
+  app.post('/api/invoices/:id/send-email', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const invoiceId = req.params.id;
+      const { recipientEmail, recipientName, message } = req.body;
+
+      if (!recipientEmail) {
+        return res.status(400).json({ message: "recipientEmail is required" });
+      }
+
+      // Get the invoice with details
+      const invoice = await storage.getInvoiceWithDetails(invoiceId);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+
+      // Get line items
+      const lineItems = await storage.listInvoiceLineItems(invoiceId);
+
+      // Format currency helper
+      const formatCurrency = (amount: string | number | null | undefined) => {
+        if (amount === null || amount === undefined) return "$0.00";
+        const num = typeof amount === "string" ? parseFloat(amount) : amount;
+        return new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: "USD",
+        }).format(num);
+      };
+
+      // Prepare invoice data for email
+      const invoiceData = {
+        recipientName: recipientName || 'Valued Customer',
+        invoiceNumber: invoice.invoiceNumber || `INV-${invoice.id.slice(0, 8)}`,
+        invoiceDate: invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString() : new Date().toLocaleDateString(),
+        dueDate: invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'Upon Receipt',
+        totalAmount: formatCurrency(invoice.totalAmount),
+        hospitalName: invoice.hospital?.name,
+        projectName: invoice.project?.name,
+        lineItems: lineItems.map(item => ({
+          description: item.description || '',
+          quantity: item.quantity || 1,
+          unitPrice: formatCurrency(item.unitPrice),
+          amount: formatCurrency(item.amount),
+        })),
+        message,
+      };
+
+      // Send the email
+      const result = await sendInvoiceEmailToRecipient(recipientEmail, invoiceData);
+
+      if (!result.success) {
+        return res.status(500).json({ message: result.error || "Failed to send email" });
+      }
+
+      // Update invoice status to sent if it's in draft
+      if (invoice.status === 'draft') {
+        await storage.updateInvoice(invoiceId, { status: 'sent' });
+      }
+
+      // Log the activity
+      await logActivity(userId, {
+        activityType: 'update',
+        resourceType: 'invoice',
+        resourceId: invoiceId,
+        resourceName: invoice.invoiceNumber || 'Invoice',
+        description: `Sent invoice via email to ${recipientEmail}`,
+      }, req);
+
+      res.json({ success: true, message: `Invoice sent to ${recipientEmail}` });
+    } catch (error) {
+      console.error("Error sending invoice email:", error);
+      res.status(500).json({ message: "Failed to send invoice email" });
     }
   });
 
@@ -6699,6 +7112,33 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error updating pay rate:", error);
       res.status(500).json({ message: "Failed to update pay rate" });
+    }
+  });
+
+  app.delete('/api/pay-rates/:id', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const payRate = await storage.getPayRate(req.params.id);
+      if (!payRate) {
+        return res.status(404).json({ message: "Pay rate not found" });
+      }
+
+      await storage.deletePayRate(req.params.id);
+
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'pay_rate',
+          resourceId: req.params.id,
+          resourceName: `Pay rate: $${payRate.hourlyRate}/hr`,
+          description: 'Deleted pay rate',
+        }, req);
+      }
+
+      res.json({ message: "Pay rate deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting pay rate:", error);
+      res.status(500).json({ message: "Failed to delete pay rate" });
     }
   });
 

@@ -394,8 +394,10 @@ router.get("/consultants/:id", async (req: Request, res: Response) => {
 
 router.get("/teams", async (req: Request, res: Response) => {
   try {
-    const teams = await discStorage.getDiscTeams();
-    res.json(teams);
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 12;
+    const result = await discStorage.getDiscTeams(page, limit);
+    res.json(result);
   } catch (error) {
     console.error("Error fetching DiSC teams:", error);
     res.status(500).json({ error: "Failed to fetch teams" });

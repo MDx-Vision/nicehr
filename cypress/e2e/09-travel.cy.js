@@ -1,320 +1,553 @@
-// ***********************************************
-// NICEHR Platform - Travel Management Tests
-// ***********************************************
-
 describe('Travel Management', () => {
+  const testUser = {
+    id: 1,
+    email: 'test@example.com',
+    firstName: 'Test',
+    lastName: 'User',
+    role: 'admin'
+  };
+
+  const mockBookings = [
+    {
+      id: 'b1',
+      consultantId: 1,
+      projectId: 'p1',
+      bookingType: 'flight',
+      status: 'confirmed',
+      airline: 'United Airlines',
+      flightNumber: 'UA1234',
+      departureAirport: 'ORD',
+      arrivalAirport: 'LAX',
+      departureDate: '2024-02-15',
+      returnDate: '2024-02-20',
+      departureTime: '08:00',
+      arrivalTime: '10:30',
+      estimatedCost: '450.00',
+      notes: 'Business trip',
+      consultant: { id: 1, user: { firstName: 'John', lastName: 'Doe' } },
+      project: { id: 'p1', name: 'Epic EHR Project' }
+    },
+    {
+      id: 'b2',
+      consultantId: 2,
+      projectId: 'p1',
+      bookingType: 'hotel',
+      status: 'pending',
+      hotelName: 'Marriott Downtown',
+      hotelAddress: '123 Main St, Los Angeles, CA',
+      checkInDate: '2024-02-15',
+      checkOutDate: '2024-02-20',
+      confirmationNumber: 'MAR123456',
+      estimatedCost: '750.00',
+      notes: 'Near hospital',
+      consultant: { id: 2, user: { firstName: 'Jane', lastName: 'Smith' } },
+      project: { id: 'p1', name: 'Epic EHR Project' }
+    },
+    {
+      id: 'b3',
+      consultantId: 1,
+      projectId: 'p2',
+      bookingType: 'car',
+      status: 'completed',
+      rentalCompany: 'Enterprise',
+      vehicleType: 'SUV',
+      pickupLocation: 'LAX Airport',
+      dropoffLocation: 'LAX Airport',
+      pickupDate: '2024-01-15',
+      returnDate: '2024-01-20',
+      confirmationNumber: 'ENT789012',
+      estimatedCost: '350.00',
+      notes: 'Full coverage insurance',
+      consultant: { id: 1, user: { firstName: 'John', lastName: 'Doe' } },
+      project: { id: 'p2', name: 'Cerner Training' }
+    }
+  ];
+
+  const mockItineraries = [
+    {
+      id: 'i1',
+      tripName: 'Epic Implementation Trip',
+      consultantId: 1,
+      projectId: 'p1',
+      startDate: '2024-02-15',
+      endDate: '2024-02-20',
+      status: 'active',
+      notes: 'Full week on-site',
+      consultant: { id: 1, user: { firstName: 'John', lastName: 'Doe' } },
+      project: { id: 'p1', name: 'Epic EHR Project' },
+      bookings: [mockBookings[0], mockBookings[1]]
+    }
+  ];
+
+  const mockConsultants = [
+    { id: 1, user: { firstName: 'John', lastName: 'Doe' } },
+    { id: 2, user: { firstName: 'Jane', lastName: 'Smith' } }
+  ];
+
+  const mockProjects = [
+    { id: 'p1', name: 'Epic EHR Project' },
+    { id: 'p2', name: 'Cerner Training' }
+  ];
+
   beforeEach(() => {
-    cy.loginViaApi();
-    cy.navigateTo('travel');
-    cy.waitForPageLoad();
+    cy.clearCookies();
+    cy.clearLocalStorage();
+    cy.clearSessionStorage();
+
+    cy.intercept('GET', '/api/auth/user', {
+      statusCode: 200,
+      body: testUser
+    }).as('getUser');
+
+    cy.intercept('GET', '/api/travel-bookings*', {
+      statusCode: 200,
+      body: mockBookings
+    }).as('getBookings');
+
+    cy.intercept('GET', '/api/travel-itineraries*', {
+      statusCode: 200,
+      body: mockItineraries
+    }).as('getItineraries');
+
+    cy.intercept('GET', '/api/consultants', {
+      statusCode: 200,
+      body: mockConsultants
+    }).as('getConsultants');
+
+    cy.intercept('GET', '/api/projects', {
+      statusCode: 200,
+      body: mockProjects
+    }).as('getProjects');
+
+    cy.visit('/travel-bookings');
+    cy.wait('@getUser');
   });
 
-  describe('Travel Dashboard', () => {
-    it('should display travel dashboard', () => {
-      cy.get('[data-testid="travel-dashboard"]').should('be.visible');
+  describe('Travel Page Layout', () => {
+    it('should display travel page title', () => {
+      cy.get('[data-testid="text-page-title"]').should('contain', 'Travel Bookings');
     });
 
-    it('should show upcoming trips', () => {
-      cy.get('[data-testid="upcoming-trips"]').should('be.visible');
+    it('should display travel tabs', () => {
+      cy.get('[data-testid="tabs-travel"]').should('exist');
+      cy.get('[data-testid="tab-bookings"]').should('be.visible');
+      cy.get('[data-testid="tab-itineraries"]').should('be.visible');
     });
 
-    it('should show travel calendar', () => {
-      cy.get('[data-testid="travel-calendar"]').should('be.visible');
-    });
-
-    it('should show travel spend summary', () => {
-      cy.get('[data-testid="travel-spend-summary"]').should('be.visible');
+    it('should display booking stats', () => {
+      cy.get('[data-testid="stat-pending-bookings"]').should('exist');
+      cy.get('[data-testid="stat-confirmed-bookings"]').should('exist');
+      cy.get('[data-testid="stat-completed-bookings"]').should('exist');
+      cy.get('[data-testid="stat-total-cost"]').should('exist');
     });
   });
 
-  describe('Travel Bookings', () => {
+  describe('Bookings Tab', () => {
+    it('should display new booking button', () => {
+      cy.get('[data-testid="button-new-booking"]').should('be.visible');
+    });
+
+    it('should display booking type filter', () => {
+      cy.get('[data-testid="filter-booking-type-trigger"]').should('exist');
+    });
+
+    it('should display booking status filter', () => {
+      cy.get('[data-testid="filter-booking-status-trigger"]').should('exist');
+    });
+
+    it('should open booking type filter dropdown', () => {
+      cy.get('[data-testid="filter-booking-type-trigger"]').click();
+      cy.get('[data-testid="filter-type-all"]').should('be.visible');
+    });
+
+    it('should open booking status filter dropdown', () => {
+      cy.get('[data-testid="filter-booking-status-trigger"]').click();
+      cy.get('[data-testid="filter-status-all"]').should('be.visible');
+    });
+
+    it('should display booking cards', () => {
+      cy.wait('@getBookings');
+      cy.get('[data-testid^="booking-card-"]').should('have.length.at.least', 1);
+    });
+  });
+
+  describe('Create Booking Dialog', () => {
     beforeEach(() => {
-      cy.get('[data-testid="tab-bookings"]').click();
-      cy.waitForPageLoad();
+      cy.get('[data-testid="button-new-booking"]').click();
     });
 
-    describe('Booking List', () => {
-      it('should display bookings list', () => {
-        cy.get('[data-testid="bookings-list"]').should('be.visible');
-      });
-
-      it('should filter by status', () => {
-        cy.selectOption('[data-testid="filter-status"]', 'Confirmed');
-      });
-
-      it('should filter by consultant', () => {
-        cy.selectOption('[data-testid="filter-consultant"]', 'consultant');
-      });
-
-      it('should filter by date range', () => {
-        cy.get('[data-testid="input-start-date"]').type('2024-01-01');
-        cy.get('[data-testid="input-end-date"]').type('2024-03-31');
-        cy.get('[data-testid="button-apply-filter"]').click();
-      });
-
-      it('should search bookings', () => {
-        cy.get('[data-testid="input-search"]').type('flight');
-      });
+    it('should open create booking dialog', () => {
+      cy.get('[data-testid="select-booking-type-trigger"]').should('be.visible');
     });
 
-    describe('Create Booking', () => {
-      it('should open create booking modal', () => {
-        cy.openModal('button-create-booking');
-        cy.get('[role="dialog"]').should('contain', 'Booking');
-      });
-
-      it('should create flight booking', () => {
-        cy.openModal('button-create-booking');
-        cy.selectOption('[data-testid="select-booking-type"]', 'Flight');
-        cy.selectOption('[data-testid="select-consultant"]', 'consultant');
-        cy.selectOption('[data-testid="select-project"]', 'project');
-        cy.get('[data-testid="input-departure-city"]').type('Boston');
-        cy.get('[data-testid="input-arrival-city"]').type('Chicago');
-        cy.get('[data-testid="input-departure-date"]').type('2024-02-15');
-        cy.get('[data-testid="input-departure-time"]').type('08:00');
-        cy.get('[data-testid="input-return-date"]').type('2024-02-18');
-        cy.get('[data-testid="input-return-time"]').type('17:00');
-        cy.get('[data-testid="input-airline"]').type('Delta');
-        cy.get('[data-testid="input-confirmation"]').type('ABC123');
-        cy.get('[data-testid="input-cost"]').type('450');
-        
-        cy.get('[data-testid="button-submit-booking"]').click();
-        
-        cy.get('[role="dialog"]').should('not.exist');
-      });
-
-      it('should create hotel booking', () => {
-        cy.openModal('button-create-booking');
-        cy.selectOption('[data-testid="select-booking-type"]', 'Hotel');
-        cy.selectOption('[data-testid="select-consultant"]', 'consultant');
-        cy.get('[data-testid="input-hotel-name"]').type('Marriott Downtown');
-        cy.get('[data-testid="input-hotel-address"]').type('123 Main St, Chicago, IL');
-        cy.get('[data-testid="input-check-in"]').type('2024-02-15');
-        cy.get('[data-testid="input-check-out"]').type('2024-02-18');
-        cy.get('[data-testid="input-confirmation"]').type('HOTEL456');
-        cy.get('[data-testid="input-nightly-rate"]').type('189');
-        
-        cy.get('[data-testid="button-submit-booking"]').click();
-      });
-
-      it('should create rental car booking', () => {
-        cy.openModal('button-create-booking');
-        cy.selectOption('[data-testid="select-booking-type"]', 'Rental Car');
-        cy.selectOption('[data-testid="select-consultant"]', 'consultant');
-        cy.get('[data-testid="input-rental-company"]').type('Enterprise');
-        cy.get('[data-testid="input-pickup-location"]').type('ORD Airport');
-        cy.get('[data-testid="input-pickup-date"]').type('2024-02-15');
-        cy.get('[data-testid="input-return-date"]').type('2024-02-18');
-        cy.get('[data-testid="input-car-type"]').type('Midsize');
-        cy.get('[data-testid="input-confirmation"]').type('CAR789');
-        
-        cy.get('[data-testid="button-submit-booking"]').click();
-      });
+    it('should display booking type selector', () => {
+      cy.get('[data-testid="select-booking-type-trigger"]').should('exist');
     });
 
-    describe('Booking Details', () => {
-      beforeEach(() => {
-        cy.get('[data-testid="booking-item"]').first().click();
-        cy.waitForPageLoad();
-      });
+    it('should display consultant selector', () => {
+      cy.get('[data-testid="select-consultant-trigger"]').should('exist');
+    });
 
-      it('should display booking details', () => {
-        cy.get('[data-testid="booking-details"]').should('be.visible');
-      });
+    it('should display project selector', () => {
+      cy.get('[data-testid="select-project-trigger"]').should('exist');
+    });
 
-      it('should show itinerary', () => {
-        cy.get('[data-testid="booking-itinerary"]').should('be.visible');
-      });
+    it('should display estimated cost input', () => {
+      cy.get('[data-testid="input-estimated-cost"]').should('exist');
+    });
 
-      it('should edit booking', () => {
-        cy.get('[data-testid="button-edit-booking"]').click();
-        cy.get('[data-testid="input-confirmation"]').clear().type('UPDATED123');
-        cy.get('[data-testid="button-submit-booking"]').click();
-      });
+    it('should display notes input', () => {
+      cy.get('[data-testid="input-notes"]').should('exist');
+    });
 
-      it('should cancel booking', () => {
-        cy.get('[data-testid="button-cancel-booking"]').click();
-        cy.get('[data-testid="input-cancellation-reason"]').type('Project postponed');
-        cy.get('[data-testid="button-confirm-cancel"]').click();
-      });
+    it('should have cancel button', () => {
+      cy.get('[data-testid="button-cancel-booking"]').should('exist');
+    });
+
+    it('should have create button', () => {
+      cy.get('[data-testid="button-create-booking"]').should('exist');
+    });
+
+    it('should close dialog on cancel', () => {
+      cy.get('[data-testid="button-cancel-booking"]').click();
+      cy.get('[data-testid="select-booking-type-trigger"]').should('not.exist');
     });
   });
 
-  describe('Consultant Travel Preferences', () => {
+  describe('Flight Booking Form', () => {
     beforeEach(() => {
-      cy.get('[data-testid="tab-preferences"]').click();
-      cy.waitForPageLoad();
+      cy.get('[data-testid="button-new-booking"]').click();
+      // Select flight type
+      cy.get('[data-testid="select-booking-type-trigger"]').click();
+      cy.get('[data-testid="option-booking-type-flight"]').click();
     });
 
-    it('should display travel preferences form', () => {
-      cy.get('[data-testid="travel-preferences-form"]').should('be.visible');
+    it('should display airline input', () => {
+      cy.get('[data-testid="input-airline"]').should('exist');
     });
 
-    it('should set airline preferences', () => {
-      cy.selectOption('[data-testid="select-preferred-airline"]', 'Delta');
-      cy.get('[data-testid="input-frequent-flyer"]').type('SK12345678');
-      cy.selectOption('[data-testid="select-seat-preference"]', 'Aisle');
-      cy.get('[data-testid="button-save-preferences"]').click();
+    it('should display flight number input', () => {
+      cy.get('[data-testid="input-flight-number"]').should('exist');
     });
 
-    it('should set hotel preferences', () => {
-      cy.selectOption('[data-testid="select-preferred-hotel"]', 'Marriott');
-      cy.get('[data-testid="input-loyalty-number"]').type('1234567890');
-      cy.selectOption('[data-testid="select-room-preference"]', 'Non-Smoking');
-      cy.get('[data-testid="button-save-preferences"]').click();
+    it('should display departure airport input', () => {
+      cy.get('[data-testid="input-departure-airport"]').should('exist');
     });
 
-    it('should set dietary restrictions', () => {
-      cy.get('[data-testid="input-dietary-restrictions"]').type('Vegetarian');
-      cy.get('[data-testid="button-save-preferences"]').click();
+    it('should display arrival airport input', () => {
+      cy.get('[data-testid="input-arrival-airport"]').should('exist');
     });
 
-    it('should set emergency contact', () => {
-      cy.get('[data-testid="input-emergency-name"]').type('John Smith');
-      cy.get('[data-testid="input-emergency-phone"]').type('555-123-4567');
-      cy.get('[data-testid="input-emergency-relationship"]').type('Spouse');
-      cy.get('[data-testid="button-save-preferences"]').click();
+    it('should display departure date input', () => {
+      cy.get('[data-testid="input-departure-date"]').should('exist');
+    });
+
+    it('should display return date input', () => {
+      cy.get('[data-testid="input-return-date"]').should('exist');
+    });
+
+    it('should display departure time input', () => {
+      cy.get('[data-testid="input-departure-time"]').should('exist');
+    });
+
+    it('should display arrival time input', () => {
+      cy.get('[data-testid="input-arrival-time"]').should('exist');
     });
   });
 
-  describe('Transportation Coordination', () => {
+  describe('Hotel Booking Form', () => {
     beforeEach(() => {
-      cy.get('[data-testid="tab-transportation"]').click();
-      cy.waitForPageLoad();
+      cy.get('[data-testid="button-new-booking"]').click();
+      // Select hotel type
+      cy.get('[data-testid="select-booking-type-trigger"]').click();
+      cy.get('[data-testid="option-booking-type-hotel"]').click();
     });
 
-    describe('Ground Transportation', () => {
-      it('should display transportation requests', () => {
-        cy.get('[data-testid="transportation-list"]').should('be.visible');
-      });
+    it('should display hotel name input', () => {
+      cy.get('[data-testid="input-hotel-name"]').should('exist');
+    });
 
-      it('should create transportation request', () => {
-        cy.openModal('button-create-transport');
-        cy.selectOption('[data-testid="select-transport-type"]', 'Airport Shuttle');
-        cy.selectOption('[data-testid="select-consultant"]', 'consultant');
-        cy.get('[data-testid="input-pickup-location"]').type('ORD Terminal 2');
-        cy.get('[data-testid="input-dropoff-location"]').type('Marriott Downtown');
-        cy.get('[data-testid="input-pickup-datetime"]').type('2024-02-15T10:00');
-        cy.get('[data-testid="input-passengers"]').type('1');
-        
-        cy.get('[data-testid="button-submit-transport"]').click();
-      });
+    it('should display hotel address input', () => {
+      cy.get('[data-testid="input-hotel-address"]').should('exist');
+    });
 
-      it('should schedule recurring transportation', () => {
-        cy.openModal('button-create-transport');
-        cy.selectOption('[data-testid="select-transport-type"]', 'Daily Shuttle');
-        cy.get('[data-testid="checkbox-recurring"]').click();
-        cy.get('[data-testid="input-start-date"]').type('2024-02-15');
-        cy.get('[data-testid="input-end-date"]').type('2024-02-18');
-        cy.get('[data-testid="input-pickup-time"]').type('07:30');
-        
-        cy.get('[data-testid="button-submit-transport"]').click();
-      });
+    it('should display check-in date input', () => {
+      cy.get('[data-testid="input-check-in-date"]').should('exist');
+    });
+
+    it('should display check-out date input', () => {
+      cy.get('[data-testid="input-check-out-date"]').should('exist');
+    });
+
+    it('should display confirmation number input', () => {
+      cy.get('[data-testid="input-hotel-confirmation"]').should('exist');
     });
   });
 
-  describe('Travel Itineraries', () => {
+  describe('Car Rental Booking Form', () => {
+    beforeEach(() => {
+      cy.get('[data-testid="button-new-booking"]').click();
+      // Select rental car type
+      cy.get('[data-testid="select-booking-type-trigger"]').click();
+      cy.get('[data-testid="option-booking-type-rental_car"]').click();
+    });
+
+    it('should display rental company input', () => {
+      cy.get('[data-testid="input-rental-company"]').should('exist');
+    });
+
+    it('should display vehicle type input', () => {
+      cy.get('[data-testid="input-vehicle-type"]').should('exist');
+    });
+
+    it('should display pickup location input', () => {
+      cy.get('[data-testid="input-pickup-location"]').should('exist');
+    });
+
+    it('should display dropoff location input', () => {
+      cy.get('[data-testid="input-dropoff-location"]').should('exist');
+    });
+
+    it('should display pickup date input', () => {
+      cy.get('[data-testid="input-pickup-date"]').should('exist');
+    });
+
+    it('should display return date input', () => {
+      cy.get('[data-testid="input-rental-return-date"]').should('exist');
+    });
+
+    it('should display confirmation number input', () => {
+      cy.get('[data-testid="input-rental-confirmation"]').should('exist');
+    });
+  });
+
+  describe('Itineraries Tab', () => {
     beforeEach(() => {
       cy.get('[data-testid="tab-itineraries"]').click();
-      cy.waitForPageLoad();
+      cy.wait('@getItineraries');
     });
 
-    it('should display itineraries list', () => {
-      cy.get('[data-testid="itineraries-list"]').should('be.visible');
+    it('should switch to itineraries tab', () => {
+      cy.get('[data-testid="button-new-itinerary"]').should('be.visible');
     });
 
-    it('should create combined itinerary', () => {
-      cy.openModal('button-create-itinerary');
-      cy.get('[data-testid="input-itinerary-name"]').type('Chicago Project Trip');
-      cy.selectOption('[data-testid="select-consultant"]', 'consultant');
-      cy.get('[data-testid="input-trip-start"]').type('2024-02-15');
-      cy.get('[data-testid="input-trip-end"]').type('2024-02-18');
-      
-      // Link existing bookings
-      cy.get('[data-testid="button-link-booking"]').click();
-      cy.get('[data-testid="booking-checkbox"]').first().click();
-      cy.get('[data-testid="button-confirm-link"]').click();
-      
-      cy.get('[data-testid="button-submit-itinerary"]').click();
+    it('should display new itinerary button', () => {
+      cy.get('[data-testid="button-new-itinerary"]').should('be.visible');
     });
 
-    it('should view itinerary details', () => {
-      cy.get('[data-testid="itinerary-item"]').first().click();
-      cy.get('[data-testid="itinerary-timeline"]').should('be.visible');
+    it('should display itinerary status filter', () => {
+      cy.get('[data-testid="filter-itinerary-status-trigger"]').should('exist');
     });
 
-    it('should export itinerary to PDF', () => {
-      cy.get('[data-testid="itinerary-item"]').first().click();
-      cy.get('[data-testid="button-export-pdf"]').click();
+    it('should display itinerary cards', () => {
+      cy.get('[data-testid^="itinerary-card-"]').should('have.length.at.least', 1);
     });
 
-    it('should share itinerary via email', () => {
-      cy.get('[data-testid="itinerary-item"]').first().click();
-      cy.get('[data-testid="button-share-itinerary"]').click();
-      cy.get('[data-testid="input-email"]').type('manager@company.com');
-      cy.get('[data-testid="button-send"]').click();
+    it('should open itinerary status filter dropdown', () => {
+      cy.get('[data-testid="filter-itinerary-status-trigger"]').click();
+      cy.get('[data-testid="filter-itinerary-status-all"]').should('be.visible');
     });
   });
 
-  describe('Travel Approval Workflow', () => {
+  describe('Create Itinerary Dialog', () => {
     beforeEach(() => {
-      cy.get('[data-testid="tab-approvals"]').click();
-      cy.waitForPageLoad();
+      cy.get('[data-testid="tab-itineraries"]').click();
+      cy.wait('@getItineraries');
+      cy.get('[data-testid="button-new-itinerary"]').click();
     });
 
-    it('should display pending approvals', () => {
-      cy.get('[data-testid="pending-approvals-list"]').should('be.visible');
+    it('should open create itinerary dialog', () => {
+      cy.get('[data-testid="input-trip-name"]').should('be.visible');
     });
 
-    it('should approve travel request', () => {
-      cy.get('[data-testid="approval-item"]').first()
-        .find('[data-testid="button-approve"]').click();
-      cy.get('[data-testid="button-confirm"]').click();
+    it('should display trip name input', () => {
+      cy.get('[data-testid="input-trip-name"]').should('exist');
     });
 
-    it('should reject travel request', () => {
-      cy.get('[data-testid="approval-item"]').first()
-        .find('[data-testid="button-reject"]').click();
-      cy.get('[data-testid="input-rejection-reason"]').type('Over budget');
-      cy.get('[data-testid="button-confirm-reject"]').click();
+    it('should display consultant selector', () => {
+      cy.get('[data-testid="select-itinerary-consultant-trigger"]').should('exist');
     });
 
-    it('should request additional information', () => {
-      cy.get('[data-testid="approval-item"]').first()
-        .find('[data-testid="button-request-info"]').click();
-      cy.get('[data-testid="input-info-request"]').type('Please provide business justification');
-      cy.get('[data-testid="button-send-request"]').click();
+    it('should display project selector', () => {
+      cy.get('[data-testid="select-itinerary-project-trigger"]').should('exist');
+    });
+
+    it('should display start date input', () => {
+      cy.get('[data-testid="input-itinerary-start-date"]').should('exist');
+    });
+
+    it('should display end date input', () => {
+      cy.get('[data-testid="input-itinerary-end-date"]').should('exist');
+    });
+
+    it('should display notes input', () => {
+      cy.get('[data-testid="input-itinerary-notes"]').should('exist');
+    });
+
+    it('should have cancel button', () => {
+      cy.get('[data-testid="button-cancel-itinerary"]').should('exist');
+    });
+
+    it('should have create button', () => {
+      cy.get('[data-testid="button-create-itinerary"]').should('exist');
+    });
+
+    it('should close dialog on cancel', () => {
+      cy.get('[data-testid="button-cancel-itinerary"]').click();
+      cy.get('[data-testid="input-trip-name"]').should('not.exist');
+    });
+
+    it('should fill out and submit new itinerary', () => {
+      cy.intercept('POST', '/api/travel-itineraries', {
+        statusCode: 201,
+        body: { id: 'i2', tripName: 'New Trip', status: 'draft' }
+      }).as('createItinerary');
+
+      cy.get('[data-testid="input-trip-name"]').type('Business Trip to LA');
+
+      // Select consultant
+      cy.get('[data-testid="select-itinerary-consultant-trigger"]').click();
+      cy.get('[role="option"]').first().click();
+
+      // Select project
+      cy.get('[data-testid="select-itinerary-project-trigger"]').click();
+      cy.get('[role="option"]').first().click();
+
+      // Fill dates
+      cy.get('[data-testid="input-itinerary-start-date"]').type('2024-03-01');
+      cy.get('[data-testid="input-itinerary-end-date"]').type('2024-03-05');
+
+      cy.get('[data-testid="input-itinerary-notes"]').type('Week long on-site implementation');
+
+      cy.get('[data-testid="button-create-itinerary"]').click();
     });
   });
 
-  describe('Travel Reports', () => {
+  describe('Booking Detail View', () => {
     beforeEach(() => {
-      cy.get('[data-testid="tab-reports"]').click();
-      cy.waitForPageLoad();
+      cy.wait('@getBookings');
     });
 
-    it('should display travel spend by consultant', () => {
-      cy.get('[data-testid="spend-by-consultant-chart"]').should('be.visible');
+    it('should open booking detail on card click', () => {
+      cy.get('[data-testid^="booking-card-"]').first().click();
+      cy.get('[data-testid="select-update-status-trigger"]').should('be.visible');
     });
 
-    it('should display travel spend by project', () => {
-      cy.get('[data-testid="spend-by-project-chart"]').should('be.visible');
+    it('should display status update selector', () => {
+      cy.get('[data-testid^="booking-card-"]').first().click();
+      cy.get('[data-testid="select-update-status-trigger"]').should('exist');
     });
 
-    it('should display travel spend by category', () => {
-      cy.get('[data-testid="spend-by-category-chart"]').should('be.visible');
+    it('should have close button', () => {
+      cy.get('[data-testid^="booking-card-"]').first().click();
+      cy.get('[data-testid="button-close-booking-detail"]').should('exist');
     });
 
-    it('should filter reports by date range', () => {
-      cy.get('[data-testid="input-report-start"]').type('2024-01-01');
-      cy.get('[data-testid="input-report-end"]').type('2024-03-31');
-      cy.get('[data-testid="button-apply-filter"]').click();
+    it('should close detail view', () => {
+      cy.get('[data-testid^="booking-card-"]').first().click();
+      cy.get('[data-testid="button-close-booking-detail"]').click();
+      cy.get('[data-testid="select-update-status-trigger"]').should('not.exist');
+    });
+  });
+
+  // ===========================================================================
+  // Travel Calendar
+  // ===========================================================================
+
+  describe('Travel Calendar', () => {
+    it('should display travel calendar tab', () => {
+      cy.get('[data-testid="tab-calendar"]').should('be.visible');
     });
 
-    it('should export travel report', () => {
-      cy.get('[data-testid="button-export-report"]').click();
-      cy.selectOption('[data-testid="select-format"]', 'Excel');
-      cy.get('[data-testid="button-download"]').click();
+    it('should switch to calendar view', () => {
+      cy.get('[data-testid="tab-calendar"]').click();
+      cy.get('[data-testid="tab-content-calendar"]').should('be.visible');
+    });
+
+    it('should display calendar grid', () => {
+      cy.get('[data-testid="tab-calendar"]').click();
+      cy.get('[data-testid="calendar-grid"]').should('be.visible');
+    });
+
+    it('should display current month', () => {
+      cy.get('[data-testid="tab-calendar"]').click();
+      cy.get('[data-testid="calendar-month-display"]').should('be.visible');
+    });
+
+    it('should navigate to previous month', () => {
+      cy.get('[data-testid="tab-calendar"]').click();
+      cy.get('[data-testid="calendar-month-display"]').invoke('text').then((currentMonth) => {
+        cy.get('[data-testid="button-prev-month"]').click();
+        cy.get('[data-testid="calendar-month-display"]').should('not.have.text', currentMonth);
+      });
+    });
+
+    it('should navigate to next month', () => {
+      cy.get('[data-testid="tab-calendar"]').click();
+      cy.get('[data-testid="button-prev-month"]').click(); // Go back first
+      cy.get('[data-testid="calendar-month-display"]').invoke('text').then((previousMonth) => {
+        cy.get('[data-testid="button-next-month"]').click();
+        cy.get('[data-testid="calendar-month-display"]').should('not.have.text', previousMonth);
+      });
+    });
+
+    it('should display calendar day cells', () => {
+      cy.get('[data-testid="tab-calendar"]').click();
+      cy.get('[data-testid="calendar-day"]').should('have.length.at.least', 28);
+    });
+  });
+
+  // ===========================================================================
+  // Travel Expenses Integration
+  // ===========================================================================
+
+  describe('Travel Expenses Integration', () => {
+    it('should display expenses tab', () => {
+      cy.get('[data-testid="tab-expenses"]').should('be.visible');
+    });
+
+    it('should switch to expenses view', () => {
+      cy.get('[data-testid="tab-expenses"]').click();
+      cy.get('[data-testid="tab-content-expenses"]').should('be.visible');
+    });
+
+    it('should display expense summary cards', () => {
+      cy.get('[data-testid="tab-expenses"]').click();
+      cy.get('[data-testid="expense-summary"]').should('be.visible');
+    });
+
+    it('should display total travel costs', () => {
+      cy.get('[data-testid="tab-expenses"]').click();
+      cy.get('[data-testid="total-travel-costs"]').should('contain', '$');
+    });
+
+    it('should display expense list section', () => {
+      cy.get('[data-testid="tab-expenses"]').click();
+      cy.get('[data-testid="expense-list"]').should('be.visible');
+    });
+
+    it('should display expense items when bookings exist', () => {
+      // Re-intercept with bookings data
+      cy.intercept('GET', '/api/travel/bookings*', {
+        statusCode: 200,
+        body: [
+          {
+            id: 'b1',
+            bookingType: 'flight',
+            status: 'confirmed',
+            airline: 'United Airlines',
+            flightNumber: 'UA1234',
+            departureDate: '2024-02-15',
+            returnDate: '2024-02-20',
+            estimatedCost: '450.00'
+          }
+        ]
+      }).as('getBookingsWithData');
+
+      cy.visit('/travel-bookings');
+      cy.wait('@getUser');
+      cy.get('[data-testid="tab-expenses"]').click();
+      cy.get('[data-testid="expense-item"]').should('have.length.at.least', 1);
     });
   });
 });

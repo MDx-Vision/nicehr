@@ -162,9 +162,36 @@ export default function Landing() {
         </section>
       </main>
 
-      <footer className="border-t py-8 px-4">
-        <div className="container mx-auto text-center text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} NICEHR Group. All rights reserved.</p>
+      <footer className="border-t py-8 px-4" role="contentinfo">
+        <div className="container mx-auto">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-muted-foreground">
+              &copy; {new Date().getFullYear()} NICEHR Group. All rights reserved.
+            </p>
+            <nav aria-label="Footer navigation" className="flex items-center gap-6">
+              <a
+                href="/privacy-policy"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                data-testid="link-privacy-policy"
+              >
+                Privacy Policy
+              </a>
+              <a
+                href="/terms-of-service"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                data-testid="link-terms-of-service"
+              >
+                Terms of Service
+              </a>
+              <a
+                href="mailto:support@nicehrgroup.com"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                data-testid="link-contact"
+              >
+                Contact
+              </a>
+            </nav>
+          </div>
         </div>
       </footer>
     </div>

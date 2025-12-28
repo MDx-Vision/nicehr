@@ -1,6 +1,24 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+  ReferenceLine,
+  Area,
+  ComposedChart,
+} from "recharts";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,7 +36,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format, formatDistanceToNow } from "date-fns";
-import { 
+import {
   TrendingUp,
   Calculator,
   Target,
@@ -42,7 +60,8 @@ import {
   Minus,
   Edit,
   GitCompare,
-  Layers
+  Layers,
+  AlertTriangle
 } from "lucide-react";
 import type { BudgetScenario, ScenarioMetric, Project } from "@shared/schema";
 
@@ -97,16 +116,312 @@ function getVarianceIcon(variance: number) {
   return <Minus className="h-4 w-4 text-muted-foreground" />;
 }
 
+function isOverBudget(scenario: BudgetScenarioWithDetails): boolean {
+  const variance = parseFloat(scenario.budgetVariance || "0");
+  return variance > 0 && !!scenario.actualTotalCost;
+}
+
+function getOverBudgetPercentage(scenario: BudgetScenarioWithDetails): number {
+  const variance = parseFloat(scenario.variancePercentage || "0");
+  return variance > 0 ? variance : 0;
+}
+
+function OverBudgetAlert({ scenario }: { scenario: BudgetScenarioWithDetails }) {
+  if (!isOverBudget(scenario)) return null;
+
+  const percentage = getOverBudgetPercentage(scenario);
+  const variance = parseFloat(scenario.budgetVariance || "0");
+
+  return (
+    <div
+      className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg"
+      data-testid="alert-over-budget"
+    >
+      <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0" />
+      <div className="flex-1">
+        <p className="text-sm font-medium text-red-800 dark:text-red-200">
+          Over Budget Alert
+        </p>
+        <p className="text-xs text-red-600 dark:text-red-400">
+          This scenario is {formatCurrency(variance)} ({percentage.toFixed(1)}%) over the planned budget
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function OverBudgetBadge({ scenario }: { scenario: BudgetScenarioWithDetails }) {
+  if (!isOverBudget(scenario)) return null;
+
+  return (
+    <Badge variant="destructive" className="gap-1" data-testid="badge-over-budget">
+      <AlertTriangle className="h-3 w-3" />
+      Over Budget
+    </Badge>
+  );
+}
+
+interface ForecastData {
+  weeklyBurnRate: number;
+  projectedTotalCost: number;
+  forecastVariance: number;
+  forecastVariancePercent: number;
+  weeksElapsed: number;
+  weeksRemaining: number;
+  budgetRunoutWeeks: number | null;
+  isOnTrack: boolean;
+  chartData: { week: number; actual: number | null; forecast: number | null; budget: number }[];
+}
+
+function calculateForecast(scenario: BudgetScenarioWithDetails): ForecastData | null {
+  const totalBudget = parseFloat(scenario.totalBudget || "0");
+  const actualCost = parseFloat(scenario.actualTotalCost || "0");
+  const durationWeeks = scenario.durationWeeks || 0;
+
+  if (!actualCost || !totalBudget || !durationWeeks) return null;
+
+  // Calculate weeks elapsed based on creation date
+  const createdAt = scenario.createdAt ? new Date(scenario.createdAt) : new Date();
+  const now = new Date();
+  const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+  const weeksElapsed = Math.max(1, Math.ceil((now.getTime() - createdAt.getTime()) / msPerWeek));
+  const weeksRemaining = Math.max(0, durationWeeks - weeksElapsed);
+
+  // Calculate burn rate (cost per week)
+  const weeklyBurnRate = actualCost / weeksElapsed;
+
+  // Project total cost at completion
+  const projectedTotalCost = weeklyBurnRate * durationWeeks;
+
+  // Calculate forecast variance
+  const forecastVariance = projectedTotalCost - totalBudget;
+  const forecastVariancePercent = totalBudget > 0 ? (forecastVariance / totalBudget) * 100 : 0;
+
+  // Calculate when budget will run out at current rate
+  const budgetRunoutWeeks = weeklyBurnRate > 0 ? totalBudget / weeklyBurnRate : null;
+
+  // Is on track?
+  const isOnTrack = projectedTotalCost <= totalBudget;
+
+  // Generate chart data
+  const chartData = [];
+  const weeklyBudget = totalBudget / durationWeeks;
+
+  for (let week = 0; week <= durationWeeks; week++) {
+    const budgetAtWeek = weeklyBudget * week;
+    const actualAtWeek = week <= weeksElapsed ? (actualCost / weeksElapsed) * week : null;
+    const forecastAtWeek = week >= weeksElapsed ? weeklyBurnRate * week : null;
+
+    chartData.push({
+      week,
+      actual: actualAtWeek,
+      forecast: forecastAtWeek,
+      budget: budgetAtWeek,
+    });
+  }
+
+  return {
+    weeklyBurnRate,
+    projectedTotalCost,
+    forecastVariance,
+    forecastVariancePercent,
+    weeksElapsed,
+    weeksRemaining,
+    budgetRunoutWeeks,
+    isOnTrack,
+    chartData,
+  };
+}
+
+function ForecastCard({ scenario }: { scenario: BudgetScenarioWithDetails }) {
+  const forecast = calculateForecast(scenario);
+
+  if (!forecast) {
+    return (
+      <Card className="mb-4" data-testid="card-forecast">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            Budget Forecast
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>Insufficient data for forecasting</p>
+            <p className="text-xs mt-2">
+              Add actual costs and duration to enable forecasting
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const totalBudget = parseFloat(scenario.totalBudget || "0");
+
+  return (
+    <Card className="mb-4" data-testid="card-forecast">
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <TrendingUp className="h-4 w-4" />
+          Budget Forecast
+        </CardTitle>
+        <CardDescription>
+          Projections based on current spending rate
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="space-y-1">
+            <div className="text-xs text-muted-foreground">Weekly Burn Rate</div>
+            <div className="text-lg font-semibold" data-testid="forecast-burn-rate">
+              {formatCurrency(forecast.weeklyBurnRate)}
+            </div>
+            <div className="text-xs text-muted-foreground">per week</div>
+          </div>
+          <div className="space-y-1">
+            <div className="text-xs text-muted-foreground">Projected Total</div>
+            <div className="text-lg font-semibold" data-testid="forecast-projected-total">
+              {formatCurrency(forecast.projectedTotalCost)}
+            </div>
+            <div className="text-xs text-muted-foreground">at completion</div>
+          </div>
+          <div className="space-y-1">
+            <div className="text-xs text-muted-foreground">Forecast Variance</div>
+            <div className={`text-lg font-semibold ${getVarianceColor(forecast.forecastVariance)}`} data-testid="forecast-variance">
+              {formatCurrency(Math.abs(forecast.forecastVariance))}
+              <span className="text-sm ml-1">
+                ({forecast.forecastVariancePercent > 0 ? '+' : ''}{forecast.forecastVariancePercent.toFixed(1)}%)
+              </span>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {forecast.isOnTrack ? "under budget" : "over budget"}
+            </div>
+          </div>
+          <div className="space-y-1">
+            <div className="text-xs text-muted-foreground">Progress</div>
+            <div className="text-lg font-semibold" data-testid="forecast-progress">
+              {forecast.weeksElapsed} / {scenario.durationWeeks}
+            </div>
+            <div className="text-xs text-muted-foreground">weeks elapsed</div>
+          </div>
+        </div>
+
+        {forecast.budgetRunoutWeeks && !forecast.isOnTrack && (
+          <div
+            className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg"
+            data-testid="forecast-warning"
+          >
+            <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                Budget Runway Warning
+              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                At current burn rate, budget will be exhausted in {forecast.budgetRunoutWeeks.toFixed(1)} weeks
+                {forecast.budgetRunoutWeeks < (scenario.durationWeeks || 0) && (
+                  <span> ({((scenario.durationWeeks || 0) - forecast.budgetRunoutWeeks).toFixed(1)} weeks before project end)</span>
+                )}
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div className="pt-4">
+          <div className="text-sm font-medium mb-2">Forecast Trend</div>
+          <ResponsiveContainer width="100%" height={200}>
+            <ComposedChart data={forecast.chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <XAxis
+                dataKey="week"
+                tick={{ fontSize: 11 }}
+                tickFormatter={(v) => `W${v}`}
+              />
+              <YAxis
+                tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                tick={{ fontSize: 11 }}
+              />
+              <Tooltip
+                formatter={(value: number) => formatCurrency(value)}
+                labelFormatter={(label) => `Week ${label}`}
+                contentStyle={{
+                  backgroundColor: "hsl(var(--card))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "6px",
+                }}
+              />
+              <Legend />
+              <ReferenceLine y={totalBudget} stroke="#ef4444" strokeDasharray="5 5" label={{ value: 'Budget', fill: '#ef4444', fontSize: 10 }} />
+              <Line
+                type="monotone"
+                dataKey="budget"
+                stroke="#94a3b8"
+                strokeWidth={2}
+                dot={false}
+                name="Planned"
+              />
+              <Line
+                type="monotone"
+                dataKey="actual"
+                stroke="#22c55e"
+                strokeWidth={2}
+                dot={{ fill: '#22c55e', r: 3 }}
+                name="Actual"
+                connectNulls={false}
+              />
+              <Line
+                type="monotone"
+                dataKey="forecast"
+                stroke="#f59e0b"
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                dot={false}
+                name="Forecast"
+                connectNulls={false}
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="flex items-center justify-between pt-2 border-t">
+          <div className="flex items-center gap-2">
+            {forecast.isOnTrack ? (
+              <>
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <span className="text-sm text-green-600 dark:text-green-400" data-testid="forecast-status-ontrack">
+                  On Track
+                </span>
+              </>
+            ) : (
+              <>
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <span className="text-sm text-amber-600 dark:text-amber-400" data-testid="forecast-status-atrisk">
+                  At Risk
+                </span>
+              </>
+            )}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {forecast.weeksRemaining} weeks remaining
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function ScenarioStats({ scenarios }: { scenarios: BudgetScenarioWithDetails[] }) {
   const totalCount = scenarios.length;
   const baselineCount = scenarios.filter(s => s.scenarioType === "baseline" || s.isBaseline).length;
   const whatIfCount = scenarios.filter(s => s.scenarioType === "what_if").length;
   const activeCount = scenarios.filter(s => s.isActive).length;
-  
+  const overBudgetCount = scenarios.filter(s => isOverBudget(s)).length;
+
   const totalBudget = scenarios.reduce((sum, s) => sum + parseFloat(s.totalBudget || "0"), 0);
 
   return (
-    <div className="grid gap-4 md:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-5">
       <Card data-testid="stat-total-scenarios">
         <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Scenarios</CardTitle>
@@ -145,6 +460,148 @@ function ScenarioStats({ scenarios }: { scenarios: BudgetScenarioWithDetails[] }
         <CardContent>
           <div className="text-2xl font-bold">{activeCount}</div>
           <p className="text-xs text-muted-foreground">{formatCurrency(totalBudget)} total budget</p>
+        </CardContent>
+      </Card>
+      <Card data-testid="stat-over-budget" className={overBudgetCount > 0 ? "border-red-200 dark:border-red-800" : ""}>
+        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Over Budget</CardTitle>
+          <AlertTriangle className={`h-4 w-4 ${overBudgetCount > 0 ? "text-red-500" : "text-muted-foreground"}`} />
+        </CardHeader>
+        <CardContent>
+          <div className={`text-2xl font-bold ${overBudgetCount > 0 ? "text-red-600 dark:text-red-400" : ""}`}>
+            {overBudgetCount}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {overBudgetCount > 0 ? "Requires attention" : "All on track"}
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+const CHART_COLORS = ["#0891b2", "#22c55e", "#ef4444", "#8b5cf6", "#f59e0b", "#ec4899"];
+
+function BudgetCharts({ scenarios }: { scenarios: BudgetScenarioWithDetails[] }) {
+  // Prepare data for Budget vs Actual bar chart
+  const budgetVsActualData = scenarios
+    .filter(s => s.totalBudget || s.actualTotalCost)
+    .slice(0, 8) // Limit to 8 for readability
+    .map(s => ({
+      name: s.name.length > 15 ? s.name.slice(0, 15) + "..." : s.name,
+      Budget: parseFloat(s.totalBudget || "0"),
+      Actual: parseFloat(s.actualTotalCost || "0"),
+    }));
+
+  // Prepare data for budget breakdown by type pie chart
+  const typeBreakdown = SCENARIO_TYPES.map((type, index) => {
+    const typeScenarios = scenarios.filter(s => s.scenarioType === type.value);
+    const totalBudget = typeScenarios.reduce((sum, s) => sum + parseFloat(s.totalBudget || "0"), 0);
+    return {
+      name: type.label,
+      value: totalBudget,
+      color: CHART_COLORS[index % CHART_COLORS.length],
+    };
+  }).filter(d => d.value > 0);
+
+  // Format currency for tooltips
+  const formatTooltipValue = (value: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
+  if (scenarios.length === 0) return null;
+
+  return (
+    <div className="grid gap-6 md:grid-cols-2" data-testid="budget-charts">
+      {/* Budget vs Actual Bar Chart */}
+      <Card data-testid="chart-budget-vs-actual">
+        <CardHeader>
+          <CardTitle className="text-base">Budget vs Actual</CardTitle>
+          <CardDescription>Compare planned budget against actual costs</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {budgetVsActualData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={budgetVsActualData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={{ className: "stroke-muted" }}
+                />
+                <YAxis
+                  tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                  tick={{ fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={{ className: "stroke-muted" }}
+                />
+                <Tooltip
+                  formatter={(value: number) => formatTooltipValue(value)}
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "6px",
+                  }}
+                />
+                <Legend />
+                <Bar dataKey="Budget" fill="#0891b2" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Actual" fill="#22c55e" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[280px] flex items-center justify-center text-muted-foreground">
+              No budget data available
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Budget by Type Pie Chart */}
+      <Card data-testid="chart-budget-by-type">
+        <CardHeader>
+          <CardTitle className="text-base">Budget by Scenario Type</CardTitle>
+          <CardDescription>Total budget distribution across scenario types</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {typeBreakdown.length > 0 ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <PieChart>
+                <Pie
+                  data={typeBreakdown}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {typeBreakdown.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value: number) => formatTooltipValue(value)}
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "6px",
+                  }}
+                />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[280px] flex items-center justify-center text-muted-foreground">
+              No budget data available
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -200,9 +657,12 @@ function ScenarioRow({
         )}
       </TableCell>
       <TableCell>
-        <Badge variant={scenario.isActive ? "default" : "secondary"}>
-          {scenario.isActive ? "Active" : "Inactive"}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant={scenario.isActive ? "default" : "secondary"}>
+            {scenario.isActive ? "Active" : "Inactive"}
+          </Badge>
+          <OverBudgetBadge scenario={scenario} />
+        </div>
       </TableCell>
       <TableCell>
         <div className="text-sm text-muted-foreground">
@@ -239,7 +699,7 @@ function ScenarioDetailPanel({
   });
 
   const { data: metrics = [], isLoading: metricsLoading } = useQuery<ScenarioMetric[]>({
-    queryKey: ['/api/scenario-metrics', { scenarioId }],
+    queryKey: [`/api/scenario-metrics?scenarioId=${scenarioId}`],
     enabled: !!scenarioId,
   });
 
@@ -320,6 +780,12 @@ function ScenarioDetailPanel({
       </div>
 
       <ScrollArea className="flex-1 p-6">
+        {isOverBudget(scenario) && (
+          <div className="mb-4">
+            <OverBudgetAlert scenario={scenario} />
+          </div>
+        )}
+
         <Card className="mb-4">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -367,65 +833,109 @@ function ScenarioDetailPanel({
           </CardContent>
         </Card>
 
-        <Card className="mb-4">
+        <ForecastCard scenario={scenario} />
+
+        <Card className="mb-4" data-testid="card-variance-analysis">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
-              Cost Breakdown
+              Cost Breakdown & Variance Analysis
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
+            <Table data-testid="table-variance-analysis">
               <TableHeader>
                 <TableRow>
                   <TableHead>Category</TableHead>
                   <TableHead className="text-right">Budgeted</TableHead>
                   <TableHead className="text-right">Actual</TableHead>
                   <TableHead className="text-right">Variance</TableHead>
+                  <TableHead className="text-right">Variance %</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                <TableRow>
+                <TableRow data-testid="variance-row-labor">
                   <TableCell>Labor</TableCell>
-                  <TableCell className="text-right">{formatCurrency(scenario.laborCost)}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(scenario.actualLaborCost)}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right" data-testid="budgeted-labor">{formatCurrency(scenario.laborCost)}</TableCell>
+                  <TableCell className="text-right" data-testid="actual-labor">{formatCurrency(scenario.actualLaborCost)}</TableCell>
+                  <TableCell className="text-right" data-testid="variance-labor">
                     {scenario.actualLaborCost ? (
                       <span className={getVarianceColor(parseFloat(scenario.actualLaborCost || "0") - parseFloat(scenario.laborCost || "0"))}>
                         {formatCurrency(parseFloat(scenario.actualLaborCost || "0") - parseFloat(scenario.laborCost || "0"))}
                       </span>
                     ) : "—"}
                   </TableCell>
+                  <TableCell className="text-right" data-testid="variance-pct-labor">
+                    {scenario.actualLaborCost && scenario.laborCost ? (
+                      <span className={getVarianceColor(parseFloat(scenario.actualLaborCost || "0") - parseFloat(scenario.laborCost || "0"))}>
+                        {(((parseFloat(scenario.actualLaborCost || "0") - parseFloat(scenario.laborCost || "0")) / parseFloat(scenario.laborCost || "1")) * 100).toFixed(1)}%
+                      </span>
+                    ) : "—"}
+                  </TableCell>
                 </TableRow>
-                <TableRow>
+                <TableRow data-testid="variance-row-travel">
                   <TableCell>Travel</TableCell>
-                  <TableCell className="text-right">{formatCurrency(scenario.travelCost)}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(scenario.actualTravelCost)}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right" data-testid="budgeted-travel">{formatCurrency(scenario.travelCost)}</TableCell>
+                  <TableCell className="text-right" data-testid="actual-travel">{formatCurrency(scenario.actualTravelCost)}</TableCell>
+                  <TableCell className="text-right" data-testid="variance-travel">
                     {scenario.actualTravelCost ? (
                       <span className={getVarianceColor(parseFloat(scenario.actualTravelCost || "0") - parseFloat(scenario.travelCost || "0"))}>
                         {formatCurrency(parseFloat(scenario.actualTravelCost || "0") - parseFloat(scenario.travelCost || "0"))}
                       </span>
                     ) : "—"}
                   </TableCell>
+                  <TableCell className="text-right" data-testid="variance-pct-travel">
+                    {scenario.actualTravelCost && scenario.travelCost ? (
+                      <span className={getVarianceColor(parseFloat(scenario.actualTravelCost || "0") - parseFloat(scenario.travelCost || "0"))}>
+                        {(((parseFloat(scenario.actualTravelCost || "0") - parseFloat(scenario.travelCost || "0")) / parseFloat(scenario.travelCost || "1")) * 100).toFixed(1)}%
+                      </span>
+                    ) : "—"}
+                  </TableCell>
                 </TableRow>
-                <TableRow>
+                <TableRow data-testid="variance-row-expenses">
                   <TableCell>Expenses</TableCell>
-                  <TableCell className="text-right">{formatCurrency(scenario.expenseCost)}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(scenario.actualExpenseCost)}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right" data-testid="budgeted-expenses">{formatCurrency(scenario.expenseCost)}</TableCell>
+                  <TableCell className="text-right" data-testid="actual-expenses">{formatCurrency(scenario.actualExpenseCost)}</TableCell>
+                  <TableCell className="text-right" data-testid="variance-expenses">
                     {scenario.actualExpenseCost ? (
                       <span className={getVarianceColor(parseFloat(scenario.actualExpenseCost || "0") - parseFloat(scenario.expenseCost || "0"))}>
                         {formatCurrency(parseFloat(scenario.actualExpenseCost || "0") - parseFloat(scenario.expenseCost || "0"))}
                       </span>
                     ) : "—"}
                   </TableCell>
+                  <TableCell className="text-right" data-testid="variance-pct-expenses">
+                    {scenario.actualExpenseCost && scenario.expenseCost ? (
+                      <span className={getVarianceColor(parseFloat(scenario.actualExpenseCost || "0") - parseFloat(scenario.expenseCost || "0"))}>
+                        {(((parseFloat(scenario.actualExpenseCost || "0") - parseFloat(scenario.expenseCost || "0")) / parseFloat(scenario.expenseCost || "1")) * 100).toFixed(1)}%
+                      </span>
+                    ) : "—"}
+                  </TableCell>
                 </TableRow>
-                <TableRow>
+                <TableRow data-testid="variance-row-overhead">
                   <TableCell>Overhead</TableCell>
-                  <TableCell className="text-right">{formatCurrency(scenario.overheadCost)}</TableCell>
+                  <TableCell className="text-right" data-testid="budgeted-overhead">{formatCurrency(scenario.overheadCost)}</TableCell>
                   <TableCell className="text-right">—</TableCell>
                   <TableCell className="text-right">—</TableCell>
+                  <TableCell className="text-right">—</TableCell>
+                </TableRow>
+                <TableRow className="font-semibold border-t-2" data-testid="variance-row-total">
+                  <TableCell>Total</TableCell>
+                  <TableCell className="text-right" data-testid="budgeted-total">{formatCurrency(scenario.totalBudget)}</TableCell>
+                  <TableCell className="text-right" data-testid="actual-total">{formatCurrency(scenario.actualTotalCost)}</TableCell>
+                  <TableCell className="text-right" data-testid="variance-total">
+                    {scenario.actualTotalCost ? (
+                      <span className={getVarianceColor(parseFloat(scenario.budgetVariance || "0"))}>
+                        {formatCurrency(scenario.budgetVariance)}
+                      </span>
+                    ) : "—"}
+                  </TableCell>
+                  <TableCell className="text-right" data-testid="variance-pct-total">
+                    {scenario.variancePercentage ? (
+                      <span className={getVarianceColor(parseFloat(scenario.budgetVariance || "0"))}>
+                        {parseFloat(scenario.variancePercentage).toFixed(1)}%
+                      </span>
+                    ) : "—"}
+                  </TableCell>
                 </TableRow>
               </TableBody>
             </Table>
@@ -1062,15 +1572,15 @@ function CreateScenarioDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="projectId">Project</Label>
-              <Select 
-                value={formData.projectId} 
-                onValueChange={(value) => setFormData({ ...formData, projectId: value })}
+              <Select
+                value={formData.projectId || "_none"}
+                onValueChange={(value) => setFormData({ ...formData, projectId: value === "_none" ? "" : value })}
               >
                 <SelectTrigger data-testid="select-project">
                   <SelectValue placeholder="Select project..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No Project</SelectItem>
+                  <SelectItem value="_none">No Project</SelectItem>
                   {projects.map((project) => (
                     <SelectItem key={project.id} value={project.id}>
                       {project.name}
@@ -1397,8 +1907,16 @@ export default function BudgetModeling() {
   const { isAdmin } = useAuth();
   const { toast } = useToast();
 
+  const budgetScenariosUrl = (() => {
+    const params = new URLSearchParams();
+    if (projectFilter) params.set('projectId', projectFilter);
+    if (typeFilter) params.set('scenarioType', typeFilter);
+    const queryString = params.toString();
+    return queryString ? `/api/budget-scenarios?${queryString}` : '/api/budget-scenarios';
+  })();
+
   const { data: scenarios = [], isLoading: scenariosLoading } = useQuery<BudgetScenarioWithDetails[]>({
-    queryKey: ['/api/budget-scenarios', { projectId: projectFilter, scenarioType: typeFilter }],
+    queryKey: [budgetScenariosUrl],
   });
 
   const { data: projects = [] } = useQuery<Project[]>({
@@ -1496,6 +2014,8 @@ export default function BudgetModeling() {
 
       <ScenarioStats scenarios={scenarios} />
 
+      <BudgetCharts scenarios={scenarios} />
+
       <div className="flex flex-col lg:flex-row gap-6">
         <div className={`flex-1 space-y-4 ${selectedScenarioId ? 'lg:max-w-[60%]' : ''}`}>
           <Card>
@@ -1503,12 +2023,12 @@ export default function BudgetModeling() {
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <CardTitle>Scenarios</CardTitle>
                 <div className="flex gap-2 flex-wrap">
-                  <Select value={projectFilter} onValueChange={setProjectFilter}>
+                  <Select value={projectFilter || "_all"} onValueChange={(v) => setProjectFilter(v === "_all" ? "" : v)}>
                     <SelectTrigger className="w-[180px]" data-testid="filter-project">
                       <SelectValue placeholder="All Projects" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Projects</SelectItem>
+                      <SelectItem value="_all">All Projects</SelectItem>
                       {projects.map((project) => (
                         <SelectItem key={project.id} value={project.id}>
                           {project.name}
@@ -1516,12 +2036,12 @@ export default function BudgetModeling() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <Select value={typeFilter || "_all"} onValueChange={(v) => setTypeFilter(v === "_all" ? "" : v)}>
                     <SelectTrigger className="w-[180px]" data-testid="filter-type">
                       <SelectValue placeholder="All Types" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Types</SelectItem>
+                      <SelectItem value="_all">All Types</SelectItem>
                       {SCENARIO_TYPES.map((type) => (
                         <SelectItem key={type.value} value={type.value}>
                           {type.label}
