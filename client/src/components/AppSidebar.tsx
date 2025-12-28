@@ -118,7 +118,7 @@ const NAV_GROUPS: NavGroup[] = [
     roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"],
     defaultOpen: true,
     items: [
-      { id: "overview", title: "Overview", url: "/", icon: "LayoutDashboard", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
+      { id: "dashboard", title: "Dashboard", url: "/", icon: "LayoutDashboard", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
       { id: "projects", title: "Projects", url: "/projects", icon: "FolderKanban", roles: ["admin", "hospital_leadership", "hospital_staff"] },
       { id: "project-phases", title: "Project Phases", url: "/project-phases", icon: "Layers", roles: ["admin", "hospital_leadership", "hospital_staff"] },
       { id: "raci-matrix", title: "RACI Matrix", url: "/raci-matrix", icon: "ClipboardCheck", roles: ["admin", "hospital_leadership", "hospital_staff"] },

@@ -1,12 +1,13 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation, Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Building2, Users, FolderKanban, FileText, DollarSign, UserCheck, Settings2, CheckCircle2, Circle, ChevronLeft, ChevronRight, Calendar, TrendingUp, BarChart3, Download, RotateCcw, Loader2, GripVertical, Wifi, WifiOff } from "lucide-react";
+import { Building2, Users, FolderKanban, FileText, DollarSign, UserCheck, Settings2, CheckCircle2, Circle, ChevronLeft, ChevronRight, Calendar, TrendingUp, BarChart3, Download, RotateCcw, Loader2, GripVertical, Wifi, WifiOff, ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { ActivityFeed } from "@/components/ActivityFeed";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isSameMonth, isToday } from "date-fns";
@@ -59,6 +60,7 @@ const DEFAULT_WIDGET_ORDER = ["tasks", "charts", "calendar", "activity", "gauges
 
 export default function Dashboard() {
   const { user, isAdmin, isConsultant, isHospitalStaff } = useAuth();
+  const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const [showWidgetSettings, setShowWidgetSettings] = useState(false);
   const [widgetSettings, setWidgetSettings] = useState<WidgetSettings>({
@@ -279,99 +281,147 @@ export default function Dashboard() {
       {isAdmin && (
         <>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <Card data-testid="card-total-consultants">
-            <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-              <CardTitle className="text-sm font-medium">Total Consultants</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <Skeleton className="h-8 w-20" />
-              ) : (
-                <div className="text-2xl font-bold">{stats?.totalConsultants || 0}</div>
-              )}
-              <p className="text-xs text-muted-foreground">
-                {stats?.activeConsultants || 0} currently available
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card data-testid="card-total-hospitals">
-            <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-              <CardTitle className="text-sm font-medium">Hospitals</CardTitle>
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <Skeleton className="h-8 w-20" />
-              ) : (
-                <div className="text-2xl font-bold">{stats?.totalHospitals || 0}</div>
-              )}
-              <p className="text-xs text-muted-foreground">Registered hospitals</p>
-            </CardContent>
-          </Card>
-
-          <Card data-testid="card-active-projects">
-            <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-              <CardTitle className="text-sm font-medium">Active Projects</CardTitle>
-              <FolderKanban className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <Skeleton className="h-8 w-20" />
-              ) : (
-                <div className="text-2xl font-bold">{stats?.activeProjects || 0}</div>
-              )}
-              <p className="text-xs text-muted-foreground">Currently in progress</p>
-            </CardContent>
-          </Card>
-
-          <Card data-testid="card-pending-documents">
-            <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Documents</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <Skeleton className="h-8 w-20" />
-              ) : (
-                <div className="text-2xl font-bold">{stats?.pendingDocuments || 0}</div>
-              )}
-              <p className="text-xs text-muted-foreground">Awaiting review</p>
-            </CardContent>
-          </Card>
-
-          <Card data-testid="card-active-consultants">
-            <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-              <CardTitle className="text-sm font-medium">Available Consultants</CardTitle>
-              <UserCheck className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <Skeleton className="h-8 w-20" />
-              ) : (
-                <div className="text-2xl font-bold">{stats?.activeConsultants || 0}</div>
-              )}
-              <p className="text-xs text-muted-foreground">Ready for assignments</p>
-            </CardContent>
-          </Card>
-
-          <Card data-testid="card-total-savings">
-            <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-              <CardTitle className="text-sm font-medium">Total Savings</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <Skeleton className="h-8 w-20" />
-              ) : (
-                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                  {formatCurrency(stats?.totalSavings || "0")}
+          <Link href="/consultants" className="block">
+            <Card
+              data-testid="card-total-consultants"
+              className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all h-full"
+            >
+              <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+                <CardTitle className="text-sm font-medium">Total Consultants</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <Skeleton className="h-8 w-20" />
+                ) : (
+                  <div className="text-2xl font-bold">{stats?.totalConsultants || 0}</div>
+                )}
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    {stats?.activeConsultants || 0} currently available
+                  </p>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
                 </div>
-              )}
-              <p className="text-xs text-muted-foreground">Across all projects</p>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/hospitals" className="block">
+            <Card
+              data-testid="card-total-hospitals"
+              className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all h-full"
+            >
+              <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+                <CardTitle className="text-sm font-medium">Hospitals</CardTitle>
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <Skeleton className="h-8 w-20" />
+                ) : (
+                  <div className="text-2xl font-bold">{stats?.totalHospitals || 0}</div>
+                )}
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">Registered hospitals</p>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/projects" className="block">
+            <Card
+              data-testid="card-active-projects"
+              className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all h-full"
+            >
+              <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+                <CardTitle className="text-sm font-medium">Active Projects</CardTitle>
+                <FolderKanban className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <Skeleton className="h-8 w-20" />
+                ) : (
+                  <div className="text-2xl font-bold">{stats?.activeProjects || 0}</div>
+                )}
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">Currently in progress</p>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/documents" className="block">
+            <Card
+              data-testid="card-pending-documents"
+              className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all h-full"
+            >
+              <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+                <CardTitle className="text-sm font-medium">Pending Documents</CardTitle>
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <Skeleton className="h-8 w-20" />
+                ) : (
+                  <div className="text-2xl font-bold">{stats?.pendingDocuments || 0}</div>
+                )}
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">Awaiting review</p>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/consultants" className="block">
+            <Card
+              data-testid="card-active-consultants"
+              className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all h-full"
+            >
+              <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+                <CardTitle className="text-sm font-medium">Available Consultants</CardTitle>
+                <UserCheck className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <Skeleton className="h-8 w-20" />
+                ) : (
+                  <div className="text-2xl font-bold">{stats?.activeConsultants || 0}</div>
+                )}
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">Ready for assignments</p>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/analytics" className="block">
+            <Card
+              data-testid="card-total-savings"
+              className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all h-full"
+            >
+              <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+                <CardTitle className="text-sm font-medium">Total Savings</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <Skeleton className="h-8 w-20" />
+                ) : (
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                    {formatCurrency(stats?.totalSavings || "0")}
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">Across all projects</p>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
 
         {/* Widgets Row */}
@@ -468,7 +518,13 @@ export default function Dashboard() {
             <Card data-testid="card-charts">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">Analytics</CardTitle>
+                  <CardTitle
+                    className="text-base cursor-pointer hover:text-primary transition-colors flex items-center gap-2"
+                    onClick={() => navigate("/analytics")}
+                  >
+                    Analytics
+                    <ArrowRight className="h-4 w-4" />
+                  </CardTitle>
                   <div className="flex gap-2">
                     <select
                       className="text-xs border rounded px-2 py-1"
