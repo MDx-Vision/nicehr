@@ -40,6 +40,10 @@ import {
   Loader2,
   Lock,
   Key,
+  Monitor,
+  Smartphone,
+  LogOut,
+  Globe,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,6 +64,16 @@ interface AccountSettingsData {
   showPhone: boolean;
   deletionRequestedAt: string | null;
   createdAt: string | null;
+}
+
+interface Session {
+  id: string;
+  deviceType: "desktop" | "mobile" | "tablet";
+  browser: string;
+  location: string;
+  ipAddress: string;
+  lastActive: string;
+  isCurrent: boolean;
 }
 
 export default function AccountSettings() {
@@ -133,6 +147,47 @@ export default function AccountSettings() {
       toast({ title: message, variant: "destructive" });
     },
   });
+
+  const { data: sessions = [] } = useQuery<Session[]>({
+    queryKey: ["/api/account/sessions"],
+  });
+
+  const terminateSessionMutation = useMutation({
+    mutationFn: async (sessionId: string) => {
+      return await apiRequest("DELETE", `/api/account/sessions/${sessionId}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/account/sessions"] });
+      toast({ title: "Session terminated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to terminate session", variant: "destructive" });
+    },
+  });
+
+  const terminateAllOtherSessionsMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("DELETE", "/api/account/sessions", {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/account/sessions"] });
+      toast({ title: "All other sessions terminated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to terminate sessions", variant: "destructive" });
+    },
+  });
+
+  const getDeviceIcon = (deviceType: string) => {
+    switch (deviceType) {
+      case "mobile":
+        return <Smartphone className="w-4 h-4" />;
+      case "tablet":
+        return <Monitor className="w-4 h-4" />;
+      default:
+        return <Monitor className="w-4 h-4" />;
+    }
+  };
 
   const calculatePasswordStrength = (password: string): { score: number; label: string; color: string } => {
     let score = 0;
@@ -502,6 +557,88 @@ export default function AccountSettings() {
               <Key className="w-4 h-4 mr-2" />
               Change Password
             </Button>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-session-management">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Monitor className="w-5 h-5" />
+              Active Sessions
+            </CardTitle>
+            <CardDescription>
+              Manage your active sessions across devices
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {sessions.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No active sessions found
+              </p>
+            ) : (
+              <>
+                <div className="space-y-3" data-testid="sessions-list">
+                  {sessions.map((session) => (
+                    <div
+                      key={session.id}
+                      className="flex items-center justify-between p-3 rounded-lg border"
+                      data-testid={`session-row-${session.id}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-full bg-muted">
+                          {getDeviceIcon(session.deviceType)}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">{session.browser}</span>
+                            {session.isCurrent && (
+                              <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                                Current
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Globe className="w-3 h-3" />
+                            <span>{session.location}</span>
+                            <span>•</span>
+                            <span>{session.ipAddress}</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Last active: {format(new Date(session.lastActive), "MMM d, yyyy 'at' h:mm a")}
+                          </div>
+                        </div>
+                      </div>
+                      {!session.isCurrent && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => terminateSessionMutation.mutate(session.id)}
+                          disabled={terminateSessionMutation.isPending}
+                          data-testid={`button-terminate-session-${session.id}`}
+                        >
+                          <LogOut className="w-4 h-4 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {sessions.filter(s => !s.isCurrent).length > 0 && (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => terminateAllOtherSessionsMutation.mutate()}
+                    disabled={terminateAllOtherSessionsMutation.isPending}
+                    data-testid="button-terminate-all-sessions"
+                  >
+                    {terminateAllOtherSessionsMutation.isPending && (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    )}
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out All Other Sessions
+                  </Button>
+                )}
+              </>
+            )}
           </CardContent>
         </Card>
 

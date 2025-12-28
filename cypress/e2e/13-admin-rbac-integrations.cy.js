@@ -656,19 +656,153 @@ describe('Administration, RBAC & Integrations', () => {
   // ===========================================================================
 
   describe('Integration Hub', () => {
-    it.skip('TODO: Display available integrations list', () => {});
-    it.skip('TODO: Configure integration settings', () => {});
-    it.skip('TODO: Test connection functionality', () => {});
+    const mockConnections = [
+      {
+        id: 'conn-1',
+        name: 'Google Calendar',
+        provider: 'google_calendar',
+        category: 'calendar',
+        status: 'connected',
+        isActive: true,
+        lastSyncAt: new Date().toISOString(),
+        lastSyncStatus: 'completed',
+        syncFrequency: 'daily',
+        connectedAt: '2024-01-01T00:00:00Z',
+        errorMessage: null
+      }
+    ];
+
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: adminUser
+      }).as('getUser');
+
+      cy.intercept('GET', '/api/integrations/connections', {
+        statusCode: 200,
+        body: mockConnections
+      }).as('getConnections');
+
+      cy.intercept('GET', '/api/integrations/sync-jobs', {
+        statusCode: 200,
+        body: []
+      }).as('getSyncJobs');
+
+      cy.visit('/integrations');
+      cy.wait('@getUser');
+      cy.wait('@getConnections');
+    });
+
+    it('should display available integrations list', () => {
+      cy.get('[data-testid="page-integrations-hub"]').should('be.visible');
+      cy.get('[data-testid="card-connection-conn-1"]').should('be.visible');
+    });
+
+    it('should configure integration settings', () => {
+      cy.get('[data-testid="tab-settings"]').click();
+      cy.get('[data-testid="card-general-settings"]').should('be.visible');
+      cy.get('[data-testid="switch-auto-retry"]').should('be.visible');
+      cy.get('[data-testid="select-conflict-resolution"]').should('be.visible');
+    });
+
+    it('should test connection functionality', () => {
+      cy.intercept('POST', '/api/integrations/connections/conn-1/test', {
+        statusCode: 200,
+        body: { success: true }
+      }).as('testConnection');
+
+      cy.get('[data-testid="button-test-conn-1"]').click();
+      cy.wait('@testConnection');
+    });
   });
 
   describe('System Settings', () => {
-    it.skip('TODO: General settings configuration', () => {});
-    it.skip('TODO: Security settings configuration', () => {});
-    it.skip('TODO: Audit logs viewer', () => {});
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: adminUser
+      }).as('getUser');
+
+      cy.intercept('GET', '/api/integrations/connections', {
+        statusCode: 200,
+        body: []
+      }).as('getConnections');
+
+      cy.intercept('GET', '/api/integrations/sync-jobs', {
+        statusCode: 200,
+        body: []
+      }).as('getSyncJobs');
+
+      cy.visit('/integrations');
+      cy.wait('@getUser');
+      cy.wait('@getConnections');
+      cy.get('[data-testid="tab-settings"]').click();
+    });
+
+    it('should display general settings configuration', () => {
+      cy.get('[data-testid="card-general-settings"]').should('be.visible');
+      cy.get('[data-testid="switch-auto-retry"]').should('be.visible');
+      cy.get('[data-testid="switch-sync-notifications"]').should('be.visible');
+    });
+
+    it('should display security settings configuration', () => {
+      cy.get('[data-testid="card-security-settings"]').scrollIntoView().should('be.visible');
+      cy.contains('All Connections Secure').should('be.visible');
+      cy.contains('Audit Logging Enabled').should('be.visible');
+    });
+
+    it('should display audit logs viewer', () => {
+      cy.get('[data-testid="card-audit-logs"]').scrollIntoView().should('be.visible');
+      cy.get('[data-testid="audit-logs-list"]').should('be.visible');
+      cy.contains('Sync completed').should('be.visible');
+    });
   });
 
   describe('System Health', () => {
-    it.skip('TODO: Health dashboard monitoring', () => {});
-    it.skip('TODO: API response times', () => {});
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: adminUser
+      }).as('getUser');
+
+      cy.intercept('GET', '/api/integrations/connections', {
+        statusCode: 200,
+        body: []
+      }).as('getConnections');
+
+      cy.intercept('GET', '/api/integrations/sync-jobs', {
+        statusCode: 200,
+        body: []
+      }).as('getSyncJobs');
+
+      cy.visit('/integrations');
+      cy.wait('@getUser');
+      cy.wait('@getConnections');
+      cy.get('[data-testid="tab-settings"]').click();
+    });
+
+    it('should display health dashboard monitoring', () => {
+      cy.get('[data-testid="card-system-health"]').scrollIntoView().should('be.visible');
+      cy.get('[data-testid="health-status"]').should('be.visible');
+      cy.contains('All Systems Operational').should('be.visible');
+    });
+
+    it('should display API response times', () => {
+      cy.get('[data-testid="api-response-time"]').scrollIntoView().should('be.visible');
+      cy.get('[data-testid="api-response-time"]').should('contain', '145');
+      cy.get('[data-testid="api-response-time"]').should('contain', 'ms');
+    });
   });
 });

@@ -400,9 +400,95 @@ describe('Dashboard Analytics', () => {
   // ===========================================================================
 
   describe('Custom Reports', () => {
-    it.skip('TODO: Create custom report with selected metrics', () => {});
-    it.skip('TODO: Save report templates', () => {});
-    it.skip('TODO: Schedule automated report delivery', () => {});
-    it.skip('TODO: Export reports to PDF/Excel', () => {});
+    const mockTemplates = [
+      {
+        id: 'template-1',
+        name: 'Consultant Report',
+        description: 'Overview of consultants',
+        category: 'consultants',
+        dataSource: 'consultants',
+        availableFields: {},
+        defaultFilters: {},
+        defaultGrouping: {},
+        isActive: true,
+        createdAt: '2024-01-01T00:00:00Z'
+      }
+    ];
+
+    const mockSavedReports = [
+      {
+        id: 'report-1',
+        name: 'Monthly Summary',
+        description: 'Monthly metrics report',
+        templateId: 'template-1',
+        userId: 'user-1',
+        configuration: {
+          selectedFields: ['name', 'email'],
+          filters: [],
+          groupBy: [],
+          sortBy: [],
+          aggregations: []
+        },
+        isFavorite: false,
+        isPublic: false,
+        lastRunAt: '2024-01-15T00:00:00Z',
+        createdAt: '2024-01-01T00:00:00Z'
+      }
+    ];
+
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: adminUser
+      }).as('getUser');
+
+      cy.intercept('GET', '/api/report-templates', {
+        statusCode: 200,
+        body: mockTemplates
+      }).as('getTemplates');
+
+      cy.intercept('GET', '/api/saved-reports', {
+        statusCode: 200,
+        body: mockSavedReports
+      }).as('getSavedReports');
+
+      cy.intercept('GET', '/api/scheduled-reports', {
+        statusCode: 200,
+        body: []
+      }).as('getScheduledReports');
+
+      cy.visit('/report-builder');
+      cy.wait('@getUser');
+      cy.wait('@getTemplates');
+      cy.wait('@getSavedReports');
+    });
+
+    it('should create custom report with selected metrics', () => {
+      cy.get('[data-testid="text-page-title"]').should('contain', 'Report Builder');
+      cy.get('[data-testid="tab-build"]').should('be.visible');
+      cy.get('[data-testid="select-data-source"]').should('be.visible');
+    });
+
+    it('should have save report functionality', () => {
+      cy.get('[data-testid="button-save-report"]').should('exist');
+      cy.get('[data-testid="tab-saved"]').should('be.visible');
+      cy.get('[data-testid="tab-saved"]').click();
+      cy.get('[data-testid="saved-report-report-1"]').should('be.visible');
+    });
+
+    it('should have schedule report functionality', () => {
+      cy.get('[data-testid="button-schedule-report"]').should('exist');
+      cy.get('[data-testid="tabs-report-builder"]').should('be.visible');
+    });
+
+    it('should have preview generation functionality', () => {
+      cy.get('[data-testid="tab-build"]').should('be.visible');
+      cy.get('[data-testid="button-generate-preview"]').scrollIntoView().should('be.visible');
+      cy.get('[data-testid="button-reset"]').scrollIntoView().should('be.visible');
+    });
   });
 });

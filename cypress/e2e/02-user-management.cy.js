@@ -330,7 +330,110 @@ describe('User Management', () => {
   });
 
   describe('Session Management', () => {
-    it.skip('TODO: View active sessions', () => {});
-    it.skip('TODO: Terminate other sessions', () => {});
+    const mockSessions = [
+      {
+        id: 'session-1',
+        deviceType: 'desktop',
+        browser: 'Chrome on macOS',
+        location: 'San Francisco, CA',
+        ipAddress: '192.168.1.1',
+        lastActive: new Date().toISOString(),
+        isCurrent: true
+      },
+      {
+        id: 'session-2',
+        deviceType: 'mobile',
+        browser: 'Safari on iOS',
+        location: 'New York, NY',
+        ipAddress: '10.0.0.1',
+        lastActive: new Date(Date.now() - 3600000).toISOString(),
+        isCurrent: false
+      }
+    ];
+
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: testUser
+      }).as('getUser');
+
+      cy.intercept('GET', '/api/account/settings', {
+        statusCode: 200,
+        body: mockAccountSettings
+      }).as('getAccountSettings');
+
+      cy.intercept('GET', '/api/account/sessions', {
+        statusCode: 200,
+        body: mockSessions
+      }).as('getSessions');
+
+      cy.visit('/account');
+      cy.wait('@getUser');
+      cy.wait('@getAccountSettings');
+    });
+
+    it('should display active sessions card', () => {
+      cy.get('[data-testid="card-session-management"]').scrollIntoView().should('be.visible');
+    });
+
+    it('should display sessions list', () => {
+      cy.get('[data-testid="card-session-management"]').scrollIntoView();
+      cy.wait('@getSessions');
+      cy.get('[data-testid="sessions-list"]').should('be.visible');
+      cy.get('[data-testid="session-row-session-1"]').should('be.visible');
+      cy.get('[data-testid="session-row-session-2"]').should('be.visible');
+    });
+
+    it('should show current session badge', () => {
+      cy.get('[data-testid="card-session-management"]').scrollIntoView();
+      cy.wait('@getSessions');
+      cy.get('[data-testid="session-row-session-1"]').should('contain', 'Current');
+    });
+
+    it('should show terminate button for other sessions', () => {
+      cy.get('[data-testid="card-session-management"]').scrollIntoView();
+      cy.wait('@getSessions');
+      cy.get('[data-testid="button-terminate-session-session-2"]').should('be.visible');
+    });
+
+    it('should not show terminate button for current session', () => {
+      cy.get('[data-testid="card-session-management"]').scrollIntoView();
+      cy.wait('@getSessions');
+      cy.get('[data-testid="button-terminate-session-session-1"]').should('not.exist');
+    });
+
+    it('should terminate a specific session', () => {
+      cy.intercept('DELETE', '/api/account/sessions/session-2', {
+        statusCode: 200,
+        body: { success: true }
+      }).as('terminateSession');
+
+      cy.get('[data-testid="card-session-management"]').scrollIntoView();
+      cy.wait('@getSessions');
+      cy.get('[data-testid="button-terminate-session-session-2"]').click();
+      cy.wait('@terminateSession');
+    });
+
+    it('should show sign out all button when other sessions exist', () => {
+      cy.get('[data-testid="card-session-management"]').scrollIntoView();
+      cy.wait('@getSessions');
+      cy.get('[data-testid="button-terminate-all-sessions"]').should('be.visible');
+    });
+
+    it('should terminate all other sessions', () => {
+      cy.intercept('DELETE', '/api/account/sessions', {
+        statusCode: 200,
+        body: { success: true }
+      }).as('terminateAllSessions');
+
+      cy.get('[data-testid="card-session-management"]').scrollIntoView();
+      cy.wait('@getSessions');
+      cy.get('[data-testid="button-terminate-all-sessions"]').click();
+      cy.wait('@terminateAllSessions');
+    });
   });
 });
