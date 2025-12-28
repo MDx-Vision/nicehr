@@ -323,15 +323,295 @@ describe('Time & Attendance', () => {
   });
 
   // ===========================================================================
-  // TODO: Advanced Features (Require Additional Implementation)
+  // Clock In/Out Features
   // ===========================================================================
 
   describe('Clock In/Out', () => {
-    it.skip('TODO: Clock in button', () => {});
-    it.skip('TODO: Clock out button', () => {});
-    it.skip('TODO: Break tracking', () => {});
-    it.skip('TODO: Current status display', () => {});
+    // Helper to set up common intercepts
+    const setupCommonIntercepts = () => {
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: testUser
+      }).as('getUser');
+
+      cy.intercept('GET', '/api/projects', {
+        statusCode: 200,
+        body: []
+      }).as('getProjects');
+
+      cy.intercept('GET', '/api/consultants', {
+        statusCode: 200,
+        body: []
+      }).as('getConsultants');
+
+      // Use demo-ts-1 to match the default fallback in the component
+      cy.intercept('GET', '/api/timesheets', {
+        statusCode: 200,
+        body: [{ id: 'demo-ts-1', status: 'draft' }]
+      }).as('getTimesheets');
+    };
+
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+    });
+
+    it('should display time clock card', () => {
+      setupCommonIntercepts();
+      cy.intercept('GET', '/api/timesheets/demo-ts-1/entries', {
+        statusCode: 200,
+        body: []
+      }).as('getEntries');
+
+      cy.visit('/timesheets');
+      cy.wait('@getUser');
+      cy.get('[data-testid="card-time-clock"]').should('be.visible');
+    });
+
+    it('should display clock in button when not clocked in', () => {
+      setupCommonIntercepts();
+      cy.intercept('GET', '/api/timesheets/demo-ts-1/entries', {
+        statusCode: 200,
+        body: []
+      }).as('getEntries');
+
+      cy.visit('/timesheets');
+      cy.wait('@getUser');
+      cy.get('[data-testid="button-clock-in"]').should('be.visible');
+      cy.get('[data-testid="button-clock-out"]').should('not.exist');
+    });
+
+    it('should display current status as Not Clocked In', () => {
+      setupCommonIntercepts();
+      cy.intercept('GET', '/api/timesheets/demo-ts-1/entries', {
+        statusCode: 200,
+        body: []
+      }).as('getEntries');
+
+      cy.visit('/timesheets');
+      cy.wait('@getUser');
+      cy.get('[data-testid="text-clock-status"]').should('contain', 'Not Clocked In');
+    });
+
+    it('should display elapsed time counter', () => {
+      setupCommonIntercepts();
+      cy.intercept('GET', '/api/timesheets/demo-ts-1/entries', {
+        statusCode: 200,
+        body: []
+      }).as('getEntries');
+
+      cy.visit('/timesheets');
+      cy.wait('@getUser');
+      cy.get('[data-testid="text-elapsed-time"]').should('contain', '00:00:00');
+    });
+
+    it('should clock in successfully', () => {
+      setupCommonIntercepts();
+      cy.intercept('GET', '/api/timesheets/demo-ts-1/entries', {
+        statusCode: 200,
+        body: []
+      }).as('getEntries');
+
+      cy.intercept('POST', '/api/timesheets/demo-ts-1/clock-in', {
+        statusCode: 200,
+        body: { id: 'entry-1', clockIn: new Date().toISOString(), clockOut: null }
+      }).as('clockIn');
+
+      cy.visit('/timesheets');
+      cy.wait('@getUser');
+      cy.get('[data-testid="button-clock-in"]').click();
+      cy.wait('@clockIn');
+    });
+
+    it('should show clock out and break buttons when clocked in', () => {
+      setupCommonIntercepts();
+      // Use local date format to match component's format()
+      const today = new Date();
+      const localDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+      cy.intercept('GET', '/api/timesheets/demo-ts-1/entries', {
+        statusCode: 200,
+        body: [{
+          id: 'entry-1',
+          timesheetId: 'demo-ts-1',
+          entryDate: localDate,
+          clockIn: new Date().toISOString(),
+          clockOut: null,
+          breakMinutes: 0,
+          totalHours: 0,
+          location: null,
+          notes: null,
+          isManualEntry: false
+        }]
+      }).as('getActiveEntry');
+
+      cy.visit('/timesheets');
+      cy.wait('@getUser');
+      cy.wait('@getActiveEntry');
+
+      cy.get('[data-testid="button-clock-out"]').should('be.visible');
+      cy.get('[data-testid="button-start-break"]').should('be.visible');
+      cy.get('[data-testid="button-clock-in"]').should('not.exist');
+    });
+
+    it('should display Working status when clocked in', () => {
+      setupCommonIntercepts();
+      const today = new Date();
+      const localDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+      cy.intercept('GET', '/api/timesheets/demo-ts-1/entries', {
+        statusCode: 200,
+        body: [{
+          id: 'entry-1',
+          timesheetId: 'demo-ts-1',
+          entryDate: localDate,
+          clockIn: new Date().toISOString(),
+          clockOut: null,
+          breakMinutes: 0,
+          totalHours: 0,
+          location: null,
+          notes: null,
+          isManualEntry: false
+        }]
+      }).as('getActiveEntry');
+
+      cy.visit('/timesheets');
+      cy.wait('@getUser');
+      cy.wait('@getActiveEntry');
+
+      cy.get('[data-testid="text-clock-status"]').should('contain', 'Working');
+    });
+
+    it('should clock out successfully', () => {
+      setupCommonIntercepts();
+      const today = new Date();
+      const localDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+      cy.intercept('GET', '/api/timesheets/demo-ts-1/entries', {
+        statusCode: 200,
+        body: [{
+          id: 'entry-1',
+          timesheetId: 'demo-ts-1',
+          entryDate: localDate,
+          clockIn: new Date(Date.now() - 3600000).toISOString(),
+          clockOut: null,
+          breakMinutes: 0,
+          totalHours: 0,
+          location: null,
+          notes: null,
+          isManualEntry: false
+        }]
+      }).as('getActiveEntry');
+
+      cy.intercept('POST', '/api/timesheet-entries/entry-1/clock-out', {
+        statusCode: 200,
+        body: { id: 'entry-1', clockOut: new Date().toISOString(), totalHours: 1.0 }
+      }).as('clockOut');
+
+      cy.visit('/timesheets');
+      cy.wait('@getUser');
+      cy.wait('@getActiveEntry');
+
+      cy.get('[data-testid="button-clock-out"]').click();
+      cy.wait('@clockOut');
+    });
   });
+
+  describe('Break Tracking', () => {
+    // Helper to get local date in YYYY-MM-DD format
+    const getLocalDate = () => {
+      const today = new Date();
+      return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    };
+
+    // Helper to set up common intercepts
+    const setupCommonIntercepts = () => {
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: testUser
+      }).as('getUser');
+
+      cy.intercept('GET', '/api/projects', {
+        statusCode: 200,
+        body: []
+      }).as('getProjects');
+
+      cy.intercept('GET', '/api/consultants', {
+        statusCode: 200,
+        body: []
+      }).as('getConsultants');
+
+      // Use demo-ts-1 to match the default fallback in the component
+      cy.intercept('GET', '/api/timesheets', {
+        statusCode: 200,
+        body: [{ id: 'demo-ts-1', status: 'draft' }]
+      }).as('getTimesheets');
+
+      // Mock active clock-in with complete entry data
+      cy.intercept('GET', '/api/timesheets/demo-ts-1/entries', {
+        statusCode: 200,
+        body: [{
+          id: 'entry-1',
+          timesheetId: 'demo-ts-1',
+          entryDate: getLocalDate(),
+          clockIn: new Date().toISOString(),
+          clockOut: null,
+          breakMinutes: 0,
+          totalHours: 0,
+          location: null,
+          notes: null,
+          isManualEntry: false
+        }]
+      }).as('getEntries');
+    };
+
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+    });
+
+    it('should show start break button when working', () => {
+      setupCommonIntercepts();
+      cy.visit('/timesheets');
+      cy.wait('@getUser');
+      cy.wait('@getEntries');
+      cy.get('[data-testid="button-start-break"]').should('be.visible');
+    });
+
+    it('should switch to end break button when on break', () => {
+      setupCommonIntercepts();
+      cy.visit('/timesheets');
+      cy.wait('@getUser');
+      cy.wait('@getEntries');
+      cy.get('[data-testid="button-start-break"]').click();
+      cy.get('[data-testid="button-end-break"]').should('be.visible');
+      cy.get('[data-testid="button-start-break"]').should('not.exist');
+    });
+
+    it('should display On Break status', () => {
+      setupCommonIntercepts();
+      cy.visit('/timesheets');
+      cy.wait('@getUser');
+      cy.wait('@getEntries');
+      cy.get('[data-testid="button-start-break"]').click();
+      cy.get('[data-testid="text-clock-status"]').should('contain', 'On Break');
+    });
+
+    it('should disable clock out during break', () => {
+      setupCommonIntercepts();
+      cy.visit('/timesheets');
+      cy.wait('@getUser');
+      cy.wait('@getEntries');
+      cy.get('[data-testid="button-start-break"]').click();
+      cy.get('[data-testid="button-clock-out"]').should('be.disabled');
+    });
+  });
+
+  // ===========================================================================
+  // TODO: Monthly Summary (Require Additional Implementation)
+  // ===========================================================================
 
   describe('Monthly Summary', () => {
     it.skip('TODO: Monthly summary view', () => {});
