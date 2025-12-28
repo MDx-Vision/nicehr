@@ -276,8 +276,22 @@ export default function Consultants() {
   const onboardedConsultants = consultants?.filter(c => c.isOnboarded).length || 0;
   const pendingOnboarding = totalConsultants - onboardedConsultants;
 
-  const getInitials = (consultant: Consultant) => {
+  const getInitials = (consultant: any) => {
+    const firstName = consultant.user?.firstName || "";
+    const lastName = consultant.user?.lastName || "";
+    if (firstName || lastName) {
+      return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+    }
     return consultant.tngId?.substring(0, 2).toUpperCase() || "C";
+  };
+
+  const getConsultantName = (consultant: any) => {
+    const firstName = consultant.user?.firstName;
+    const lastName = consultant.user?.lastName;
+    if (firstName || lastName) {
+      return `${firstName || ""} ${lastName || ""}`.trim();
+    }
+    return consultant.tngId || "N/A";
   };
 
   const clearFilters = () => {
@@ -492,7 +506,7 @@ export default function Consultants() {
                             <AvatarFallback>{getInitials(consultant)}</AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-medium" data-testid="consultant-name">{consultant.tngId || "N/A"}</p>
+                            <p className="font-medium" data-testid="consultant-name">{getConsultantName(consultant)}</p>
                             <p className="text-sm text-muted-foreground">{consultant.phone || "No phone"}</p>
                           </div>
                         </div>
@@ -758,7 +772,7 @@ export default function Consultants() {
                 <AvatarFallback>{selectedConsultant ? getInitials(selectedConsultant) : "C"}</AvatarFallback>
               </Avatar>
               <div>
-                <span data-testid="consultant-name">{selectedConsultant?.tngId || "Consultant"}</span>
+                <span data-testid="consultant-name">{selectedConsultant ? getConsultantName(selectedConsultant) : "Consultant"}</span>
                 <p className="text-sm font-normal text-muted-foreground">
                   {selectedConsultant?.city && selectedConsultant?.state 
                     ? `${selectedConsultant.city}, ${selectedConsultant.state}` 

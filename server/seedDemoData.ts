@@ -64,8 +64,38 @@ const demoHospitals = [
     phone: "(312) 555-0100",
     email: "admin@mercyregional.org",
     website: "https://mercyregional.org",
+    // Organizational Info
+    facilityType: "Acute Care",
+    bedCount: 850,
+    traumaLevel: "Level I",
+    teachingStatus: "Academic Medical Center",
+    ownershipType: "Non-profit",
+    healthSystemAffiliation: "Mercy Health System",
+    npiNumber: "1234567890",
+    cmsNumber: "140001",
+    // Technical/IT Info
     emrSystem: "Epic",
+    currentEmrVersion: "Epic 2024",
+    targetEmrSystem: null,
+    dataCenter: "Hybrid",
+    itStaffCount: 120,
+    networkInfrastructure: "10Gbps fiber backbone, redundant WAN connections, Cisco infrastructure",
+    // Implementation-Specific
+    goLiveDate: new Date("2025-06-15"),
+    implementationPhase: "Build",
+    contractValue: "$2,500,000",
+    primaryContactName: "Dr. James Wilson",
+    primaryContactEmail: "jwilson@mercyregional.org",
+    primaryContactPhone: "(312) 555-0105",
+    executiveSponsor: "Sarah Mitchell, CEO",
+    // Compliance
+    jointCommissionAccredited: true,
+    lastAuditDate: new Date("2024-09-15"),
+    hipaaOfficerName: "Patricia Chen",
+    hipaaOfficerEmail: "pchen@mercyregional.org",
+    // General
     totalStaff: 2500,
+    notes: "Primary Epic implementation site. Strong IT team with previous EMR experience.",
     isActive: true,
   },
   {
@@ -78,8 +108,38 @@ const demoHospitals = [
     phone: "(713) 555-0200",
     email: "info@stlukes.org",
     website: "https://stlukeshealthcare.org",
+    // Organizational Info
+    facilityType: "Acute Care",
+    bedCount: 1200,
+    traumaLevel: "Level II",
+    teachingStatus: "Teaching Affiliate",
+    ownershipType: "For-profit",
+    healthSystemAffiliation: "HCA Healthcare",
+    npiNumber: "2345678901",
+    cmsNumber: "450002",
+    // Technical/IT Info
     emrSystem: "Cerner",
+    currentEmrVersion: "Cerner Millennium 2023",
+    targetEmrSystem: "Epic",
+    dataCenter: "Cloud",
+    itStaffCount: 85,
+    networkInfrastructure: "AWS-hosted, 5Gbps dedicated connections",
+    // Implementation-Specific
+    goLiveDate: new Date("2025-09-01"),
+    implementationPhase: "Design",
+    contractValue: "$4,200,000",
+    primaryContactName: "Michael Torres",
+    primaryContactEmail: "mtorres@stlukes.org",
+    primaryContactPhone: "(713) 555-0210",
+    executiveSponsor: "Robert Anderson, CFO",
+    // Compliance
+    jointCommissionAccredited: true,
+    lastAuditDate: new Date("2024-06-20"),
+    hipaaOfficerName: "Jennifer Adams",
+    hipaaOfficerEmail: "jadams@stlukes.org",
+    // General
     totalStaff: 3200,
+    notes: "Migrating from Cerner to Epic. Large multi-facility implementation.",
     isActive: true,
   },
   {
@@ -92,8 +152,38 @@ const demoHospitals = [
     phone: "(206) 555-0300",
     email: "contact@pnwhealth.org",
     website: "https://pnwhealth.org",
+    // Organizational Info
+    facilityType: "Acute Care",
+    bedCount: 650,
+    traumaLevel: "Level III",
+    teachingStatus: "Community Hospital",
+    ownershipType: "Non-profit",
+    healthSystemAffiliation: "Pacific Health Partners",
+    npiNumber: "3456789012",
+    cmsNumber: "500003",
+    // Technical/IT Info
     emrSystem: "Epic",
+    currentEmrVersion: "Epic 2023",
+    targetEmrSystem: null,
+    dataCenter: "On-premise",
+    itStaffCount: 65,
+    networkInfrastructure: "Upgraded to 10Gbps in 2024, new Cisco switches deployed",
+    // Implementation-Specific
+    goLiveDate: new Date("2024-11-15"),
+    implementationPhase: "Optimization",
+    contractValue: "$1,800,000",
+    primaryContactName: "Linda Chen",
+    primaryContactEmail: "lchen@pnwhealth.org",
+    primaryContactPhone: "(206) 555-0315",
+    executiveSponsor: "David Kim, CMO",
+    // Compliance
+    jointCommissionAccredited: true,
+    lastAuditDate: new Date("2024-11-01"),
+    hipaaOfficerName: "Marcus Johnson",
+    hipaaOfficerEmail: "mjohnson@pnwhealth.org",
+    // General
     totalStaff: 1800,
+    notes: "Recent go-live, now in optimization phase. Focus on MyChart adoption.",
     isActive: true,
   },
 ];
@@ -3000,7 +3090,47 @@ export async function seedDemoData() {
   try {
     console.log("Seeding hospitals...");
     for (const hospital of demoHospitals) {
-      await db.insert(hospitals).values(hospital).onConflictDoNothing();
+      await db.insert(hospitals).values(hospital).onConflictDoUpdate({
+        target: hospitals.id,
+        set: {
+          name: hospital.name,
+          address: hospital.address,
+          city: hospital.city,
+          state: hospital.state,
+          zipCode: hospital.zipCode,
+          phone: hospital.phone,
+          email: hospital.email,
+          website: hospital.website,
+          facilityType: hospital.facilityType,
+          bedCount: hospital.bedCount,
+          traumaLevel: hospital.traumaLevel,
+          teachingStatus: hospital.teachingStatus,
+          ownershipType: hospital.ownershipType,
+          healthSystemAffiliation: hospital.healthSystemAffiliation,
+          npiNumber: hospital.npiNumber,
+          cmsNumber: hospital.cmsNumber,
+          emrSystem: hospital.emrSystem,
+          currentEmrVersion: hospital.currentEmrVersion,
+          targetEmrSystem: hospital.targetEmrSystem,
+          dataCenter: hospital.dataCenter,
+          itStaffCount: hospital.itStaffCount,
+          networkInfrastructure: hospital.networkInfrastructure,
+          goLiveDate: hospital.goLiveDate,
+          implementationPhase: hospital.implementationPhase,
+          contractValue: hospital.contractValue,
+          primaryContactName: hospital.primaryContactName,
+          primaryContactEmail: hospital.primaryContactEmail,
+          primaryContactPhone: hospital.primaryContactPhone,
+          executiveSponsor: hospital.executiveSponsor,
+          jointCommissionAccredited: hospital.jointCommissionAccredited,
+          lastAuditDate: hospital.lastAuditDate,
+          hipaaOfficerName: hospital.hipaaOfficerName,
+          hipaaOfficerEmail: hospital.hipaaOfficerEmail,
+          totalStaff: hospital.totalStaff,
+          notes: hospital.notes,
+          isActive: hospital.isActive,
+        },
+      });
     }
 
     console.log("Seeding hospital units...");
@@ -3056,7 +3186,17 @@ export async function seedDemoData() {
         role: "consultant",
         isActive: true,
         accessStatus: "active",
-      }).onConflictDoNothing();
+      }).onConflictDoUpdate({
+        target: users.id,
+        set: {
+          email: consultant.email,
+          firstName: consultant.firstName,
+          lastName: consultant.lastName,
+          role: "consultant",
+          isActive: true,
+          accessStatus: "active",
+        },
+      });
 
       await db.insert(consultants).values({
         id: consultant.id,

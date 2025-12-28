@@ -252,8 +252,43 @@ export const hospitals = pgTable("hospitals", {
   phone: varchar("phone"),
   email: varchar("email"),
   website: varchar("website"),
-  emrSystem: varchar("emr_system"),
+
+  // Organizational Info
+  facilityType: varchar("facility_type"), // Acute Care, Ambulatory, Long-term Care, Behavioral Health
+  bedCount: integer("bed_count"),
+  traumaLevel: varchar("trauma_level"), // Level I, II, III, IV, V, None
+  teachingStatus: varchar("teaching_status"), // Academic, Community, Teaching Affiliate
+  ownershipType: varchar("ownership_type"), // Non-profit, For-profit, Government, Religious
+  healthSystemAffiliation: varchar("health_system_affiliation"),
+  npiNumber: varchar("npi_number"), // National Provider Identifier
+  cmsNumber: varchar("cms_number"), // CMS Certification Number
+
+  // Technical/IT Info
+  emrSystem: varchar("emr_system"), // Current EMR
+  currentEmrVersion: varchar("current_emr_version"),
+  targetEmrSystem: varchar("target_emr_system"), // What they're migrating to
+  dataCenter: varchar("data_center"), // On-premise, Cloud, Hybrid
+  itStaffCount: integer("it_staff_count"),
+  networkInfrastructure: text("network_infrastructure"),
+
+  // Implementation-Specific
+  goLiveDate: timestamp("go_live_date"),
+  implementationPhase: varchar("implementation_phase"),
+  contractValue: varchar("contract_value"),
+  primaryContactName: varchar("primary_contact_name"),
+  primaryContactEmail: varchar("primary_contact_email"),
+  primaryContactPhone: varchar("primary_contact_phone"),
+  executiveSponsor: varchar("executive_sponsor"),
+
+  // Compliance
+  jointCommissionAccredited: boolean("joint_commission_accredited").default(false),
+  lastAuditDate: timestamp("last_audit_date"),
+  hipaaOfficerName: varchar("hipaa_officer_name"),
+  hipaaOfficerEmail: varchar("hipaa_officer_email"),
+
+  // General
   totalStaff: integer("total_staff"),
+  notes: text("notes"),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

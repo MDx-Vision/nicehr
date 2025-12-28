@@ -1986,8 +1986,25 @@ export class DatabaseStorage implements IStorage {
     return newConsultant;
   }
 
-  async getAllConsultants(): Promise<Consultant[]> {
-    return await db.select().from(consultants).orderBy(desc(consultants.createdAt));
+  async getAllConsultants(): Promise<(Consultant & { user?: { firstName: string | null; lastName: string | null; email: string | null; profileImageUrl: string | null } })[]> {
+    const result = await db
+      .select({
+        consultant: consultants,
+        user: {
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          profileImageUrl: users.profileImageUrl,
+        },
+      })
+      .from(consultants)
+      .leftJoin(users, eq(consultants.userId, users.id))
+      .orderBy(desc(consultants.createdAt));
+
+    return result.map(row => ({
+      ...row.consultant,
+      user: row.user,
+    }));
   }
 
   async createConsultant(consultant: InsertConsultant): Promise<Consultant> {

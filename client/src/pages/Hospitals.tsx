@@ -24,17 +24,27 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Building2, MapPin, Phone, Mail, Globe, Pencil, Trash2, Search } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, Building2, MapPin, Phone, Mail, Globe, Pencil, Trash2, Search, Shield, Server, Users } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import type { Hospital } from "@shared/schema";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 
 const hospitalFormSchema = z.object({
+  // Basic Info
   name: z.string().min(1, "Name is required"),
   address: z.string().optional(),
   city: z.string().optional(),
@@ -43,11 +53,55 @@ const hospitalFormSchema = z.object({
   phone: z.string().optional(),
   email: z.string().email().optional().or(z.literal("")),
   website: z.string().optional(),
+
+  // Organizational Info
+  facilityType: z.string().optional(),
+  bedCount: z.coerce.number().optional(),
+  traumaLevel: z.string().optional(),
+  teachingStatus: z.string().optional(),
+  ownershipType: z.string().optional(),
+  healthSystemAffiliation: z.string().optional(),
+  npiNumber: z.string().optional(),
+  cmsNumber: z.string().optional(),
+
+  // Technical/IT Info
   emrSystem: z.string().optional(),
+  currentEmrVersion: z.string().optional(),
+  targetEmrSystem: z.string().optional(),
+  dataCenter: z.string().optional(),
+  itStaffCount: z.coerce.number().optional(),
+  networkInfrastructure: z.string().optional(),
+
+  // Implementation-Specific
+  goLiveDate: z.string().optional(),
+  implementationPhase: z.string().optional(),
+  contractValue: z.string().optional(),
+  primaryContactName: z.string().optional(),
+  primaryContactEmail: z.string().email().optional().or(z.literal("")),
+  primaryContactPhone: z.string().optional(),
+  executiveSponsor: z.string().optional(),
+
+  // Compliance
+  jointCommissionAccredited: z.boolean().optional(),
+  lastAuditDate: z.string().optional(),
+  hipaaOfficerName: z.string().optional(),
+  hipaaOfficerEmail: z.string().email().optional().or(z.literal("")),
+
+  // General
   totalStaff: z.coerce.number().optional(),
+  notes: z.string().optional(),
 });
 
 type HospitalFormValues = z.infer<typeof hospitalFormSchema>;
+
+// Constants for dropdown options
+const FACILITY_TYPES = ["Acute Care", "Ambulatory", "Long-term Care", "Behavioral Health", "Rehabilitation", "Critical Access"];
+const TRAUMA_LEVELS = ["Level I", "Level II", "Level III", "Level IV", "Level V", "None"];
+const TEACHING_STATUSES = ["Academic Medical Center", "Teaching Affiliate", "Community Hospital"];
+const OWNERSHIP_TYPES = ["Non-profit", "For-profit", "Government", "Religious", "Public"];
+const EMR_SYSTEMS = ["Epic", "Cerner", "Meditech", "Allscripts", "athenahealth", "eClinicalWorks", "NextGen", "Other"];
+const DATA_CENTER_TYPES = ["On-premise", "Cloud", "Hybrid"];
+const IMPLEMENTATION_PHASES = ["Discovery", "Planning", "Design", "Build", "Testing", "Training", "Go-Live", "Optimization", "Completed"];
 
 export default function Hospitals() {
   const { isAdmin } = useAuth();
@@ -79,8 +133,33 @@ export default function Hospitals() {
       phone: "",
       email: "",
       website: "",
+      facilityType: "",
+      bedCount: 0,
+      traumaLevel: "",
+      teachingStatus: "",
+      ownershipType: "",
+      healthSystemAffiliation: "",
+      npiNumber: "",
+      cmsNumber: "",
       emrSystem: "",
+      currentEmrVersion: "",
+      targetEmrSystem: "",
+      dataCenter: "",
+      itStaffCount: 0,
+      networkInfrastructure: "",
+      goLiveDate: "",
+      implementationPhase: "",
+      contractValue: "",
+      primaryContactName: "",
+      primaryContactEmail: "",
+      primaryContactPhone: "",
+      executiveSponsor: "",
+      jointCommissionAccredited: false,
+      lastAuditDate: "",
+      hipaaOfficerName: "",
+      hipaaOfficerEmail: "",
       totalStaff: 0,
+      notes: "",
     },
   });
 
@@ -139,8 +218,33 @@ export default function Hospitals() {
       phone: hospital.phone || "",
       email: hospital.email || "",
       website: hospital.website || "",
+      facilityType: (hospital as any).facilityType || "",
+      bedCount: (hospital as any).bedCount || 0,
+      traumaLevel: (hospital as any).traumaLevel || "",
+      teachingStatus: (hospital as any).teachingStatus || "",
+      ownershipType: (hospital as any).ownershipType || "",
+      healthSystemAffiliation: (hospital as any).healthSystemAffiliation || "",
+      npiNumber: (hospital as any).npiNumber || "",
+      cmsNumber: (hospital as any).cmsNumber || "",
       emrSystem: hospital.emrSystem || "",
+      currentEmrVersion: (hospital as any).currentEmrVersion || "",
+      targetEmrSystem: (hospital as any).targetEmrSystem || "",
+      dataCenter: (hospital as any).dataCenter || "",
+      itStaffCount: (hospital as any).itStaffCount || 0,
+      networkInfrastructure: (hospital as any).networkInfrastructure || "",
+      goLiveDate: (hospital as any).goLiveDate ? new Date((hospital as any).goLiveDate).toISOString().split('T')[0] : "",
+      implementationPhase: (hospital as any).implementationPhase || "",
+      contractValue: (hospital as any).contractValue || "",
+      primaryContactName: (hospital as any).primaryContactName || "",
+      primaryContactEmail: (hospital as any).primaryContactEmail || "",
+      primaryContactPhone: (hospital as any).primaryContactPhone || "",
+      executiveSponsor: (hospital as any).executiveSponsor || "",
+      jointCommissionAccredited: (hospital as any).jointCommissionAccredited || false,
+      lastAuditDate: (hospital as any).lastAuditDate ? new Date((hospital as any).lastAuditDate).toISOString().split('T')[0] : "",
+      hipaaOfficerName: (hospital as any).hipaaOfficerName || "",
+      hipaaOfficerEmail: (hospital as any).hipaaOfficerEmail || "",
       totalStaff: hospital.totalStaff || 0,
+      notes: (hospital as any).notes || "",
     });
     setIsDialogOpen(true);
   };
@@ -185,149 +289,626 @@ export default function Hospitals() {
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Hospital Name *</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="Enter hospital name" data-testid="input-hospital-name" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <Tabs defaultValue="basic" className="w-full">
+                    <TabsList className="grid w-full grid-cols-5">
+                      <TabsTrigger value="basic">Basic</TabsTrigger>
+                      <TabsTrigger value="organization">Organization</TabsTrigger>
+                      <TabsTrigger value="technical">Technical</TabsTrigger>
+                      <TabsTrigger value="implementation">Implementation</TabsTrigger>
+                      <TabsTrigger value="compliance">Compliance</TabsTrigger>
+                    </TabsList>
 
-                  <FormField
-                    control={form.control}
-                    name="address"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Address</FormLabel>
-                        <FormControl>
-                          <Textarea {...field} placeholder="Enter address" data-testid="input-hospital-address" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    {/* Basic Info Tab */}
+                    <TabsContent value="basic" className="space-y-4 mt-4">
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Hospital Name *</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Enter hospital name" data-testid="input-hospital-name" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                  <div className="grid grid-cols-3 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="city"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>City</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="City" data-testid="input-hospital-city" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="state"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>State</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="State" data-testid="input-hospital-state" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="zipCode"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Zip Code</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="Zip Code" data-testid="input-hospital-zip" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                      <FormField
+                        control={form.control}
+                        name="address"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Address</FormLabel>
+                            <FormControl>
+                              <Textarea {...field} placeholder="Enter address" data-testid="input-hospital-address" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="phone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Phone</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="Phone number" data-testid="input-hospital-phone" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input {...field} type="email" placeholder="Email" data-testid="input-hospital-email" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="city"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>City</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="City" data-testid="input-hospital-city" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="state"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>State</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="State" data-testid="input-hospital-state" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="zipCode"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Zip Code</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Zip Code" data-testid="input-hospital-zip" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="website"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Website</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="Website URL" data-testid="input-hospital-website" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="emrSystem"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>EMR System</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="EMR System" data-testid="input-hospital-emr" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="phone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Phone</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Phone number" data-testid="input-hospital-phone" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email</FormLabel>
+                              <FormControl>
+                                <Input {...field} type="email" placeholder="Email" data-testid="input-hospital-email" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
 
-                  <FormField
-                    control={form.control}
-                    name="totalStaff"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Total Staff</FormLabel>
-                        <FormControl>
-                          <Input {...field} type="number" placeholder="Number of staff" data-testid="input-hospital-staff" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                      <FormField
+                        control={form.control}
+                        name="website"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Website</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Website URL" data-testid="input-hospital-website" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </TabsContent>
 
-                  <DialogFooter>
+                    {/* Organization Tab */}
+                    <TabsContent value="organization" className="space-y-4 mt-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="facilityType"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Facility Type</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select facility type" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {FACILITY_TYPES.map((type) => (
+                                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="bedCount"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Bed Count</FormLabel>
+                              <FormControl>
+                                <Input {...field} type="number" placeholder="Number of beds" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="traumaLevel"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Trauma Level</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select trauma level" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {TRAUMA_LEVELS.map((level) => (
+                                    <SelectItem key={level} value={level}>{level}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="teachingStatus"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Teaching Status</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select teaching status" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {TEACHING_STATUSES.map((status) => (
+                                    <SelectItem key={status} value={status}>{status}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="ownershipType"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Ownership Type</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select ownership type" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {OWNERSHIP_TYPES.map((type) => (
+                                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="totalStaff"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Total Staff</FormLabel>
+                              <FormControl>
+                                <Input {...field} type="number" placeholder="Number of staff" data-testid="input-hospital-staff" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <FormField
+                        control={form.control}
+                        name="healthSystemAffiliation"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Health System Affiliation</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Parent health system name" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="npiNumber"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>NPI Number</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="National Provider Identifier" />
+                              </FormControl>
+                              <FormDescription>10-digit National Provider Identifier</FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="cmsNumber"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>CMS Number</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="CMS Certification Number" />
+                              </FormControl>
+                              <FormDescription>CMS Certification Number (CCN)</FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </TabsContent>
+
+                    {/* Technical Tab */}
+                    <TabsContent value="technical" className="space-y-4 mt-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="emrSystem"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Current EMR System</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select EMR system" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {EMR_SYSTEMS.map((emr) => (
+                                    <SelectItem key={emr} value={emr}>{emr}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="currentEmrVersion"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Current EMR Version</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="e.g., Epic 2024, Cerner Millennium 2023" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="targetEmrSystem"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Target EMR System</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Migrating to..." />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {EMR_SYSTEMS.map((emr) => (
+                                    <SelectItem key={emr} value={emr}>{emr}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormDescription>Leave empty if not migrating</FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="dataCenter"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Data Center</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select data center type" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {DATA_CENTER_TYPES.map((type) => (
+                                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <FormField
+                        control={form.control}
+                        name="itStaffCount"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>IT Staff Count</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="number" placeholder="Number of IT staff" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="networkInfrastructure"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Network Infrastructure Notes</FormLabel>
+                            <FormControl>
+                              <Textarea {...field} placeholder="Notes on network readiness, bandwidth, etc." />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </TabsContent>
+
+                    {/* Implementation Tab */}
+                    <TabsContent value="implementation" className="space-y-4 mt-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="implementationPhase"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Implementation Phase</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select current phase" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {IMPLEMENTATION_PHASES.map((phase) => (
+                                    <SelectItem key={phase} value={phase}>{phase}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="goLiveDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Go-Live Date</FormLabel>
+                              <FormControl>
+                                <Input {...field} type="date" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <FormField
+                        control={form.control}
+                        name="contractValue"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Contract Value</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="e.g., $500,000" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="border rounded-lg p-4 space-y-4">
+                        <h4 className="font-medium flex items-center gap-2">
+                          <Users className="w-4 h-4" />
+                          Primary Contact
+                        </h4>
+                        <div className="grid grid-cols-3 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="primaryContactName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Name</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="Contact name" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="primaryContactEmail"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Email</FormLabel>
+                                <FormControl>
+                                  <Input {...field} type="email" placeholder="Contact email" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="primaryContactPhone"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Phone</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="Contact phone" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+
+                      <FormField
+                        control={form.control}
+                        name="executiveSponsor"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Executive Sponsor</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="C-suite sponsor name and title" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="notes"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Notes</FormLabel>
+                            <FormControl>
+                              <Textarea {...field} placeholder="Additional notes about this hospital..." rows={4} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </TabsContent>
+
+                    {/* Compliance Tab */}
+                    <TabsContent value="compliance" className="space-y-4 mt-4">
+                      <FormField
+                        control={form.control}
+                        name="jointCommissionAccredited"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>Joint Commission Accredited</FormLabel>
+                              <FormDescription>
+                                Hospital is accredited by The Joint Commission (TJC)
+                              </FormDescription>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="lastAuditDate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Last Audit Date</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="date" />
+                            </FormControl>
+                            <FormDescription>Most recent compliance audit</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="border rounded-lg p-4 space-y-4">
+                        <h4 className="font-medium flex items-center gap-2">
+                          <Shield className="w-4 h-4" />
+                          HIPAA Officer
+                        </h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="hipaaOfficerName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Name</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="HIPAA officer name" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="hipaaOfficerEmail"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Email</FormLabel>
+                                <FormControl>
+                                  <Input {...field} type="email" placeholder="HIPAA officer email" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+
+                  <DialogFooter className="mt-6">
                     <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
                       Cancel
                     </Button>
