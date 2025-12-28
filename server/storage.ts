@@ -211,6 +211,7 @@ import {
   invoiceTemplates,
   invoices,
   invoiceLineItems,
+  invoicePayments,
   payRates,
   payrollBatches,
   payrollEntries,
@@ -239,6 +240,8 @@ import {
   type InsertInvoice,
   type InvoiceLineItem,
   type InsertInvoiceLineItem,
+  type InvoicePayment,
+  type InsertInvoicePayment,
   type PayRate,
   type InsertPayRate,
   type PayrollBatch,
@@ -964,6 +967,11 @@ export interface IStorage {
   createInvoiceLineItem(item: InsertInvoiceLineItem): Promise<InvoiceLineItem>;
   updateInvoiceLineItem(id: string, data: Partial<InsertInvoiceLineItem>): Promise<InvoiceLineItem | undefined>;
   deleteInvoiceLineItem(id: string): Promise<void>;
+
+  // Invoice Payment Operations
+  getInvoicePayments(invoiceId: string): Promise<InvoicePayment[]>;
+  createInvoicePayment(payment: InsertInvoicePayment): Promise<InvoicePayment>;
+  deleteInvoicePayment(id: string): Promise<void>;
 
   // Pay Rate Operations
   listPayRates(consultantId?: string): Promise<PayRate[]>;
@@ -6556,6 +6564,63 @@ export class DatabaseStorage implements IStorage {
 
   async deleteInvoiceLineItem(id: string): Promise<void> {
     await db.delete(invoiceLineItems).where(eq(invoiceLineItems.id, id));
+  }
+
+  // Invoice Payment Operations
+  async getInvoicePayments(invoiceId: string): Promise<InvoicePayment[]> {
+    return await db
+      .select()
+      .from(invoicePayments)
+      .where(eq(invoicePayments.invoiceId, invoiceId))
+      .orderBy(desc(invoicePayments.createdAt));
+  }
+
+  async createInvoicePayment(payment: InsertInvoicePayment): Promise<InvoicePayment> {
+    // Create the payment record
+    const results = await db.insert(invoicePayments).values(payment).returning();
+    const newPayment = results[0];
+
+    // Update the invoice's paidAmount and paidAt
+    const invoice = await db.select().from(invoices).where(eq(invoices.id, payment.invoiceId));
+    if (invoice[0]) {
+      const currentPaid = parseFloat(invoice[0].paidAmount || "0");
+      const newPaidAmount = currentPaid + parseFloat(payment.amount);
+      const totalAmount = parseFloat(invoice[0].totalAmount || "0");
+
+      await db
+        .update(invoices)
+        .set({
+          paidAmount: newPaidAmount.toFixed(2),
+          paidAt: new Date(),
+          status: newPaidAmount >= totalAmount ? "paid" : invoice[0].status,
+        })
+        .where(eq(invoices.id, payment.invoiceId));
+    }
+
+    return newPayment;
+  }
+
+  async deleteInvoicePayment(id: string): Promise<void> {
+    // Get the payment first to update the invoice
+    const payment = await db.select().from(invoicePayments).where(eq(invoicePayments.id, id));
+    if (payment[0]) {
+      const invoice = await db.select().from(invoices).where(eq(invoices.id, payment[0].invoiceId));
+      if (invoice[0]) {
+        const currentPaid = parseFloat(invoice[0].paidAmount || "0");
+        const newPaidAmount = Math.max(0, currentPaid - parseFloat(payment[0].amount));
+        const totalAmount = parseFloat(invoice[0].totalAmount || "0");
+
+        await db
+          .update(invoices)
+          .set({
+            paidAmount: newPaidAmount.toFixed(2),
+            status: newPaidAmount >= totalAmount ? "paid" : "sent",
+          })
+          .where(eq(invoices.id, payment[0].invoiceId));
+      }
+    }
+
+    await db.delete(invoicePayments).where(eq(invoicePayments.id, id));
   }
 
   // Pay Rate Operations

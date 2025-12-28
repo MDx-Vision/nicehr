@@ -6510,7 +6510,7 @@ export async function registerRoutes(
     try {
       const userId = req.user?.claims?.sub;
       await storage.deleteInvoice(req.params.id);
-      
+
       if (userId) {
         await logActivity(userId, {
           activityType: 'delete',
@@ -6520,11 +6520,70 @@ export async function registerRoutes(
           description: 'Deleted invoice',
         }, req);
       }
-      
+
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting invoice:", error);
       res.status(500).json({ message: "Failed to delete invoice" });
+    }
+  });
+
+  // Invoice Payments Routes
+  app.get('/api/invoices/:id/payments', isAuthenticated, async (req, res) => {
+    try {
+      const payments = await storage.getInvoicePayments(req.params.id);
+      res.json(payments);
+    } catch (error) {
+      console.error("Error fetching invoice payments:", error);
+      res.status(500).json({ message: "Failed to fetch invoice payments" });
+    }
+  });
+
+  app.post('/api/invoices/:id/payments', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const invoiceId = req.params.id;
+
+      const payment = await storage.createInvoicePayment({
+        ...req.body,
+        invoiceId,
+        recordedBy: userId,
+      });
+
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'invoice_payment',
+        resourceId: payment.id,
+        resourceName: `Payment for Invoice`,
+        description: `Recorded payment of ${req.body.amount}`,
+      }, req);
+
+      res.status(201).json(payment);
+    } catch (error) {
+      console.error("Error creating invoice payment:", error);
+      res.status(500).json({ message: "Failed to create invoice payment" });
+    }
+  });
+
+  app.delete('/api/invoices/:invoiceId/payments/:paymentId', isAuthenticated, requireRole('admin'), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      await storage.deleteInvoicePayment(req.params.paymentId);
+
+      if (userId) {
+        await logActivity(userId, {
+          activityType: 'delete',
+          resourceType: 'invoice_payment',
+          resourceId: req.params.paymentId,
+          resourceName: 'Payment',
+          description: 'Deleted invoice payment',
+        }, req);
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting invoice payment:", error);
+      res.status(500).json({ message: "Failed to delete invoice payment" });
     }
   });
 

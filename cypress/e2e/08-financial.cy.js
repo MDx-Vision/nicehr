@@ -630,9 +630,9 @@ describe('Financial Module', () => {
     });
 
     it('should record payment successfully', () => {
-      cy.intercept('PATCH', '/api/invoices/inv-1', {
-        statusCode: 200,
-        body: { ...mockInvoices[0], paidAmount: '5000.00', status: 'paid' }
+      cy.intercept('POST', '/api/invoices/inv-1/payments', {
+        statusCode: 201,
+        body: { id: 'pay-1', invoiceId: 'inv-1', amount: '5000.00', paymentMethod: 'wire', referenceNumber: 'WIRE-12345' }
       }).as('recordPayment');
 
       cy.get('[data-testid="invoice-row-inv-1"]').click();
@@ -645,6 +645,47 @@ describe('Financial Module', () => {
       cy.get('[data-testid="button-confirm-payment"]').click();
 
       cy.wait('@recordPayment');
+    });
+
+    it('should display payment history button when payments exist', () => {
+      // Mock payments for this invoice
+      cy.intercept('GET', '/api/invoices/inv-1/payments', {
+        statusCode: 200,
+        body: [
+          { id: 'pay-1', amount: '2500.00', paymentMethod: 'check', referenceNumber: 'CHK-001', paymentDate: '2024-01-15', createdAt: '2024-01-15T10:00:00Z' }
+        ]
+      }).as('getPayments');
+
+      cy.get('[data-testid="invoice-row-inv-1"]').click();
+      cy.wait('@getInvoice1');
+      cy.wait('@getPayments');
+
+      cy.get('[data-testid="button-view-payment-history"]').should('be.visible');
+      cy.contains('History (1)').should('be.visible');
+    });
+
+    it('should display payment history dialog with payment records', () => {
+      const mockPayments = [
+        { id: 'pay-1', amount: '2500.00', paymentMethod: 'check', referenceNumber: 'CHK-001', paymentDate: '2024-01-15', createdAt: '2024-01-15T10:00:00Z' },
+        { id: 'pay-2', amount: '1500.00', paymentMethod: 'wire', referenceNumber: 'WIRE-002', paymentDate: '2024-01-20', createdAt: '2024-01-20T14:30:00Z' }
+      ];
+
+      cy.intercept('GET', '/api/invoices/inv-1/payments', {
+        statusCode: 200,
+        body: mockPayments
+      }).as('getPayments');
+
+      cy.get('[data-testid="invoice-row-inv-1"]').click();
+      cy.wait('@getInvoice1');
+      cy.wait('@getPayments');
+
+      cy.get('[data-testid="button-view-payment-history"]').click();
+
+      cy.get('[data-testid="payment-history-list"]').should('be.visible');
+      cy.contains('$2,500.00').should('be.visible');
+      cy.contains('$1,500.00').should('be.visible');
+      cy.contains('Check').should('be.visible');
+      cy.contains('Wire').should('be.visible');
     });
 
     it('should show payment complete status for paid invoices', () => {

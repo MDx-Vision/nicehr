@@ -36,7 +36,8 @@ import {
   Receipt,
   Download,
   Mail,
-  Printer
+  Printer,
+  History
 } from "lucide-react";
 import type { 
   Project, 
@@ -188,6 +189,7 @@ function InvoiceDetailPanel({
   const [showVoidDialog, setShowVoidDialog] = useState(false);
   const [voidReason, setVoidReason] = useState("");
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [showPaymentHistory, setShowPaymentHistory] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [paymentReference, setPaymentReference] = useState("");
@@ -199,6 +201,19 @@ function InvoiceDetailPanel({
 
   const { data: invoice, isLoading } = useQuery<InvoiceWithDetails>({
     queryKey: ['/api/invoices', invoiceId],
+    enabled: !!invoiceId,
+  });
+
+  const { data: payments = [] } = useQuery<Array<{
+    id: string;
+    amount: string;
+    paymentMethod: string | null;
+    referenceNumber: string | null;
+    paymentDate: string | null;
+    notes: string | null;
+    createdAt: string;
+  }>>({
+    queryKey: [`/api/invoices/${invoiceId}/payments`],
     enabled: !!invoiceId,
   });
 
@@ -261,26 +276,17 @@ function InvoiceDetailPanel({
 
   const recordPaymentMutation = useMutation({
     mutationFn: async (data: { amount: string; method: string; reference: string }) => {
-      const currentPaid = parseFloat(invoice?.paidAmount || "0");
-      const newPayment = parseFloat(data.amount);
-      const newTotal = currentPaid + newPayment;
-      const totalDue = parseFloat(invoice?.totalAmount || "0");
-      const isFullyPaid = newTotal >= totalDue;
-
-      const paymentNote = `Payment recorded: ${formatCurrency(newPayment)}${data.method ? ` via ${data.method}` : ""}${data.reference ? ` (Ref: ${data.reference})` : ""} on ${format(new Date(), "MMM d, yyyy")}`;
-
-      return apiRequest("PATCH", `/api/invoices/${invoiceId}`, {
-        paidAmount: newTotal.toFixed(2),
-        paidAt: new Date().toISOString(),
-        status: isFullyPaid ? "paid" : invoice?.status,
-        notes: invoice?.notes
-          ? `${invoice.notes}\n\n${paymentNote}`
-          : paymentNote
+      return apiRequest("POST", `/api/invoices/${invoiceId}/payments`, {
+        amount: data.amount,
+        paymentMethod: data.method || null,
+        referenceNumber: data.reference || null,
+        paymentDate: new Date().toISOString().split('T')[0],
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
       queryClient.invalidateQueries({ queryKey: ['/api/invoices', invoiceId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/invoices/${invoiceId}/payments`] });
       setShowPaymentDialog(false);
       setPaymentAmount("");
       setPaymentMethod("");
@@ -289,6 +295,21 @@ function InvoiceDetailPanel({
     },
     onError: () => {
       toast({ title: "Failed to record payment", variant: "destructive" });
+    }
+  });
+
+  const deletePaymentMutation = useMutation({
+    mutationFn: async (paymentId: string) => {
+      return apiRequest("DELETE", `/api/invoices/${invoiceId}/payments/${paymentId}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/invoices', invoiceId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/invoices/${invoiceId}/payments`] });
+      toast({ title: "Payment deleted" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete payment", variant: "destructive" });
     }
   });
 
@@ -614,18 +635,31 @@ function InvoiceDetailPanel({
           <Card className="mb-4">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-base">Payment</CardTitle>
-              <Button
-                size="sm"
-                onClick={() => {
-                  const balance = parseFloat(invoice.totalAmount || "0") - parseFloat(invoice.paidAmount || "0");
-                  setPaymentAmount(balance.toFixed(2));
-                  setShowPaymentDialog(true);
-                }}
-                data-testid="button-record-payment"
-              >
-                <DollarSign className="h-4 w-4 mr-2" />
-                Record Payment
-              </Button>
+              <div className="flex gap-2">
+                {payments.length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowPaymentHistory(true)}
+                    data-testid="button-view-payment-history"
+                  >
+                    <History className="h-4 w-4 mr-2" />
+                    History ({payments.length})
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const balance = parseFloat(invoice.totalAmount || "0") - parseFloat(invoice.paidAmount || "0");
+                    setPaymentAmount(balance.toFixed(2));
+                    setShowPaymentDialog(true);
+                  }}
+                  data-testid="button-record-payment"
+                >
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  Record Payment
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-2 text-sm">
@@ -646,11 +680,22 @@ function InvoiceDetailPanel({
 
         {invoice.status === "paid" && (
           <Card className="mb-4 border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-base flex items-center gap-2 text-green-700 dark:text-green-400">
                 <CheckCircle2 className="h-5 w-5" />
                 Payment Complete
               </CardTitle>
+              {payments.length > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowPaymentHistory(true)}
+                  data-testid="button-view-payment-history-paid"
+                >
+                  <History className="h-4 w-4 mr-2" />
+                  View History ({payments.length})
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               <div className="space-y-2 text-sm">
@@ -878,6 +923,78 @@ function InvoiceDetailPanel({
               data-testid="button-confirm-payment"
             >
               Record Payment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showPaymentHistory} onOpenChange={setShowPaymentHistory}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Payment History</DialogTitle>
+            <DialogDescription>
+              All payments recorded for this invoice.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4" data-testid="payment-history-list">
+            {payments.length === 0 ? (
+              <p className="text-center text-muted-foreground py-4">No payments recorded yet.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Method</TableHead>
+                    <TableHead>Reference</TableHead>
+                    {isAdmin && <TableHead className="w-[50px]"></TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {payments.map((payment) => (
+                    <TableRow key={payment.id} data-testid={`payment-row-${payment.id}`}>
+                      <TableCell>
+                        {payment.paymentDate
+                          ? format(new Date(payment.paymentDate), "MMM d, yyyy")
+                          : format(new Date(payment.createdAt), "MMM d, yyyy")}
+                      </TableCell>
+                      <TableCell className="font-medium">{formatCurrency(payment.amount)}</TableCell>
+                      <TableCell>
+                        {payment.paymentMethod
+                          ? payment.paymentMethod.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
+                          : '-'}
+                      </TableCell>
+                      <TableCell>{payment.referenceNumber || '-'}</TableCell>
+                      {isAdmin && (
+                        <TableCell>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => deletePaymentMutation.mutate(payment.id)}
+                            disabled={deletePaymentMutation.isPending}
+                            data-testid={`button-delete-payment-${payment.id}`}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+            <div className="flex justify-between items-center pt-4 border-t">
+              <span className="text-sm text-muted-foreground">
+                Total Payments: {payments.length}
+              </span>
+              <span className="font-medium">
+                Total: {formatCurrency(payments.reduce((sum, p) => sum + parseFloat(p.amount), 0))}
+              </span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPaymentHistory(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

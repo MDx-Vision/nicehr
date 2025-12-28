@@ -3870,6 +3870,31 @@ export const invoicesRelations = relations(invoices, ({ one, many }) => ({
     references: [users.id],
   }),
   lineItems: many(invoiceLineItems),
+  payments: many(invoicePayments),
+}));
+
+// Invoice Payments - Track individual payment records
+export const invoicePayments = pgTable("invoice_payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  invoiceId: varchar("invoice_id").references(() => invoices.id).notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  paymentMethod: varchar("payment_method"), // check, ach, wire, credit_card, other
+  referenceNumber: varchar("reference_number"),
+  paymentDate: date("payment_date"),
+  notes: text("notes"),
+  recordedBy: varchar("recorded_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const invoicePaymentsRelations = relations(invoicePayments, ({ one }) => ({
+  invoice: one(invoices, {
+    fields: [invoicePayments.invoiceId],
+    references: [invoices.id],
+  }),
+  recorder: one(users, {
+    fields: [invoicePayments.recordedBy],
+    references: [users.id],
+  }),
 }));
 
 // Invoice Line Items
@@ -4151,6 +4176,11 @@ export const insertInvoiceLineItemSchema = createInsertSchema(invoiceLineItems).
   createdAt: true,
 });
 
+export const insertInvoicePaymentSchema = createInsertSchema(invoicePayments).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertPayRateSchema = createInsertSchema(payRates).omit({
   id: true,
   createdAt: true,
@@ -4206,6 +4236,9 @@ export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
 
 export type InvoiceLineItem = typeof invoiceLineItems.$inferSelect;
 export type InsertInvoiceLineItem = z.infer<typeof insertInvoiceLineItemSchema>;
+
+export type InvoicePayment = typeof invoicePayments.$inferSelect;
+export type InsertInvoicePayment = z.infer<typeof insertInvoicePaymentSchema>;
 
 export type PayRate = typeof payRates.$inferSelect;
 export type InsertPayRate = z.infer<typeof insertPayRateSchema>;
