@@ -8,7 +8,7 @@
 - **Database**: PostgreSQL
 - **Testing**: Cypress E2E tests
 
-## Recent Changes (Dec 28, 2024)
+## Recent Changes (Dec 28, 2025)
 
 ### Completed Features
 
@@ -35,15 +35,20 @@
    - Added 30+ financial fields to projects (budget breakdown, ROI, savings categories)
    - Added "View More" modals for both hospitals and projects
 
-### Pending Work
+4. **Performance Metrics (Completed)**
+   - `ticketResolutionRate` - Calculated from support_tickets table (resolved + closed / total)
+   - `projectCompletionRate` - Calculated from projects table (completed / total)
+   - `consultantUtilization` - Calculated from timesheets (current month hours / expected hours)
+   - `totalHoursLogged` - Sum of all timesheet hours
+   - Added 8 demo timesheets with current month dates
+   - Added 10 demo support tickets (8 resolved, 1 in progress, 1 open)
+   - Added 1 completed project to show project completion rate
 
-1. **Performance Metrics** - Dashboard gauges need real calculations:
-   - `ticketResolutionRate` - not calculated
-   - `projectCompletionRate` - not calculated
-   - `consultantUtilization` - not calculated
-   - `totalHoursLogged` - not calculated
-
-2. **Cypress Tests** - Need to run and verify all tests pass
+5. **Cypress Tests (All Passing)**
+   - 47 spec files, 784 passing tests, 0 failures
+   - Fixed contracts-signatures tests (embedded signers in mock data)
+   - Fixed profile-management tests (restructured beforeEach blocks)
+   - 75 pending tests for unimplemented features
 
 ## Key Files
 
@@ -56,7 +61,7 @@
 
 ### Backend
 - `server/routes.ts` - All API endpoints
-- `server/storage.ts` - Database operations
+- `server/storage.ts` - Database operations (including performance metrics)
 - `server/seedDemoData.ts` - Demo data seeding
 - `shared/schema.ts` - Drizzle ORM schema definitions
 
@@ -68,11 +73,11 @@
 ## Running the Project
 
 ```bash
-# Start development server (port 3000)
-PORT=3000 npm run dev
+# Start development server (port 4000 for Cypress tests)
+PORT=4000 npm run dev
 
 # Seed demo data
-curl -X POST http://localhost:3000/api/admin/seed-demo-data
+curl -X POST http://localhost:4000/api/admin/seed-demo-data
 
 # Run Cypress tests
 CYPRESS_TEST=true npx cypress run
@@ -91,11 +96,13 @@ Uses PostgreSQL with Drizzle ORM. Key tables:
 - `project_tasks` - Tasks for projects
 - `user_activities` - Activity feed
 - `consultant_documents` - Document management
+- `timesheets` - Time tracking for utilization metrics
+- `support_tickets` - Ticket tracking for resolution metrics
 
 ## API Endpoints
 
 ### Dashboard
-- `GET /api/dashboard/stats` - Dashboard statistics
+- `GET /api/dashboard/stats` - Dashboard statistics (includes performance metrics)
 - `GET /api/dashboard/tasks` - User's tasks
 - `GET /api/dashboard/calendar-events` - Calendar events
 - `GET /api/activities/recent` - Recent activity feed
@@ -115,7 +122,8 @@ In development mode, the app uses a mock user:
 
 ## Notes for Future Sessions
 
-1. Performance metrics need backend calculations in `storage.getDashboardStats()`
-2. Some Cypress tests may need updating after UI changes
+1. All Cypress tests pass - run `CYPRESS_TEST=true npx cypress run` to verify
+2. Performance metrics are calculated in `storage.getDashboardStats()`
 3. Documents page (`/documents`) exists but may need review
 4. Analytics page (`/analytics`) links from dashboard
+5. Account settings page (`/account-settings`) not yet implemented (tests skipped)

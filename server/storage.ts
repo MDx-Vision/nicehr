@@ -1615,6 +1615,11 @@ export interface DashboardStats {
   activeProjects: number;
   pendingDocuments: number;
   totalSavings: string;
+  // Performance metrics
+  totalHoursLogged: number;
+  ticketResolutionRate: number;
+  projectCompletionRate: number;
+  consultantUtilization: number;
 }
 
 export interface DirectorySearchParams {
@@ -2419,13 +2424,60 @@ export class DatabaseStorage implements IStorage {
     const [pendingDocCount] = await db.select({ count: sql<number>`count(*)` }).from(consultantDocuments).where(eq(consultantDocuments.status, "pending"));
     const [savingsSum] = await db.select({ total: sql<string>`COALESCE(SUM(total_savings), 0)` }).from(budgetCalculations);
 
+    // Calculate ticket resolution rate (resolved + closed / total tickets * 100)
+    const [totalTickets] = await db.select({ count: sql<number>`count(*)` }).from(supportTickets);
+    const [resolvedTickets] = await db.select({ count: sql<number>`count(*)` })
+      .from(supportTickets)
+      .where(sql`${supportTickets.status} IN ('resolved', 'closed')`);
+    const ticketResolutionRate = totalTickets?.count > 0
+      ? Math.round((Number(resolvedTickets?.count || 0) / Number(totalTickets.count)) * 100)
+      : 0;
+
+    // Calculate project completion rate (completed / total projects * 100)
+    const [totalProjects] = await db.select({ count: sql<number>`count(*)` }).from(projects);
+    const [completedProjects] = await db.select({ count: sql<number>`count(*)` })
+      .from(projects)
+      .where(eq(projects.status, "completed"));
+    const projectCompletionRate = totalProjects?.count > 0
+      ? Math.round((Number(completedProjects?.count || 0) / Number(totalProjects.count)) * 100)
+      : 0;
+
+    // Calculate total hours logged from timesheets
+    const [hoursSum] = await db.select({
+      total: sql<number>`COALESCE(SUM(total_hours), 0)`
+    }).from(timesheets);
+    const totalHoursLogged = Math.round(Number(hoursSum?.total || 0));
+
+    // Calculate consultant utilization (hours logged this month / expected hours)
+    // Expected hours per consultant per month: ~160 hours (40 hrs/week * 4 weeks)
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const [monthlyHours] = await db.select({
+      total: sql<number>`COALESCE(SUM(total_hours), 0)`
+    })
+      .from(timesheets)
+      .where(sql`${timesheets.weekStartDate} >= ${startOfMonth.toISOString().split('T')[0]}`);
+
+    const activeConsultants = Number(activeConsultantCount?.count || 0);
+    const expectedMonthlyHours = activeConsultants * 160; // 160 hours per consultant per month
+    const consultantUtilization = expectedMonthlyHours > 0
+      ? Math.min(100, Math.round((Number(monthlyHours?.total || 0) / expectedMonthlyHours) * 100))
+      : 0;
+
     return {
       totalConsultants: Number(consultantCount?.count || 0),
-      activeConsultants: Number(activeConsultantCount?.count || 0),
+      activeConsultants: activeConsultants,
       totalHospitals: Number(hospitalCount?.count || 0),
       activeProjects: Number(activeProjectCount?.count || 0),
       pendingDocuments: Number(pendingDocCount?.count || 0),
       totalSavings: savingsSum?.total || "0",
+      // Performance metrics
+      totalHoursLogged,
+      ticketResolutionRate,
+      projectCompletionRate,
+      consultantUtilization,
     };
   }
 

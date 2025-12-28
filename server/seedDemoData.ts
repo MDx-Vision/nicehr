@@ -745,6 +745,20 @@ const demoProjects = [
     actualBudget: "0.00",
     savings: "0.00",
   },
+  {
+    id: "project-5",
+    hospitalId: "hospital-2",
+    name: "Radiology PACS Integration - Phase 1",
+    description: "Completed integration of radiology PACS system with Cerner for seamless image viewing and diagnostic workflow.",
+    startDate: "2024-03-01",
+    endDate: "2024-09-30",
+    status: "completed" as const,
+    estimatedConsultants: 4,
+    actualConsultants: 4,
+    estimatedBudget: "650000.00",
+    actualBudget: "625000.00",
+    savings: "180000.00",
+  },
 ];
 
 const projectPhaseData = [
@@ -2330,6 +2344,278 @@ const demoUserActivities = [
   },
 ];
 
+// Demo Timesheets for Performance Metrics (using current month dates)
+const currentYear = new Date().getFullYear();
+const currentMonth = new Date().getMonth();
+
+// Helper to get week start/end dates for current month
+const getWeekDates = (weekNum: number) => {
+  const start = new Date(currentYear, currentMonth, 1 + (weekNum * 7));
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  return {
+    start: start.toISOString().split('T')[0],
+    end: end.toISOString().split('T')[0],
+  };
+};
+
+const week1 = getWeekDates(0);
+const week2 = getWeekDates(1);
+const week3 = getWeekDates(2);
+
+const demoTimesheets = [
+  {
+    id: "timesheet-1",
+    consultantId: "consultant-1",
+    projectId: "project-1",
+    weekStartDate: week1.start,
+    weekEndDate: week1.end,
+    status: "approved" as const,
+    totalHours: 45,
+    regularHours: 40,
+    overtimeHours: 5,
+    notes: "Epic ED workflow optimization",
+  },
+  {
+    id: "timesheet-2",
+    consultantId: "consultant-2",
+    projectId: "project-1",
+    weekStartDate: week1.start,
+    weekEndDate: week1.end,
+    status: "approved" as const,
+    totalHours: 42,
+    regularHours: 40,
+    overtimeHours: 2,
+    notes: "Revenue cycle training sessions",
+  },
+  {
+    id: "timesheet-3",
+    consultantId: "consultant-3",
+    projectId: "project-2",
+    weekStartDate: week1.start,
+    weekEndDate: week1.end,
+    status: "approved" as const,
+    totalHours: 40,
+    regularHours: 40,
+    overtimeHours: 0,
+    notes: "Cerner migration data validation",
+  },
+  {
+    id: "timesheet-4",
+    consultantId: "consultant-4",
+    projectId: "project-1",
+    weekStartDate: week2.start,
+    weekEndDate: week2.end,
+    status: "approved" as const,
+    totalHours: 48,
+    regularHours: 40,
+    overtimeHours: 8,
+    notes: "Surgical workflows and OR integration",
+  },
+  {
+    id: "timesheet-5",
+    consultantId: "consultant-5",
+    projectId: "project-3",
+    weekStartDate: week2.start,
+    weekEndDate: week2.end,
+    status: "approved" as const,
+    totalHours: 38,
+    regularHours: 38,
+    overtimeHours: 0,
+    notes: "System upgrades and testing",
+  },
+  {
+    id: "timesheet-6",
+    consultantId: "consultant-6",
+    projectId: "project-2",
+    weekStartDate: week3.start,
+    weekEndDate: week3.end,
+    status: "approved" as const,
+    totalHours: 44,
+    regularHours: 40,
+    overtimeHours: 4,
+    notes: "End-user training preparation",
+  },
+  {
+    id: "timesheet-7",
+    consultantId: "consultant-7",
+    projectId: "project-1",
+    weekStartDate: week3.start,
+    weekEndDate: week3.end,
+    status: "approved" as const,
+    totalHours: 40,
+    regularHours: 40,
+    overtimeHours: 0,
+    notes: "Pharmacy module configuration",
+  },
+  {
+    id: "timesheet-8",
+    consultantId: "consultant-8",
+    projectId: "project-3",
+    weekStartDate: week3.start,
+    weekEndDate: week3.end,
+    status: "approved" as const,
+    totalHours: 46,
+    regularHours: 40,
+    overtimeHours: 6,
+    notes: "Go-live support preparation",
+  },
+];
+
+// Demo Support Tickets for Ticket Resolution Rate
+const demoSupportTickets = [
+  {
+    id: "ticket-1",
+    ticketNumber: "TKT-2024-001",
+    projectId: "project-1",
+    reportedById: "user-c1",
+    assignedToId: "consultant-1",
+    title: "Epic MyChart login timeout issue",
+    description: "Users experiencing timeout after 5 minutes of inactivity",
+    category: "access" as const,
+    priority: "high" as const,
+    status: "resolved" as const,
+    resolution: "Adjusted session timeout settings from 5 to 30 minutes",
+    responseTime: 45,
+    resolutionTime: 180,
+  },
+  {
+    id: "ticket-2",
+    ticketNumber: "TKT-2024-002",
+    projectId: "project-1",
+    reportedById: "user-c2",
+    assignedToId: "consultant-2",
+    title: "Revenue cycle report formatting",
+    description: "Monthly revenue reports showing incorrect date format",
+    category: "technical" as const,
+    priority: "medium" as const,
+    status: "resolved" as const,
+    resolution: "Updated report template date format to MM/DD/YYYY",
+    responseTime: 30,
+    resolutionTime: 120,
+  },
+  {
+    id: "ticket-3",
+    ticketNumber: "TKT-2024-003",
+    projectId: "project-2",
+    reportedById: "user-c3",
+    assignedToId: "consultant-3",
+    title: "Cerner data migration validation errors",
+    description: "Patient records showing duplicate entries after migration",
+    category: "integration" as const,
+    priority: "critical" as const,
+    status: "resolved" as const,
+    resolution: "Implemented deduplication logic and re-ran migration scripts",
+    responseTime: 15,
+    resolutionTime: 480,
+  },
+  {
+    id: "ticket-4",
+    ticketNumber: "TKT-2024-004",
+    projectId: "project-1",
+    reportedById: "user-c4",
+    assignedToId: "consultant-4",
+    title: "OR scheduling conflict",
+    description: "Double-booking allowed in surgical scheduling module",
+    category: "workflow" as const,
+    priority: "high" as const,
+    status: "closed" as const,
+    resolution: "Enabled conflict detection rules and validation",
+    responseTime: 20,
+    resolutionTime: 240,
+  },
+  {
+    id: "ticket-5",
+    ticketNumber: "TKT-2024-005",
+    projectId: "project-1",
+    reportedById: "user-c5",
+    assignedToId: "consultant-1",
+    title: "ED triage form missing fields",
+    description: "Custom assessment fields not appearing in triage forms",
+    category: "technical" as const,
+    priority: "medium" as const,
+    status: "resolved" as const,
+    resolution: "Added missing fields to form builder configuration",
+    responseTime: 60,
+    resolutionTime: 90,
+  },
+  {
+    id: "ticket-6",
+    ticketNumber: "TKT-2024-006",
+    projectId: "project-3",
+    reportedById: "user-c6",
+    assignedToId: "consultant-5",
+    title: "Performance degradation on reports",
+    description: "Weekly reports taking 10+ minutes to generate",
+    category: "technical" as const,
+    priority: "high" as const,
+    status: "in_progress" as const,
+    resolution: null,
+    responseTime: 25,
+    resolutionTime: null,
+  },
+  {
+    id: "ticket-7",
+    ticketNumber: "TKT-2024-007",
+    projectId: "project-2",
+    reportedById: "user-c7",
+    assignedToId: "consultant-6",
+    title: "User access request for new department",
+    description: "Need to provision Epic access for 15 new oncology staff",
+    category: "access" as const,
+    priority: "medium" as const,
+    status: "resolved" as const,
+    resolution: "Created user accounts and assigned appropriate role templates",
+    responseTime: 35,
+    resolutionTime: 60,
+  },
+  {
+    id: "ticket-8",
+    ticketNumber: "TKT-2024-008",
+    projectId: "project-1",
+    reportedById: "user-c8",
+    assignedToId: "consultant-7",
+    title: "Pharmacy order verification issue",
+    description: "Some orders skipping pharmacist verification step",
+    category: "workflow" as const,
+    priority: "critical" as const,
+    status: "resolved" as const,
+    resolution: "Fixed order routing rules and added verification checkpoint",
+    responseTime: 10,
+    resolutionTime: 150,
+  },
+  {
+    id: "ticket-9",
+    ticketNumber: "TKT-2024-009",
+    projectId: "project-3",
+    reportedById: "user-c9",
+    assignedToId: "consultant-8",
+    title: "Training environment sync issue",
+    description: "Test data not refreshing in training environment",
+    category: "training" as const,
+    priority: "low" as const,
+    status: "open" as const,
+    resolution: null,
+    responseTime: null,
+    resolutionTime: null,
+  },
+  {
+    id: "ticket-10",
+    ticketNumber: "TKT-2024-010",
+    projectId: "project-1",
+    reportedById: "user-c10",
+    assignedToId: "consultant-1",
+    title: "Lab results interface delay",
+    description: "Lab results taking 30+ seconds to appear in patient chart",
+    category: "integration" as const,
+    priority: "high" as const,
+    status: "closed" as const,
+    resolution: "Optimized interface engine and increased polling frequency",
+    responseTime: 20,
+    resolutionTime: 360,
+  },
+];
+
 // EHR Systems Demo Data (matching actual schema)
 const demoEhrSystems = [
   {
@@ -3809,6 +4095,26 @@ export async function seedDemoData() {
     console.log("Seeding user activities...");
     for (const activity of demoUserActivities) {
       await db.insert(userActivities).values(activity).onConflictDoNothing();
+    }
+
+    console.log("Seeding timesheets for performance metrics...");
+    for (const timesheet of demoTimesheets) {
+      await db.insert(timesheets).values(timesheet).onConflictDoUpdate({
+        target: timesheets.id,
+        set: {
+          weekStartDate: timesheet.weekStartDate,
+          weekEndDate: timesheet.weekEndDate,
+          totalHours: timesheet.totalHours,
+          regularHours: timesheet.regularHours,
+          overtimeHours: timesheet.overtimeHours,
+          status: timesheet.status,
+        },
+      });
+    }
+
+    console.log("Seeding support tickets for performance metrics...");
+    for (const ticket of demoSupportTickets) {
+      await db.insert(supportTickets).values(ticket).onConflictDoNothing();
     }
 
     console.log("Seeding project team assignments...");
