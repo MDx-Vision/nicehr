@@ -143,6 +143,10 @@ describe('Authentication System', () => {
         body: { user: { id: 1, email: testUser.email, role: 'admin' } }
       }).as('loginRequest');
 
+      // Mock permission endpoints that get called after login
+      cy.intercept('GET', '/api/permissions*', { statusCode: 200, body: [] });
+      cy.intercept('GET', '/api/rbac/effective-permissions*', { statusCode: 200, body: [] });
+
       // Login first
       cy.visit('/login', { failOnStatusCode: false });
       cy.get('[data-testid="input-email"]').type(testUser.email);
