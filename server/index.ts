@@ -22,10 +22,11 @@ declare module "http" {
 // =============================================================================
 
 // Helmet.js with HIPAA-appropriate security headers
+const isDev = process.env.NODE_ENV !== 'production';
 app.use(
   helmet({
-    // Strict Content Security Policy
-    contentSecurityPolicy: {
+    // Strict Content Security Policy (relaxed in dev for Vite HMR)
+    contentSecurityPolicy: isDev ? false : {
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'"],
