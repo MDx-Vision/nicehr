@@ -1,8 +1,8 @@
 import { db } from "./db";
-import { 
-  hospitals, 
-  hospitalUnits, 
-  hospitalModules, 
+import {
+  hospitals,
+  hospitalUnits,
+  hospitalModules,
   hospitalStaff,
   users,
   consultants,
@@ -49,6 +49,7 @@ import {
   timelineForecastSnapshots,
   costVarianceSnapshots,
   raciAssignments,
+  projectTeamAssignments,
 } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 
@@ -1488,6 +1489,27 @@ const demoRaciAssignments = [
     notes: "Updates on optimization progress",
     createdBy: "user-c2",
   },
+];
+
+// Project Team Assignments - Team members assigned to projects
+const demoProjectTeamAssignments = [
+  // Project 1 team
+  { id: "team-1-1", projectId: "project-1", userId: "user-c1", customRoleName: "Project Lead", isPrimary: true },
+  { id: "team-1-2", projectId: "project-1", userId: "user-c2", customRoleName: "Clinical Analyst", isPrimary: false },
+  { id: "team-1-3", projectId: "project-1", userId: "user-c3", customRoleName: "Technical Lead", isPrimary: false },
+  { id: "team-1-4", projectId: "project-1", userId: "user-c4", customRoleName: "Training Coordinator", isPrimary: false },
+  { id: "team-1-5", projectId: "project-1", userId: "user-c5", customRoleName: "Integration Specialist", isPrimary: false },
+  { id: "team-1-6", projectId: "project-1", userId: "user-c6", customRoleName: "Data Migration Lead", isPrimary: false },
+  // Project 2 team
+  { id: "team-2-1", projectId: "project-2", userId: "user-c2", customRoleName: "Optimization Lead", isPrimary: true },
+  { id: "team-2-2", projectId: "project-2", userId: "user-c1", customRoleName: "Executive Sponsor", isPrimary: false },
+  { id: "team-2-3", projectId: "project-2", userId: "user-c5", customRoleName: "Workflow Analyst", isPrimary: false },
+  { id: "team-2-4", projectId: "project-2", userId: "user-c3", customRoleName: "Technical Support", isPrimary: false },
+  // Project 3 team
+  { id: "team-3-1", projectId: "project-3", userId: "user-c4", customRoleName: "Project Manager", isPrimary: true },
+  { id: "team-3-2", projectId: "project-3", userId: "user-c6", customRoleName: "Clinical SME", isPrimary: false },
+  { id: "team-3-3", projectId: "project-3", userId: "user-c7", customRoleName: "Patient Portal Specialist", isPrimary: false },
+  { id: "team-3-4", projectId: "project-3", userId: "user-c8", customRoleName: "Integration Engineer", isPrimary: false },
 ];
 
 const demoDocumentTypes = [
@@ -3086,6 +3108,11 @@ export async function seedDemoData() {
     console.log("Seeding project milestones...");
     for (const milestone of demoProjectMilestones) {
       await db.insert(projectMilestones).values(milestone).onConflictDoNothing();
+    }
+
+    console.log("Seeding project team assignments...");
+    for (const assignment of demoProjectTeamAssignments) {
+      await db.insert(projectTeamAssignments).values(assignment).onConflictDoNothing();
     }
 
     console.log("Seeding RACI assignments...");
