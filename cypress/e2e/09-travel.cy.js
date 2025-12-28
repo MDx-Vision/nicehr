@@ -451,17 +451,103 @@ describe('Travel Management', () => {
   });
 
   // ===========================================================================
-  // TODO: Advanced Travel Features (Require Additional Implementation)
+  // Travel Calendar
   // ===========================================================================
 
   describe('Travel Calendar', () => {
-    it.skip('TODO: Display travel calendar view', () => {});
-    it.skip('TODO: Navigate between months', () => {});
-    it.skip('TODO: View trip details on calendar', () => {});
+    it('should display travel calendar tab', () => {
+      cy.get('[data-testid="tab-calendar"]').should('be.visible');
+    });
+
+    it('should switch to calendar view', () => {
+      cy.get('[data-testid="tab-calendar"]').click();
+      cy.get('[data-testid="tab-content-calendar"]').should('be.visible');
+    });
+
+    it('should display calendar grid', () => {
+      cy.get('[data-testid="tab-calendar"]').click();
+      cy.get('[data-testid="calendar-grid"]').should('be.visible');
+    });
+
+    it('should display current month', () => {
+      cy.get('[data-testid="tab-calendar"]').click();
+      cy.get('[data-testid="calendar-month-display"]').should('be.visible');
+    });
+
+    it('should navigate to previous month', () => {
+      cy.get('[data-testid="tab-calendar"]').click();
+      cy.get('[data-testid="calendar-month-display"]').invoke('text').then((currentMonth) => {
+        cy.get('[data-testid="button-prev-month"]').click();
+        cy.get('[data-testid="calendar-month-display"]').should('not.have.text', currentMonth);
+      });
+    });
+
+    it('should navigate to next month', () => {
+      cy.get('[data-testid="tab-calendar"]').click();
+      cy.get('[data-testid="button-prev-month"]').click(); // Go back first
+      cy.get('[data-testid="calendar-month-display"]').invoke('text').then((previousMonth) => {
+        cy.get('[data-testid="button-next-month"]').click();
+        cy.get('[data-testid="calendar-month-display"]').should('not.have.text', previousMonth);
+      });
+    });
+
+    it('should display calendar day cells', () => {
+      cy.get('[data-testid="tab-calendar"]').click();
+      cy.get('[data-testid="calendar-day"]').should('have.length.at.least', 28);
+    });
   });
 
+  // ===========================================================================
+  // Travel Expenses Integration
+  // ===========================================================================
+
   describe('Travel Expenses Integration', () => {
-    it.skip('TODO: Link expenses to travel', () => {});
-    it.skip('TODO: Track travel expenses', () => {});
+    it('should display expenses tab', () => {
+      cy.get('[data-testid="tab-expenses"]').should('be.visible');
+    });
+
+    it('should switch to expenses view', () => {
+      cy.get('[data-testid="tab-expenses"]').click();
+      cy.get('[data-testid="tab-content-expenses"]').should('be.visible');
+    });
+
+    it('should display expense summary cards', () => {
+      cy.get('[data-testid="tab-expenses"]').click();
+      cy.get('[data-testid="expense-summary"]').should('be.visible');
+    });
+
+    it('should display total travel costs', () => {
+      cy.get('[data-testid="tab-expenses"]').click();
+      cy.get('[data-testid="total-travel-costs"]').should('contain', '$');
+    });
+
+    it('should display expense list section', () => {
+      cy.get('[data-testid="tab-expenses"]').click();
+      cy.get('[data-testid="expense-list"]').should('be.visible');
+    });
+
+    it('should display expense items when bookings exist', () => {
+      // Re-intercept with bookings data
+      cy.intercept('GET', '/api/travel/bookings*', {
+        statusCode: 200,
+        body: [
+          {
+            id: 'b1',
+            bookingType: 'flight',
+            status: 'confirmed',
+            airline: 'United Airlines',
+            flightNumber: 'UA1234',
+            departureDate: '2024-02-15',
+            returnDate: '2024-02-20',
+            estimatedCost: '450.00'
+          }
+        ]
+      }).as('getBookingsWithData');
+
+      cy.visit('/travel-bookings');
+      cy.wait('@getUser');
+      cy.get('[data-testid="tab-expenses"]').click();
+      cy.get('[data-testid="expense-item"]').should('have.length.at.least', 1);
+    });
   });
 });

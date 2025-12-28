@@ -42,7 +42,10 @@ import {
   Frown,
   Send,
   X,
-  FileText
+  FileText,
+  FileBarChart,
+  Download,
+  Award
 } from "lucide-react";
 import type { 
   ConsultantScorecardWithDetails,
@@ -1193,6 +1196,132 @@ function IncidentsTab() {
   );
 }
 
+// Reports Tab Component
+function ReportsTab() {
+  const { data: analytics, isLoading } = useQuery<QualityAnalytics>({
+    queryKey: ['/api/quality-analytics'],
+  });
+
+  const { data: scorecards } = useQuery<ConsultantScorecardWithDetails[]>({
+    queryKey: ['/api/consultant-scorecards'],
+  });
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-32" />
+        <Skeleton className="h-64" />
+      </div>
+    );
+  }
+
+  // Calculate certification stats from scorecards
+  const certifiedCount = scorecards?.filter(s =>
+    parseFloat(s.overallScore || '0') >= 4.0
+  ).length || 0;
+  const totalScorecards = scorecards?.length || 0;
+
+  return (
+    <div className="space-y-6">
+      {/* Compliance Summary Card */}
+      <Card data-testid="compliance-summary-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileBarChart className="h-5 w-5" />
+            Compliance Summary
+          </CardTitle>
+          <CardDescription>Overview of quality and compliance metrics</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-4" data-testid="compliance-summary-grid">
+            <div className="p-4 border rounded-lg text-center">
+              <div className="text-2xl font-bold text-primary">{analytics?.avgOverallScore || "0.0"}</div>
+              <div className="text-sm text-muted-foreground">Avg. Overall Score</div>
+            </div>
+            <div className="p-4 border rounded-lg text-center">
+              <div className="text-2xl font-bold text-green-600">{analytics?.totalCompletedSurveys || 0}</div>
+              <div className="text-sm text-muted-foreground">Surveys Completed</div>
+            </div>
+            <div className="p-4 border rounded-lg text-center">
+              <div className="text-2xl font-bold text-blue-600">{analytics?.activeIncidents || 0}</div>
+              <div className="text-sm text-muted-foreground">Active Incidents</div>
+            </div>
+            <div className="p-4 border rounded-lg text-center">
+              <div className="text-2xl font-bold text-purple-600">{analytics?.avgNpsScore || 0}</div>
+              <div className="text-sm text-muted-foreground">NPS Score</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Certification Tracking */}
+      <Card data-testid="certification-tracking-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Award className="h-5 w-5" />
+            Certification Tracking
+          </CardTitle>
+          <CardDescription>Track consultant certifications and compliance status</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div>
+                <div className="font-medium">High Performers</div>
+                <div className="text-sm text-muted-foreground">Consultants with score &gt;= 4.0</div>
+              </div>
+              <div className="text-2xl font-bold text-green-600" data-testid="certified-count">{certifiedCount}</div>
+            </div>
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div>
+                <div className="font-medium">Total Scorecards</div>
+                <div className="text-sm text-muted-foreground">All active scorecards</div>
+              </div>
+              <div className="text-2xl font-bold" data-testid="total-scorecards">{totalScorecards}</div>
+            </div>
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div>
+                <div className="font-medium">Certification Rate</div>
+                <div className="text-sm text-muted-foreground">Percentage of high performers</div>
+              </div>
+              <div className="text-2xl font-bold text-primary" data-testid="certification-rate">
+                {totalScorecards > 0 ? Math.round((certifiedCount / totalScorecards) * 100) : 0}%
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Report Generation */}
+      <Card data-testid="report-generation-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Download className="h-5 w-5" />
+            Generate Reports
+          </CardTitle>
+          <CardDescription>Generate and download compliance reports</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            <Button variant="outline" className="h-24 flex flex-col gap-2" data-testid="button-generate-summary">
+              <FileBarChart className="h-6 w-6" />
+              <span>Compliance Summary</span>
+            </Button>
+            <Button variant="outline" className="h-24 flex flex-col gap-2" data-testid="button-generate-certification">
+              <Award className="h-6 w-6" />
+              <span>Certification Report</span>
+            </Button>
+            <Button variant="outline" className="h-24 flex flex-col gap-2" data-testid="button-schedule-report">
+              <Calendar className="h-6 w-6" />
+              <span>Schedule Report</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function QualityAssurance() {
   const [activeTab, setActiveTab] = useState("scorecards");
 
@@ -1206,7 +1335,7 @@ export default function QualityAssurance() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
           <TabsTrigger value="scorecards" data-testid="tab-scorecards">
             <ClipboardList className="h-4 w-4 mr-2" />
             Scorecards
@@ -1222,6 +1351,10 @@ export default function QualityAssurance() {
           <TabsTrigger value="incidents" data-testid="tab-incidents">
             <AlertTriangle className="h-4 w-4 mr-2" />
             Incidents
+          </TabsTrigger>
+          <TabsTrigger value="reports" data-testid="tab-reports">
+            <FileBarChart className="h-4 w-4 mr-2" />
+            Reports
           </TabsTrigger>
         </TabsList>
 
@@ -1239,6 +1372,10 @@ export default function QualityAssurance() {
 
         <TabsContent value="incidents" className="mt-6">
           <IncidentsTab />
+        </TabsContent>
+
+        <TabsContent value="reports" className="mt-6" data-testid="tab-content-reports">
+          <ReportsTab />
         </TabsContent>
       </Tabs>
     </div>

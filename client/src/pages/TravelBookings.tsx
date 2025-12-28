@@ -16,8 +16,8 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { format } from "date-fns";
-import { 
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isSameMonth, isSameDay, parseISO } from "date-fns";
+import {
   Plus,
   Clock,
   CheckCircle2,
@@ -29,12 +29,14 @@ import {
   Calendar,
   Building2,
   ChevronRight,
+  ChevronLeft,
   MapPin,
   X,
   FileText,
   Route,
   Luggage,
-  Eye
+  Eye,
+  Receipt
 } from "lucide-react";
 import type { 
   Project, 
@@ -1352,6 +1354,8 @@ export default function TravelBookings() {
   const [bookingTypeFilter, setBookingTypeFilter] = useState<string>("all");
   const [bookingStatusFilter, setBookingStatusFilter] = useState<string>("all");
   const [itineraryStatusFilter, setItineraryStatusFilter] = useState<string>("all");
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [selectedCalendarTrip, setSelectedCalendarTrip] = useState<TravelBookingWithDetails | null>(null);
   const [showCreateBooking, setShowCreateBooking] = useState(false);
   const [showCreateItinerary, setShowCreateItinerary] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<TravelBookingWithDetails | null>(null);
@@ -1393,6 +1397,8 @@ export default function TravelBookings() {
         <TabsList data-testid="tabs-travel">
           <TabsTrigger value="bookings" data-testid="tab-bookings">Bookings</TabsTrigger>
           <TabsTrigger value="itineraries" data-testid="tab-itineraries">Itineraries</TabsTrigger>
+          <TabsTrigger value="calendar" data-testid="tab-calendar">Calendar</TabsTrigger>
+          <TabsTrigger value="expenses" data-testid="tab-expenses">Expenses</TabsTrigger>
         </TabsList>
 
         <TabsContent value="bookings" className="space-y-6">
@@ -1544,14 +1550,244 @@ export default function TravelBookings() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {itineraries.map(itinerary => (
-                <ItineraryCard 
-                  key={itinerary.id} 
+                <ItineraryCard
+                  key={itinerary.id}
                   itinerary={itinerary}
                   onClick={() => setSelectedItinerary(itinerary)}
                 />
               ))}
             </div>
           )}
+        </TabsContent>
+
+        {/* Calendar Tab */}
+        <TabsContent value="calendar" className="space-y-6" data-testid="tab-content-calendar">
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Travel Calendar
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCalendarMonth(subMonths(calendarMonth, 1))}
+                    data-testid="button-prev-month"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="font-medium min-w-[140px] text-center" data-testid="calendar-month-display">
+                    {format(calendarMonth, "MMMM yyyy")}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCalendarMonth(addMonths(calendarMonth, 1))}
+                    data-testid="button-next-month"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {/* Calendar Grid */}
+              <div className="grid grid-cols-7 gap-1 mb-2">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                  <div key={day} className="text-center text-sm font-medium text-muted-foreground py-2">
+                    {day}
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-1" data-testid="calendar-grid">
+                {(() => {
+                  const monthStart = startOfMonth(calendarMonth);
+                  const monthEnd = endOfMonth(calendarMonth);
+                  const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+                  const startPadding = monthStart.getDay();
+                  const cells = [];
+
+                  // Add empty cells for padding
+                  for (let i = 0; i < startPadding; i++) {
+                    cells.push(<div key={`pad-${i}`} className="h-24 border rounded-lg bg-muted/20" />);
+                  }
+
+                  // Add day cells
+                  days.forEach(day => {
+                    const dayBookings = bookings.filter(b => {
+                      const depDate = b.departureDate ? parseISO(b.departureDate) : null;
+                      const retDate = b.returnDate ? parseISO(b.returnDate) : null;
+                      if (depDate && isSameDay(day, depDate)) return true;
+                      if (retDate && isSameDay(day, retDate)) return true;
+                      return false;
+                    });
+
+                    cells.push(
+                      <div
+                        key={day.toISOString()}
+                        className={`h-24 border rounded-lg p-1 overflow-hidden hover:bg-muted/50 cursor-pointer ${
+                          isSameDay(day, new Date()) ? 'ring-2 ring-primary' : ''
+                        }`}
+                        data-testid="calendar-day"
+                        onClick={() => dayBookings.length > 0 && setSelectedCalendarTrip(dayBookings[0])}
+                      >
+                        <div className="text-sm font-medium">{format(day, 'd')}</div>
+                        <div className="space-y-1 overflow-hidden">
+                          {dayBookings.slice(0, 2).map(booking => (
+                            <div
+                              key={booking.id}
+                              className={`text-xs px-1 py-0.5 rounded truncate ${
+                                booking.bookingType === 'flight' ? 'bg-blue-100 text-blue-800' :
+                                booking.bookingType === 'hotel' ? 'bg-green-100 text-green-800' :
+                                'bg-orange-100 text-orange-800'
+                              }`}
+                              data-testid="calendar-booking-item"
+                            >
+                              {getBookingTypeIcon(booking.bookingType)} {booking.bookingType === 'flight' ? booking.flightNumber : booking.hotelName || booking.rentalCompany}
+                            </div>
+                          ))}
+                          {dayBookings.length > 2 && (
+                            <div className="text-xs text-muted-foreground">+{dayBookings.length - 2} more</div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  });
+
+                  return cells;
+                })()}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Trip Details Panel */}
+          {selectedCalendarTrip && (
+            <Card data-testid="trip-details-panel">
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="flex items-center gap-2">
+                    {getBookingTypeIcon(selectedCalendarTrip.bookingType)}
+                    Trip Details
+                  </CardTitle>
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedCalendarTrip(null)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <div className="text-sm text-muted-foreground">Type</div>
+                    <div className="font-medium">{getBookingTypeLabel(selectedCalendarTrip.bookingType)}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Dates</div>
+                    <div className="font-medium">
+                      {selectedCalendarTrip.departureDate && format(parseISO(selectedCalendarTrip.departureDate), 'MMM d, yyyy')}
+                      {selectedCalendarTrip.returnDate && ` - ${format(parseISO(selectedCalendarTrip.returnDate), 'MMM d, yyyy')}`}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Status</div>
+                    {getBookingStatusBadge(selectedCalendarTrip.status)}
+                  </div>
+                  {selectedCalendarTrip.estimatedCost && (
+                    <div>
+                      <div className="text-sm text-muted-foreground">Estimated Cost</div>
+                      <div className="font-medium">${parseFloat(selectedCalendarTrip.estimatedCost).toFixed(2)}</div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Expenses Tab */}
+        <TabsContent value="expenses" className="space-y-6" data-testid="tab-content-expenses">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Receipt className="h-5 w-5" />
+                Travel Expenses
+              </CardTitle>
+              <CardDescription>Track and manage expenses linked to travel bookings</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Expense Summary */}
+              <div className="grid gap-4 md:grid-cols-3 mb-6" data-testid="expense-summary">
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-sm text-muted-foreground">Total Travel Costs</div>
+                    <div className="text-2xl font-bold" data-testid="total-travel-costs">
+                      ${bookings.reduce((sum, b) => sum + parseFloat(b.estimatedCost || '0'), 0).toFixed(2)}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-sm text-muted-foreground">Flights</div>
+                    <div className="text-2xl font-bold">
+                      ${bookings.filter(b => b.bookingType === 'flight').reduce((sum, b) => sum + parseFloat(b.estimatedCost || '0'), 0).toFixed(2)}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-sm text-muted-foreground">Hotels & Cars</div>
+                    <div className="text-2xl font-bold">
+                      ${bookings.filter(b => b.bookingType !== 'flight').reduce((sum, b) => sum + parseFloat(b.estimatedCost || '0'), 0).toFixed(2)}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Expense List */}
+              <div className="space-y-4" data-testid="expense-list">
+                <h3 className="font-semibold">Booking Expenses</h3>
+                {bookings.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No travel expenses to display
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {bookings.map(booking => (
+                      <div
+                        key={booking.id}
+                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50"
+                        data-testid="expense-item"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="p-2 bg-muted rounded-lg">
+                            {getBookingTypeIcon(booking.bookingType)}
+                          </div>
+                          <div>
+                            <div className="font-medium">
+                              {booking.bookingType === 'flight' ? `${booking.airline} - ${booking.flightNumber}` :
+                               booking.bookingType === 'hotel' ? booking.hotelName :
+                               `${booking.rentalCompany} - ${booking.vehicleType}`}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {booking.departureDate && format(parseISO(booking.departureDate), 'MMM d, yyyy')}
+                              {booking.returnDate && ` - ${format(parseISO(booking.returnDate), 'MMM d, yyyy')}`}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold" data-testid="expense-amount">
+                            ${parseFloat(booking.estimatedCost || '0').toFixed(2)}
+                          </div>
+                          {getBookingStatusBadge(booking.status)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 

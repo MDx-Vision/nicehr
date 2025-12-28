@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { format, startOfWeek, endOfWeek, eachDayOfInterval, addWeeks, subWeeks, differenceInMinutes, differenceInSeconds } from "date-fns";
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, addWeeks, subWeeks, addMonths, subMonths, differenceInMinutes, differenceInSeconds } from "date-fns";
 import { Calendar, Clock, Plus, FileText, Download, Check, X, AlertCircle, ChevronLeft, ChevronRight, Edit, Trash2, Play, Square, Coffee, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -240,6 +240,9 @@ export default function Timesheets() {
   // Current week for weekly view
   const [currentWeek, setCurrentWeek] = useState(new Date());
 
+  // Current month for monthly view
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+
   // Modal state
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -446,6 +449,32 @@ export default function Timesheets() {
   });
 
   const weeklyTotalHours = weeklyTimesheets.reduce((sum, ts) => sum + ts.hours, 0);
+
+  // Calculate monthly summary
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(currentMonth);
+
+  const monthlyTimesheets = timesheets.filter(ts => {
+    const tsDate = new Date(ts.date);
+    return tsDate >= monthStart && tsDate <= monthEnd;
+  });
+
+  const monthlyTotalHours = monthlyTimesheets.reduce((sum, ts) => sum + ts.hours, 0);
+
+  // Calculate monthly project breakdown
+  const monthlyProjectBreakdown: ProjectBreakdown[] = [];
+  monthlyTimesheets.forEach(ts => {
+    const existing = monthlyProjectBreakdown.find(pb => pb.projectId === ts.projectId);
+    if (existing) {
+      existing.totalHours += ts.hours;
+    } else {
+      monthlyProjectBreakdown.push({
+        projectId: ts.projectId,
+        projectName: ts.projectName,
+        totalHours: ts.hours
+      });
+    }
+  });
 
   // Calculate project breakdown
   const projectBreakdown: ProjectBreakdown[] = [];
@@ -724,6 +753,7 @@ export default function Timesheets() {
         <TabsList>
           <TabsTrigger value="list">Timesheet List</TabsTrigger>
           <TabsTrigger value="weekly-summary" data-testid="tab-weekly-summary">Weekly Summary</TabsTrigger>
+          <TabsTrigger value="monthly-summary" data-testid="tab-monthly-summary">Monthly Summary</TabsTrigger>
         </TabsList>
 
         {/* List Tab */}
@@ -972,6 +1002,54 @@ export default function Timesheets() {
                     </div>
                   );
                 })}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Monthly Summary Tab */}
+        <TabsContent value="monthly-summary" className="space-y-4" data-testid="tab-content-monthly-summary">
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle>Monthly Summary</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} data-testid="button-prev-month">
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="font-medium" data-testid="text-current-month">
+                    {format(currentMonth, "MMMM yyyy")}
+                  </span>
+                  <Button variant="outline" size="sm" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} data-testid="button-next-month">
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-6">
+                <div className="text-4xl font-bold" data-testid="monthly-hours-total">{monthlyTotalHours}h</div>
+                <div className="text-muted-foreground">Total hours this month</div>
+              </div>
+
+              {/* Monthly Project Breakdown */}
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold mb-4" data-testid="monthly-project-breakdown-title">Hours by Project</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="monthly-project-breakdown">
+                  {monthlyProjectBreakdown.length > 0 ? (
+                    monthlyProjectBreakdown.map(pb => (
+                      <div key={pb.projectId} className="p-4 border rounded-lg" data-testid="project-breakdown-item">
+                        <div className="font-medium">{pb.projectName}</div>
+                        <div className="text-2xl font-bold">{pb.totalHours}h</div>
+                        <div className="text-sm text-muted-foreground">
+                          {monthlyTotalHours > 0 ? Math.round((pb.totalHours / monthlyTotalHours) * 100) : 0}% of total
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-muted-foreground col-span-full">No hours logged this month</div>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>

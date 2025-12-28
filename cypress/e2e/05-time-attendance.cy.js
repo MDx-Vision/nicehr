@@ -610,11 +610,88 @@ describe('Time & Attendance', () => {
   });
 
   // ===========================================================================
-  // TODO: Monthly Summary (Require Additional Implementation)
+  // Monthly Summary
   // ===========================================================================
 
   describe('Monthly Summary', () => {
-    it.skip('TODO: Monthly summary view', () => {});
-    it.skip('TODO: Monthly hours by project breakdown', () => {});
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: testUser
+      }).as('getUser');
+
+      cy.intercept('GET', '/api/projects', {
+        statusCode: 200,
+        body: []
+      }).as('getProjects');
+
+      cy.intercept('GET', '/api/consultants', {
+        statusCode: 200,
+        body: []
+      }).as('getConsultants');
+
+      cy.intercept('GET', '/api/timesheets', {
+        statusCode: 200,
+        body: []
+      }).as('getTimesheets');
+
+      cy.intercept('GET', '/api/timesheets/*/entries', {
+        statusCode: 200,
+        body: []
+      }).as('getEntries');
+
+      cy.visit('/timesheets');
+      cy.wait('@getUser');
+    });
+
+    it('should display monthly summary tab', () => {
+      cy.get('[data-testid="tab-monthly-summary"]').should('be.visible');
+    });
+
+    it('should switch to monthly summary view', () => {
+      cy.get('[data-testid="tab-monthly-summary"]').click();
+      cy.get('[data-testid="tab-content-monthly-summary"]').should('be.visible');
+    });
+
+    it('should display current month name', () => {
+      cy.get('[data-testid="tab-monthly-summary"]').click();
+      cy.get('[data-testid="text-current-month"]').should('be.visible');
+    });
+
+    it('should display monthly hours total', () => {
+      cy.get('[data-testid="tab-monthly-summary"]').click();
+      cy.get('[data-testid="monthly-hours-total"]').should('contain', 'h');
+    });
+
+    it('should navigate to previous month', () => {
+      cy.get('[data-testid="tab-monthly-summary"]').click();
+      cy.get('[data-testid="text-current-month"]').invoke('text').then((currentMonth) => {
+        cy.get('[data-testid="button-prev-month"]').click();
+        cy.get('[data-testid="text-current-month"]').should('not.have.text', currentMonth);
+      });
+    });
+
+    it('should navigate to next month', () => {
+      cy.get('[data-testid="tab-monthly-summary"]').click();
+      cy.get('[data-testid="button-prev-month"]').click(); // Go back first
+      cy.get('[data-testid="text-current-month"]').invoke('text').then((previousMonth) => {
+        cy.get('[data-testid="button-next-month"]').click();
+        cy.get('[data-testid="text-current-month"]').should('not.have.text', previousMonth);
+      });
+    });
+
+    it('should display project breakdown section', () => {
+      cy.get('[data-testid="tab-monthly-summary"]').click();
+      cy.get('[data-testid="monthly-project-breakdown-title"]').should('contain', 'Hours by Project');
+    });
+
+    it('should display monthly project breakdown grid', () => {
+      cy.get('[data-testid="tab-monthly-summary"]').click();
+      cy.get('[data-testid="monthly-project-breakdown"]').should('be.visible');
+    });
   });
 });

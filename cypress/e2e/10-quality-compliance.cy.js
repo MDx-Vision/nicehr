@@ -455,15 +455,135 @@ describe('Quality & Compliance', () => {
   // TODO: Advanced Compliance Features (Require Additional Implementation)
   // ===========================================================================
 
+  // ===========================================================================
+  // Quality Assurance Page Tests (different page from Compliance Center)
+  // ===========================================================================
+
   describe('Consultant Scorecards', () => {
-    it.skip('TODO: Display scorecards list', () => {});
-    it.skip('TODO: Rate technical skills', () => {});
-    it.skip('TODO: Rate communication skills', () => {});
+    beforeEach(() => {
+      cy.visit('/quality-assurance');
+      cy.wait('@getUser');
+    });
+
+    it('should display scorecards tab', () => {
+      cy.get('[data-testid="tab-scorecards"]').should('be.visible');
+    });
+
+    it('should display scorecards list when clicked', () => {
+      cy.get('[data-testid="tab-scorecards"]').click();
+      cy.get('[data-testid="tab-scorecards"]').should('have.attr', 'data-state', 'active');
+    });
+
+    it('should display technical skills score in scorecard details', () => {
+      cy.intercept('GET', '/api/consultant-scorecards', {
+        statusCode: 200,
+        body: [
+          {
+            id: 'sc-1',
+            consultantId: 'c1',
+            periodStart: '2024-01-01',
+            periodEnd: '2024-01-31',
+            status: 'completed',
+            overallScore: '4.5',
+            qualityScore: '4.5',
+            punctualityScore: '4.0',
+            communicationScore: '4.5',
+            technicalScore: '4.8',
+            teamworkScore: '4.2',
+            consultant: { id: 'c1', user: { firstName: 'John', lastName: 'Doe' } }
+          }
+        ]
+      }).as('getScorecards');
+
+      cy.visit('/quality-assurance');
+      cy.wait('@getUser');
+      cy.get('[data-testid="tab-scorecards"]').click();
+      cy.wait('@getScorecards');
+      cy.get('[data-testid="scorecard-card-sc-1"]').click();
+      cy.contains('Technical Score').should('be.visible');
+    });
+
+    it('should display communication skills score in scorecard details', () => {
+      cy.intercept('GET', '/api/consultant-scorecards', {
+        statusCode: 200,
+        body: [
+          {
+            id: 'sc-1',
+            consultantId: 'c1',
+            periodStart: '2024-01-01',
+            periodEnd: '2024-01-31',
+            status: 'completed',
+            overallScore: '4.5',
+            qualityScore: '4.5',
+            punctualityScore: '4.0',
+            communicationScore: '4.5',
+            technicalScore: '4.8',
+            teamworkScore: '4.2',
+            consultant: { id: 'c1', user: { firstName: 'John', lastName: 'Doe' } }
+          }
+        ]
+      }).as('getScorecards');
+
+      cy.visit('/quality-assurance');
+      cy.wait('@getUser');
+      cy.get('[data-testid="tab-scorecards"]').click();
+      cy.wait('@getScorecards');
+      cy.get('[data-testid="scorecard-card-sc-1"]').click();
+      cy.contains('Communication Score').should('be.visible');
+    });
   });
 
   describe('Compliance Reports', () => {
-    it.skip('TODO: Generate compliance summary', () => {});
-    it.skip('TODO: Certification tracking report', () => {});
-    it.skip('TODO: Schedule compliance reports', () => {});
+    beforeEach(() => {
+      cy.visit('/quality-assurance');
+      cy.wait('@getUser');
+    });
+
+    it('should display reports tab', () => {
+      cy.get('[data-testid="tab-reports"]').should('be.visible');
+    });
+
+    it('should switch to reports view', () => {
+      cy.get('[data-testid="tab-reports"]').click();
+      cy.get('[data-testid="tab-content-reports"]').should('be.visible');
+    });
+
+    it('should display compliance summary card', () => {
+      cy.get('[data-testid="tab-reports"]').click();
+      cy.get('[data-testid="compliance-summary-card"]').should('be.visible');
+    });
+
+    it('should display compliance summary grid', () => {
+      cy.get('[data-testid="tab-reports"]').click();
+      cy.get('[data-testid="compliance-summary-grid"]').should('be.visible');
+    });
+
+    it('should display certification tracking card', () => {
+      cy.get('[data-testid="tab-reports"]').click();
+      cy.get('[data-testid="certification-tracking-card"]').should('be.visible');
+    });
+
+    it('should display report generation card', () => {
+      cy.get('[data-testid="tab-reports"]').click();
+      cy.get('[data-testid="report-generation-card"]').should('be.visible');
+    });
+
+    it('should have generate summary button', () => {
+      cy.get('[data-testid="tab-reports"]').click();
+      cy.get('[data-testid="report-generation-card"]').scrollIntoView();
+      cy.get('[data-testid="button-generate-summary"]').should('be.visible');
+    });
+
+    it('should have generate certification report button', () => {
+      cy.get('[data-testid="tab-reports"]').click();
+      cy.get('[data-testid="report-generation-card"]').scrollIntoView();
+      cy.get('[data-testid="button-generate-certification"]').should('be.visible');
+    });
+
+    it('should have schedule report button', () => {
+      cy.get('[data-testid="tab-reports"]').click();
+      cy.get('[data-testid="report-generation-card"]').scrollIntoView();
+      cy.get('[data-testid="button-schedule-report"]').should('be.visible');
+    });
   });
 });
