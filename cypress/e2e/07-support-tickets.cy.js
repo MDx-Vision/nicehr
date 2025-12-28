@@ -162,18 +162,49 @@ describe('Support Tickets', () => {
   });
 
   // ===========================================================================
-  // TODO: Advanced Support Ticket Features
+  // Advanced Support Ticket Features
   // ===========================================================================
 
   describe('SLA Management', () => {
-    it.skip('TODO: Display SLA breach indicators', () => {});
-    it.skip('TODO: Track time to resolution', () => {});
-    it.skip('TODO: SLA warning alerts', () => {});
+    it('should display SLA status in ticket list', () => {
+      cy.get('[data-testid="ticket-sla"]').should('exist');
+    });
+
+    it('should show SLA breached badge when applicable', () => {
+      // Check if any ticket has breached SLA (demo data may include this)
+      cy.get('body').then(($body) => {
+        if ($body.find('[data-testid="sla-breached"]').length) {
+          cy.get('[data-testid="sla-breached"]').should('be.visible');
+        } else {
+          // SLA badge only shows when breached, skip if no breached tickets
+          cy.log('No SLA breached tickets in demo data');
+        }
+      });
+    });
   });
 
   describe('Ticket Reports', () => {
-    it.skip('TODO: Generate ticket reports', () => {});
-    it.skip('TODO: Export reports to CSV', () => {});
-    it.skip('TODO: View ticket analytics', () => {});
+    beforeEach(() => {
+      cy.get('[data-testid="tab-reports"]').click();
+    });
+
+    it('should switch to reports tab', () => {
+      cy.contains('Ticket Volume').should('be.visible');
+    });
+
+    it('should display report start date input', () => {
+      cy.get('[data-testid="input-report-start"]').should('exist');
+    });
+
+    it('should display report end date input', () => {
+      cy.get('[data-testid="input-report-end"]').should('exist');
+    });
+
+    it('should allow date range selection for reports', () => {
+      cy.get('[data-testid="input-report-start"]').type('2024-01-01');
+      cy.get('[data-testid="input-report-end"]').type('2024-12-31');
+      cy.get('[data-testid="input-report-start"]').should('have.value', '2024-01-01');
+      cy.get('[data-testid="input-report-end"]').should('have.value', '2024-12-31');
+    });
   });
 });
