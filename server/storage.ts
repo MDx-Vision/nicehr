@@ -649,6 +649,9 @@ export interface IStorage {
 
   // Dashboard stats
   getDashboardStats(): Promise<DashboardStats>;
+  getDashboardTasks(userId: string, role: string): Promise<{ id: string; title: string; priority: string; status: string; dueDate: string | null; projectId: string; projectName?: string }[]>;
+  getDashboardCalendarEvents(userId: string, role: string): Promise<{ id: string; title: string; date: string; type: 'milestone' | 'event'; projectId?: string; projectName?: string }[]>;
+  completeDashboardTask(taskId: string): Promise<ProjectTask | undefined>;
 
   // Directory operations
   searchConsultantsDirectory(params: DirectorySearchParams): Promise<ConsultantDirectoryResult>;
@@ -2407,6 +2410,169 @@ export class DatabaseStorage implements IStorage {
       pendingDocuments: Number(pendingDocCount?.count || 0),
       totalSavings: savingsSum?.total || "0",
     };
+  }
+
+  async getDashboardTasks(userId: string, role: string): Promise<{ id: string; title: string; priority: string; status: string; dueDate: string | null; projectId: string; projectName?: string }[]> {
+    // For admins, get all tasks from active projects
+    // For consultants, get tasks assigned to them
+    let tasksQuery;
+
+    if (role === 'admin') {
+      // Get all tasks from active projects
+      tasksQuery = await db
+        .select({
+          id: projectTasks.id,
+          title: projectTasks.title,
+          priority: projectTasks.priority,
+          status: projectTasks.status,
+          dueDate: projectTasks.dueDate,
+          projectId: projectTasks.projectId,
+          projectName: projects.name,
+        })
+        .from(projectTasks)
+        .leftJoin(projects, eq(projectTasks.projectId, projects.id))
+        .where(eq(projects.status, 'active'))
+        .orderBy(asc(projectTasks.dueDate))
+        .limit(20);
+    } else {
+      // Get tasks assigned to this user
+      tasksQuery = await db
+        .select({
+          id: projectTasks.id,
+          title: projectTasks.title,
+          priority: projectTasks.priority,
+          status: projectTasks.status,
+          dueDate: projectTasks.dueDate,
+          projectId: projectTasks.projectId,
+          projectName: projects.name,
+        })
+        .from(projectTasks)
+        .leftJoin(projects, eq(projectTasks.projectId, projects.id))
+        .where(eq(projectTasks.assignedTo, userId))
+        .orderBy(asc(projectTasks.dueDate))
+        .limit(20);
+    }
+
+    return tasksQuery.map(task => ({
+      id: task.id,
+      title: task.title,
+      priority: task.priority,
+      status: task.status,
+      dueDate: task.dueDate,
+      projectId: task.projectId,
+      projectName: task.projectName || undefined,
+    }));
+  }
+
+  async getDashboardCalendarEvents(userId: string, role: string): Promise<{ id: string; title: string; date: string; type: 'milestone' | 'event'; projectId?: string; projectName?: string }[]> {
+    const events: { id: string; title: string; date: string; type: 'milestone' | 'event'; projectId?: string; projectName?: string }[] = [];
+
+    // Get milestones from active projects
+    const milestonesQuery = role === 'admin'
+      ? db
+          .select({
+            id: projectMilestones.id,
+            title: projectMilestones.title,
+            dueDate: projectMilestones.dueDate,
+            projectId: projectMilestones.projectId,
+            projectName: projects.name,
+          })
+          .from(projectMilestones)
+          .leftJoin(projects, eq(projectMilestones.projectId, projects.id))
+          .where(eq(projects.status, 'active'))
+          .orderBy(asc(projectMilestones.dueDate))
+          .limit(10)
+      : db
+          .select({
+            id: projectMilestones.id,
+            title: projectMilestones.title,
+            dueDate: projectMilestones.dueDate,
+            projectId: projectMilestones.projectId,
+            projectName: projects.name,
+          })
+          .from(projectMilestones)
+          .leftJoin(projects, eq(projectMilestones.projectId, projects.id))
+          .innerJoin(scheduleAssignments, eq(scheduleAssignments.scheduleId, projectSchedules.id))
+          .innerJoin(projectSchedules, eq(projectSchedules.projectId, projects.id))
+          .innerJoin(consultants, eq(scheduleAssignments.consultantId, consultants.id))
+          .where(eq(consultants.userId, userId))
+          .orderBy(asc(projectMilestones.dueDate))
+          .limit(10);
+
+    const milestones = await milestonesQuery;
+
+    for (const m of milestones) {
+      events.push({
+        id: m.id,
+        title: m.title,
+        date: m.dueDate,
+        type: 'milestone',
+        projectId: m.projectId,
+        projectName: m.projectName || undefined,
+      });
+    }
+
+    // Get upcoming schedule events (project schedules)
+    const schedulesQuery = role === 'admin'
+      ? db
+          .select({
+            id: projectSchedules.id,
+            scheduleDate: projectSchedules.scheduleDate,
+            shiftType: projectSchedules.shiftType,
+            projectId: projectSchedules.projectId,
+            projectName: projects.name,
+          })
+          .from(projectSchedules)
+          .leftJoin(projects, eq(projectSchedules.projectId, projects.id))
+          .where(eq(projects.status, 'active'))
+          .orderBy(asc(projectSchedules.scheduleDate))
+          .limit(10)
+      : db
+          .select({
+            id: projectSchedules.id,
+            scheduleDate: projectSchedules.scheduleDate,
+            shiftType: projectSchedules.shiftType,
+            projectId: projectSchedules.projectId,
+            projectName: projects.name,
+          })
+          .from(projectSchedules)
+          .leftJoin(projects, eq(projectSchedules.projectId, projects.id))
+          .innerJoin(scheduleAssignments, eq(scheduleAssignments.scheduleId, projectSchedules.id))
+          .innerJoin(consultants, eq(scheduleAssignments.consultantId, consultants.id))
+          .where(eq(consultants.userId, userId))
+          .orderBy(asc(projectSchedules.scheduleDate))
+          .limit(10);
+
+    const schedules = await schedulesQuery;
+
+    for (const s of schedules) {
+      events.push({
+        id: s.id,
+        title: `${s.projectName || 'Project'} - ${s.shiftType} shift`,
+        date: s.scheduleDate,
+        type: 'event',
+        projectId: s.projectId,
+        projectName: s.projectName || undefined,
+      });
+    }
+
+    // Sort all events by date
+    events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    return events.slice(0, 20);
+  }
+
+  async completeDashboardTask(taskId: string): Promise<ProjectTask | undefined> {
+    const [updated] = await db
+      .update(projectTasks)
+      .set({
+        status: 'completed',
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(projectTasks.id, taskId))
+      .returning();
+    return updated;
   }
 
   // Directory operations

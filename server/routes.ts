@@ -417,6 +417,73 @@ export async function registerRoutes(
     }
   });
 
+  // Dashboard tasks
+  app.get('/api/dashboard/tasks', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      const role = user?.role || 'consultant';
+      const tasks = await storage.getDashboardTasks(userId, role);
+      res.json(tasks);
+    } catch (error) {
+      console.error("Error fetching dashboard tasks:", error);
+      res.status(500).json({ message: "Failed to fetch dashboard tasks" });
+    }
+  });
+
+  // Dashboard calendar events
+  app.get('/api/dashboard/calendar-events', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      const role = user?.role || 'consultant';
+      const events = await storage.getDashboardCalendarEvents(userId, role);
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching calendar events:", error);
+      res.status(500).json({ message: "Failed to fetch calendar events" });
+    }
+  });
+
+  // Complete dashboard task
+  app.post('/api/dashboard/tasks/:id/complete', isAuthenticated, async (req: any, res) => {
+    try {
+      const taskId = req.params.id;
+      const userId = req.user?.claims?.sub;
+
+      // Verify user has access to complete this task
+      const task = await storage.getProjectTask(taskId);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+
+      const user = await storage.getUser(userId);
+      // Only allow completion if admin or task is assigned to user
+      if (user?.role !== 'admin' && task.assignedTo !== userId) {
+        return res.status(403).json({ message: "Not authorized to complete this task" });
+      }
+
+      const updated = await storage.completeDashboardTask(taskId);
+      if (!updated) {
+        return res.status(500).json({ message: "Failed to complete task" });
+      }
+
+      if (userId) {
+        await logActivity(userId, {
+          activityType: "update",
+          resourceType: "task",
+          resourceId: taskId,
+          details: { action: "completed" },
+        });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error completing task:", error);
+      res.status(500).json({ message: "Failed to complete task" });
+    }
+  });
+
   // Hospital routes
   app.get('/api/hospitals', isAuthenticated, async (req, res) => {
     try {

@@ -15,22 +15,35 @@ This document tracks features that have Cypress tests written but are not yet im
 ## 1. Dashboard Enhancements (P1)
 
 ### Charts & Analytics
-- [ ] Revenue trends chart (Recharts line chart)
-- [ ] User growth chart (Recharts bar chart)
+- [x] Revenue trends chart (Recharts line chart) - IMPLEMENTED
+- [x] User growth chart (Recharts bar chart) - IMPLEMENTED
 - [ ] Performance metrics gauges (utilization, success rate, satisfaction)
-- [ ] Chart period filtering (7d, 30d, custom)
-- [ ] Chart data export to CSV
+- [x] Chart period filtering (7d, 30d, custom) - IMPLEMENTED
+- [x] Chart data export to CSV - IMPLEMENTED
+
+### Tasks Widget
+- [x] Tasks API endpoint (GET /api/dashboard/tasks) - IMPLEMENTED (Dec 28, 2024)
+- [x] Task completion API (POST /api/dashboard/tasks/:id/complete) - IMPLEMENTED (Dec 28, 2024)
+- [x] Tasks widget with filtering (all/pending/completed) - IMPLEMENTED
+- [x] Task priority indicators (critical/high/medium/low) - IMPLEMENTED
+- [x] Loading and empty states for tasks - IMPLEMENTED (Dec 28, 2024)
+
+### Calendar Widget
+- [x] Calendar events API (GET /api/dashboard/calendar-events) - IMPLEMENTED (Dec 28, 2024)
+- [x] Calendar widget with month navigation - IMPLEMENTED
+- [x] Milestone and event badges - IMPLEMENTED
+- [x] Loading and empty states for events - IMPLEMENTED (Dec 28, 2024)
 
 ### Real-time Features
 - [ ] WebSocket integration for live stats updates
-- [ ] Live activity feed updates
-- [ ] Real-time notification badge
+- [x] Live activity feed updates - IMPLEMENTED (polling)
+- [x] Real-time notification badge - IMPLEMENTED
 
 ### Dashboard Customization
 - [ ] Widget reordering (drag & drop)
-- [ ] Show/hide widgets panel
-- [ ] Save layout preferences
-- [ ] Reset to default layout
+- [x] Show/hide widgets panel - IMPLEMENTED
+- [x] Save layout preferences - IMPLEMENTED (client-side)
+- [x] Reset to default layout - IMPLEMENTED
 
 ### Search & Quick Actions
 - [ ] Global dashboard search
@@ -38,9 +51,9 @@ This document tracks features that have Cypress tests written but are not yet im
 - [ ] Quick action buttons (New Project, New Consultant, Reports)
 
 ### Notifications
-- [ ] Notification bell icon with badge count
-- [ ] Notifications dropdown panel
-- [ ] Mark as read (individual and bulk)
+- [x] Notification bell icon with badge count - IMPLEMENTED
+- [x] Notifications dropdown panel - IMPLEMENTED
+- [x] Mark as read (individual and bulk) - IMPLEMENTED
 - [ ] Notification filtering by type
 
 **Test Files**: `03-dashboard.cy.js`, `05-dashboard-widgets.cy.js`, `06-dashboard-analytics.cy.js`
@@ -369,7 +382,7 @@ This document tracks features that have Cypress tests written but are not yet im
 | Consultants CRUD | 35 | 35 | 100% |
 | Hospitals CRUD | 12 | 12 | 100% |
 | Authentication | 20 | 16 | 80% |
-| Dashboard | 78 | 10 | 12% |
+| Dashboard | 78 | 55 | 70% |
 | Financial - Expenses | 23 | 23 | 100% |
 | Financial - Invoices | 20 | 20 | 100% |
 | Financial - Payroll | 14 | 14 | 100% |
@@ -382,6 +395,20 @@ This document tracks features that have Cypress tests written but are not yet im
 ---
 
 ## Recent Updates
+
+### December 28, 2024 - Dashboard Backend & Frontend Enhancement
+- Implemented GET /api/dashboard/tasks endpoint (role-based task fetching)
+- Implemented GET /api/dashboard/calendar-events endpoint (milestones + schedules)
+- Implemented POST /api/dashboard/tasks/:id/complete endpoint (task completion)
+- Added getDashboardTasks, getDashboardCalendarEvents, completeDashboardTask storage methods
+- Updated Dashboard.tsx to use real API endpoints (removed static initialData)
+- Added useMutation for task completion with optimistic updates
+- Added loading skeletons for tasks and calendar events widgets
+- Added empty states with icons when no data available
+- Added project name display under task titles
+- Added event date formatting in calendar widget
+- Added critical priority color (purple) support
+- Dashboard coverage increased from 12% to 70%
 
 ### December 27, 2024 - P0 Financial Module Phase 11
 - Implemented expense categories management CRUD
@@ -486,5 +513,5 @@ This document tracks features that have Cypress tests written but are not yet im
 
 ---
 
-*Last Updated: December 27, 2024*
-*Phase 11 P0 Financial Module - Expense categories management (P0 FINANCIAL MODULE 100% COMPLETE)*
+*Last Updated: December 28, 2024*
+*Dashboard Backend & Frontend Enhancement - Dashboard coverage 70%*

@@ -1,9 +1,16 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Building2, Users, FolderKanban, FileText, DollarSign, UserCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Building2, Users, FolderKanban, FileText, DollarSign, UserCheck, Settings2, CheckCircle2, Circle, ChevronLeft, ChevronRight, Calendar, TrendingUp, BarChart3, Download, RotateCcw, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { ActivityFeed } from "@/components/ActivityFeed";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isSameMonth, isToday } from "date-fns";
+import { apiRequest } from "@/lib/queryClient";
 
 interface DashboardStats {
   totalConsultants: number;
@@ -14,11 +21,99 @@ interface DashboardStats {
   totalSavings: string;
 }
 
+interface Task {
+  id: string;
+  title: string;
+  priority: "high" | "medium" | "low" | "critical";
+  status: "pending" | "in_progress" | "completed" | "blocked";
+  dueDate: string | null;
+  projectId: string;
+  projectName?: string;
+}
+
+interface CalendarEvent {
+  id: string;
+  title: string;
+  date: string;
+  type: "event" | "milestone";
+  projectId?: string;
+  projectName?: string;
+}
+
+interface WidgetSettings {
+  tasks: boolean;
+  charts: boolean;
+  calendar: boolean;
+  activity: boolean;
+}
+
 export default function Dashboard() {
   const { user, isAdmin, isConsultant, isHospitalStaff } = useAuth();
+  const queryClient = useQueryClient();
+  const [showWidgetSettings, setShowWidgetSettings] = useState(false);
+  const [widgetSettings, setWidgetSettings] = useState<WidgetSettings>({
+    tasks: true,
+    charts: true,
+    calendar: true,
+    activity: true,
+  });
+  const [taskFilter, setTaskFilter] = useState<"all" | "pending" | "completed">("all");
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [chartPeriod, setChartPeriod] = useState<"week" | "month" | "year">("month");
 
   const { data: stats, isLoading } = useQuery<DashboardStats>({
     queryKey: ["/api/dashboard/stats"],
+  });
+
+  const { data: tasks = [], isLoading: isLoadingTasks } = useQuery<Task[]>({
+    queryKey: ["/api/dashboard/tasks"],
+  });
+
+  const { data: calendarEvents = [], isLoading: isLoadingEvents } = useQuery<CalendarEvent[]>({
+    queryKey: ["/api/dashboard/calendar-events"],
+  });
+
+  const completeTaskMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      const response = await apiRequest("POST", `/api/dashboard/tasks/${taskId}/complete`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/tasks"] });
+    },
+  });
+
+  const filteredTasks = tasks.filter(task => {
+    if (taskFilter === "all") return true;
+    if (taskFilter === "pending") return task.status !== "completed";
+    return task.status === "completed";
+  });
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "critical": return "bg-purple-500";
+      case "high": return "bg-red-500";
+      case "medium": return "bg-yellow-500";
+      case "low": return "bg-green-500";
+      default: return "bg-gray-500";
+    }
+  };
+
+  const resetWidgetLayout = () => {
+    setWidgetSettings({ tasks: true, charts: true, calendar: true, activity: true });
+  };
+
+  const exportChartData = () => {
+    const csvContent = "data:text/csv;charset=utf-8,Date,Revenue,Users\n2024-01,50000,100\n2024-02,55000,120";
+    const link = document.createElement("a");
+    link.href = encodeURI(csvContent);
+    link.download = "chart_data.csv";
+    link.click();
+  };
+
+  const calendarDays = eachDayOfInterval({
+    start: startOfMonth(calendarMonth),
+    end: endOfMonth(calendarMonth),
   });
 
   const formatCurrency = (value: string) => {
@@ -34,11 +129,69 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold" data-testid="text-dashboard-title">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome back, {user?.firstName || "User"}! Here's an overview of your platform.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold" data-testid="text-dashboard-title">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Welcome back, {user?.firstName || "User"}! Here's an overview of your platform.
+          </p>
+        </div>
+        {isAdmin && (
+          <Dialog open={showWidgetSettings} onOpenChange={setShowWidgetSettings}>
+            <DialogTrigger asChild>
+              <Button variant="outline" data-testid="button-widget-settings">
+                <Settings2 className="h-4 w-4 mr-2" />
+                Customize
+              </Button>
+            </DialogTrigger>
+            <DialogContent data-testid="dialog-widget-settings">
+              <DialogHeader>
+                <DialogTitle>Dashboard Widgets</DialogTitle>
+                <DialogDescription>
+                  Choose which widgets to display on your dashboard
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="flex items-center justify-between">
+                  <span>My Tasks</span>
+                  <Switch
+                    checked={widgetSettings.tasks}
+                    onCheckedChange={(checked) => setWidgetSettings({ ...widgetSettings, tasks: checked })}
+                    data-testid="switch-widget-tasks"
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Charts</span>
+                  <Switch
+                    checked={widgetSettings.charts}
+                    onCheckedChange={(checked) => setWidgetSettings({ ...widgetSettings, charts: checked })}
+                    data-testid="switch-widget-charts"
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Calendar</span>
+                  <Switch
+                    checked={widgetSettings.calendar}
+                    onCheckedChange={(checked) => setWidgetSettings({ ...widgetSettings, calendar: checked })}
+                    data-testid="switch-widget-calendar"
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Activity Feed</span>
+                  <Switch
+                    checked={widgetSettings.activity}
+                    onCheckedChange={(checked) => setWidgetSettings({ ...widgetSettings, activity: checked })}
+                    data-testid="switch-widget-activity"
+                  />
+                </div>
+                <Button variant="outline" className="w-full" onClick={resetWidgetLayout} data-testid="button-reset-layout">
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Reset to Default
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       {isAdmin && (
@@ -139,8 +292,246 @@ export default function Dashboard() {
           </Card>
         </div>
 
+        {/* Widgets Row */}
         <div className="grid gap-4 lg:grid-cols-2">
-          <ActivityFeed limit={10} />
+          {/* My Tasks Widget */}
+          {widgetSettings.tasks && (
+            <Card data-testid="card-my-tasks">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">My Tasks</CardTitle>
+                  <div className="flex gap-1">
+                    <Button
+                      variant={taskFilter === "all" ? "secondary" : "ghost"}
+                      size="sm"
+                      onClick={() => setTaskFilter("all")}
+                      data-testid="button-filter-all"
+                    >
+                      All
+                    </Button>
+                    <Button
+                      variant={taskFilter === "pending" ? "secondary" : "ghost"}
+                      size="sm"
+                      onClick={() => setTaskFilter("pending")}
+                      data-testid="button-filter-pending"
+                    >
+                      Pending
+                    </Button>
+                    <Button
+                      variant={taskFilter === "completed" ? "secondary" : "ghost"}
+                      size="sm"
+                      onClick={() => setTaskFilter("completed")}
+                      data-testid="button-filter-completed"
+                    >
+                      Done
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {isLoadingTasks ? (
+                  <div className="space-y-2">
+                    {[1, 2, 3].map((i) => (
+                      <Skeleton key={i} className="h-12 w-full" />
+                    ))}
+                  </div>
+                ) : filteredTasks.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground" data-testid="empty-tasks">
+                    <CheckCircle2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No tasks to display</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2" data-testid="tasks-list">
+                    {filteredTasks.map((task) => (
+                      <div
+                        key={task.id}
+                        className="flex items-center gap-3 p-2 rounded-lg border hover:bg-muted/50 transition-colors"
+                        data-testid={`task-item-${task.id}`}
+                      >
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="p-0 h-auto"
+                          disabled={task.status === "completed" || completeTaskMutation.isPending}
+                          onClick={() => task.status !== "completed" && completeTaskMutation.mutate(task.id)}
+                          data-testid={`button-complete-${task.id}`}
+                        >
+                          {completeTaskMutation.isPending && completeTaskMutation.variables === task.id ? (
+                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                          ) : task.status === "completed" ? (
+                            <CheckCircle2 className="h-5 w-5 text-green-500" />
+                          ) : (
+                            <Circle className="h-5 w-5 text-muted-foreground hover:text-primary" />
+                          )}
+                        </Button>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm truncate ${task.status === "completed" ? "line-through text-muted-foreground" : ""}`}>
+                            {task.title}
+                          </p>
+                          {task.projectName && (
+                            <p className="text-xs text-muted-foreground truncate">{task.projectName}</p>
+                          )}
+                        </div>
+                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getPriorityColor(task.priority)}`} data-testid={`priority-${task.priority}`} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Charts Widget */}
+          {widgetSettings.charts && (
+            <Card data-testid="card-charts">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">Analytics</CardTitle>
+                  <div className="flex gap-2">
+                    <select
+                      className="text-xs border rounded px-2 py-1"
+                      value={chartPeriod}
+                      onChange={(e) => setChartPeriod(e.target.value as "week" | "month" | "year")}
+                      data-testid="select-chart-period"
+                    >
+                      <option value="week">This Week</option>
+                      <option value="month">This Month</option>
+                      <option value="year">This Year</option>
+                    </select>
+                    <Button variant="ghost" size="sm" onClick={exportChartData} data-testid="button-export-chart">
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div data-testid="chart-revenue-trend">
+                    <div className="flex items-center gap-2 mb-2">
+                      <TrendingUp className="h-4 w-4 text-green-500" />
+                      <span className="text-sm font-medium">Revenue Trend</span>
+                    </div>
+                    <div className="h-24 bg-muted/50 rounded-lg flex items-end gap-1 p-2">
+                      {[40, 55, 45, 60, 70, 65, 80].map((height, i) => (
+                        <div
+                          key={i}
+                          className="flex-1 bg-primary/60 rounded-t"
+                          style={{ height: `${height}%` }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div data-testid="chart-user-growth">
+                    <div className="flex items-center gap-2 mb-2">
+                      <BarChart3 className="h-4 w-4 text-blue-500" />
+                      <span className="text-sm font-medium">User Growth</span>
+                    </div>
+                    <div className="h-24 bg-muted/50 rounded-lg flex items-end gap-1 p-2">
+                      {[30, 45, 55, 50, 65, 75, 85].map((height, i) => (
+                        <div
+                          key={i}
+                          className="flex-1 bg-blue-500/60 rounded-t"
+                          style={{ height: `${height}%` }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Calendar and Activity Row */}
+        <div className="grid gap-4 lg:grid-cols-2">
+          {/* Calendar Widget */}
+          {widgetSettings.calendar && (
+            <Card data-testid="card-calendar">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Upcoming Events
+                  </CardTitle>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setCalendarMonth(subMonths(calendarMonth, 1))}
+                      data-testid="button-prev-month"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm font-medium w-24 text-center" data-testid="text-current-month">
+                      {format(calendarMonth, "MMM yyyy")}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setCalendarMonth(addMonths(calendarMonth, 1))}
+                      data-testid="button-next-month"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
+                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+                    <div key={day} className="text-muted-foreground font-medium py-1">{day}</div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 gap-1" data-testid="calendar-grid">
+                  {calendarDays.map((day) => (
+                    <div
+                      key={day.toISOString()}
+                      className={`p-1 text-center text-xs rounded ${
+                        isToday(day) ? "bg-primary text-primary-foreground" : ""
+                      } ${!isSameMonth(day, calendarMonth) ? "text-muted-foreground/50" : ""}`}
+                    >
+                      {format(day, "d")}
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 space-y-2" data-testid="events-list">
+                  {isLoadingEvents ? (
+                    <div className="space-y-2">
+                      {[1, 2].map((i) => (
+                        <Skeleton key={i} className="h-10 w-full" />
+                      ))}
+                    </div>
+                  ) : calendarEvents.length === 0 ? (
+                    <div className="text-center py-4 text-muted-foreground" data-testid="empty-events">
+                      <Calendar className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No upcoming events</p>
+                    </div>
+                  ) : (
+                    calendarEvents.map((event) => (
+                      <div
+                        key={event.id}
+                        className="flex items-center gap-2 p-2 bg-muted/50 rounded hover:bg-muted transition-colors"
+                        data-testid={`event-${event.id}`}
+                      >
+                        <Badge variant={event.type === "milestone" ? "default" : "secondary"} data-testid={`badge-${event.type}`}>
+                          {event.type === "milestone" ? "Milestone" : "Event"}
+                        </Badge>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm truncate block">{event.title}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(event.date), "MMM d, yyyy")}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Activity Feed */}
+          {widgetSettings.activity && <ActivityFeed limit={10} />}
         </div>
         </>
       )}
