@@ -193,7 +193,7 @@ describe('Analytics & Reporting', () => {
   });
 
   // ===========================================================================
-  // TODO: Role-Specific Analytics Views
+  // TODO: Role-Specific Analytics Views (Require role-based auth mocking)
   // ===========================================================================
 
   describe('Hospital Staff Analytics', () => {
@@ -209,7 +209,7 @@ describe('Analytics & Reporting', () => {
   });
 
   // ===========================================================================
-  // TODO: Advanced Analytics Features
+  // TODO: Advanced Analytics Features (Require Additional Implementation)
   // ===========================================================================
 
   describe('Report Builder', () => {
