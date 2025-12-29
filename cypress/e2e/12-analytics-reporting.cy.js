@@ -193,19 +193,157 @@ describe('Analytics & Reporting', () => {
   });
 
   // ===========================================================================
-  // TODO: Role-Specific Analytics Views (Require role-based auth mocking)
+  // Role-Specific Analytics Views
   // ===========================================================================
 
   describe('Hospital Staff Analytics', () => {
-    it.skip('TODO: Display hospital analytics for hospital_staff role', () => {});
-    it.skip('TODO: Show hospital-specific KPIs', () => {});
-    it.skip('TODO: Display project breakdown', () => {});
+    const hospitalStaffUser = {
+      id: 2,
+      email: 'staff@hospital.com',
+      firstName: 'Hospital',
+      lastName: 'Staff',
+      role: 'hospital_staff'
+    };
+
+    const mockHospitalAnalytics = {
+      type: 'hospital',
+      data: {
+        hospitalName: 'Test Hospital',
+        overview: {
+          totalProjects: 5,
+          activeProjects: 3,
+          totalBudget: '500000',
+          totalSavings: '125000',
+          averageRoi: 25
+        },
+        savingsBreakdown: {
+          laborSavings: '75000',
+          benefitsSavings: '30000',
+          overheadSavings: '20000',
+          totalSavings: '125000'
+        },
+        projectBreakdown: [
+          { id: 'p1', name: 'EMR Implementation', status: 'active', budget: '200000', consultantsAssigned: 4 },
+          { id: 'p2', name: 'Training Program', status: 'completed', budget: '100000', consultantsAssigned: 2 }
+        ],
+        consultantPerformance: [
+          { consultantId: 'c1', name: 'John Doe', shiftsCompleted: 45, averageRating: 4.8 },
+          { consultantId: 'c2', name: 'Jane Smith', shiftsCompleted: 38, averageRating: 4.5 }
+        ]
+      }
+    };
+
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: hospitalStaffUser
+      }).as('getUser');
+
+      cy.intercept('GET', '/api/analytics/me', {
+        statusCode: 200,
+        body: mockHospitalAnalytics
+      }).as('getHospitalAnalytics');
+
+      cy.visit('/analytics');
+      cy.wait('@getUser');
+      cy.wait('@getHospitalAnalytics');
+    });
+
+    it('should display hospital analytics for hospital_staff role', () => {
+      cy.get('[data-testid="text-analytics-title"]').should('contain', 'Test Hospital Analytics');
+    });
+
+    it('should show hospital-specific KPIs', () => {
+      cy.get('[data-testid="kpi-total-projects"]').should('exist');
+      cy.get('[data-testid="kpi-total-budget"]').should('exist');
+      cy.get('[data-testid="kpi-total-savings"]').should('exist');
+      cy.get('[data-testid="kpi-average-roi"]').should('exist');
+    });
+
+    it('should display project breakdown', () => {
+      cy.get('[data-testid="card-project-breakdown"]').should('exist');
+      cy.get('[data-testid="card-savings-breakdown"]').should('exist');
+    });
   });
 
   describe('Consultant Analytics', () => {
-    it.skip('TODO: Display consultant analytics for consultant role', () => {});
-    it.skip('TODO: Show personal performance metrics', () => {});
-    it.skip('TODO: Display shift history', () => {});
+    const consultantUser = {
+      id: 3,
+      email: 'consultant@example.com',
+      firstName: 'Test',
+      lastName: 'Consultant',
+      role: 'consultant'
+    };
+
+    const mockConsultantAnalytics = {
+      type: 'consultant',
+      data: {
+        overview: {
+          completedShifts: 52,
+          upcomingShifts: 3,
+          averageRating: 4.7,
+          utilizationRate: 85
+        },
+        documentStatus: {
+          approved: 8,
+          pending: 1,
+          rejected: 0,
+          expired: 1,
+          complianceRate: 80
+        },
+        skillsUtilization: [
+          { skill: 'Epic EMR', projectsUsed: 5 },
+          { skill: 'Cerner', projectsUsed: 3 }
+        ],
+        expiringDocuments: [
+          { id: 'd1', name: 'HIPAA Certification', typeName: 'Certification', daysUntilExpiry: 15, expirationDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString() }
+        ],
+        shiftHistory: [
+          { id: 's1', projectName: 'EMR Go-Live', hospitalName: 'Test Hospital', date: new Date().toISOString(), status: 'completed' },
+          { id: 's2', projectName: 'Training', hospitalName: 'Test Hospital', date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), status: 'completed' }
+        ]
+      }
+    };
+
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: consultantUser
+      }).as('getUser');
+
+      cy.intercept('GET', '/api/analytics/me', {
+        statusCode: 200,
+        body: mockConsultantAnalytics
+      }).as('getConsultantAnalytics');
+
+      cy.visit('/analytics');
+      cy.wait('@getUser');
+      cy.wait('@getConsultantAnalytics');
+    });
+
+    it('should display consultant analytics for consultant role', () => {
+      cy.get('[data-testid="text-analytics-title"]').should('contain', 'My Analytics');
+    });
+
+    it('should show personal performance metrics', () => {
+      cy.get('[data-testid="kpi-completed-shifts"]').should('exist');
+      cy.get('[data-testid="kpi-average-rating"]').should('exist');
+      cy.get('[data-testid="kpi-utilization-rate"]').should('exist');
+      cy.get('[data-testid="kpi-compliance-rate"]').should('exist');
+    });
+
+    it('should display shift history', () => {
+      cy.get('[data-testid="card-shift-history"]').should('exist');
+      cy.get('[data-testid="card-skills-utilization"]').should('exist');
+    });
   });
 
   // ===========================================================================
