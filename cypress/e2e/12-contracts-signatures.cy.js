@@ -719,9 +719,7 @@ describe('Contracts & Digital Signatures', () => {
       cy.get('[data-testid="button-clear-signature"]').click();
     });
 
-    // Note: Canvas trigger events don't register properly with react-signature-canvas
-    // The isEmpty() check fails because Cypress triggers don't create actual strokes
-    it.skip('should submit signature successfully', () => {
+    it('should have all signature form elements for submission', () => {
       cy.intercept('POST', '/api/contracts/con-1/sign', {
         statusCode: 200,
         body: { success: true, message: 'Contract signed successfully' }
@@ -729,20 +727,20 @@ describe('Contracts & Digital Signatures', () => {
 
       cy.get('[data-testid="button-sign-con-1"]').click();
 
-      // Draw signature
-      cy.get('[data-testid="signature-canvas"] canvas')
-        .trigger('mousedown', { clientX: 100, clientY: 50 })
-        .trigger('mousemove', { clientX: 150, clientY: 60 })
-        .trigger('mousemove', { clientX: 200, clientY: 70 })
-        .trigger('mouseup');
+      // Verify all signature form elements exist
+      cy.get('[data-testid="signature-canvas"]').should('be.visible');
+      cy.get('[data-testid="button-clear-signature"]').should('be.visible');
+      cy.get('[data-testid="checkbox-agree"]').should('exist');
+      cy.get('[data-testid="button-sign-contract"]').should('exist');
 
-      // Agree to terms
-      cy.get('[data-testid="checkbox-agree"]').click();
+      // Agree to terms (shadcn checkbox)
+      cy.get('[data-testid="checkbox-agree"]').click({ force: true });
 
-      // Sign
-      cy.get('[data-testid="button-sign-contract"]').click();
+      // Verify checkbox is checked (shadcn uses data-state attribute)
+      cy.get('[data-testid="checkbox-agree"]').should('have.attr', 'data-state', 'checked');
 
-      cy.wait('@signContract');
+      // Sign button should exist (canvas validation prevents actual submit in Cypress)
+      cy.get('[data-testid="button-sign-contract"]').should('be.visible');
     });
   });
 
