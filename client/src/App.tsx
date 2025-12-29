@@ -74,6 +74,7 @@ import EhrMonitoring from "@/pages/ehr-monitoring";
 import AdvancedAnalytics from "@/pages/AdvancedAnalytics";
 import RaciMatrix from "@/pages/RaciMatrix";
 import AutoScheduling from "@/pages/AutoScheduling";
+import RemoteSupport from "@/pages/RemoteSupport";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/not-found";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
@@ -211,6 +212,7 @@ function Router() {
       <Route path="/project-phases" component={() => <ProtectedRoute component={ProjectPhases} />} />
       <Route path="/onboarding" component={() => <ProtectedRoute component={ConsultantOnboarding} />} />
       <Route path="/command-center" component={() => <ProtectedRoute component={CommandCenter} />} />
+      <Route path="/remote-support" component={() => <ProtectedRoute component={RemoteSupport} />} />
       <Route path="/timesheets" component={() => <ProtectedRoute component={Timesheets} />} />
       <Route path="/availability" component={() => <ProtectedRoute component={Availability} />} />
       <Route path="/shift-swaps" component={() => <ProtectedRoute component={ShiftSwaps} />} />

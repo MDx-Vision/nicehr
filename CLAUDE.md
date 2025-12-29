@@ -43,6 +43,21 @@
    - Fixed all skipped/pending tests
    - All tests now passing with 0 pending
 
+6. **Remote Support Integration**
+   - Standalone video support system at `remote-support/`
+   - Daily.co for video/audio/screen sharing (HIPAA compliant)
+   - Smart consultant matching based on expertise and relationships
+   - Real-time queue with WebSocket updates
+   - Integrated into main NiceHR via `/remote-support` route
+   - Runs on port 3002 (server) and 5173 (client)
+   - 10 integration tests added
+
+7. **Deployment Ready**
+   - Docker multi-stage build with `Dockerfile`
+   - Docker Compose configuration
+   - GitHub Actions CI/CD pipeline
+   - Comprehensive deployment guide in `DEPLOYMENT.md`
+
 ### Previous Features (Dec 28, 2025)
 
 1. **Consultant Documents & Shift Preferences**
@@ -68,8 +83,8 @@
 ## Test Suite Status
 
 ```
-Total Tests: 836
-Passing: 836
+Total Tests: 846
+Passing: 846
 Pending: 0
 Failing: 0
 ```
@@ -88,6 +103,7 @@ Run tests with: `CYPRESS_TEST=true npx cypress run`
 - `client/src/pages/Schedules.tsx` - Scheduling (database connected)
 - `client/src/pages/Contracts.tsx` - Contracts with digital signatures
 - `client/src/pages/Invoices.tsx` - Invoice management (database connected)
+- `client/src/pages/RemoteSupport.tsx` - Remote support integration page
 
 ### Backend
 - `server/routes.ts` - All API endpoints
@@ -96,9 +112,16 @@ Run tests with: `CYPRESS_TEST=true npx cypress run`
 - `shared/schema.ts` - Drizzle ORM schema definitions
 
 ### Testing
-- `cypress/e2e/` - 24 E2E test files
+- `cypress/e2e/` - 25 E2E test files
 - `cypress/support/commands.js` - Custom Cypress commands
 - `cypress.config.js` - Cypress configuration
+
+### Remote Support System
+- `remote-support/server/` - Express backend (port 3002)
+- `remote-support/client/` - React frontend (port 5173)
+- `remote-support/server/src/services/daily.ts` - Daily.co integration
+- `remote-support/server/src/services/websocket.ts` - Real-time updates
+- `remote-support/server/src/services/matching.ts` - Smart consultant matching
 
 ## Running the Project
 
@@ -117,6 +140,11 @@ CYPRESS_TEST=true npx cypress run
 
 # Open Cypress UI
 CYPRESS_TEST=true npx cypress open
+
+# Run Remote Support (standalone)
+cd remote-support && npm run dev
+# Server: http://localhost:3002
+# Client: http://localhost:5173
 ```
 
 ## Database Tables
@@ -204,3 +232,6 @@ In development mode, the app uses a mock user:
 | Travel | ✅ Complete | Yes |
 | Chat | ✅ Complete | Yes |
 | Documents | ✅ Complete | Yes |
+| Remote Support | ✅ Complete | Standalone* |
+
+*Remote Support runs as a standalone service on ports 3002/5173

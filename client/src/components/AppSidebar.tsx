@@ -73,6 +73,7 @@ import {
   PieChart,
   Command,
   Sparkles,
+  Video,
   type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -88,7 +89,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   GraduationCap, Book, Monitor, Ticket, FileCheck, AlertTriangle, DollarSign,
   Receipt, Banknote, TrendingUp, Plane, Luggage, Bus, Target, Award, ShieldCheck,
   FileSignature, MessageCircle, UserCheck, FileBarChart, Gauge, KeyRound, Link2,
-  Star, Briefcase, HeadphonesIcon, PieChart, Sparkles,
+  Star, Briefcase, HeadphonesIcon, PieChart, Sparkles, Video,
 };
 
 // Simplified navigation structure
@@ -199,6 +200,7 @@ const NAV_GROUPS: NavGroup[] = [
     defaultOpen: false,
     items: [
       { id: "command", title: "Command Center", url: "/command-center", icon: "Radio", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
+      { id: "remote-support", title: "Remote Support", url: "/remote-support", icon: "Video", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
       { id: "tickets", title: "Tickets", url: "/support-tickets", icon: "Ticket", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
       { id: "knowledge", title: "Knowledge Base", url: "/knowledge-base", icon: "Book", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
       { id: "eod", title: "EOD Reports", url: "/eod-reports", icon: "FileCheck", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
