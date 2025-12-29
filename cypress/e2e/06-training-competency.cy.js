@@ -220,18 +220,117 @@ describe('Training & Competency', () => {
   });
 
   // ===========================================================================
-  // TODO: Advanced Training Features (Require Additional Implementation)
+  // Advanced Training Features
   // ===========================================================================
 
   describe('Training Completion Flow', () => {
-    it.skip('TODO: Complete training module with content navigation', () => {});
-    it.skip('TODO: Generate completion certificate', () => {});
-    it.skip('TODO: Track progress across multiple sessions', () => {});
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: { id: 1, email: 'test@example.com', firstName: 'Test', lastName: 'User', role: 'admin' }
+      }).as('getUser');
+
+      cy.intercept('GET', '/api/consultants', {
+        statusCode: 200,
+        body: []
+      }).as('getConsultants');
+
+      cy.visit('/training');
+      cy.wait('@getUser');
+    });
+
+    it('should complete training module with content navigation', () => {
+      // Click Start on first module
+      cy.get('[data-testid="button-start-training"]').first().click();
+      // Should show training content view
+      cy.get('[data-testid="training-content"]').should('be.visible');
+      // Should have progress bar
+      cy.get('[data-testid="training-progress"]').should('be.visible');
+      // Should have Mark Complete button
+      cy.get('[data-testid="button-mark-complete"]').should('be.visible');
+    });
+
+    it('should generate completion certificate', () => {
+      // Start training on first module
+      cy.get('[data-testid="button-start-training"]').first().click();
+      // Mark content as complete and proceed through all content
+      cy.get('[data-testid="button-mark-complete"]').click();
+      cy.get('[data-testid="button-next-content"]').click();
+      cy.get('[data-testid="button-mark-complete"]').click();
+      cy.get('[data-testid="button-next-content"]').click();
+      cy.get('[data-testid="button-mark-complete"]').click();
+      // Complete the module
+      cy.get('[data-testid="button-complete-module"]').click();
+      // Certificate should be displayed
+      cy.get('[data-testid="completion-certificate"]').should('be.visible');
+    });
+
+    it('should track progress with progress bar', () => {
+      cy.get('[data-testid="button-start-training"]').first().click();
+      cy.get('[data-testid="training-progress"]').should('be.visible');
+      // Mark first content complete
+      cy.get('[data-testid="button-mark-complete"]').click();
+      // Mark Complete button should now be disabled (showing "Completed")
+      cy.get('[data-testid="button-mark-complete"]').should('be.disabled');
+    });
   });
 
   describe('Assessment Flow', () => {
-    it.skip('TODO: Take timed assessment', () => {});
-    it.skip('TODO: Submit assessment and view score', () => {});
-    it.skip('TODO: Retake failed assessment', () => {});
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: { id: 1, email: 'test@example.com', firstName: 'Test', lastName: 'User', role: 'admin' }
+      }).as('getUser');
+
+      cy.intercept('GET', '/api/consultants', {
+        statusCode: 200,
+        body: []
+      }).as('getConsultants');
+
+      cy.visit('/training');
+      cy.wait('@getUser');
+      // Navigate to Assessments tab
+      cy.get('[data-testid="tab-assessments"]').click();
+    });
+
+    it('should take timed assessment', () => {
+      // Start assessment that hasn't been taken yet
+      cy.get('[data-testid="button-start-assessment"]').first().click();
+      // Should show assessment content with timer
+      cy.get('[data-testid="assessment-timer"]').should('be.visible');
+      cy.get('[data-testid="assessment-content"]').should('be.visible');
+      // Should show answer options
+      cy.get('[data-testid="answer-option"]').should('have.length.at.least', 2);
+    });
+
+    it('should submit assessment and view score', () => {
+      // Start assessment
+      cy.get('[data-testid="button-start-assessment"]').first().click();
+      // Select an answer
+      cy.get('[data-testid="answer-option"]').first().click();
+      // Submit assessment
+      cy.get('[data-testid="button-submit-assessment"]').click();
+      // Should show results with score
+      cy.get('[data-testid="assessment-results"]').should('be.visible');
+      cy.get('[data-testid="assessment-score"]').should('be.visible');
+    });
+
+    it('should show retake option for failed assessment', () => {
+      // Go to My Results tab
+      cy.get('[data-testid="tab-my-results"]').click();
+      // Should show results list
+      cy.get('[data-testid="results-list"]').should('be.visible');
+      // Failed assessment should have retake button
+      cy.get('[data-testid="result-status"]').contains('Failed').should('exist');
+      cy.get('[data-testid="button-retake"]').should('be.visible');
+    });
   });
 });
