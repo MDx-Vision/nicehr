@@ -45,11 +45,12 @@
 
 6. **Remote Support Integration**
    - Standalone video support system at `remote-support/`
-   - Daily.co for video/audio/screen sharing (HIPAA compliant)
+   - White-labeled video/audio/screen sharing (HIPAA compliant)
    - Smart consultant matching based on expertise and relationships
    - Real-time queue with WebSocket updates
    - Integrated into main NiceHR via `/remote-support` route
    - Runs on port 3002 (server) and 5173 (client)
+   - Video service configured and connected
    - 10 integration tests added
 
 7. **Deployment Ready**
@@ -145,6 +146,11 @@ CYPRESS_TEST=true npx cypress open
 cd remote-support && npm run dev
 # Server: http://localhost:3002
 # Client: http://localhost:5173
+
+# Remote Support requires .env file with video credentials
+# remote-support/.env:
+# DAILY_API_KEY=your_key
+# DAILY_DOMAIN=your_domain.daily.co
 ```
 
 ## Database Tables
