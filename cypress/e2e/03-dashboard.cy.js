@@ -415,9 +415,93 @@ describe('Dashboard Feature', () => {
   });
 
   describe('Dashboard Customization', () => {
-    it.skip('TODO: Widget reordering with drag and drop', () => {});
-    it.skip('TODO: Show/hide widgets panel', () => {});
-    it.skip('TODO: Save layout preferences', () => {});
-    it.skip('TODO: Reset to default layout', () => {});
+    const testUser = { email: 'admin@example.com' };
+
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: {
+          id: 1,
+          email: testUser.email,
+          firstName: 'Test',
+          lastName: 'User',
+          role: 'admin'
+        }
+      }).as('getUser');
+
+      cy.intercept('GET', '/api/dashboard/stats', {
+        statusCode: 200,
+        body: {
+          totalConsultants: 12,
+          activeConsultants: 8,
+          totalHospitals: 5,
+          activeProjects: 4,
+          pendingDocuments: 3,
+          totalSavings: '125000',
+          totalHoursLogged: 343,
+          ticketResolutionRate: 80,
+          projectCompletionRate: 20,
+          consultantUtilization: 19
+        }
+      }).as('getStats');
+
+      cy.intercept('GET', '/api/dashboard/tasks', {
+        statusCode: 200,
+        body: []
+      }).as('getTasks');
+
+      cy.intercept('GET', '/api/dashboard/calendar-events', {
+        statusCode: 200,
+        body: []
+      }).as('getEvents');
+
+      cy.intercept('GET', '/api/activities/recent*', {
+        statusCode: 200,
+        body: []
+      }).as('getActivities');
+
+      cy.visit('/');
+      cy.wait('@getUser');
+      cy.wait('@getStats');
+    });
+
+    it('should display drag mode toggle button for widget reordering', () => {
+      cy.get('[data-testid="button-drag-mode"]').should('be.visible');
+      cy.get('[data-testid="button-drag-mode"]').click();
+      cy.get('[data-testid="button-drag-mode"]').should('contain', 'Done');
+    });
+
+    it('should display show/hide widgets panel', () => {
+      cy.get('[data-testid="button-widget-settings"]').should('be.visible');
+      cy.get('[data-testid="button-widget-settings"]').click();
+      cy.get('[data-testid="dialog-widget-settings"]').should('be.visible');
+      cy.get('[data-testid="switch-widget-tasks"]').should('be.visible');
+      cy.get('[data-testid="switch-widget-charts"]').should('be.visible');
+      cy.get('[data-testid="switch-widget-calendar"]').should('be.visible');
+      cy.get('[data-testid="switch-widget-activity"]').should('be.visible');
+    });
+
+    it('should toggle widget visibility', () => {
+      cy.get('[data-testid="button-widget-settings"]').click();
+      cy.get('[data-testid="switch-widget-tasks"]').click();
+      // Close dialog
+      cy.get('body').type('{esc}');
+      // My Tasks widget should be hidden
+      cy.get('[data-testid="card-my-tasks"]').should('not.exist');
+    });
+
+    it('should reset to default layout', () => {
+      cy.get('[data-testid="button-widget-settings"]').click();
+      cy.get('[data-testid="button-reset-layout"]').should('be.visible');
+      cy.get('[data-testid="button-reset-layout"]').click();
+      // All widgets should be visible after reset
+      cy.get('body').type('{esc}');
+      cy.get('[data-testid="card-my-tasks"]').should('be.visible');
+      cy.get('[data-testid="card-charts"]').should('be.visible');
+    });
   });
 });
