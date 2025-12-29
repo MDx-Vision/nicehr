@@ -204,7 +204,7 @@ function Router() {
       <Route path="/my-schedule" component={() => <ProtectedRoute component={MySchedule} />} />
       <Route path="/my-documents" component={() => <ProtectedRoute component={MyDocuments} />} />
       <Route path="/roi-survey" component={() => <ProtectedRoute component={RoiSurvey} />} />
-      <Route path="/account" component={() => <ProtectedRoute component={AccountSettings} />} />
+      <Route path="/account-settings" component={() => <ProtectedRoute component={AccountSettings} />} />
       <Route path="/access-control" component={() => <ProtectedRoute component={AccessControl} requiredRoles={["admin"]} />} />
       <Route path="/activity-log" component={() => <ProtectedRoute component={ActivityLog} requiredRoles={["admin"]} />} />
       <Route path="/analytics" component={() => <ProtectedRoute component={Analytics} />} />

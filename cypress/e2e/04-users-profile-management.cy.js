@@ -217,10 +217,10 @@ describe('User Profile Management', () => {
   });
 
   // ===========================================================================
-  // Account Settings Features (TODO: /account-settings page not yet implemented)
+  // Account Settings Features
   // ===========================================================================
 
-  describe.skip('Email Change', () => {
+  describe('Email Change', () => {
     beforeEach(() => {
       cy.clearCookies();
       cy.clearLocalStorage();
@@ -270,7 +270,7 @@ describe('User Profile Management', () => {
     });
   });
 
-  describe.skip('User Preferences', () => {
+  describe('User Preferences', () => {
     beforeEach(() => {
       cy.clearCookies();
       cy.clearLocalStorage();
@@ -329,7 +329,7 @@ describe('User Profile Management', () => {
     });
   });
 
-  describe.skip('Privacy Settings', () => {
+  describe('Privacy Settings', () => {
     beforeEach(() => {
       cy.clearCookies();
       cy.clearLocalStorage();
@@ -382,7 +382,7 @@ describe('User Profile Management', () => {
     });
   });
 
-  describe.skip('Account Management', () => {
+  describe('Account Management', () => {
     beforeEach(() => {
       cy.clearCookies();
       cy.clearLocalStorage();

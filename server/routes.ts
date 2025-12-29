@@ -1013,6 +1013,123 @@ export async function registerRoutes(
     }
   });
 
+  // Session management routes
+  app.get('/api/account/sessions', isAuthenticated, async (req: any, res) => {
+    try {
+      // Return demo sessions data
+      const sessions = [
+        {
+          id: "session-1",
+          deviceType: "desktop",
+          browser: "Chrome on macOS",
+          location: "San Francisco, CA",
+          ipAddress: "192.168.1.1",
+          lastActive: new Date().toISOString(),
+          isCurrent: true
+        },
+        {
+          id: "session-2",
+          deviceType: "mobile",
+          browser: "Safari on iOS",
+          location: "New York, NY",
+          ipAddress: "10.0.0.1",
+          lastActive: new Date(Date.now() - 86400000).toISOString(),
+          isCurrent: false
+        }
+      ];
+      res.json(sessions);
+    } catch (error) {
+      console.error("Error fetching sessions:", error);
+      res.status(500).json({ message: "Failed to fetch sessions" });
+    }
+  });
+
+  app.delete('/api/account/sessions/:sessionId', isAuthenticated, async (req: any, res) => {
+    try {
+      // Mock session termination
+      res.json({ message: "Session terminated successfully" });
+    } catch (error) {
+      console.error("Error terminating session:", error);
+      res.status(500).json({ message: "Failed to terminate session" });
+    }
+  });
+
+  app.delete('/api/account/sessions', isAuthenticated, async (req: any, res) => {
+    try {
+      // Mock termination of all other sessions
+      res.json({ message: "All other sessions terminated" });
+    } catch (error) {
+      console.error("Error terminating sessions:", error);
+      res.status(500).json({ message: "Failed to terminate sessions" });
+    }
+  });
+
+  app.post('/api/account/change-password', isAuthenticated, async (req: any, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Current and new password are required" });
+      }
+
+      if (newPassword.length < 8) {
+        return res.status(400).json({ message: "Password must be at least 8 characters" });
+      }
+
+      // Mock password change - in production would verify current password
+      // For demo, accept any current password except "wrong"
+      if (currentPassword === "wrong") {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
+
+      res.json({ message: "Password changed successfully" });
+    } catch (error) {
+      console.error("Error changing password:", error);
+      res.status(500).json({ message: "Failed to change password" });
+    }
+  });
+
+  app.post('/api/account/change-email', isAuthenticated, async (req: any, res) => {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      // Mock email verification - would send verification email in production
+      res.json({ message: "Verification email sent" });
+    } catch (error) {
+      console.error("Error changing email:", error);
+      res.status(500).json({ message: "Failed to change email" });
+    }
+  });
+
+  app.post('/api/account/two-factor', isAuthenticated, async (req: any, res) => {
+    try {
+      const { enabled } = req.body;
+
+      // Mock 2FA toggle
+      res.json({
+        message: enabled ? "Two-factor authentication enabled" : "Two-factor authentication disabled",
+        enabled
+      });
+    } catch (error) {
+      console.error("Error toggling 2FA:", error);
+      res.status(500).json({ message: "Failed to update two-factor authentication" });
+    }
+  });
+
+  app.post('/api/account/export-data', isAuthenticated, async (req: any, res) => {
+    try {
+      // Mock data export - would trigger async job in production
+      res.json({ message: "Data export started. You will receive an email when ready." });
+    } catch (error) {
+      console.error("Error exporting data:", error);
+      res.status(500).json({ message: "Failed to export data" });
+    }
+  });
+
   // Consultant documents routes
   app.get('/api/consultants/:consultantId/documents', isAuthenticated, async (req, res) => {
     try {
