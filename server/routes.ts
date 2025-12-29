@@ -1422,6 +1422,65 @@ export async function registerRoutes(
   });
 
   // Schedule routes
+  // General schedules endpoint (all schedules across projects)
+  app.get('/api/schedules', isAuthenticated, async (req, res) => {
+    try {
+      const schedules = await storage.getAllSchedules();
+      res.json(schedules);
+    } catch (error) {
+      console.error("Error fetching all schedules:", error);
+      res.status(500).json({ message: "Failed to fetch schedules" });
+    }
+  });
+
+  app.get('/api/schedules/:id', isAuthenticated, async (req, res) => {
+    try {
+      const schedule = await storage.getSchedule(req.params.id);
+      if (!schedule) {
+        return res.status(404).json({ message: "Schedule not found" });
+      }
+      res.json(schedule);
+    } catch (error) {
+      console.error("Error fetching schedule:", error);
+      res.status(500).json({ message: "Failed to fetch schedule" });
+    }
+  });
+
+  app.post('/api/schedules', isAuthenticated, async (req: any, res) => {
+    try {
+      const validated = insertProjectScheduleSchema.parse(req.body);
+      const schedule = await storage.createProjectSchedule(validated);
+      res.status(201).json(schedule);
+    } catch (error) {
+      console.error("Error creating schedule:", error);
+      res.status(400).json({ message: "Failed to create schedule" });
+    }
+  });
+
+  app.patch('/api/schedules/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const schedule = await storage.updateSchedule(req.params.id, req.body);
+      if (!schedule) {
+        return res.status(404).json({ message: "Schedule not found" });
+      }
+      res.json(schedule);
+    } catch (error) {
+      console.error("Error updating schedule:", error);
+      res.status(500).json({ message: "Failed to update schedule" });
+    }
+  });
+
+  app.delete('/api/schedules/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.deleteSchedule(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting schedule:", error);
+      res.status(500).json({ message: "Failed to delete schedule" });
+    }
+  });
+
+  // Project-specific schedule routes
   app.get('/api/projects/:projectId/schedules', isAuthenticated, async (req, res) => {
     try {
       const schedules = await storage.getProjectSchedules(req.params.projectId);

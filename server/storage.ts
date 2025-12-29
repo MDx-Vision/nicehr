@@ -601,9 +601,12 @@ export interface IStorage {
   deleteProjectRequirement(id: string): Promise<boolean>;
 
   // Schedule operations
+  getAllSchedules(): Promise<ProjectSchedule[]>;
   getProjectSchedules(projectId: string): Promise<ProjectSchedule[]>;
   getSchedule(id: string): Promise<ProjectSchedule | undefined>;
   createProjectSchedule(schedule: InsertProjectSchedule): Promise<ProjectSchedule>;
+  updateSchedule(id: string, data: Partial<InsertProjectSchedule>): Promise<ProjectSchedule | undefined>;
+  deleteSchedule(id: string): Promise<boolean>;
   updateScheduleStatus(id: string, status: "pending" | "approved" | "rejected", approvedBy?: string): Promise<ProjectSchedule | undefined>;
 
   // Schedule Assignment operations
@@ -2218,6 +2221,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Schedule operations
+  async getAllSchedules(): Promise<ProjectSchedule[]> {
+    return await db.select().from(projectSchedules).orderBy(projectSchedules.scheduleDate);
+  }
+
   async getProjectSchedules(projectId: string): Promise<ProjectSchedule[]> {
     return await db.select().from(projectSchedules).where(eq(projectSchedules.projectId, projectId));
   }
@@ -2230,6 +2237,20 @@ export class DatabaseStorage implements IStorage {
   async createProjectSchedule(schedule: InsertProjectSchedule): Promise<ProjectSchedule> {
     const [newSchedule] = await db.insert(projectSchedules).values(schedule).returning();
     return newSchedule;
+  }
+
+  async updateSchedule(id: string, data: Partial<InsertProjectSchedule>): Promise<ProjectSchedule | undefined> {
+    const [updated] = await db
+      .update(projectSchedules)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(projectSchedules.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteSchedule(id: string): Promise<boolean> {
+    await db.delete(projectSchedules).where(eq(projectSchedules.id, id));
+    return true;
   }
 
   async updateScheduleStatus(id: string, status: "pending" | "approved" | "rejected", approvedBy?: string): Promise<ProjectSchedule | undefined> {
