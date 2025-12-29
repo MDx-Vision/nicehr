@@ -15,6 +15,17 @@ import { apiRequest } from "@/lib/queryClient";
 import { useDashboardWebSocket } from "@/hooks/useDashboardWebSocket";
 import { DraggableWidgets, useWidgetOrder } from "@/components/DraggableWidgets";
 import { GaugeGrid } from "@/components/PerformanceGauge";
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 interface DashboardStats {
   totalConsultants: number;
@@ -90,6 +101,46 @@ export default function Dashboard() {
     if (liveStats) return liveStats;
     return fetchedStats;
   }, [liveStats, fetchedStats]);
+
+  // Chart data based on period
+  const chartData = useMemo(() => {
+    const generateData = (period: "week" | "month" | "year") => {
+      if (period === "week") {
+        return [
+          { name: "Mon", revenue: 12000, users: 45 },
+          { name: "Tue", revenue: 15000, users: 52 },
+          { name: "Wed", revenue: 18000, users: 61 },
+          { name: "Thu", revenue: 14000, users: 48 },
+          { name: "Fri", revenue: 21000, users: 72 },
+          { name: "Sat", revenue: 16000, users: 55 },
+          { name: "Sun", revenue: 13000, users: 42 },
+        ];
+      } else if (period === "month") {
+        return [
+          { name: "Week 1", revenue: 45000, users: 180 },
+          { name: "Week 2", revenue: 52000, users: 210 },
+          { name: "Week 3", revenue: 48000, users: 195 },
+          { name: "Week 4", revenue: 61000, users: 245 },
+        ];
+      } else {
+        return [
+          { name: "Jan", revenue: 150000, users: 520 },
+          { name: "Feb", revenue: 165000, users: 580 },
+          { name: "Mar", revenue: 180000, users: 640 },
+          { name: "Apr", revenue: 175000, users: 620 },
+          { name: "May", revenue: 195000, users: 710 },
+          { name: "Jun", revenue: 210000, users: 780 },
+          { name: "Jul", revenue: 225000, users: 850 },
+          { name: "Aug", revenue: 240000, users: 920 },
+          { name: "Sep", revenue: 235000, users: 890 },
+          { name: "Oct", revenue: 255000, users: 980 },
+          { name: "Nov", revenue: 270000, users: 1050 },
+          { name: "Dec", revenue: 290000, users: 1120 },
+        ];
+      }
+    };
+    return generateData(chartPeriod);
+  }, [chartPeriod]);
 
   // Performance gauges data
   const performanceGauges = useMemo(() => [
@@ -549,14 +600,31 @@ export default function Dashboard() {
                       <TrendingUp className="h-4 w-4 text-green-500" />
                       <span className="text-sm font-medium">Revenue Trend</span>
                     </div>
-                    <div className="h-24 bg-muted/50 rounded-lg flex items-end gap-1 p-2">
-                      {[40, 55, 45, 60, 70, 65, 80].map((height, i) => (
-                        <div
-                          key={i}
-                          className="flex-1 bg-primary/60 rounded-t"
-                          style={{ height: `${height}%` }}
-                        />
-                      ))}
+                    <div className="h-32">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+                              <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                          <XAxis dataKey="name" tick={{ fontSize: 10 }} className="text-muted-foreground" />
+                          <YAxis tick={{ fontSize: 10 }} className="text-muted-foreground" tickFormatter={(v) => `$${v / 1000}k`} />
+                          <Tooltip
+                            contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}
+                            formatter={(value: number) => [`$${value.toLocaleString()}`, 'Revenue']}
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="revenue"
+                            stroke="#22c55e"
+                            strokeWidth={2}
+                            fill="url(#colorRevenue)"
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
                     </div>
                   </div>
                   <div data-testid="chart-user-growth">
@@ -564,14 +632,19 @@ export default function Dashboard() {
                       <BarChart3 className="h-4 w-4 text-blue-500" />
                       <span className="text-sm font-medium">User Growth</span>
                     </div>
-                    <div className="h-24 bg-muted/50 rounded-lg flex items-end gap-1 p-2">
-                      {[30, 45, 55, 50, 65, 75, 85].map((height, i) => (
-                        <div
-                          key={i}
-                          className="flex-1 bg-blue-500/60 rounded-t"
-                          style={{ height: `${height}%` }}
-                        />
-                      ))}
+                    <div className="h-32">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                          <XAxis dataKey="name" tick={{ fontSize: 10 }} className="text-muted-foreground" />
+                          <YAxis tick={{ fontSize: 10 }} className="text-muted-foreground" />
+                          <Tooltip
+                            contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}
+                            formatter={(value: number) => [value, 'Users']}
+                          />
+                          <Bar dataKey="users" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
                     </div>
                   </div>
                 </div>

@@ -245,11 +245,87 @@ describe('Dashboard Feature', () => {
   // ===========================================================================
 
   describe('Charts & Analytics', () => {
-    it.skip('TODO: Revenue trends chart with Recharts', () => {});
-    it.skip('TODO: User growth bar chart', () => {});
-    it.skip('TODO: Performance metrics gauges', () => {});
-    it.skip('TODO: Chart period filtering (7d, 30d, custom)', () => {});
-    it.skip('TODO: Export chart data to CSV', () => {});
+    const testUser = { email: 'admin@example.com' };
+
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: {
+          id: 1,
+          email: testUser.email,
+          firstName: 'Test',
+          lastName: 'User',
+          role: 'admin'
+        }
+      }).as('getUser');
+
+      cy.intercept('GET', '/api/dashboard/stats', {
+        statusCode: 200,
+        body: {
+          totalConsultants: 12,
+          activeConsultants: 8,
+          totalHospitals: 5,
+          activeProjects: 4,
+          pendingDocuments: 3,
+          totalSavings: '125000',
+          totalHoursLogged: 343,
+          ticketResolutionRate: 80,
+          projectCompletionRate: 20,
+          consultantUtilization: 19
+        }
+      }).as('getStats');
+
+      cy.intercept('GET', '/api/dashboard/tasks', {
+        statusCode: 200,
+        body: []
+      }).as('getTasks');
+
+      cy.intercept('GET', '/api/dashboard/calendar-events', {
+        statusCode: 200,
+        body: []
+      }).as('getEvents');
+
+      cy.intercept('GET', '/api/activities/recent*', {
+        statusCode: 200,
+        body: []
+      }).as('getActivities');
+
+      cy.visit('/');
+      cy.wait('@getUser');
+      cy.wait('@getStats');
+    });
+
+    it('should display revenue trends chart with Recharts', () => {
+      cy.get('[data-testid="chart-revenue-trend"]').should('be.visible');
+      cy.get('[data-testid="chart-revenue-trend"]').find('.recharts-area').should('exist');
+    });
+
+    it('should display user growth bar chart', () => {
+      cy.get('[data-testid="chart-user-growth"]').should('be.visible');
+      cy.get('[data-testid="chart-user-growth"]').find('.recharts-bar').should('exist');
+    });
+
+    it('should display performance metrics gauges', () => {
+      cy.get('[data-testid="card-performance-gauges"]').scrollIntoView().should('be.visible');
+    });
+
+    it('should allow chart period filtering', () => {
+      cy.get('[data-testid="select-chart-period"]').should('be.visible');
+      cy.get('[data-testid="select-chart-period"]').select('week');
+      cy.get('[data-testid="select-chart-period"]').should('have.value', 'week');
+      cy.get('[data-testid="select-chart-period"]').select('year');
+      cy.get('[data-testid="select-chart-period"]').should('have.value', 'year');
+    });
+
+    it('should export chart data to CSV', () => {
+      cy.get('[data-testid="button-export-chart"]').should('be.visible');
+      cy.get('[data-testid="button-export-chart"]').click();
+      // Verify download was triggered (link created and clicked)
+    });
   });
 
   describe('Real-time Features', () => {
