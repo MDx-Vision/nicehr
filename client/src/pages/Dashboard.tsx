@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Building2, Users, FolderKanban, FileText, DollarSign, UserCheck, Settings2, CheckCircle2, Circle, ChevronLeft, ChevronRight, Calendar, TrendingUp, BarChart3, Download, RotateCcw, Loader2, GripVertical, Wifi, WifiOff, ArrowRight } from "lucide-react";
+import { Building2, Users, FolderKanban, FileText, DollarSign, UserCheck, Settings2, CheckCircle2, Circle, ChevronLeft, ChevronRight, Calendar, TrendingUp, BarChart3, Download, RotateCcw, Loader2, GripVertical, Wifi, WifiOff, ArrowRight, Bell } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { ActivityFeed } from "@/components/ActivityFeed";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isSameMonth, isToday } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
 import { useDashboardWebSocket } from "@/hooks/useDashboardWebSocket";
+import { useNotificationWebSocket } from "@/hooks/useNotificationWebSocket";
 import { DraggableWidgets, useWidgetOrder } from "@/components/DraggableWidgets";
 import { GaugeGrid } from "@/components/PerformanceGauge";
 import {
@@ -88,6 +89,9 @@ export default function Dashboard() {
 
   // WebSocket for live stats
   const { isConnected, liveStats } = useDashboardWebSocket();
+
+  // WebSocket for real-time notifications
+  const { notificationCounts, totalCount: totalNotifications } = useNotificationWebSocket();
 
   // Widget order with persistence
   const { order: widgetOrder, updateOrder, resetOrder: resetWidgetOrder } = useWidgetOrder(DEFAULT_WIDGET_ORDER);
@@ -246,6 +250,12 @@ export default function Dashboard() {
               <Badge variant="outline" className="gap-1 text-muted-foreground" data-testid="badge-offline">
                 <WifiOff className="h-3 w-3" />
                 Offline
+              </Badge>
+            )}
+            {totalNotifications > 0 && (
+              <Badge variant="destructive" className="gap-1" data-testid="badge-notifications">
+                <Bell className="h-3 w-3" />
+                {totalNotifications}
               </Badge>
             )}
           </div>
