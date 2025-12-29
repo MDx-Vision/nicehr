@@ -8,72 +8,105 @@
 - **Database**: PostgreSQL
 - **Testing**: Cypress E2E tests
 
-## Recent Changes (Dec 28, 2025)
+## Recent Changes (Dec 29, 2025)
 
 ### Completed Features
 
+1. **Analytics Enhancements**
+   - Hospital Staff Analytics view with role-based filtering
+   - Consultant Analytics view with performance metrics
+   - Report Builder with saved reports, custom report creation, export (CSV/Excel/PDF), and scheduling
+   - Advanced Visualizations: Timeline & Forecasting, Cost Variance Analytics, Go-Live Readiness Dashboard
+
+2. **Support Tickets (Database Connected)**
+   - Full CRUD API endpoints (`/api/support-tickets`)
+   - React Query integration replacing local state
+   - Assignee selector with "Assign to Me" button
+   - Tags section with add/remove functionality
+   - All 32 support ticket tests passing
+
+3. **Schedules (Database Connected)**
+   - General schedule API endpoints (`/api/schedules` - GET, POST, PATCH, DELETE)
+   - Storage methods: `getAllSchedules`, `updateSchedule`, `deleteSchedule`
+   - React Query integration for schedules and EOD reports
+   - Calendar view displays schedules from database
+   - Connected to `/api/eod-reports` API
+
+4. **Contracts & Digital Signatures**
+   - E-Sign feature with SignatureCanvas
+   - Pending signatures tab
+   - Digital signature capture and storage
+   - All 52 signature tests passing (previously 1 skipped)
+
+5. **Code Cleanup**
+   - Removed 23 legacy placeholder test files
+   - Fixed all skipped/pending tests
+   - All tests now passing with 0 pending
+
+### Previous Features (Dec 28, 2025)
+
 1. **Consultant Documents & Shift Preferences**
-   - Added 90+ demo documents for all 12 consultants
+   - 90+ demo documents for all 12 consultants
    - Documents include: Resume, certifications, background checks, HIPAA training, W-9, NDA, etc.
-   - Added shift preferences (day/night/swing) for all consultants
-   - Documents tab now fetches and displays real documents with status badges
+   - Shift preferences (day/night/swing) for all consultants
 
 2. **Dashboard Enhancements**
-   - Made all 6 stat cards clickable with navigation:
-     - Total Consultants → /consultants
-     - Hospitals → /hospitals
-     - Active Projects → /projects
-     - Pending Documents → /documents
-     - Available Consultants → /consultants
-     - Total Savings → /analytics
-   - Added 10 demo project tasks for My Tasks widget
-   - Added 10 demo user activities for Recent Activities feed
-   - Renamed sidebar "Overview" to "Dashboard"
+   - All 6 stat cards clickable with navigation
+   - 10 demo project tasks for My Tasks widget
+   - 10 demo user activities for Recent Activities feed
 
 3. **Hospital & Project Expansions**
-   - Added 25+ fields to hospitals (facility type, bed count, trauma level, etc.)
-   - Added 30+ financial fields to projects (budget breakdown, ROI, savings categories)
-   - Added "View More" modals for both hospitals and projects
+   - 25+ fields added to hospitals
+   - 30+ financial fields added to projects
+   - "View More" modals for both
 
-4. **Performance Metrics (Completed)**
-   - `ticketResolutionRate` - Calculated from support_tickets table (resolved + closed / total)
-   - `projectCompletionRate` - Calculated from projects table (completed / total)
-   - `consultantUtilization` - Calculated from timesheets (current month hours / expected hours)
-   - `totalHoursLogged` - Sum of all timesheet hours
-   - Added 8 demo timesheets with current month dates
-   - Added 10 demo support tickets (8 resolved, 1 in progress, 1 open)
-   - Added 1 completed project to show project completion rate
+4. **Performance Metrics**
+   - Ticket resolution rate, project completion rate
+   - Consultant utilization from timesheets
+   - Total hours logged tracking
 
-5. **Cypress Tests (All Passing)**
-   - 47 spec files, 784 passing tests, 0 failures
-   - Fixed contracts-signatures tests (embedded signers in mock data)
-   - Fixed profile-management tests (restructured beforeEach blocks)
-   - 75 pending tests for unimplemented features
+## Test Suite Status
+
+```
+Total Tests: 836
+Passing: 836
+Pending: 0
+Failing: 0
+```
+
+Run tests with: `CYPRESS_TEST=true npx cypress run`
 
 ## Key Files
 
-### Frontend
+### Frontend Pages
 - `client/src/pages/Dashboard.tsx` - Main dashboard with widgets
+- `client/src/pages/Analytics.tsx` - Analytics with Report Builder & Advanced Visualizations
 - `client/src/pages/Consultants.tsx` - Consultant management with documents
 - `client/src/pages/Hospitals.tsx` - Hospital management with view modal
 - `client/src/pages/Projects.tsx` - Project management with financial tracking
-- `client/src/components/AppSidebar.tsx` - Navigation sidebar
+- `client/src/pages/SupportTickets.tsx` - Support tickets (database connected)
+- `client/src/pages/Schedules.tsx` - Scheduling (database connected)
+- `client/src/pages/Contracts.tsx` - Contracts with digital signatures
+- `client/src/pages/Invoices.tsx` - Invoice management (database connected)
 
 ### Backend
 - `server/routes.ts` - All API endpoints
-- `server/storage.ts` - Database operations (including performance metrics)
+- `server/storage.ts` - Database operations
 - `server/seedDemoData.ts` - Demo data seeding
 - `shared/schema.ts` - Drizzle ORM schema definitions
 
 ### Testing
-- `cypress/e2e/` - E2E test files
+- `cypress/e2e/` - 24 E2E test files
 - `cypress/support/commands.js` - Custom Cypress commands
 - `cypress.config.js` - Cypress configuration
 
 ## Running the Project
 
 ```bash
-# Start development server (port 4000 for Cypress tests)
+# Start development server
+npm run dev
+
+# Start on specific port (for Cypress tests)
 PORT=4000 npm run dev
 
 # Seed demo data
@@ -86,7 +119,7 @@ CYPRESS_TEST=true npx cypress run
 CYPRESS_TEST=true npx cypress open
 ```
 
-## Database
+## Database Tables
 
 Uses PostgreSQL with Drizzle ORM. Key tables:
 - `users` - User accounts
@@ -94,24 +127,49 @@ Uses PostgreSQL with Drizzle ORM. Key tables:
 - `hospitals` - Hospital information
 - `projects` - Project tracking
 - `project_tasks` - Tasks for projects
+- `project_schedules` - Shift schedules
 - `user_activities` - Activity feed
 - `consultant_documents` - Document management
-- `timesheets` - Time tracking for utilization metrics
-- `support_tickets` - Ticket tracking for resolution metrics
+- `timesheets` - Time tracking
+- `support_tickets` - Support ticket system
+- `invoices` - Invoice management
+- `contracts` - Contract management
+- `eod_reports` - End of day reports
 
 ## API Endpoints
 
 ### Dashboard
-- `GET /api/dashboard/stats` - Dashboard statistics (includes performance metrics)
+- `GET /api/dashboard/stats` - Dashboard statistics
 - `GET /api/dashboard/tasks` - User's tasks
 - `GET /api/dashboard/calendar-events` - Calendar events
 - `GET /api/activities/recent` - Recent activity feed
 
 ### Core Resources
 - `GET /api/consultants` - List consultants
-- `GET /api/consultants/:id/documents` - Consultant documents
 - `GET /api/hospitals` - List hospitals
 - `GET /api/projects` - List projects
+
+### Support Tickets
+- `GET /api/support-tickets` - List all tickets
+- `POST /api/support-tickets` - Create ticket
+- `PATCH /api/support-tickets/:id` - Update ticket
+- `DELETE /api/support-tickets/:id` - Delete ticket
+
+### Schedules
+- `GET /api/schedules` - List all schedules
+- `POST /api/schedules` - Create schedule
+- `PATCH /api/schedules/:id` - Update schedule
+- `DELETE /api/schedules/:id` - Delete schedule
+
+### EOD Reports
+- `GET /api/eod-reports` - List EOD reports
+- `POST /api/eod-reports` - Create EOD report
+
+### Invoices
+- `GET /api/invoices` - List invoices
+- `POST /api/invoices` - Create invoice
+- `PATCH /api/invoices/:id` - Update invoice
+- `DELETE /api/invoices/:id` - Delete invoice
 
 ## Test User
 
@@ -120,10 +178,29 @@ In development mode, the app uses a mock user:
 - Role: admin
 - Name: Dev Admin
 
-## Notes for Future Sessions
+## Architecture Notes
 
-1. All Cypress tests pass - run `CYPRESS_TEST=true npx cypress run` to verify
-2. Performance metrics are calculated in `storage.getDashboardStats()`
-3. Documents page (`/documents`) exists but may need review
-4. Analytics page (`/analytics`) links from dashboard
-5. Account settings page (`/account-settings`) not yet implemented (tests skipped)
+1. **State Management**: React Query for server state, local useState for UI state
+2. **API Pattern**: RESTful endpoints with Express.js
+3. **Database**: PostgreSQL with Drizzle ORM for type-safe queries
+4. **Testing**: Cypress E2E tests with mock API intercepts
+5. **UI Components**: shadcn/ui with Tailwind CSS
+
+## Pages Status
+
+| Page | Status | Database Connected |
+|------|--------|-------------------|
+| Dashboard | ✅ Complete | Yes |
+| Analytics | ✅ Complete | Yes |
+| Consultants | ✅ Complete | Yes |
+| Hospitals | ✅ Complete | Yes |
+| Projects | ✅ Complete | Yes |
+| Support Tickets | ✅ Complete | Yes |
+| Schedules | ✅ Complete | Yes |
+| Invoices | ✅ Complete | Yes |
+| Contracts | ✅ Complete | Yes |
+| Training | ✅ Complete | Yes |
+| Timesheets | ✅ Complete | Yes |
+| Travel | ✅ Complete | Yes |
+| Chat | ✅ Complete | Yes |
+| Documents | ✅ Complete | Yes |
