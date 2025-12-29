@@ -3749,6 +3749,108 @@ export async function registerRoutes(
   });
 
   // Support Ticket Routes
+
+  // General support tickets (all tickets across projects)
+  app.get('/api/support-tickets', isAuthenticated, async (req, res) => {
+    try {
+      const tickets = await storage.getAllSupportTickets();
+      res.json(tickets);
+    } catch (error) {
+      console.error("Error fetching all support tickets:", error);
+      res.status(500).json({ message: "Failed to fetch support tickets" });
+    }
+  });
+
+  app.post('/api/support-tickets', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id || '1';
+      const validated = insertSupportTicketSchema.parse({
+        ...req.body,
+        reportedById: parseInt(userId),
+      });
+      const ticket = await storage.createSupportTicket(validated);
+
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'support_ticket',
+        resourceId: ticket.id,
+        resourceName: ticket.ticketNumber || `Ticket ${ticket.id}`,
+        description: `Created support ticket: ${ticket.title}`,
+      }, req);
+
+      broadcastNotificationUpdate(['tickets']);
+      res.status(201).json(ticket);
+    } catch (error) {
+      console.error("Error creating support ticket:", error);
+      res.status(500).json({ message: "Failed to create support ticket" });
+    }
+  });
+
+  app.get('/api/support-tickets/:id', isAuthenticated, async (req, res) => {
+    try {
+      const ticket = await storage.getSupportTicket(req.params.id);
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+      res.json(ticket);
+    } catch (error) {
+      console.error("Error fetching ticket:", error);
+      res.status(500).json({ message: "Failed to fetch ticket" });
+    }
+  });
+
+  app.patch('/api/support-tickets/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const ticket = await storage.updateSupportTicket(req.params.id, req.body);
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+
+      const userId = req.user?.claims?.sub || req.user?.id || '1';
+      await logActivity(userId, {
+        activityType: 'update',
+        resourceType: 'support_ticket',
+        resourceId: ticket.id,
+        resourceName: ticket.ticketNumber || `Ticket ${ticket.id}`,
+        description: `Updated support ticket: ${ticket.title}`,
+      }, req);
+
+      broadcastNotificationUpdate(['tickets']);
+      res.json(ticket);
+    } catch (error) {
+      console.error("Error updating ticket:", error);
+      res.status(500).json({ message: "Failed to update ticket" });
+    }
+  });
+
+  app.delete('/api/support-tickets/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const ticket = await storage.getSupportTicket(req.params.id);
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+
+      // For now, just mark as closed instead of deleting
+      await storage.updateSupportTicket(req.params.id, { status: 'closed' });
+
+      const userId = req.user?.claims?.sub || req.user?.id || '1';
+      await logActivity(userId, {
+        activityType: 'delete',
+        resourceType: 'support_ticket',
+        resourceId: ticket.id,
+        resourceName: ticket.ticketNumber || `Ticket ${ticket.id}`,
+        description: `Closed support ticket: ${ticket.title}`,
+      }, req);
+
+      broadcastNotificationUpdate(['tickets']);
+      res.json({ message: "Ticket closed successfully" });
+    } catch (error) {
+      console.error("Error closing ticket:", error);
+      res.status(500).json({ message: "Failed to close ticket" });
+    }
+  });
+
+  // Project-specific support tickets
   app.get('/api/projects/:projectId/support/tickets', isAuthenticated, requireAnyPermission('support_tickets:view_all', 'support_tickets:view_own'), async (req, res) => {
     try {
       const tickets = await storage.getSupportTickets(req.params.projectId);
