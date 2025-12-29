@@ -477,12 +477,74 @@ describe('Analytics & Reporting', () => {
   });
 
   // ===========================================================================
-  // TODO: Advanced Visualizations (Require Additional Implementation)
+  // Advanced Visualizations
   // ===========================================================================
 
   describe('Advanced Visualizations', () => {
-    it.skip('TODO: Timeline & forecasting view', () => {});
-    it.skip('TODO: Cost variance analytics', () => {});
-    it.skip('TODO: Go-live readiness dashboard', () => {});
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.clearSessionStorage();
+
+      cy.intercept('GET', '/api/auth/user', {
+        statusCode: 200,
+        body: adminUser
+      }).as('getUser');
+
+      cy.intercept('GET', '/api/analytics/me', {
+        statusCode: 200,
+        body: mockPlatformAnalytics
+      }).as('getAnalytics');
+
+      cy.intercept('GET', '/api/saved-reports*', {
+        statusCode: 200,
+        body: []
+      }).as('getSavedReports');
+
+      cy.intercept('GET', '/api/report-templates*', {
+        statusCode: 200,
+        body: []
+      }).as('getReportTemplates');
+
+      cy.visit('/analytics');
+      cy.wait('@getUser');
+      cy.wait('@getAnalytics');
+    });
+
+    it('should display timeline & forecasting view', () => {
+      // Click on Advanced tab
+      cy.get('[data-testid="tab-advanced"]').click();
+      // Should show timeline forecasting card
+      cy.get('[data-testid="card-timeline-forecasting"]').should('exist');
+      // Should have chart with bars
+      cy.get('[data-testid="card-timeline-forecasting"]').within(() => {
+        cy.contains('Timeline & Forecasting').should('exist');
+        cy.contains('Projected Growth').should('exist');
+      });
+    });
+
+    it('should display cost variance analytics', () => {
+      cy.get('[data-testid="tab-advanced"]').click();
+      // Should show cost variance card
+      cy.get('[data-testid="card-cost-variance"]').should('exist');
+      cy.get('[data-testid="card-cost-variance"]').within(() => {
+        cy.contains('Cost Variance Analytics').should('exist');
+        cy.contains('Total Budget').should('exist');
+        cy.contains('Actual Spent').should('exist');
+        cy.contains('Variance').should('exist');
+      });
+    });
+
+    it('should display go-live readiness dashboard', () => {
+      cy.get('[data-testid="tab-advanced"]').click();
+      // Should show go-live readiness card
+      cy.get('[data-testid="card-golive-readiness"]').should('exist');
+      cy.get('[data-testid="card-golive-readiness"]').within(() => {
+        cy.contains('Go-Live Readiness Dashboard').should('exist');
+        cy.contains('Overall Readiness').should('exist');
+        cy.contains('Readiness by Category').should('exist');
+        cy.contains('Key Milestones').should('exist');
+      });
+    });
   });
 });

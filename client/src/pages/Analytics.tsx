@@ -29,7 +29,14 @@ import {
   Table,
   Filter,
   Settings,
-  Send
+  Send,
+  LineChart,
+  AlertTriangle,
+  CheckCircle2,
+  Circle,
+  Rocket,
+  ArrowUpRight,
+  ArrowDownRight
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -41,6 +48,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
@@ -131,6 +139,10 @@ export default function Analytics() {
             <FileText className="h-4 w-4 mr-2" />
             Reports
           </TabsTrigger>
+          <TabsTrigger value="advanced" data-testid="tab-advanced">
+            <LineChart className="h-4 w-4 mr-2" />
+            Advanced
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard" className="space-y-6">
@@ -147,6 +159,10 @@ export default function Analytics() {
 
         <TabsContent value="reports" className="space-y-6">
           <ReportBuilder />
+        </TabsContent>
+
+        <TabsContent value="advanced" className="space-y-6">
+          <AdvancedVisualizations />
         </TabsContent>
       </Tabs>
     </div>
@@ -648,6 +664,307 @@ function ScheduleReportDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function AdvancedVisualizations() {
+  // Sample forecasting data
+  const forecastData = [
+    { month: "Jan", actual: 12, forecast: 12 },
+    { month: "Feb", actual: 15, forecast: 14 },
+    { month: "Mar", actual: 18, forecast: 17 },
+    { month: "Apr", actual: 22, forecast: 20 },
+    { month: "May", actual: 25, forecast: 24 },
+    { month: "Jun", actual: 28, forecast: 27 },
+    { month: "Jul", actual: null, forecast: 30 },
+    { month: "Aug", actual: null, forecast: 33 },
+    { month: "Sep", actual: null, forecast: 36 },
+  ];
+
+  // Cost variance data
+  const costVarianceData = [
+    { category: "Labor", budgeted: 150000, actual: 142000, variance: 8000, status: "under" },
+    { category: "Equipment", budgeted: 50000, actual: 55000, variance: -5000, status: "over" },
+    { category: "Training", budgeted: 25000, actual: 22000, variance: 3000, status: "under" },
+    { category: "Travel", budgeted: 30000, actual: 35000, variance: -5000, status: "over" },
+    { category: "Software", budgeted: 40000, actual: 38000, variance: 2000, status: "under" },
+  ];
+
+  // Go-live readiness data
+  const goLiveReadiness = {
+    overallScore: 78,
+    categories: [
+      { name: "Training Completion", score: 85, status: "on_track" },
+      { name: "System Configuration", score: 92, status: "on_track" },
+      { name: "Data Migration", score: 75, status: "at_risk" },
+      { name: "User Acceptance Testing", score: 60, status: "at_risk" },
+      { name: "Go-Live Checklist", score: 70, status: "on_track" },
+    ],
+    milestones: [
+      { name: "Phase 1 Complete", date: "2024-01-15", status: "completed" },
+      { name: "UAT Sign-off", date: "2024-02-28", status: "in_progress" },
+      { name: "Go-Live", date: "2024-03-15", status: "pending" },
+      { name: "Hypercare End", date: "2024-04-15", status: "pending" },
+    ],
+  };
+
+  const totalBudgeted = costVarianceData.reduce((sum, item) => sum + item.budgeted, 0);
+  const totalActual = costVarianceData.reduce((sum, item) => sum + item.actual, 0);
+  const totalVariance = totalBudgeted - totalActual;
+
+  return (
+    <>
+      <div>
+        <h2 className="text-2xl font-bold">Advanced Analytics</h2>
+        <p className="text-muted-foreground">Forecasting, cost analysis, and project readiness dashboards</p>
+      </div>
+
+      {/* Timeline & Forecasting */}
+      <Card data-testid="card-timeline-forecasting">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            Timeline & Forecasting
+          </CardTitle>
+          <CardDescription>Project activity trends with future projections</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {/* Chart representation */}
+            <div className="h-64 flex items-end gap-2 border-b border-l p-4">
+              {forecastData.map((item, index) => (
+                <div key={item.month} className="flex-1 flex flex-col items-center gap-1">
+                  <div className="w-full flex flex-col items-center gap-1">
+                    {item.actual !== null && (
+                      <div
+                        className="w-full bg-primary rounded-t"
+                        style={{ height: `${item.actual * 6}px` }}
+                        title={`Actual: ${item.actual}`}
+                      />
+                    )}
+                    {item.actual === null && (
+                      <div
+                        className="w-full bg-primary/30 border-2 border-dashed border-primary rounded-t"
+                        style={{ height: `${item.forecast * 6}px` }}
+                        title={`Forecast: ${item.forecast}`}
+                      />
+                    )}
+                  </div>
+                  <span className="text-xs text-muted-foreground">{item.month}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-center gap-6 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-primary rounded" />
+                <span>Actual</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-primary/30 border-2 border-dashed border-primary rounded" />
+                <span>Forecast</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-primary">+15%</p>
+                <p className="text-sm text-muted-foreground">Projected Growth</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold">36</p>
+                <p className="text-sm text-muted-foreground">Sept Forecast</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-green-600">28</p>
+                <p className="text-sm text-muted-foreground">Current (Jun)</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Cost Variance Analytics */}
+      <Card data-testid="card-cost-variance">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5" />
+            Cost Variance Analytics
+          </CardTitle>
+          <CardDescription>Budget vs actual spending analysis</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {/* Summary cards */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="p-4 bg-muted rounded-lg text-center">
+                <p className="text-sm text-muted-foreground">Total Budget</p>
+                <p className="text-xl font-bold">${(totalBudgeted / 1000).toFixed(0)}K</p>
+              </div>
+              <div className="p-4 bg-muted rounded-lg text-center">
+                <p className="text-sm text-muted-foreground">Actual Spent</p>
+                <p className="text-xl font-bold">${(totalActual / 1000).toFixed(0)}K</p>
+              </div>
+              <div className={`p-4 rounded-lg text-center ${totalVariance >= 0 ? 'bg-green-50 dark:bg-green-950' : 'bg-red-50 dark:bg-red-950'}`}>
+                <p className="text-sm text-muted-foreground">Variance</p>
+                <p className={`text-xl font-bold flex items-center justify-center gap-1 ${totalVariance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {totalVariance >= 0 ? <ArrowDownRight className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
+                  ${Math.abs(totalVariance / 1000).toFixed(0)}K
+                </p>
+              </div>
+            </div>
+
+            {/* Variance by category */}
+            <div className="space-y-4">
+              {costVarianceData.map((item) => (
+                <div key={item.category} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{item.category}</span>
+                    <span className={`text-sm font-medium ${item.status === 'under' ? 'text-green-600' : 'text-red-600'}`}>
+                      {item.status === 'under' ? '-' : '+'}${Math.abs(item.variance / 1000).toFixed(0)}K
+                    </span>
+                  </div>
+                  <div className="relative h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="absolute h-full bg-muted-foreground/30 rounded-full"
+                      style={{ width: '100%' }}
+                    />
+                    <div
+                      className={`absolute h-full rounded-full ${item.status === 'under' ? 'bg-green-500' : 'bg-red-500'}`}
+                      style={{ width: `${(item.actual / item.budgeted) * 100}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Budget: ${(item.budgeted / 1000).toFixed(0)}K</span>
+                    <span>Actual: ${(item.actual / 1000).toFixed(0)}K</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Go-Live Readiness Dashboard */}
+      <Card data-testid="card-golive-readiness">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Rocket className="h-5 w-5" />
+            Go-Live Readiness Dashboard
+          </CardTitle>
+          <CardDescription>Project readiness assessment and milestone tracking</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {/* Overall readiness score */}
+            <div className="flex items-center gap-6">
+              <div className="relative w-32 h-32">
+                <svg className="w-full h-full" viewBox="0 0 100 100">
+                  <circle
+                    className="stroke-muted"
+                    fill="none"
+                    strokeWidth="10"
+                    r="40"
+                    cx="50"
+                    cy="50"
+                  />
+                  <circle
+                    className={`${goLiveReadiness.overallScore >= 80 ? 'stroke-green-500' : goLiveReadiness.overallScore >= 60 ? 'stroke-yellow-500' : 'stroke-red-500'}`}
+                    fill="none"
+                    strokeWidth="10"
+                    r="40"
+                    cx="50"
+                    cy="50"
+                    strokeDasharray={`${goLiveReadiness.overallScore * 2.51} 251`}
+                    strokeLinecap="round"
+                    transform="rotate(-90 50 50)"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-2xl font-bold">{goLiveReadiness.overallScore}%</span>
+                </div>
+              </div>
+              <div className="flex-1 space-y-2">
+                <h4 className="font-medium">Overall Readiness</h4>
+                <p className="text-sm text-muted-foreground">
+                  {goLiveReadiness.overallScore >= 80
+                    ? "Project is on track for go-live"
+                    : goLiveReadiness.overallScore >= 60
+                    ? "Some areas need attention before go-live"
+                    : "Critical issues must be addressed"}
+                </p>
+                <Badge variant={goLiveReadiness.overallScore >= 80 ? "default" : goLiveReadiness.overallScore >= 60 ? "secondary" : "destructive"}>
+                  {goLiveReadiness.overallScore >= 80 ? "On Track" : goLiveReadiness.overallScore >= 60 ? "At Risk" : "Critical"}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Category breakdown */}
+            <div className="space-y-4">
+              <h4 className="font-medium">Readiness by Category</h4>
+              {goLiveReadiness.categories.map((category) => (
+                <div key={category.name} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {category.status === "on_track" ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                      )}
+                      <span className="text-sm">{category.name}</span>
+                    </div>
+                    <span className="text-sm font-medium">{category.score}%</span>
+                  </div>
+                  <Progress value={category.score} className="h-2" />
+                </div>
+              ))}
+            </div>
+
+            {/* Milestones */}
+            <div className="space-y-4">
+              <h4 className="font-medium">Key Milestones</h4>
+              <div className="space-y-3">
+                {goLiveReadiness.milestones.map((milestone, index) => (
+                  <div key={milestone.name} className="flex items-center gap-3">
+                    <div className="flex flex-col items-center">
+                      {milestone.status === "completed" ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      ) : milestone.status === "in_progress" ? (
+                        <Circle className="h-5 w-5 text-blue-500 fill-blue-500" />
+                      ) : (
+                        <Circle className="h-5 w-5 text-muted-foreground" />
+                      )}
+                      {index < goLiveReadiness.milestones.length - 1 && (
+                        <div className={`w-0.5 h-6 ${milestone.status === "completed" ? "bg-green-500" : "bg-muted"}`} />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className={`text-sm font-medium ${milestone.status === "completed" ? "text-muted-foreground line-through" : ""}`}>
+                        {milestone.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{milestone.date}</p>
+                    </div>
+                    <Badge
+                      variant={
+                        milestone.status === "completed"
+                          ? "default"
+                          : milestone.status === "in_progress"
+                          ? "secondary"
+                          : "outline"
+                      }
+                    >
+                      {milestone.status === "completed"
+                        ? "Done"
+                        : milestone.status === "in_progress"
+                        ? "In Progress"
+                        : "Pending"}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </>
   );
 }
 
