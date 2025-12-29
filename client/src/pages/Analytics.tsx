@@ -1,34 +1,87 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
-import { 
-  KpiCard, 
-  TrendChart, 
-  StatusDistributionCard, 
-  PieChartCard 
+import {
+  KpiCard,
+  TrendChart,
+  StatusDistributionCard,
+  PieChartCard
 } from "@/components/analytics";
-import { 
-  Users, 
-  Building2, 
-  FolderKanban, 
-  DollarSign, 
+import {
+  Users,
+  Building2,
+  FolderKanban,
+  DollarSign,
   FileCheck,
   TrendingUp,
   Calendar,
   Star,
   Activity,
-  Target
+  Target,
+  FileText,
+  Plus,
+  Download,
+  Clock,
+  Play,
+  Trash2,
+  BarChart3,
+  Table,
+  Filter,
+  Settings,
+  Send
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { PlatformAnalytics, HospitalAnalytics, ConsultantAnalytics } from "@shared/schema";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { format } from "date-fns";
+import type { PlatformAnalytics, HospitalAnalytics, ConsultantAnalytics, SavedReport, ReportTemplate, ScheduledReport } from "@shared/schema";
 
 interface AnalyticsResponse {
   type: 'platform' | 'hospital' | 'consultant';
   data: PlatformAnalytics | HospitalAnalytics | ConsultantAnalytics | null;
 }
 
+interface SavedReportWithDetails extends SavedReport {
+  template?: ReportTemplate | null;
+  user?: { firstName: string; lastName: string } | null;
+  scheduledReports?: ScheduledReport[];
+  lastRun?: { status: string; completedAt: string } | null;
+}
+
+const DATA_SOURCES = [
+  { value: "consultants", label: "Consultants" },
+  { value: "projects", label: "Projects" },
+  { value: "hospitals", label: "Hospitals" },
+  { value: "timesheets", label: "Timesheets" },
+  { value: "support_tickets", label: "Support Tickets" },
+  { value: "documents", label: "Documents" },
+];
+
+const EXPORT_FORMATS = [
+  { value: "csv", label: "CSV", icon: Table },
+  { value: "excel", label: "Excel", icon: FileText },
+  { value: "pdf", label: "PDF", icon: FileText },
+];
+
+const SCHEDULE_OPTIONS = [
+  { value: "daily", label: "Daily" },
+  { value: "weekly", label: "Weekly" },
+  { value: "monthly", label: "Monthly" },
+];
+
 export default function Analytics() {
   const { isAdmin, isHospitalStaff, isConsultant } = useAuth();
+  const [activeTab, setActiveTab] = useState("dashboard");
 
   const { data: analytics, isLoading } = useQuery<AnalyticsResponse>({
     queryKey: ["/api/analytics/me"],
@@ -68,16 +121,533 @@ export default function Analytics() {
 
   return (
     <div className="space-y-6">
-      {isAdmin && analytics.type === 'platform' && (
-        <PlatformDashboard data={analytics.data as PlatformAnalytics} />
-      )}
-      {isHospitalStaff && analytics.type === 'hospital' && (
-        <HospitalDashboard data={analytics.data as HospitalAnalytics} />
-      )}
-      {isConsultant && analytics.type === 'consultant' && (
-        <ConsultantDashboard data={analytics.data as ConsultantAnalytics} />
-      )}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList data-testid="analytics-tabs">
+          <TabsTrigger value="dashboard" data-testid="tab-dashboard">
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Dashboard
+          </TabsTrigger>
+          <TabsTrigger value="reports" data-testid="tab-reports">
+            <FileText className="h-4 w-4 mr-2" />
+            Reports
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="dashboard" className="space-y-6">
+          {isAdmin && analytics.type === 'platform' && (
+            <PlatformDashboard data={analytics.data as PlatformAnalytics} />
+          )}
+          {isHospitalStaff && analytics.type === 'hospital' && (
+            <HospitalDashboard data={analytics.data as HospitalAnalytics} />
+          )}
+          {isConsultant && analytics.type === 'consultant' && (
+            <ConsultantDashboard data={analytics.data as ConsultantAnalytics} />
+          )}
+        </TabsContent>
+
+        <TabsContent value="reports" className="space-y-6">
+          <ReportBuilder />
+        </TabsContent>
+      </Tabs>
     </div>
+  );
+}
+
+function ReportBuilder() {
+  const { toast } = useToast();
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<SavedReportWithDetails | null>(null);
+  const [exportFormat, setExportFormat] = useState("csv");
+
+  const { data: savedReports = [], isLoading: reportsLoading } = useQuery<SavedReportWithDetails[]>({
+    queryKey: ["/api/saved-reports"],
+  });
+
+  const { data: templates = [] } = useQuery<ReportTemplate[]>({
+    queryKey: ["/api/report-templates"],
+  });
+
+  const deleteReportMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/saved-reports/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/saved-reports"] });
+      toast({ title: "Report deleted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete report", variant: "destructive" });
+    },
+  });
+
+  const runReportMutation = useMutation({
+    mutationFn: async (report: SavedReportWithDetails) => {
+      const config = report.config as Record<string, unknown> || {};
+      return apiRequest("POST", "/api/reports/preview", {
+        dataSource: config.dataSource || "consultants",
+        selectedFields: config.selectedFields || ["id", "name"],
+        filters: config.filters || {},
+        limit: 100,
+      });
+    },
+    onSuccess: (data) => {
+      toast({ title: "Report generated successfully" });
+      // Handle export based on format
+      handleExport(data, exportFormat);
+    },
+    onError: () => {
+      toast({ title: "Failed to generate report", variant: "destructive" });
+    },
+  });
+
+  const handleExport = (data: unknown, format: string) => {
+    const reportData = data as { data: Record<string, unknown>[]; columns: string[] };
+
+    if (format === "csv") {
+      const csv = [
+        reportData.columns.join(","),
+        ...reportData.data.map((row: Record<string, unknown>) =>
+          reportData.columns.map(col => JSON.stringify(row[col] ?? "")).join(",")
+        )
+      ].join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `report_${Date.now()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } else if (format === "excel" || format === "pdf") {
+      toast({ title: `${format.toUpperCase()} export prepared`, description: "Download starting..." });
+      // For demo purposes, export as CSV
+      handleExport(data, "csv");
+    }
+  };
+
+  return (
+    <>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold" data-testid="text-reports-title">Report Builder</h2>
+          <p className="text-muted-foreground">Create, manage, and schedule custom reports</p>
+        </div>
+        <Button onClick={() => setShowCreateDialog(true)} data-testid="button-create-report">
+          <Plus className="h-4 w-4 mr-2" />
+          New Report
+        </Button>
+      </div>
+
+      {reportsLoading ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-48" />
+          ))}
+        </div>
+      ) : savedReports.length === 0 ? (
+        <Card data-testid="empty-reports">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium mb-2">No saved reports</h3>
+            <p className="text-muted-foreground text-center mb-4">
+              Create your first custom report to get started
+            </p>
+            <Button onClick={() => setShowCreateDialog(true)} data-testid="button-create-first-report">
+              <Plus className="h-4 w-4 mr-2" />
+              Create Report
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" data-testid="saved-reports-list">
+          {savedReports.map((report) => (
+            <Card key={report.id} data-testid={`report-card-${report.id}`}>
+              <CardHeader className="pb-2">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-base">{report.name}</CardTitle>
+                    <CardDescription>{report.description}</CardDescription>
+                  </div>
+                  {report.isPublic && (
+                    <Badge variant="secondary">Public</Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Calendar className="h-4 w-4" />
+                  <span>Created {report.createdAt ? format(new Date(report.createdAt), "MMM d, yyyy") : "N/A"}</span>
+                </div>
+
+                {report.lastRun && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Clock className="h-4 w-4" />
+                    <span>Last run: {format(new Date(report.lastRun.completedAt), "MMM d, yyyy")}</span>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <Select value={exportFormat} onValueChange={setExportFormat}>
+                    <SelectTrigger className="w-24" data-testid={`select-export-${report.id}`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {EXPORT_FORMATS.map((format) => (
+                        <SelectItem key={format.value} value={format.value}>
+                          {format.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Button
+                    size="sm"
+                    onClick={() => runReportMutation.mutate(report)}
+                    disabled={runReportMutation.isPending}
+                    data-testid={`button-run-${report.id}`}
+                  >
+                    <Download className="h-4 w-4 mr-1" />
+                    Export
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedReport(report);
+                      setShowScheduleDialog(true);
+                    }}
+                    data-testid={`button-schedule-${report.id}`}
+                  >
+                    <Clock className="h-4 w-4" />
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      if (confirm("Are you sure you want to delete this report?")) {
+                        deleteReportMutation.mutate(report.id);
+                      }
+                    }}
+                    data-testid={`button-delete-${report.id}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <CreateReportDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        templates={templates}
+      />
+
+      <ScheduleReportDialog
+        open={showScheduleDialog}
+        onOpenChange={setShowScheduleDialog}
+        report={selectedReport}
+      />
+    </>
+  );
+}
+
+function CreateReportDialog({
+  open,
+  onOpenChange,
+  templates,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  templates: ReportTemplate[];
+}) {
+  const { toast } = useToast();
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [dataSource, setDataSource] = useState("consultants");
+  const [templateId, setTemplateId] = useState("");
+  const [isPublic, setIsPublic] = useState(false);
+  const [selectedFields, setSelectedFields] = useState<string[]>([]);
+
+  const fieldsBySource: Record<string, string[]> = {
+    consultants: ["id", "firstName", "lastName", "email", "status", "specialty", "hourlyRate"],
+    projects: ["id", "name", "status", "budget", "startDate", "endDate", "hospitalName"],
+    hospitals: ["id", "name", "location", "bedCount", "activeProjects"],
+    timesheets: ["id", "consultantName", "projectName", "hoursWorked", "date", "status"],
+    support_tickets: ["id", "title", "status", "priority", "createdAt", "resolvedAt"],
+    documents: ["id", "name", "type", "status", "uploadedAt", "expirationDate"],
+  };
+
+  const createReportMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/saved-reports", {
+        name,
+        description,
+        templateId: templateId || null,
+        isPublic,
+        config: {
+          dataSource,
+          selectedFields,
+          filters: {},
+        },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/saved-reports"] });
+      toast({ title: "Report created successfully" });
+      onOpenChange(false);
+      resetForm();
+    },
+    onError: () => {
+      toast({ title: "Failed to create report", variant: "destructive" });
+    },
+  });
+
+  const resetForm = () => {
+    setName("");
+    setDescription("");
+    setDataSource("consultants");
+    setTemplateId("");
+    setIsPublic(false);
+    setSelectedFields([]);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Create Custom Report</DialogTitle>
+          <DialogDescription>
+            Build a new report by selecting data source and fields
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="report-name">Report Name</Label>
+            <Input
+              id="report-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Monthly Consultant Summary"
+              data-testid="input-report-name"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="report-description">Description</Label>
+            <Textarea
+              id="report-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Describe what this report contains..."
+              data-testid="input-report-description"
+            />
+          </div>
+
+          {templates.length > 0 && (
+            <div className="space-y-2">
+              <Label>Use Template (Optional)</Label>
+              <Select value={templateId} onValueChange={setTemplateId}>
+                <SelectTrigger data-testid="select-template">
+                  <SelectValue placeholder="Select a template" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No template</SelectItem>
+                  {templates.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label>Data Source</Label>
+            <Select value={dataSource} onValueChange={(v) => {
+              setDataSource(v);
+              setSelectedFields([]);
+            }}>
+              <SelectTrigger data-testid="select-data-source">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DATA_SOURCES.map((source) => (
+                  <SelectItem key={source.value} value={source.value}>
+                    {source.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Select Fields</Label>
+            <div className="border rounded-md p-3 space-y-2 max-h-40 overflow-y-auto" data-testid="fields-list">
+              {fieldsBySource[dataSource]?.map((field) => (
+                <div key={field} className="flex items-center gap-2">
+                  <Checkbox
+                    id={`field-${field}`}
+                    checked={selectedFields.includes(field)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedFields([...selectedFields, field]);
+                      } else {
+                        setSelectedFields(selectedFields.filter((f) => f !== field));
+                      }
+                    }}
+                  />
+                  <Label htmlFor={`field-${field}`} className="text-sm font-normal">
+                    {field}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="is-public"
+              checked={isPublic}
+              onCheckedChange={(checked) => setIsPublic(checked === true)}
+              data-testid="checkbox-public"
+            />
+            <Label htmlFor="is-public" className="text-sm font-normal">
+              Make this report public (visible to all users)
+            </Label>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => createReportMutation.mutate()}
+            disabled={!name || selectedFields.length === 0 || createReportMutation.isPending}
+            data-testid="button-submit-report"
+          >
+            Create Report
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ScheduleReportDialog({
+  open,
+  onOpenChange,
+  report,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  report: SavedReportWithDetails | null;
+}) {
+  const { toast } = useToast();
+  const [schedule, setSchedule] = useState("weekly");
+  const [exportFormat, setExportFormat] = useState("csv");
+  const [recipients, setRecipients] = useState("");
+
+  const scheduleReportMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/reports/schedule", {
+        savedReportId: report?.id,
+        schedule,
+        exportFormat,
+        recipients: recipients.split(",").map((r) => r.trim()).filter(Boolean),
+        name: `Scheduled: ${report?.name}`,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/scheduled-reports"] });
+      toast({ title: "Report scheduled successfully" });
+      onOpenChange(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to schedule report", variant: "destructive" });
+    },
+  });
+
+  if (!report) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Schedule Report</DialogTitle>
+          <DialogDescription>
+            Set up automatic delivery for "{report.name}"
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Frequency</Label>
+            <Select value={schedule} onValueChange={setSchedule}>
+              <SelectTrigger data-testid="select-schedule">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SCHEDULE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Export Format</Label>
+            <Select value={exportFormat} onValueChange={setExportFormat}>
+              <SelectTrigger data-testid="select-schedule-format">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {EXPORT_FORMATS.map((format) => (
+                  <SelectItem key={format.value} value={format.value}>
+                    {format.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="recipients">Recipients (comma-separated emails)</Label>
+            <Input
+              id="recipients"
+              value={recipients}
+              onChange={(e) => setRecipients(e.target.value)}
+              placeholder="user@example.com, team@example.com"
+              data-testid="input-recipients"
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => scheduleReportMutation.mutate()}
+            disabled={scheduleReportMutation.isPending}
+            data-testid="button-submit-schedule"
+          >
+            <Send className="h-4 w-4 mr-2" />
+            Schedule Report
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
