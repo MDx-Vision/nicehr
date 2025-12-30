@@ -1,34 +1,95 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
-import { 
-  KpiCard, 
-  TrendChart, 
-  StatusDistributionCard, 
-  PieChartCard 
+import {
+  KpiCard,
+  TrendChart,
+  StatusDistributionCard,
+  PieChartCard
 } from "@/components/analytics";
-import { 
-  Users, 
-  Building2, 
-  FolderKanban, 
-  DollarSign, 
+import {
+  Users,
+  Building2,
+  FolderKanban,
+  DollarSign,
   FileCheck,
   TrendingUp,
   Calendar,
   Star,
   Activity,
-  Target
+  Target,
+  FileText,
+  Plus,
+  Download,
+  Clock,
+  Play,
+  Trash2,
+  BarChart3,
+  Table,
+  Filter,
+  Settings,
+  Send,
+  LineChart,
+  AlertTriangle,
+  CheckCircle2,
+  Circle,
+  Rocket,
+  ArrowUpRight,
+  ArrowDownRight
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { PlatformAnalytics, HospitalAnalytics, ConsultantAnalytics } from "@shared/schema";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { format } from "date-fns";
+import type { PlatformAnalytics, HospitalAnalytics, ConsultantAnalytics, SavedReport, ReportTemplate, ScheduledReport } from "@shared/schema";
 
 interface AnalyticsResponse {
   type: 'platform' | 'hospital' | 'consultant';
   data: PlatformAnalytics | HospitalAnalytics | ConsultantAnalytics | null;
 }
 
+interface SavedReportWithDetails extends SavedReport {
+  template?: ReportTemplate | null;
+  user?: { firstName: string; lastName: string } | null;
+  scheduledReports?: ScheduledReport[];
+  lastRun?: { status: string; completedAt: string } | null;
+}
+
+const DATA_SOURCES = [
+  { value: "consultants", label: "Consultants" },
+  { value: "projects", label: "Projects" },
+  { value: "hospitals", label: "Hospitals" },
+  { value: "timesheets", label: "Timesheets" },
+  { value: "support_tickets", label: "Support Tickets" },
+  { value: "documents", label: "Documents" },
+];
+
+const EXPORT_FORMATS = [
+  { value: "csv", label: "CSV", icon: Table },
+  { value: "excel", label: "Excel", icon: FileText },
+  { value: "pdf", label: "PDF", icon: FileText },
+];
+
+const SCHEDULE_OPTIONS = [
+  { value: "daily", label: "Daily" },
+  { value: "weekly", label: "Weekly" },
+  { value: "monthly", label: "Monthly" },
+];
+
 export default function Analytics() {
   const { isAdmin, isHospitalStaff, isConsultant } = useAuth();
+  const [activeTab, setActiveTab] = useState("dashboard");
 
   const { data: analytics, isLoading } = useQuery<AnalyticsResponse>({
     queryKey: ["/api/analytics/me"],
@@ -68,16 +129,842 @@ export default function Analytics() {
 
   return (
     <div className="space-y-6">
-      {isAdmin && analytics.type === 'platform' && (
-        <PlatformDashboard data={analytics.data as PlatformAnalytics} />
-      )}
-      {isHospitalStaff && analytics.type === 'hospital' && (
-        <HospitalDashboard data={analytics.data as HospitalAnalytics} />
-      )}
-      {isConsultant && analytics.type === 'consultant' && (
-        <ConsultantDashboard data={analytics.data as ConsultantAnalytics} />
-      )}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList data-testid="analytics-tabs">
+          <TabsTrigger value="dashboard" data-testid="tab-dashboard">
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Dashboard
+          </TabsTrigger>
+          <TabsTrigger value="reports" data-testid="tab-reports">
+            <FileText className="h-4 w-4 mr-2" />
+            Reports
+          </TabsTrigger>
+          <TabsTrigger value="advanced" data-testid="tab-advanced">
+            <LineChart className="h-4 w-4 mr-2" />
+            Advanced
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="dashboard" className="space-y-6">
+          {isAdmin && analytics.type === 'platform' && (
+            <PlatformDashboard data={analytics.data as PlatformAnalytics} />
+          )}
+          {isHospitalStaff && analytics.type === 'hospital' && (
+            <HospitalDashboard data={analytics.data as HospitalAnalytics} />
+          )}
+          {isConsultant && analytics.type === 'consultant' && (
+            <ConsultantDashboard data={analytics.data as ConsultantAnalytics} />
+          )}
+        </TabsContent>
+
+        <TabsContent value="reports" className="space-y-6">
+          <ReportBuilder />
+        </TabsContent>
+
+        <TabsContent value="advanced" className="space-y-6">
+          <AdvancedVisualizations />
+        </TabsContent>
+      </Tabs>
     </div>
+  );
+}
+
+function ReportBuilder() {
+  const { toast } = useToast();
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<SavedReportWithDetails | null>(null);
+  const [exportFormat, setExportFormat] = useState("csv");
+
+  const { data: savedReports = [], isLoading: reportsLoading } = useQuery<SavedReportWithDetails[]>({
+    queryKey: ["/api/saved-reports"],
+  });
+
+  const { data: templates = [] } = useQuery<ReportTemplate[]>({
+    queryKey: ["/api/report-templates"],
+  });
+
+  const deleteReportMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/saved-reports/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/saved-reports"] });
+      toast({ title: "Report deleted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete report", variant: "destructive" });
+    },
+  });
+
+  const runReportMutation = useMutation({
+    mutationFn: async (report: SavedReportWithDetails) => {
+      const config = report.config as Record<string, unknown> || {};
+      return apiRequest("POST", "/api/reports/preview", {
+        dataSource: config.dataSource || "consultants",
+        selectedFields: config.selectedFields || ["id", "name"],
+        filters: config.filters || {},
+        limit: 100,
+      });
+    },
+    onSuccess: (data) => {
+      toast({ title: "Report generated successfully" });
+      // Handle export based on format
+      handleExport(data, exportFormat);
+    },
+    onError: () => {
+      toast({ title: "Failed to generate report", variant: "destructive" });
+    },
+  });
+
+  const handleExport = (data: unknown, format: string) => {
+    const reportData = data as { data: Record<string, unknown>[]; columns: string[] };
+
+    if (format === "csv") {
+      const csv = [
+        reportData.columns.join(","),
+        ...reportData.data.map((row: Record<string, unknown>) =>
+          reportData.columns.map(col => JSON.stringify(row[col] ?? "")).join(",")
+        )
+      ].join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `report_${Date.now()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } else if (format === "excel" || format === "pdf") {
+      toast({ title: `${format.toUpperCase()} export prepared`, description: "Download starting..." });
+      // For demo purposes, export as CSV
+      handleExport(data, "csv");
+    }
+  };
+
+  return (
+    <>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold" data-testid="text-reports-title">Report Builder</h2>
+          <p className="text-muted-foreground">Create, manage, and schedule custom reports</p>
+        </div>
+        <Button onClick={() => setShowCreateDialog(true)} data-testid="button-create-report">
+          <Plus className="h-4 w-4 mr-2" />
+          New Report
+        </Button>
+      </div>
+
+      {reportsLoading ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-48" />
+          ))}
+        </div>
+      ) : savedReports.length === 0 ? (
+        <Card data-testid="empty-reports">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium mb-2">No saved reports</h3>
+            <p className="text-muted-foreground text-center mb-4">
+              Create your first custom report to get started
+            </p>
+            <Button onClick={() => setShowCreateDialog(true)} data-testid="button-create-first-report">
+              <Plus className="h-4 w-4 mr-2" />
+              Create Report
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" data-testid="saved-reports-list">
+          {savedReports.map((report) => (
+            <Card key={report.id} data-testid={`report-card-${report.id}`}>
+              <CardHeader className="pb-2">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-base">{report.name}</CardTitle>
+                    <CardDescription>{report.description}</CardDescription>
+                  </div>
+                  {report.isPublic && (
+                    <Badge variant="secondary">Public</Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Calendar className="h-4 w-4" />
+                  <span>Created {report.createdAt ? format(new Date(report.createdAt), "MMM d, yyyy") : "N/A"}</span>
+                </div>
+
+                {report.lastRun && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Clock className="h-4 w-4" />
+                    <span>Last run: {format(new Date(report.lastRun.completedAt), "MMM d, yyyy")}</span>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <Select value={exportFormat} onValueChange={setExportFormat}>
+                    <SelectTrigger className="w-24" data-testid={`select-export-${report.id}`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {EXPORT_FORMATS.map((format) => (
+                        <SelectItem key={format.value} value={format.value}>
+                          {format.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Button
+                    size="sm"
+                    onClick={() => runReportMutation.mutate(report)}
+                    disabled={runReportMutation.isPending}
+                    data-testid={`button-run-${report.id}`}
+                  >
+                    <Download className="h-4 w-4 mr-1" />
+                    Export
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedReport(report);
+                      setShowScheduleDialog(true);
+                    }}
+                    data-testid={`button-schedule-${report.id}`}
+                  >
+                    <Clock className="h-4 w-4" />
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      if (confirm("Are you sure you want to delete this report?")) {
+                        deleteReportMutation.mutate(report.id);
+                      }
+                    }}
+                    data-testid={`button-delete-${report.id}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <CreateReportDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        templates={templates}
+      />
+
+      <ScheduleReportDialog
+        open={showScheduleDialog}
+        onOpenChange={setShowScheduleDialog}
+        report={selectedReport}
+      />
+    </>
+  );
+}
+
+function CreateReportDialog({
+  open,
+  onOpenChange,
+  templates,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  templates: ReportTemplate[];
+}) {
+  const { toast } = useToast();
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [dataSource, setDataSource] = useState("consultants");
+  const [templateId, setTemplateId] = useState("");
+  const [isPublic, setIsPublic] = useState(false);
+  const [selectedFields, setSelectedFields] = useState<string[]>([]);
+
+  const fieldsBySource: Record<string, string[]> = {
+    consultants: ["id", "firstName", "lastName", "email", "status", "specialty", "hourlyRate"],
+    projects: ["id", "name", "status", "budget", "startDate", "endDate", "hospitalName"],
+    hospitals: ["id", "name", "location", "bedCount", "activeProjects"],
+    timesheets: ["id", "consultantName", "projectName", "hoursWorked", "date", "status"],
+    support_tickets: ["id", "title", "status", "priority", "createdAt", "resolvedAt"],
+    documents: ["id", "name", "type", "status", "uploadedAt", "expirationDate"],
+  };
+
+  const createReportMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/saved-reports", {
+        name,
+        description,
+        templateId: templateId || null,
+        isPublic,
+        config: {
+          dataSource,
+          selectedFields,
+          filters: {},
+        },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/saved-reports"] });
+      toast({ title: "Report created successfully" });
+      onOpenChange(false);
+      resetForm();
+    },
+    onError: () => {
+      toast({ title: "Failed to create report", variant: "destructive" });
+    },
+  });
+
+  const resetForm = () => {
+    setName("");
+    setDescription("");
+    setDataSource("consultants");
+    setTemplateId("");
+    setIsPublic(false);
+    setSelectedFields([]);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Create Custom Report</DialogTitle>
+          <DialogDescription>
+            Build a new report by selecting data source and fields
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="report-name">Report Name</Label>
+            <Input
+              id="report-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Monthly Consultant Summary"
+              data-testid="input-report-name"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="report-description">Description</Label>
+            <Textarea
+              id="report-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Describe what this report contains..."
+              data-testid="input-report-description"
+            />
+          </div>
+
+          {templates.length > 0 && (
+            <div className="space-y-2">
+              <Label>Use Template (Optional)</Label>
+              <Select value={templateId} onValueChange={setTemplateId}>
+                <SelectTrigger data-testid="select-template">
+                  <SelectValue placeholder="Select a template" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No template</SelectItem>
+                  {templates.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label>Data Source</Label>
+            <Select value={dataSource} onValueChange={(v) => {
+              setDataSource(v);
+              setSelectedFields([]);
+            }}>
+              <SelectTrigger data-testid="select-data-source">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DATA_SOURCES.map((source) => (
+                  <SelectItem key={source.value} value={source.value}>
+                    {source.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Select Fields</Label>
+            <div className="border rounded-md p-3 space-y-2 max-h-40 overflow-y-auto" data-testid="fields-list">
+              {fieldsBySource[dataSource]?.map((field) => (
+                <div key={field} className="flex items-center gap-2">
+                  <Checkbox
+                    id={`field-${field}`}
+                    checked={selectedFields.includes(field)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedFields([...selectedFields, field]);
+                      } else {
+                        setSelectedFields(selectedFields.filter((f) => f !== field));
+                      }
+                    }}
+                  />
+                  <Label htmlFor={`field-${field}`} className="text-sm font-normal">
+                    {field}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="is-public"
+              checked={isPublic}
+              onCheckedChange={(checked) => setIsPublic(checked === true)}
+              data-testid="checkbox-public"
+            />
+            <Label htmlFor="is-public" className="text-sm font-normal">
+              Make this report public (visible to all users)
+            </Label>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => createReportMutation.mutate()}
+            disabled={!name || selectedFields.length === 0 || createReportMutation.isPending}
+            data-testid="button-submit-report"
+          >
+            Create Report
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ScheduleReportDialog({
+  open,
+  onOpenChange,
+  report,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  report: SavedReportWithDetails | null;
+}) {
+  const { toast } = useToast();
+  const [schedule, setSchedule] = useState("weekly");
+  const [exportFormat, setExportFormat] = useState("csv");
+  const [recipients, setRecipients] = useState("");
+
+  const scheduleReportMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/reports/schedule", {
+        savedReportId: report?.id,
+        schedule,
+        exportFormat,
+        recipients: recipients.split(",").map((r) => r.trim()).filter(Boolean),
+        name: `Scheduled: ${report?.name}`,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/scheduled-reports"] });
+      toast({ title: "Report scheduled successfully" });
+      onOpenChange(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to schedule report", variant: "destructive" });
+    },
+  });
+
+  if (!report) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Schedule Report</DialogTitle>
+          <DialogDescription>
+            Set up automatic delivery for "{report.name}"
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Frequency</Label>
+            <Select value={schedule} onValueChange={setSchedule}>
+              <SelectTrigger data-testid="select-schedule">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SCHEDULE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Export Format</Label>
+            <Select value={exportFormat} onValueChange={setExportFormat}>
+              <SelectTrigger data-testid="select-schedule-format">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {EXPORT_FORMATS.map((format) => (
+                  <SelectItem key={format.value} value={format.value}>
+                    {format.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="recipients">Recipients (comma-separated emails)</Label>
+            <Input
+              id="recipients"
+              value={recipients}
+              onChange={(e) => setRecipients(e.target.value)}
+              placeholder="user@example.com, team@example.com"
+              data-testid="input-recipients"
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => scheduleReportMutation.mutate()}
+            disabled={scheduleReportMutation.isPending}
+            data-testid="button-submit-schedule"
+          >
+            <Send className="h-4 w-4 mr-2" />
+            Schedule Report
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AdvancedVisualizations() {
+  // Sample forecasting data
+  const forecastData = [
+    { month: "Jan", actual: 12, forecast: 12 },
+    { month: "Feb", actual: 15, forecast: 14 },
+    { month: "Mar", actual: 18, forecast: 17 },
+    { month: "Apr", actual: 22, forecast: 20 },
+    { month: "May", actual: 25, forecast: 24 },
+    { month: "Jun", actual: 28, forecast: 27 },
+    { month: "Jul", actual: null, forecast: 30 },
+    { month: "Aug", actual: null, forecast: 33 },
+    { month: "Sep", actual: null, forecast: 36 },
+  ];
+
+  // Cost variance data
+  const costVarianceData = [
+    { category: "Labor", budgeted: 150000, actual: 142000, variance: 8000, status: "under" },
+    { category: "Equipment", budgeted: 50000, actual: 55000, variance: -5000, status: "over" },
+    { category: "Training", budgeted: 25000, actual: 22000, variance: 3000, status: "under" },
+    { category: "Travel", budgeted: 30000, actual: 35000, variance: -5000, status: "over" },
+    { category: "Software", budgeted: 40000, actual: 38000, variance: 2000, status: "under" },
+  ];
+
+  // Go-live readiness data
+  const goLiveReadiness = {
+    overallScore: 78,
+    categories: [
+      { name: "Training Completion", score: 85, status: "on_track" },
+      { name: "System Configuration", score: 92, status: "on_track" },
+      { name: "Data Migration", score: 75, status: "at_risk" },
+      { name: "User Acceptance Testing", score: 60, status: "at_risk" },
+      { name: "Go-Live Checklist", score: 70, status: "on_track" },
+    ],
+    milestones: [
+      { name: "Phase 1 Complete", date: "2024-01-15", status: "completed" },
+      { name: "UAT Sign-off", date: "2024-02-28", status: "in_progress" },
+      { name: "Go-Live", date: "2024-03-15", status: "pending" },
+      { name: "Hypercare End", date: "2024-04-15", status: "pending" },
+    ],
+  };
+
+  const totalBudgeted = costVarianceData.reduce((sum, item) => sum + item.budgeted, 0);
+  const totalActual = costVarianceData.reduce((sum, item) => sum + item.actual, 0);
+  const totalVariance = totalBudgeted - totalActual;
+
+  return (
+    <>
+      <div>
+        <h2 className="text-2xl font-bold">Advanced Analytics</h2>
+        <p className="text-muted-foreground">Forecasting, cost analysis, and project readiness dashboards</p>
+      </div>
+
+      {/* Timeline & Forecasting */}
+      <Card data-testid="card-timeline-forecasting">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            Timeline & Forecasting
+          </CardTitle>
+          <CardDescription>Project activity trends with future projections</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {/* Chart representation */}
+            <div className="h-64 flex items-end gap-2 border-b border-l p-4">
+              {forecastData.map((item, index) => (
+                <div key={item.month} className="flex-1 flex flex-col items-center gap-1">
+                  <div className="w-full flex flex-col items-center gap-1">
+                    {item.actual !== null && (
+                      <div
+                        className="w-full bg-primary rounded-t"
+                        style={{ height: `${item.actual * 6}px` }}
+                        title={`Actual: ${item.actual}`}
+                      />
+                    )}
+                    {item.actual === null && (
+                      <div
+                        className="w-full bg-primary/30 border-2 border-dashed border-primary rounded-t"
+                        style={{ height: `${item.forecast * 6}px` }}
+                        title={`Forecast: ${item.forecast}`}
+                      />
+                    )}
+                  </div>
+                  <span className="text-xs text-muted-foreground">{item.month}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-center gap-6 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-primary rounded" />
+                <span>Actual</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-primary/30 border-2 border-dashed border-primary rounded" />
+                <span>Forecast</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-primary">+15%</p>
+                <p className="text-sm text-muted-foreground">Projected Growth</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold">36</p>
+                <p className="text-sm text-muted-foreground">Sept Forecast</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-green-600">28</p>
+                <p className="text-sm text-muted-foreground">Current (Jun)</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Cost Variance Analytics */}
+      <Card data-testid="card-cost-variance">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5" />
+            Cost Variance Analytics
+          </CardTitle>
+          <CardDescription>Budget vs actual spending analysis</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {/* Summary cards */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="p-4 bg-muted rounded-lg text-center">
+                <p className="text-sm text-muted-foreground">Total Budget</p>
+                <p className="text-xl font-bold">${(totalBudgeted / 1000).toFixed(0)}K</p>
+              </div>
+              <div className="p-4 bg-muted rounded-lg text-center">
+                <p className="text-sm text-muted-foreground">Actual Spent</p>
+                <p className="text-xl font-bold">${(totalActual / 1000).toFixed(0)}K</p>
+              </div>
+              <div className={`p-4 rounded-lg text-center ${totalVariance >= 0 ? 'bg-green-50 dark:bg-green-950' : 'bg-red-50 dark:bg-red-950'}`}>
+                <p className="text-sm text-muted-foreground">Variance</p>
+                <p className={`text-xl font-bold flex items-center justify-center gap-1 ${totalVariance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {totalVariance >= 0 ? <ArrowDownRight className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
+                  ${Math.abs(totalVariance / 1000).toFixed(0)}K
+                </p>
+              </div>
+            </div>
+
+            {/* Variance by category */}
+            <div className="space-y-4">
+              {costVarianceData.map((item) => (
+                <div key={item.category} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{item.category}</span>
+                    <span className={`text-sm font-medium ${item.status === 'under' ? 'text-green-600' : 'text-red-600'}`}>
+                      {item.status === 'under' ? '-' : '+'}${Math.abs(item.variance / 1000).toFixed(0)}K
+                    </span>
+                  </div>
+                  <div className="relative h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="absolute h-full bg-muted-foreground/30 rounded-full"
+                      style={{ width: '100%' }}
+                    />
+                    <div
+                      className={`absolute h-full rounded-full ${item.status === 'under' ? 'bg-green-500' : 'bg-red-500'}`}
+                      style={{ width: `${(item.actual / item.budgeted) * 100}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Budget: ${(item.budgeted / 1000).toFixed(0)}K</span>
+                    <span>Actual: ${(item.actual / 1000).toFixed(0)}K</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Go-Live Readiness Dashboard */}
+      <Card data-testid="card-golive-readiness">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Rocket className="h-5 w-5" />
+            Go-Live Readiness Dashboard
+          </CardTitle>
+          <CardDescription>Project readiness assessment and milestone tracking</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {/* Overall readiness score */}
+            <div className="flex items-center gap-6">
+              <div className="relative w-32 h-32">
+                <svg className="w-full h-full" viewBox="0 0 100 100">
+                  <circle
+                    className="stroke-muted"
+                    fill="none"
+                    strokeWidth="10"
+                    r="40"
+                    cx="50"
+                    cy="50"
+                  />
+                  <circle
+                    className={`${goLiveReadiness.overallScore >= 80 ? 'stroke-green-500' : goLiveReadiness.overallScore >= 60 ? 'stroke-yellow-500' : 'stroke-red-500'}`}
+                    fill="none"
+                    strokeWidth="10"
+                    r="40"
+                    cx="50"
+                    cy="50"
+                    strokeDasharray={`${goLiveReadiness.overallScore * 2.51} 251`}
+                    strokeLinecap="round"
+                    transform="rotate(-90 50 50)"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-2xl font-bold">{goLiveReadiness.overallScore}%</span>
+                </div>
+              </div>
+              <div className="flex-1 space-y-2">
+                <h4 className="font-medium">Overall Readiness</h4>
+                <p className="text-sm text-muted-foreground">
+                  {goLiveReadiness.overallScore >= 80
+                    ? "Project is on track for go-live"
+                    : goLiveReadiness.overallScore >= 60
+                    ? "Some areas need attention before go-live"
+                    : "Critical issues must be addressed"}
+                </p>
+                <Badge variant={goLiveReadiness.overallScore >= 80 ? "default" : goLiveReadiness.overallScore >= 60 ? "secondary" : "destructive"}>
+                  {goLiveReadiness.overallScore >= 80 ? "On Track" : goLiveReadiness.overallScore >= 60 ? "At Risk" : "Critical"}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Category breakdown */}
+            <div className="space-y-4">
+              <h4 className="font-medium">Readiness by Category</h4>
+              {goLiveReadiness.categories.map((category) => (
+                <div key={category.name} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {category.status === "on_track" ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                      )}
+                      <span className="text-sm">{category.name}</span>
+                    </div>
+                    <span className="text-sm font-medium">{category.score}%</span>
+                  </div>
+                  <Progress value={category.score} className="h-2" />
+                </div>
+              ))}
+            </div>
+
+            {/* Milestones */}
+            <div className="space-y-4">
+              <h4 className="font-medium">Key Milestones</h4>
+              <div className="space-y-3">
+                {goLiveReadiness.milestones.map((milestone, index) => (
+                  <div key={milestone.name} className="flex items-center gap-3">
+                    <div className="flex flex-col items-center">
+                      {milestone.status === "completed" ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      ) : milestone.status === "in_progress" ? (
+                        <Circle className="h-5 w-5 text-blue-500 fill-blue-500" />
+                      ) : (
+                        <Circle className="h-5 w-5 text-muted-foreground" />
+                      )}
+                      {index < goLiveReadiness.milestones.length - 1 && (
+                        <div className={`w-0.5 h-6 ${milestone.status === "completed" ? "bg-green-500" : "bg-muted"}`} />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className={`text-sm font-medium ${milestone.status === "completed" ? "text-muted-foreground line-through" : ""}`}>
+                        {milestone.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{milestone.date}</p>
+                    </div>
+                    <Badge
+                      variant={
+                        milestone.status === "completed"
+                          ? "default"
+                          : milestone.status === "in_progress"
+                          ? "secondary"
+                          : "outline"
+                      }
+                    >
+                      {milestone.status === "completed"
+                        ? "Done"
+                        : milestone.status === "in_progress"
+                        ? "In Progress"
+                        : "Pending"}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </>
   );
 }
 

@@ -117,7 +117,7 @@ describe('User Management', () => {
         body: mockAccountSettings
       }).as('getAccountSettings');
 
-      cy.visit('/account');
+      cy.visit('/account-settings');
       cy.wait('@getUser');
       cy.wait('@getAccountSettings');
     });
@@ -176,7 +176,7 @@ describe('User Management', () => {
         body: mockAccountSettings
       }).as('getAccountSettings');
 
-      cy.visit('/account');
+      cy.visit('/account-settings');
       cy.wait('@getUser');
       cy.wait('@getAccountSettings');
     });
@@ -218,7 +218,7 @@ describe('User Management', () => {
         body: mockAccountSettings
       }).as('getAccountSettings');
 
-      cy.visit('/account');
+      cy.visit('/account-settings');
       cy.wait('@getUser');
       cy.wait('@getAccountSettings');
     });
@@ -251,7 +251,7 @@ describe('User Management', () => {
         body: mockAccountSettings
       }).as('getAccountSettings');
 
-      cy.visit('/account');
+      cy.visit('/account-settings');
       cy.wait('@getUser');
       cy.wait('@getAccountSettings');
     });
@@ -371,7 +371,7 @@ describe('User Management', () => {
         body: mockSessions
       }).as('getSessions');
 
-      cy.visit('/account');
+      cy.visit('/account-settings');
       cy.wait('@getUser');
       cy.wait('@getAccountSettings');
     });

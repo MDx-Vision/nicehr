@@ -601,9 +601,12 @@ export interface IStorage {
   deleteProjectRequirement(id: string): Promise<boolean>;
 
   // Schedule operations
+  getAllSchedules(): Promise<ProjectSchedule[]>;
   getProjectSchedules(projectId: string): Promise<ProjectSchedule[]>;
   getSchedule(id: string): Promise<ProjectSchedule | undefined>;
   createProjectSchedule(schedule: InsertProjectSchedule): Promise<ProjectSchedule>;
+  updateSchedule(id: string, data: Partial<InsertProjectSchedule>): Promise<ProjectSchedule | undefined>;
+  deleteSchedule(id: string): Promise<boolean>;
   updateScheduleStatus(id: string, status: "pending" | "approved" | "rejected", approvedBy?: string): Promise<ProjectSchedule | undefined>;
 
   // Schedule Assignment operations
@@ -1638,6 +1641,11 @@ export interface DashboardStats {
   activeProjects: number;
   pendingDocuments: number;
   totalSavings: string;
+  // Performance metrics
+  totalHoursLogged: number;
+  ticketResolutionRate: number;
+  projectCompletionRate: number;
+  consultantUtilization: number;
 }
 
 export interface DirectorySearchParams {
@@ -2009,8 +2017,25 @@ export class DatabaseStorage implements IStorage {
     return newConsultant;
   }
 
-  async getAllConsultants(): Promise<Consultant[]> {
-    return await db.select().from(consultants).orderBy(desc(consultants.createdAt));
+  async getAllConsultants(): Promise<(Consultant & { user?: { firstName: string | null; lastName: string | null; email: string | null; profileImageUrl: string | null } })[]> {
+    const result = await db
+      .select({
+        consultant: consultants,
+        user: {
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          profileImageUrl: users.profileImageUrl,
+        },
+      })
+      .from(consultants)
+      .leftJoin(users, eq(consultants.userId, users.id))
+      .orderBy(desc(consultants.createdAt));
+
+    return result.map(row => ({
+      ...row.consultant,
+      user: row.user,
+    }));
   }
 
   async createConsultant(consultant: InsertConsultant): Promise<Consultant> {
@@ -2219,6 +2244,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Schedule operations
+  async getAllSchedules(): Promise<ProjectSchedule[]> {
+    return await db.select().from(projectSchedules).orderBy(projectSchedules.scheduleDate);
+  }
+
   async getProjectSchedules(projectId: string): Promise<ProjectSchedule[]> {
     return await db.select().from(projectSchedules).where(eq(projectSchedules.projectId, projectId));
   }
@@ -2231,6 +2260,20 @@ export class DatabaseStorage implements IStorage {
   async createProjectSchedule(schedule: InsertProjectSchedule): Promise<ProjectSchedule> {
     const [newSchedule] = await db.insert(projectSchedules).values(schedule).returning();
     return newSchedule;
+  }
+
+  async updateSchedule(id: string, data: Partial<InsertProjectSchedule>): Promise<ProjectSchedule | undefined> {
+    const [updated] = await db
+      .update(projectSchedules)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(projectSchedules.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteSchedule(id: string): Promise<boolean> {
+    await db.delete(projectSchedules).where(eq(projectSchedules.id, id));
+    return true;
   }
 
   async updateScheduleStatus(id: string, status: "pending" | "approved" | "rejected", approvedBy?: string): Promise<ProjectSchedule | undefined> {
@@ -2564,13 +2607,60 @@ export class DatabaseStorage implements IStorage {
     const [pendingDocCount] = await db.select({ count: sql<number>`count(*)` }).from(consultantDocuments).where(eq(consultantDocuments.status, "pending"));
     const [savingsSum] = await db.select({ total: sql<string>`COALESCE(SUM(total_savings), 0)` }).from(budgetCalculations);
 
+    // Calculate ticket resolution rate (resolved + closed / total tickets * 100)
+    const [totalTickets] = await db.select({ count: sql<number>`count(*)` }).from(supportTickets);
+    const [resolvedTickets] = await db.select({ count: sql<number>`count(*)` })
+      .from(supportTickets)
+      .where(sql`${supportTickets.status} IN ('resolved', 'closed')`);
+    const ticketResolutionRate = totalTickets?.count > 0
+      ? Math.round((Number(resolvedTickets?.count || 0) / Number(totalTickets.count)) * 100)
+      : 0;
+
+    // Calculate project completion rate (completed / total projects * 100)
+    const [totalProjects] = await db.select({ count: sql<number>`count(*)` }).from(projects);
+    const [completedProjects] = await db.select({ count: sql<number>`count(*)` })
+      .from(projects)
+      .where(eq(projects.status, "completed"));
+    const projectCompletionRate = totalProjects?.count > 0
+      ? Math.round((Number(completedProjects?.count || 0) / Number(totalProjects.count)) * 100)
+      : 0;
+
+    // Calculate total hours logged from timesheets
+    const [hoursSum] = await db.select({
+      total: sql<number>`COALESCE(SUM(total_hours), 0)`
+    }).from(timesheets);
+    const totalHoursLogged = Math.round(Number(hoursSum?.total || 0));
+
+    // Calculate consultant utilization (hours logged this month / expected hours)
+    // Expected hours per consultant per month: ~160 hours (40 hrs/week * 4 weeks)
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const [monthlyHours] = await db.select({
+      total: sql<number>`COALESCE(SUM(total_hours), 0)`
+    })
+      .from(timesheets)
+      .where(sql`${timesheets.weekStartDate} >= ${startOfMonth.toISOString().split('T')[0]}`);
+
+    const activeConsultants = Number(activeConsultantCount?.count || 0);
+    const expectedMonthlyHours = activeConsultants * 160; // 160 hours per consultant per month
+    const consultantUtilization = expectedMonthlyHours > 0
+      ? Math.min(100, Math.round((Number(monthlyHours?.total || 0) / expectedMonthlyHours) * 100))
+      : 0;
+
     return {
       totalConsultants: Number(consultantCount?.count || 0),
-      activeConsultants: Number(activeConsultantCount?.count || 0),
+      activeConsultants: activeConsultants,
       totalHospitals: Number(hospitalCount?.count || 0),
       activeProjects: Number(activeProjectCount?.count || 0),
       pendingDocuments: Number(pendingDocCount?.count || 0),
       totalSavings: savingsSum?.total || "0",
+      // Performance metrics
+      totalHoursLogged,
+      ticketResolutionRate,
+      projectCompletionRate,
+      consultantUtilization,
     };
   }
 

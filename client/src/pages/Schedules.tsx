@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, addWeeks, subWeeks, addMonths, subMonths, startOfWeek, endOfWeek, eachDayOfInterval, isToday } from "date-fns";
-import { Calendar, Clock, Plus, ChevronLeft, ChevronRight, Users, Briefcase, CheckCircle, XCircle, FileText, ArrowRightLeft, LogIn, LogOut, AlertCircle, Download } from "lucide-react";
-import { downloadCSV, downloadICal, getExportTimestamp, type ICalEvent } from "@/lib/export-utils";
+import { Calendar, Clock, Plus, ChevronLeft, ChevronRight, Users, Briefcase, CheckCircle, XCircle, FileText, ArrowRightLeft, LogIn, LogOut, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -14,66 +13,43 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
-interface Shift {
+interface Schedule {
   id: string;
-  consultantId: string;
-  consultantName: string;
   projectId: string;
-  projectName: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  shiftType: string;
-  isRecurring: boolean;
-  recurrence?: string;
-  recurrenceEnd?: string;
-}
-
-interface Availability {
-  id: string;
-  consultantId: string;
-  date: string;
-  status: "available" | "unavailable" | "partial";
-  slots: { time: string; available: boolean }[];
-}
-
-interface TimeOffRequest {
-  id: string;
-  consultantId: string;
-  startDate: string;
-  endDate: string;
-  reason: string;
+  scheduleDate: string;
+  shiftType: "day" | "night" | "swing";
   status: "pending" | "approved" | "rejected";
-}
-
-interface SignInRecord {
-  id: string;
-  date: string;
-  signInTime: string;
-  signOutTime?: string;
-  shiftId: string;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface EODReport {
   id: string;
-  date: string;
+  projectId?: string;
+  consultantId?: string;
+  reportDate: string;
   accomplishments: string;
   challenges: string;
-  tomorrowPlan: string;
-  createdBy: string;
-  createdAt: string;
+  nextDayPlan: string;
+  status: string;
+  createdAt?: string;
 }
 
 interface HandoffNote {
   id: string;
-  date: string;
+  projectId: string;
+  fromConsultantId: string;
+  toConsultantId?: string;
+  shiftDate: string;
   summary: string;
   outstandingItems: string;
   priority: "low" | "medium" | "high";
-  createdBy: string;
   acknowledged: boolean;
-  acknowledgedBy?: string;
+  acknowledgedAt?: string;
+  createdAt?: string;
 }
 
 export default function Schedules() {
@@ -96,13 +72,6 @@ export default function Schedules() {
   const [timeOffModalOpen, setTimeOffModalOpen] = useState(false);
   const [eodModalOpen, setEodModalOpen] = useState(false);
   const [handoffModalOpen, setHandoffModalOpen] = useState(false);
-  const [exportModalOpen, setExportModalOpen] = useState(false);
-  const [exportFormat, setExportFormat] = useState<"csv" | "excel" | "ical">("csv");
-  const [exportDateRange, setExportDateRange] = useState({
-    startDate: format(subMonths(new Date(), 1), "yyyy-MM-dd"),
-    endDate: format(new Date(), "yyyy-MM-dd"),
-  });
-  const [isExporting, setIsExporting] = useState(false);
 
   // Form state for create shift
   const [shiftForm, setShiftForm] = useState({
@@ -147,89 +116,86 @@ export default function Schedules() {
   const [selectedAvailabilityStatus, setSelectedAvailabilityStatus] = useState<string>("available");
 
   // Queries
-  const { data: projectsData = [] } = useQuery({
+  const { data: projectsData = [] } = useQuery<any[]>({
     queryKey: ["/api/projects"],
   });
 
-  const { data: consultantsData = [] } = useQuery({
+  const { data: consultantsData = [] } = useQuery<any[]>({
     queryKey: ["/api/consultants"],
   });
 
-  const { data: hospitals = [] } = useQuery({
-    queryKey: ["/api/hospitals"],
+  const { data: schedulesData = [] } = useQuery<Schedule[]>({
+    queryKey: ["/api/schedules"],
   });
 
-  // Fallback demo data when API returns empty
-  const demoProjects = [
-    { id: "demo-p-1", name: "Epic EHR Project Implementation" },
-    { id: "demo-p-2", name: "Cerner Training Project" },
-    { id: "demo-p-3", name: "MEDITECH Support Project" }
-  ];
+  const { data: eodReportsData = [] } = useQuery<EODReport[]>({
+    queryKey: ["/api/eod-reports"],
+  });
 
-  const demoConsultants = [
-    { id: "demo-c-1", firstName: "Demo", lastName: "Consultant One" },
-    { id: "demo-c-2", firstName: "Demo", lastName: "Consultant Two" }
-  ];
+  // Use API data
+  const projects: any[] = projectsData;
+  const consultants: any[] = consultantsData;
+  const schedules: Schedule[] = schedulesData;
+  const eodReports: EODReport[] = eodReportsData;
 
-  // Use API data if available, otherwise use demo data
-  const projects: any[] = (projectsData as any[])?.length > 0 ? (projectsData as any[]) : demoProjects;
-  const consultants: any[] = (consultantsData as any[])?.length > 0 ? (consultantsData as any[]) : demoConsultants;
+  // Local state for handoff notes (project-specific API needs projectId)
+  const [handoffNotes, setHandoffNotes] = useState<HandoffNote[]>([]);
 
-  // Mock data for shifts (in real app, this would come from API)
-  const [shifts, setShifts] = useState<Shift[]>([
-    {
-      id: "shift-1",
-      consultantId: "consultant-1",
-      consultantName: "John Smith",
-      projectId: "project-1",
-      projectName: "Epic Implementation",
-      date: format(new Date(), "yyyy-MM-dd"),
-      startTime: "09:00",
-      endTime: "17:00",
-      shiftType: "regular",
-      isRecurring: false
+  // Local sign-in state (tracked per session)
+  const [signInRecords, setSignInRecords] = useState<Array<{id: string; date: string; signInTime: string; signOutTime?: string}>>([]);
+
+  // Mutations
+  const createScheduleMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest("POST", "/api/schedules", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+      toast({ title: "Schedule Created", description: "The schedule has been successfully created." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create schedule.", variant: "destructive" });
     }
-  ]);
+  });
 
-  // Mock sign-in records
-  const [signInRecords, setSignInRecords] = useState<SignInRecord[]>([
-    {
-      id: "record-1",
-      date: format(new Date(), "yyyy-MM-dd"),
-      signInTime: "08:55",
-      signOutTime: "17:05",
-      shiftId: "shift-1"
+  const updateScheduleMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      return apiRequest("PATCH", `/api/schedules/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+      toast({ title: "Schedule Updated", description: "The schedule has been successfully updated." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update schedule.", variant: "destructive" });
     }
-  ]);
+  });
 
-  // Mock EOD reports
-  const [eodReports, setEodReports] = useState<EODReport[]>([
-    {
-      id: "eod-1",
-      date: format(new Date(), "yyyy-MM-dd"),
-      accomplishments: "Completed user training session",
-      challenges: "Network connectivity issues",
-      tomorrowPlan: "Continue with phase 2 implementation",
-      createdBy: "John Smith",
-      createdAt: new Date().toISOString()
+  const deleteScheduleMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/schedules/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+      toast({ title: "Schedule Deleted", description: "The schedule has been successfully deleted." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete schedule.", variant: "destructive" });
     }
-  ]);
+  });
 
-  // Mock handoff notes
-  const [handoffNotes, setHandoffNotes] = useState<HandoffNote[]>([
-    {
-      id: "handoff-1",
-      date: format(new Date(), "yyyy-MM-dd"),
-      summary: "Completed morning rounds, all systems operational",
-      outstandingItems: "Pending approval for software update",
-      priority: "medium",
-      createdBy: "John Smith",
-      acknowledged: false
+  const createEodReportMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest("POST", "/api/eod-reports", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/eod-reports"] });
+      toast({ title: "EOD Report Submitted", description: "Your end of day report has been saved." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to submit EOD report.", variant: "destructive" });
     }
-  ]);
-
-  // Mock availability
-  const [availabilityGrid, setAvailabilityGrid] = useState<Availability[]>([]);
+  });
 
   // Navigation functions
   const navigateNext = () => {
@@ -255,31 +221,23 @@ export default function Schedules() {
     return eachDayOfInterval({ start, end });
   };
 
-  // Filter shifts
-  const filteredShifts = shifts.filter(shift => {
-    if (consultantFilter && shift.consultantId !== consultantFilter) return false;
-    if (projectFilter && shift.projectId !== projectFilter) return false;
+  // Filter schedules
+  const filteredSchedules = schedules.filter(schedule => {
+    if (projectFilter && schedule.projectId !== projectFilter) return false;
     return true;
   });
 
-  // Handle create shift
+  // Handle create schedule
   const handleCreateShift = () => {
-    const newShift: Shift = {
-      id: `shift-${Date.now()}`,
-      consultantId: shiftForm.consultantId,
-      consultantName: consultants.find((c: any) => c.id === shiftForm.consultantId)?.firstName || "Unknown",
+    const scheduleData = {
       projectId: shiftForm.projectId,
-      projectName: projects.find((p: any) => p.id === shiftForm.projectId)?.name || "Unknown",
-      date: shiftForm.date,
-      startTime: shiftForm.startTime,
-      endTime: shiftForm.endTime,
-      shiftType: shiftForm.shiftType,
-      isRecurring: shiftForm.isRecurring,
-      recurrence: shiftForm.isRecurring ? shiftForm.recurrence : undefined,
-      recurrenceEnd: shiftForm.isRecurring ? shiftForm.recurrenceEnd : undefined
+      scheduleDate: shiftForm.date,
+      shiftType: shiftForm.shiftType === "regular" ? "day" : shiftForm.shiftType === "night" ? "night" : "day",
+      status: "pending",
+      notes: `${shiftForm.startTime} - ${shiftForm.endTime}`
     };
 
-    setShifts([...shifts, newShift]);
+    createScheduleMutation.mutate(scheduleData);
     setCreateShiftOpen(false);
     setShiftForm({
       consultantId: "",
@@ -292,24 +250,14 @@ export default function Schedules() {
       recurrence: "weekly",
       recurrenceEnd: ""
     });
-
-    toast({
-      title: "Shift Created",
-      description: "The shift has been successfully created."
-    });
   };
 
-  // Handle delete shift
+  // Handle delete schedule
   const handleDeleteShift = () => {
     if (selectedShift) {
-      setShifts(shifts.filter(s => s.id !== selectedShift.id));
+      deleteScheduleMutation.mutate(selectedShift.id);
       setDeleteShiftOpen(false);
       setSelectedShift(null);
-
-      toast({
-        title: "Shift Deleted",
-        description: "The shift has been successfully deleted."
-      });
     }
   };
 
@@ -373,24 +321,17 @@ export default function Schedules() {
 
   // Handle EOD report submission
   const handleSubmitEod = () => {
-    const newReport: EODReport = {
-      id: `eod-${Date.now()}`,
-      date: format(new Date(), "yyyy-MM-dd"),
+    const reportData = {
+      reportDate: format(new Date(), "yyyy-MM-dd"),
       accomplishments: eodForm.accomplishments,
       challenges: eodForm.challenges,
-      tomorrowPlan: eodForm.tomorrowPlan,
-      createdBy: "Current User",
-      createdAt: new Date().toISOString()
+      nextDayPlan: eodForm.tomorrowPlan,
+      status: "draft"
     };
 
-    setEodReports([...eodReports, newReport]);
+    createEodReportMutation.mutate(reportData);
     setEodModalOpen(false);
     setEodForm({ accomplishments: "", challenges: "", tomorrowPlan: "" });
-
-    toast({
-      title: "EOD Report Submitted",
-      description: "Your end of day report has been saved."
-    });
   };
 
   // Handle handoff note submission
@@ -415,105 +356,6 @@ export default function Schedules() {
     });
   };
 
-  const handleExportSchedules = async () => {
-    setIsExporting(true);
-    try {
-      const params = new URLSearchParams();
-      if (exportDateRange.startDate) params.append('startDate', exportDateRange.startDate);
-      if (exportDateRange.endDate) params.append('endDate', exportDateRange.endDate);
-      if (projectFilter) params.append('projectId', projectFilter);
-      if (consultantFilter) params.append('consultantId', consultantFilter);
-
-      const filename = `schedules_export_${getExportTimestamp()}`;
-
-      if (exportFormat === 'ical') {
-        // Fetch iCal data
-        const response = await fetch(`/api/schedules/export/ical?${params.toString()}`, {
-          credentials: 'include',
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to export schedules');
-        }
-
-        const result = await response.json();
-
-        if (result.events.length === 0) {
-          toast({
-            title: "No Data",
-            description: "No schedules found for the selected filters.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        // Download as iCal file
-        downloadICal(result.events as ICalEvent[], filename, 'NICEHR Schedules');
-
-        setExportModalOpen(false);
-        toast({
-          title: "Export Complete",
-          description: `Successfully exported ${result.count} schedule events to calendar.`,
-        });
-      } else {
-        // Fetch CSV data
-        const response = await fetch(`/api/schedules/export?${params.toString()}`, {
-          credentials: 'include',
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to export schedules');
-        }
-
-        const result = await response.json();
-
-        if (result.data.length === 0) {
-          toast({
-            title: "No Data",
-            description: "No schedules found for the selected filters.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        // Define export headers and map data
-        const headers = [
-          'scheduleDate',
-          'shiftType',
-          'status',
-          'projectName',
-          'hospitalName',
-          'consultantName',
-          'consultantEmail',
-          'unitName',
-          'moduleName',
-          'startTime',
-          'endTime',
-          'notes',
-          'approvedBy',
-          'approvedAt',
-        ];
-
-        downloadCSV(headers, result.data, filename);
-
-        setExportModalOpen(false);
-        toast({
-          title: "Export Complete",
-          description: `Successfully exported ${result.count} schedule records.`,
-        });
-      }
-    } catch (error) {
-      console.error('Export error:', error);
-      toast({
-        title: "Export Failed",
-        description: "Failed to export schedules. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
   // Handle acknowledge handoff
   const handleAcknowledgeHandoff = (noteId: string) => {
     setHandoffNotes(handoffNotes.map(note => 
@@ -535,16 +377,10 @@ export default function Schedules() {
           <h1 className="text-3xl font-bold">Schedules</h1>
           <p className="text-muted-foreground">Manage shifts, availability, and time tracking</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setExportModalOpen(true)} data-testid="button-export-schedules">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-          <Button onClick={() => setCreateShiftOpen(true)} data-testid="button-create-shift">
-            <Plus className="h-4 w-4 mr-2" />
-            Create Shift
-          </Button>
-        </div>
+        <Button onClick={() => setCreateShiftOpen(true)} data-testid="button-create-shift">
+          <Plus className="h-4 w-4 mr-2" />
+          Create Shift
+        </Button>
       </div>
 
       {/* Main Tabs */}
@@ -688,20 +524,23 @@ export default function Schedules() {
                       <div className="font-medium text-sm mb-2">
                         {format(day, "EEE d")}
                       </div>
-                      {filteredShifts
-                        .filter(s => s.date === format(day, "yyyy-MM-dd"))
-                        .map(shift => (
-                          <div
-                            key={shift.id}
-                            className="bg-primary/10 rounded p-2 text-xs mb-1 cursor-pointer hover:bg-primary/20"
-                            data-testid="shift-item"
-                            onClick={() => setSelectedShift(shift)}
-                          >
-                            <div className="font-medium">{shift.consultantName}</div>
-                            <div>{shift.startTime} - {shift.endTime}</div>
-                            <div className="text-muted-foreground">{shift.projectName}</div>
-                          </div>
-                        ))}
+                      {filteredSchedules
+                        .filter(s => s.scheduleDate === format(day, "yyyy-MM-dd"))
+                        .map(schedule => {
+                          const project = projects.find((p: any) => String(p.id) === schedule.projectId);
+                          return (
+                            <div
+                              key={schedule.id}
+                              className="bg-primary/10 rounded p-2 text-xs mb-1 cursor-pointer hover:bg-primary/20"
+                              data-testid="shift-item"
+                              onClick={() => setSelectedShift(schedule as any)}
+                            >
+                              <div className="font-medium">{schedule.shiftType} shift</div>
+                              <div>{schedule.notes || "All day"}</div>
+                              <div className="text-muted-foreground">{project?.name || "Unknown Project"}</div>
+                            </div>
+                          );
+                        })}
                     </div>
                   ))}
                 </div>
@@ -842,13 +681,13 @@ export default function Schedules() {
                     data-testid="eod-report-item"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-medium">{report.date}</span>
-                      <span className="text-sm text-muted-foreground">by {report.createdBy}</span>
+                      <span className="font-medium">{report.reportDate}</span>
+                      <Badge variant="outline">{report.status}</Badge>
                     </div>
                     <div className="text-sm" data-testid="eod-report-details">
                       <p><strong>Accomplishments:</strong> {report.accomplishments}</p>
                       <p><strong>Challenges:</strong> {report.challenges}</p>
-                      <p><strong>Tomorrow:</strong> {report.tomorrowPlan}</p>
+                      <p><strong>Tomorrow:</strong> {report.nextDayPlan}</p>
                     </div>
                   </div>
                 ))}
@@ -872,46 +711,50 @@ export default function Schedules() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3" data-testid="handoff-notes-list">
-                {handoffNotes.map(note => (
-                  <div
-                    key={note.id}
-                    className="border rounded-lg p-4 space-y-2"
-                    data-testid="handoff-note-item"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{note.date}</span>
-                        <Badge variant={
-                          note.priority === "high" ? "destructive" :
-                          note.priority === "medium" ? "default" : "secondary"
-                        }>
-                          {note.priority}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {note.acknowledged ? (
-                          <Badge variant="outline" className="bg-green-50">
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Acknowledged
+                {handoffNotes.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">No handoff notes yet</p>
+                ) : (
+                  handoffNotes.map(note => (
+                    <div
+                      key={note.id}
+                      className="border rounded-lg p-4 space-y-2"
+                      data-testid="handoff-note-item"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{note.shiftDate}</span>
+                          <Badge variant={
+                            note.priority === "high" ? "destructive" :
+                            note.priority === "medium" ? "default" : "secondary"
+                          }>
+                            {note.priority}
                           </Badge>
-                        ) : (
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => handleAcknowledgeHandoff(note.id)}
-                            data-testid="button-acknowledge"
-                          >
-                            Acknowledge
-                          </Button>
-                        )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {note.acknowledged ? (
+                            <Badge variant="outline" className="bg-green-50">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Acknowledged
+                            </Badge>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleAcknowledgeHandoff(note.id)}
+                              data-testid="button-acknowledge"
+                            >
+                              Acknowledge
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-sm">
+                        <p><strong>Summary:</strong> {note.summary}</p>
+                        <p><strong>Outstanding Items:</strong> {note.outstandingItems}</p>
                       </div>
                     </div>
-                    <div className="text-sm">
-                      <p><strong>Summary:</strong> {note.summary}</p>
-                      <p><strong>Outstanding Items:</strong> {note.outstandingItems}</p>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
@@ -1089,32 +932,15 @@ export default function Schedules() {
         </DialogContent>
       </Dialog>
 
-      {/* Shift Edit Dialog (shown when shift selected) */}
+      {/* Schedule Edit Dialog (shown when schedule selected) */}
       {selectedShift && !deleteShiftOpen && (
         <Dialog open={!!selectedShift} onOpenChange={() => setSelectedShift(null)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Edit Shift</DialogTitle>
-              <DialogDescription>Modify shift details</DialogDescription>
+              <DialogTitle>Edit Schedule</DialogTitle>
+              <DialogDescription>Modify schedule details</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div>
-                <Label>Consultant</Label>
-                <Select
-                  value={selectedShift.consultantId}
-                  onValueChange={(val) => setSelectedShift({...selectedShift, consultantId: val})}
-                  data-testid="select-consultant"
-                >
-                  <SelectTrigger data-testid="select-consultant">
-                    <SelectValue placeholder="Select consultant" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {consultants.map((c: any) => (
-                      <SelectItem key={c.id} value={c.id}>{c.firstName} {c.lastName}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
               <div>
                 <Label>Project</Label>
                 <Select
@@ -1136,35 +962,41 @@ export default function Schedules() {
                 <Label>Date</Label>
                 <Input
                   type="date"
-                  value={selectedShift.date}
-                  onChange={(e) => setSelectedShift({...selectedShift, date: e.target.value})}
+                  value={selectedShift.scheduleDate || selectedShift.date}
+                  onChange={(e) => setSelectedShift({...selectedShift, scheduleDate: e.target.value, date: e.target.value})}
                   data-testid="input-shift-date"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Start Time</Label>
-                  <Input
-                    type="time"
-                    value={selectedShift.startTime}
-                    onChange={(e) => setSelectedShift({...selectedShift, startTime: e.target.value})}
-                    data-testid="input-start-time"
-                  />
-                </div>
-                <div>
-                  <Label>End Time</Label>
-                  <Input
-                    type="time"
-                    value={selectedShift.endTime}
-                    onChange={(e) => setSelectedShift({...selectedShift, endTime: e.target.value})}
-                    data-testid="input-end-time"
-                  />
-                </div>
+              <div>
+                <Label>Shift Type</Label>
+                <Select
+                  value={selectedShift.shiftType}
+                  onValueChange={(val) => setSelectedShift({...selectedShift, shiftType: val})}
+                  data-testid="select-shift-type"
+                >
+                  <SelectTrigger data-testid="select-shift-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="day">Day</SelectItem>
+                    <SelectItem value="night">Night</SelectItem>
+                    <SelectItem value="swing">Swing</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Notes</Label>
+                <Input
+                  value={selectedShift.notes || ""}
+                  onChange={(e) => setSelectedShift({...selectedShift, notes: e.target.value})}
+                  placeholder="e.g., 09:00 - 17:00"
+                  data-testid="input-notes"
+                />
               </div>
             </div>
             <DialogFooter>
-              <Button 
-                variant="destructive" 
+              <Button
+                variant="destructive"
                 onClick={() => {
                   setDeleteShiftOpen(true);
                 }}
@@ -1172,15 +1004,18 @@ export default function Schedules() {
               >
                 Delete
               </Button>
-              <Button 
+              <Button
                 onClick={() => {
-                  // Update the shift in the list
-                  setShifts(shifts.map(s => s.id === selectedShift.id ? selectedShift : s));
-                  setSelectedShift(null);
-                  toast({
-                    title: "Shift Updated",
-                    description: "The shift has been successfully updated."
+                  updateScheduleMutation.mutate({
+                    id: selectedShift.id,
+                    data: {
+                      projectId: selectedShift.projectId,
+                      scheduleDate: selectedShift.scheduleDate || selectedShift.date,
+                      shiftType: selectedShift.shiftType,
+                      notes: selectedShift.notes
+                    }
                   });
+                  setSelectedShift(null);
                 }}
                 data-testid="button-submit-shift"
               >
@@ -1342,77 +1177,6 @@ export default function Schedules() {
             </Button>
             <Button onClick={handleSubmitHandoff} data-testid="button-submit-handoff">
               Create Handoff Note
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Export Modal */}
-      <Dialog open={exportModalOpen} onOpenChange={setExportModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Export Schedules</DialogTitle>
-            <DialogDescription>
-              Export schedule data to CSV or calendar format
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="export-format">Format</Label>
-              <Select
-                value={exportFormat}
-                onValueChange={(v) => setExportFormat(v as "csv" | "excel" | "ical")}
-              >
-                <SelectTrigger id="export-format" data-testid="select-export-format">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="csv">CSV Spreadsheet</SelectItem>
-                  <SelectItem value="excel">Excel (CSV)</SelectItem>
-                  <SelectItem value="ical">Calendar (.ics)</SelectItem>
-                </SelectContent>
-              </Select>
-              {exportFormat === 'ical' && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Import into Google Calendar, Outlook, or Apple Calendar
-                </p>
-              )}
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="export-start-date">Start Date</Label>
-                <Input
-                  id="export-start-date"
-                  type="date"
-                  value={exportDateRange.startDate}
-                  onChange={(e) => setExportDateRange({...exportDateRange, startDate: e.target.value})}
-                  data-testid="input-export-start-date"
-                />
-              </div>
-              <div>
-                <Label htmlFor="export-end-date">End Date</Label>
-                <Input
-                  id="export-end-date"
-                  type="date"
-                  value={exportDateRange.endDate}
-                  onChange={(e) => setExportDateRange({...exportDateRange, endDate: e.target.value})}
-                  data-testid="input-export-end-date"
-                />
-              </div>
-            </div>
-            <div className="text-sm text-muted-foreground">
-              {projectFilter && <p>Filtered by selected project</p>}
-              {consultantFilter && <p>Filtered by selected consultant</p>}
-              {!projectFilter && !consultantFilter && <p>Exporting all schedules in date range</p>}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setExportModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleExportSchedules} disabled={isExporting} data-testid="button-export-download">
-              <Download className="h-4 w-4 mr-2" />
-              {isExporting ? "Exporting..." : "Download"}
             </Button>
           </DialogFooter>
         </DialogContent>

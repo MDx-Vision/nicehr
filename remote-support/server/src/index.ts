@@ -45,14 +45,14 @@ app.use('/api/schedule', scheduleRoutes);
 
 // Health check
 app.get('/api/health', async (_req, res) => {
-  const dailyOk = await dailyService.healthCheck();
+  const videoOk = await dailyService.healthCheck();
 
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     seeded: db.isSeeded(),
     services: {
-      daily: dailyOk ? 'connected' : 'disconnected',
+      video: videoOk ? 'connected' : 'disconnected',
       websocket: `${websocketService.getConnectedCount()} clients`,
     },
   });

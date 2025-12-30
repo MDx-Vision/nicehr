@@ -43,6 +43,7 @@ export default function Documents() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDocument, setSelectedDocument] = useState<ConsultantDocument | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
+  const [viewingConsultant, setViewingConsultant] = useState<Consultant | null>(null);
 
   const { data: consultants, isLoading: consultantsLoading } = useQuery<Consultant[]>({
     queryKey: ["/api/consultants"],
@@ -50,6 +51,17 @@ export default function Documents() {
 
   const { data: documentTypes } = useQuery<DocumentType[]>({
     queryKey: ["/api/document-types"],
+  });
+
+  const { data: consultantDocuments, isLoading: docsLoading } = useQuery<ConsultantDocument[]>({
+    queryKey: ["/api/consultants", viewingConsultant?.id, "documents"],
+    queryFn: async () => {
+      if (!viewingConsultant?.id) return [];
+      const response = await fetch(`/api/consultants/${viewingConsultant.id}/documents`);
+      if (!response.ok) throw new Error("Failed to fetch documents");
+      return response.json();
+    },
+    enabled: !!viewingConsultant?.id,
   });
 
   const updateStatusMutation = useMutation({
@@ -206,6 +218,7 @@ export default function Documents() {
                       <Button
                         size="sm"
                         variant="outline"
+                        onClick={() => setViewingConsultant(consultant)}
                         data-testid={`button-view-docs-${consultant.id}`}
                       >
                         <Eye className="w-4 h-4 mr-1" />
@@ -230,6 +243,71 @@ export default function Documents() {
         </Card>
       )}
 
+      {/* View Consultant Documents Dialog */}
+      <Dialog open={!!viewingConsultant} onOpenChange={() => setViewingConsultant(null)}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Documents for {viewingConsultant?.tngId}</DialogTitle>
+            <DialogDescription>
+              View and review documents uploaded by this consultant
+            </DialogDescription>
+          </DialogHeader>
+          {docsLoading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ) : consultantDocuments && consultantDocuments.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Document Type</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Uploaded</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {consultantDocuments.map((doc) => (
+                  <TableRow key={doc.id}>
+                    <TableCell className="font-medium">
+                      {getDocTypeName(doc.documentTypeId)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={getStatusColor(doc.status) as any} className="capitalize">
+                        {getStatusIcon(doc.status)}
+                        <span className="ml-1">{doc.status}</span>
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {doc.uploadedAt ? format(new Date(doc.uploadedAt), "MMM d, yyyy") : "-"}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedDocument(doc);
+                        }}
+                      >
+                        Review
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="py-8 text-center">
+              <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">No documents uploaded yet</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Review Document Dialog */}
       <Dialog open={!!selectedDocument} onOpenChange={() => setSelectedDocument(null)}>
         <DialogContent>
           <DialogHeader>

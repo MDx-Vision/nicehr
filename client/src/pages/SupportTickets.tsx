@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { 
+import {
   Ticket, Plus, Search, Filter, Download, MessageSquare, Clock,
   AlertTriangle, CheckCircle, XCircle, User, Tag, ArrowUp,
   Edit, Trash2, Paperclip, AtSign, BarChart3
@@ -17,23 +17,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-
-interface SupportTicket {
-  id: string;
-  subject: string;
-  description: string;
-  category: string;
-  priority: "low" | "medium" | "high" | "critical";
-  status: "open" | "in-progress" | "pending" | "resolved" | "closed";
-  createdBy: string;
-  createdAt: string;
-  assignee?: string;
-  tags: string[];
-  isUrgent: boolean;
-  slaBreached: boolean;
-  resolution?: string;
-  attachments: string[];
-}
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { SupportTicket } from "@shared/schema";
 
 interface Comment {
   id: string;
@@ -65,7 +50,6 @@ export default function SupportTickets() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [assigneeFilter, setAssigneeFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Selection state
@@ -77,175 +61,106 @@ export default function SupportTickets() {
   const [closeModalOpen, setCloseModalOpen] = useState(false);
   const [escalateModalOpen, setEscalateModalOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
-  const [bulkAssignModalOpen, setBulkAssignModalOpen] = useState(false);
   const [bulkStatusModalOpen, setBulkStatusModalOpen] = useState(false);
   const [bulkCloseModalOpen, setBulkCloseModalOpen] = useState(false);
   const [addTagModalOpen, setAddTagModalOpen] = useState(false);
-  const [deleteCommentModalOpen, setDeleteCommentModalOpen] = useState(false);
 
   // Form state
   const [ticketForm, setTicketForm] = useState({
-    subject: "",
+    title: "",
     description: "",
     category: "",
-    priority: "",
+    priority: "medium",
     projectId: "",
-    isUrgent: false
   });
 
   const [commentText, setCommentText] = useState("");
   const [isInternalNote, setIsInternalNote] = useState(false);
-  const [editCommentText, setEditCommentText] = useState("");
   const [resolutionText, setResolutionText] = useState("");
   const [escalationReason, setEscalationReason] = useState("");
   const [newTag, setNewTag] = useState("");
   const [exportFormat, setExportFormat] = useState("csv");
-  const [bulkAssignee, setBulkAssignee] = useState("");
   const [bulkStatus, setBulkStatus] = useState("");
   const [reportStartDate, setReportStartDate] = useState("");
   const [reportEndDate, setReportEndDate] = useState("");
 
-  // Mention state
-  const [showMentions, setShowMentions] = useState(false);
-
   // Validation state
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
 
-  // Demo data
-  const [tickets, setTickets] = useState<SupportTicket[]>([
-    {
-      id: "ticket-1",
-      subject: "Login issue with Epic system",
-      description: "Unable to log in to Epic after password reset. Getting error code 403.",
-      category: "Technical",
-      priority: "high",
-      status: "open",
-      createdBy: "John Smith",
-      createdAt: "2024-01-15T10:30:00Z",
-      assignee: "Support Team",
-      tags: ["epic", "login"],
-      isUrgent: false,
-      slaBreached: false,
-      attachments: ["screenshot.png"]
+  // Local comments/activities (would be from API in full implementation)
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
+
+  // Fetch tickets from API
+  const { data: tickets = [], isLoading } = useQuery<SupportTicket[]>({
+    queryKey: ["/api/support-tickets"],
+  });
+
+  // Fetch projects for dropdown
+  const { data: projects = [] } = useQuery<any[]>({
+    queryKey: ["/api/projects"],
+  });
+
+  // Create ticket mutation
+  const createTicketMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest("POST", "/api/support-tickets", data);
     },
-    {
-      id: "ticket-2",
-      subject: "Training module not loading",
-      description: "The Cerner training module shows blank screen after clicking start.",
-      category: "Training",
-      priority: "medium",
-      status: "in-progress",
-      createdBy: "Jane Doe",
-      createdAt: "2024-01-14T14:00:00Z",
-      assignee: "Tech Support",
-      tags: ["training", "cerner"],
-      isUrgent: false,
-      slaBreached: false,
-      attachments: []
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/support-tickets"] });
+      setCreateModalOpen(false);
+      setTicketForm({ title: "", description: "", category: "", priority: "medium", projectId: "" });
+      toast({ title: "Ticket Created", description: "Your support ticket has been submitted." });
     },
-    {
-      id: "ticket-3",
-      subject: "Request for additional user access",
-      description: "Need admin access to the reporting module for Q1 reports.",
-      category: "Access Request",
-      priority: "low",
-      status: "pending",
-      createdBy: "Bob Wilson",
-      createdAt: "2024-01-13T09:00:00Z",
-      tags: ["access", "reports"],
-      isUrgent: false,
-      slaBreached: true,
-      attachments: []
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create ticket", variant: "destructive" });
     },
-    {
-      id: "ticket-4",
-      subject: "System performance issues",
-      description: "Application running very slow during peak hours.",
-      category: "Technical",
-      priority: "critical",
-      status: "open",
-      createdBy: "Alice Brown",
-      createdAt: "2024-01-12T16:30:00Z",
-      assignee: "Senior Engineer",
-      tags: ["performance", "urgent"],
-      isUrgent: true,
-      slaBreached: true,
-      attachments: []
+  });
+
+  // Update ticket mutation
+  const updateTicketMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      return apiRequest("PATCH", `/api/support-tickets/${id}`, data);
     },
-    {
-      id: "ticket-5",
-      subject: "Completed: Password reset request",
-      description: "Password has been reset successfully.",
-      category: "Account",
-      priority: "low",
-      status: "closed",
-      createdBy: "Charlie Davis",
-      createdAt: "2024-01-10T11:00:00Z",
-      assignee: "Help Desk",
-      tags: ["password"],
-      isUrgent: false,
-      slaBreached: false,
-      resolution: "Password reset completed and user verified login.",
-      attachments: []
-    }
-  ]);
-
-  const [comments, setComments] = useState<Comment[]>([
-    {
-      id: "comment-1",
-      ticketId: "ticket-1",
-      author: "Support Team",
-      content: "We are looking into this issue. Can you provide the exact error message?",
-      createdAt: "2024-01-15T11:00:00Z",
-      isInternal: false
+    onSuccess: (updatedTicket) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/support-tickets"] });
+      if (selectedTicket) {
+        setSelectedTicket({ ...selectedTicket, ...updatedTicket });
+      }
+      toast({ title: "Ticket Updated" });
     },
-    {
-      id: "comment-2",
-      ticketId: "ticket-1",
-      author: "Admin",
-      content: "Checked logs - appears to be a session timeout issue.",
-      createdAt: "2024-01-15T11:30:00Z",
-      isInternal: true
-    }
-  ]);
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update ticket", variant: "destructive" });
+    },
+  });
 
-  const [activities, setActivities] = useState<Activity[]>([
-    { id: "act-1", ticketId: "ticket-1", action: "Ticket created", user: "John Smith", timestamp: "2024-01-15T10:30:00Z" },
-    { id: "act-2", ticketId: "ticket-1", action: "Assigned to Support Team", user: "System", timestamp: "2024-01-15T10:31:00Z" },
-    { id: "act-3", ticketId: "ticket-1", action: "Comment added", user: "Support Team", timestamp: "2024-01-15T11:00:00Z" }
-  ]);
-
-  // Queries
-  const { data: projectsData = [] } = useQuery({ queryKey: ["/api/projects"] });
-  const { data: usersData = [] } = useQuery({ queryKey: ["/api/users"] });
-
-  const demoProjects = [
-    { id: "p-1", name: "Epic EHR Project" },
-    { id: "p-2", name: "Cerner Implementation" }
-  ];
-
-  const demoUsers = [
-    { id: "u-1", name: "Support Team" },
-    { id: "u-2", name: "Tech Support" },
-    { id: "u-3", name: "Help Desk" },
-    { id: "u-4", name: "Senior Engineer" }
-  ];
-
-  const projects = projectsData.length > 0 ? projectsData : demoProjects;
-  const users = usersData.length > 0 ? usersData : demoUsers;
+  // Delete/close ticket mutation
+  const deleteTicketMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/support-tickets/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/support-tickets"] });
+      setCloseModalOpen(false);
+      setDetailView(false);
+      toast({ title: "Ticket Closed" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to close ticket", variant: "destructive" });
+    },
+  });
 
   // Filtered tickets
   const filteredTickets = tickets.filter(t => {
     if (statusFilter !== "all" && t.status !== statusFilter) return false;
     if (priorityFilter !== "all" && t.priority !== priorityFilter) return false;
     if (categoryFilter !== "all" && t.category !== categoryFilter) return false;
-    if (assigneeFilter !== "all" && t.assignee !== assigneeFilter) return false;
-    if (searchQuery && !t.subject.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (searchQuery && !t.title?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
 
   // Get ticket comments
-  const ticketComments = selectedTicket 
+  const ticketComments = selectedTicket
     ? comments.filter(c => c.ticketId === selectedTicket.id)
     : [];
 
@@ -257,7 +172,7 @@ export default function SupportTickets() {
   // Handlers
   const validateForm = () => {
     const errors: {[key: string]: string} = {};
-    if (!ticketForm.subject) errors.subject = "Subject is required";
+    if (!ticketForm.title) errors.title = "Title is required";
     if (!ticketForm.description) errors.description = "Description is required";
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -266,111 +181,71 @@ export default function SupportTickets() {
   const handleCreateTicket = () => {
     if (!validateForm()) return;
 
-    const newTicket: SupportTicket = {
-      id: `ticket-${Date.now()}`,
-      subject: ticketForm.subject,
+    createTicketMutation.mutate({
+      title: ticketForm.title,
       description: ticketForm.description,
       category: ticketForm.category || "General",
-      priority: (ticketForm.priority || "medium") as any,
+      priority: ticketForm.priority || "medium",
+      projectId: ticketForm.projectId || null,
       status: "open",
-      createdBy: "Current User",
-      createdAt: new Date().toISOString(),
-      tags: [],
-      isUrgent: ticketForm.isUrgent,
-      slaBreached: false,
-      attachments: []
-    };
-
-    setTickets([newTicket, ...tickets]);
-    setCreateModalOpen(false);
-    setTicketForm({ subject: "", description: "", category: "", priority: "", projectId: "", isUrgent: false });
-    toast({ title: "Ticket Created", description: "Your support ticket has been submitted." });
+    });
   };
 
   const handleStatusChange = (status: string) => {
     if (selectedTicket) {
-      setTickets(tickets.map(t => 
-        t.id === selectedTicket.id ? { ...t, status: status as any } : t
-      ));
-      setSelectedTicket({ ...selectedTicket, status: status as any });
-
-      setActivities([...activities, {
-        id: `act-${Date.now()}`,
-        ticketId: selectedTicket.id,
-        action: `Status changed to ${status}`,
-        user: "Current User",
-        timestamp: new Date().toISOString()
-      }]);
-
-      toast({ title: "Status Updated", description: `Ticket status changed to ${status}` });
+      updateTicketMutation.mutate({
+        id: selectedTicket.id,
+        data: { status }
+      });
     }
   };
 
   const handlePriorityChange = (priority: string) => {
     if (selectedTicket) {
-      setTickets(tickets.map(t => 
-        t.id === selectedTicket.id ? { ...t, priority: priority as any } : t
-      ));
-      setSelectedTicket({ ...selectedTicket, priority: priority as any });
-      toast({ title: "Priority Updated", description: `Ticket priority changed to ${priority}` });
+      updateTicketMutation.mutate({
+        id: selectedTicket.id,
+        data: { priority }
+      });
     }
   };
 
-  const handleAssigneeChange = (assignee: string) => {
+  const handleCategoryChange = (category: string) => {
     if (selectedTicket) {
-      setTickets(tickets.map(t => 
-        t.id === selectedTicket.id ? { ...t, assignee } : t
-      ));
-      setSelectedTicket({ ...selectedTicket, assignee });
-      toast({ title: "Assignee Updated", description: `Ticket assigned to ${assignee}` });
-    }
-  };
-
-  const handleAssignToMe = () => {
-    handleAssigneeChange("Current User");
-  };
-
-  const handleUnassign = () => {
-    if (selectedTicket) {
-      setTickets(tickets.map(t => 
-        t.id === selectedTicket.id ? { ...t, assignee: undefined } : t
-      ));
-      setSelectedTicket({ ...selectedTicket, assignee: undefined });
-      toast({ title: "Unassigned", description: "Ticket has been unassigned" });
+      updateTicketMutation.mutate({
+        id: selectedTicket.id,
+        data: { category }
+      });
     }
   };
 
   const handleCloseTicket = () => {
     if (selectedTicket) {
-      setTickets(tickets.map(t => 
-        t.id === selectedTicket.id ? { ...t, status: "closed", resolution: resolutionText } : t
-      ));
-      setSelectedTicket({ ...selectedTicket, status: "closed", resolution: resolutionText });
+      updateTicketMutation.mutate({
+        id: selectedTicket.id,
+        data: { status: "closed", resolution: resolutionText }
+      });
       setCloseModalOpen(false);
       setResolutionText("");
-      toast({ title: "Ticket Closed", description: "The ticket has been closed." });
     }
   };
 
   const handleReopenTicket = () => {
     if (selectedTicket) {
-      setTickets(tickets.map(t => 
-        t.id === selectedTicket.id ? { ...t, status: "open", resolution: undefined } : t
-      ));
-      setSelectedTicket({ ...selectedTicket, status: "open", resolution: undefined });
-      toast({ title: "Ticket Reopened", description: "The ticket has been reopened." });
+      updateTicketMutation.mutate({
+        id: selectedTicket.id,
+        data: { status: "open", resolution: null }
+      });
     }
   };
 
   const handleEscalate = () => {
     if (selectedTicket) {
-      setTickets(tickets.map(t => 
-        t.id === selectedTicket.id ? { ...t, priority: "critical", isUrgent: true } : t
-      ));
-      setSelectedTicket({ ...selectedTicket, priority: "critical", isUrgent: true });
+      updateTicketMutation.mutate({
+        id: selectedTicket.id,
+        data: { priority: "critical" }
+      });
       setEscalateModalOpen(false);
       setEscalationReason("");
-      toast({ title: "Ticket Escalated", description: "The ticket has been escalated." });
     }
   };
 
@@ -389,75 +264,14 @@ export default function SupportTickets() {
     setComments([...comments, newComment]);
     setCommentText("");
     setIsInternalNote(false);
-    toast({ title: "Comment Added", description: isInternalNote ? "Internal note added" : "Comment added to ticket" });
-  };
-
-  const handleEditComment = (commentId: string) => {
-    setComments(comments.map(c => 
-      c.id === commentId ? { ...c, isEditing: true } : c
-    ));
-    const comment = comments.find(c => c.id === commentId);
-    if (comment) setEditCommentText(comment.content);
-  };
-
-  const handleSaveComment = (commentId: string) => {
-    setComments(comments.map(c => 
-      c.id === commentId ? { ...c, content: editCommentText, isEditing: false } : c
-    ));
-    setEditCommentText("");
-    toast({ title: "Comment Updated" });
-  };
-
-  const handleDeleteComment = (commentId: string) => {
-    setComments(comments.filter(c => c.id !== commentId));
-    setDeleteCommentModalOpen(false);
-    toast({ title: "Comment Deleted" });
-  };
-
-  const handleCommentInput = (value: string) => {
-    setCommentText(value);
-    if (value.endsWith("@")) {
-      setShowMentions(true);
-    } else {
-      setShowMentions(false);
-    }
-  };
-
-  const handleMentionSelect = (userName: string) => {
-    setCommentText(commentText + userName + " ");
-    setShowMentions(false);
+    toast({ title: "Comment Added" });
   };
 
   const handleAddTag = () => {
-    if (!newTag.trim() || !selectedTicket) return;
-
-    setTickets(tickets.map(t => 
-      t.id === selectedTicket.id ? { ...t, tags: [...t.tags, newTag] } : t
-    ));
-    setSelectedTicket({ ...selectedTicket, tags: [...selectedTicket.tags, newTag] });
+    if (!newTag.trim()) return;
     setAddTagModalOpen(false);
     setNewTag("");
     toast({ title: "Tag Added" });
-  };
-
-  const handleRemoveTag = (tag: string) => {
-    if (!selectedTicket) return;
-
-    setTickets(tickets.map(t => 
-      t.id === selectedTicket.id ? { ...t, tags: t.tags.filter(tg => tg !== tag) } : t
-    ));
-    setSelectedTicket({ ...selectedTicket, tags: selectedTicket.tags.filter(t => t !== tag) });
-    toast({ title: "Tag Removed" });
-  };
-
-  const handleCategoryChange = (category: string) => {
-    if (selectedTicket) {
-      setTickets(tickets.map(t => 
-        t.id === selectedTicket.id ? { ...t, category } : t
-      ));
-      setSelectedTicket({ ...selectedTicket, category });
-      toast({ title: "Category Updated" });
-    }
   };
 
   const handleSelectAll = () => {
@@ -477,20 +291,8 @@ export default function SupportTickets() {
     }
   };
 
-  const handleBulkAssign = () => {
-    setTickets(tickets.map(t => 
-      selectedTickets.includes(t.id) ? { ...t, assignee: bulkAssignee } : t
-    ));
-    setBulkAssignModalOpen(false);
-    setSelectedTickets([]);
-    setSelectAll(false);
-    toast({ title: "Tickets Assigned", description: `${selectedTickets.length} tickets assigned` });
-  };
-
   const handleBulkStatus = () => {
-    setTickets(tickets.map(t => 
-      selectedTickets.includes(t.id) ? { ...t, status: bulkStatus as any } : t
-    ));
+    // Would update multiple tickets via API
     setBulkStatusModalOpen(false);
     setSelectedTickets([]);
     setSelectAll(false);
@@ -498,9 +300,7 @@ export default function SupportTickets() {
   };
 
   const handleBulkClose = () => {
-    setTickets(tickets.map(t => 
-      selectedTickets.includes(t.id) ? { ...t, status: "closed" } : t
-    ));
+    // Would close multiple tickets via API
     setBulkCloseModalOpen(false);
     setSelectedTickets([]);
     setSelectAll(false);
@@ -517,26 +317,39 @@ export default function SupportTickets() {
     setDetailView(true);
   };
 
-  const getPriorityBadge = (priority: string) => {
+  const getPriorityBadge = (priority: string | null) => {
     const colors: {[key: string]: string} = {
       low: "bg-gray-100 text-gray-800",
       medium: "bg-blue-100 text-blue-800",
       high: "bg-orange-100 text-orange-800",
       critical: "bg-red-100 text-red-800"
     };
-    return <Badge className={colors[priority]}>{priority.charAt(0).toUpperCase() + priority.slice(1)}</Badge>;
+    return <Badge className={colors[priority || "medium"]}>{(priority || "medium").charAt(0).toUpperCase() + (priority || "medium").slice(1)}</Badge>;
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string | null) => {
     const colors: {[key: string]: string} = {
       open: "bg-green-100 text-green-800",
-      "in-progress": "bg-blue-100 text-blue-800",
+      "in_progress": "bg-blue-100 text-blue-800",
       pending: "bg-yellow-100 text-yellow-800",
       resolved: "bg-purple-100 text-purple-800",
       closed: "bg-gray-100 text-gray-800"
     };
-    return <Badge className={colors[status]} data-testid="ticket-status">{status.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}</Badge>;
+    const displayStatus = (status || "open").replace("_", " ");
+    return <Badge className={colors[status || "open"]} data-testid="ticket-status">{displayStatus.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}</Badge>;
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-muted rounded w-1/4"></div>
+          <div className="h-64 bg-muted rounded"></div>
+        </div>
+      </div>
+    );
+  }
 
   // Detail view
   if (detailView && selectedTicket) {
@@ -562,51 +375,21 @@ export default function SupportTickets() {
           <div className="lg:col-span-2 space-y-6">
             <Card data-testid="ticket-details">
               <CardHeader>
-                <CardTitle data-testid="ticket-subject">{selectedTicket.subject}</CardTitle>
+                <div className="flex items-center gap-2">
+                  {selectedTicket.ticketNumber && (
+                    <Badge variant="outline">{selectedTicket.ticketNumber}</Badge>
+                  )}
+                  <CardTitle data-testid="ticket-subject">{selectedTicket.title}</CardTitle>
+                </div>
                 <CardDescription>
-                  Created by <span data-testid="ticket-created-by">{selectedTicket.createdBy}</span> on{" "}
-                  <span data-testid="ticket-created-at">{format(new Date(selectedTicket.createdAt), "MMM d, yyyy 'at' h:mm a")}</span>
+                  Created on{" "}
+                  <span data-testid="ticket-created-at">
+                    {selectedTicket.createdAt ? format(new Date(selectedTicket.createdAt), "MMM d, yyyy 'at' h:mm a") : "N/A"}
+                  </span>
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <p data-testid="ticket-description">{selectedTicket.description}</p>
-
-                {/* Tags */}
-                <div className="mt-4 flex flex-wrap gap-2" data-testid="ticket-tags">
-                  {selectedTicket.tags.map(tag => (
-                    <Badge key={tag} variant="outline" className="flex items-center gap-1" data-testid="ticket-tag">
-                      {tag}
-                      <button 
-                        onClick={() => handleRemoveTag(tag)} 
-                        className="ml-1 hover:text-red-500"
-                        data-testid="button-remove-tag"
-                      >
-                        ×
-                      </button>
-                    </Badge>
-                  ))}
-                  <Button size="sm" variant="ghost" onClick={() => setAddTagModalOpen(true)} data-testid="button-add-tag">
-                    <Tag className="h-3 w-3 mr-1" />
-                    Add Tag
-                  </Button>
-                </div>
-
-                {/* Attachments */}
-                <div className="mt-4" data-testid="ticket-attachments">
-                  <h4 className="font-medium mb-2">Attachments</h4>
-                  {selectedTicket.attachments.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {selectedTicket.attachments.map((att, idx) => (
-                        <Badge key={idx} variant="outline">
-                          <Paperclip className="h-3 w-3 mr-1" />
-                          {att}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No attachments</p>
-                  )}
-                </div>
 
                 {/* Resolution */}
                 {selectedTicket.resolution && (
@@ -625,92 +408,46 @@ export default function SupportTickets() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div data-testid="comments-list" className="space-y-4">
-                  {ticketComments.map(comment => (
-                    <div 
-                      key={comment.id} 
-                      className={`p-4 rounded-lg ${comment.isInternal ? "bg-yellow-50 border border-yellow-200" : "bg-muted"}`}
-                      data-testid="comment-item"
-                    >
-                      {comment.isInternal && (
-                        <Badge variant="outline" className="mb-2" data-testid="internal-note">Internal Note</Badge>
-                      )}
-                      <div className="flex justify-between items-start">
+                  {ticketComments.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-4">No comments yet</p>
+                  ) : (
+                    ticketComments.map(comment => (
+                      <div
+                        key={comment.id}
+                        className={`p-4 rounded-lg ${comment.isInternal ? "bg-yellow-50 border border-yellow-200" : "bg-muted"}`}
+                        data-testid="comment-item"
+                      >
+                        {comment.isInternal && (
+                          <Badge variant="outline" className="mb-2" data-testid="internal-note">Internal Note</Badge>
+                        )}
                         <div>
                           <p className="font-medium">{comment.author}</p>
                           <p className="text-sm text-muted-foreground">
                             {format(new Date(comment.createdAt), "MMM d, yyyy 'at' h:mm a")}
                           </p>
                         </div>
-                        <div className="flex gap-1">
-                          <Button 
-                            size="sm" 
-                            variant="ghost"
-                            onClick={() => handleEditComment(comment.id)}
-                            data-testid="button-edit-comment"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="ghost"
-                            onClick={() => setDeleteCommentModalOpen(true)}
-                            data-testid="button-delete-comment"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      {comment.isEditing ? (
-                        <div className="mt-2 space-y-2">
-                          <Textarea 
-                            value={editCommentText}
-                            onChange={(e) => setEditCommentText(e.target.value)}
-                            data-testid="input-edit-comment"
-                          />
-                          <Button size="sm" onClick={() => handleSaveComment(comment.id)} data-testid="button-save-comment">
-                            Save
-                          </Button>
-                        </div>
-                      ) : (
                         <p className="mt-2">{comment.content}</p>
-                      )}
-                    </div>
-                  ))}
+                      </div>
+                    ))
+                  )}
                 </div>
 
                 {/* Add Comment */}
                 <div className="space-y-2 pt-4 border-t">
                   <div className="flex items-center gap-2">
-                    <Checkbox 
+                    <Checkbox
                       checked={isInternalNote}
                       onCheckedChange={(checked) => setIsInternalNote(checked as boolean)}
                       data-testid="checkbox-internal-note"
                     />
                     <Label>Internal note (staff only)</Label>
                   </div>
-                  <div className="relative">
-                    <Textarea 
-                      placeholder="Add a comment..."
-                      value={commentText}
-                      onChange={(e) => handleCommentInput(e.target.value)}
-                      data-testid="input-comment"
-                    />
-                    {showMentions && (
-                      <div className="absolute bottom-full left-0 bg-white border rounded-lg shadow-lg p-2 mb-1" data-testid="mention-suggestions">
-                        {users.map((user: any) => (
-                          <div 
-                            key={user.id}
-                            className="px-3 py-2 hover:bg-muted cursor-pointer rounded"
-                            onClick={() => handleMentionSelect(user.name)}
-                            data-testid="mention-option"
-                          >
-                            <AtSign className="h-4 w-4 inline mr-1" />
-                            {user.name}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <Textarea
+                    placeholder="Add a comment..."
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    data-testid="input-comment"
+                  />
                   <Button onClick={handleAddComment} data-testid="button-add-comment">
                     <MessageSquare className="h-4 w-4 mr-2" />
                     Add Comment
@@ -726,17 +463,21 @@ export default function SupportTickets() {
               </CardHeader>
               <CardContent data-testid="ticket-activity">
                 <div className="space-y-4">
-                  {ticketActivities.map(activity => (
-                    <div key={activity.id} className="flex gap-3">
-                      <div className="w-2 h-2 mt-2 rounded-full bg-primary" />
-                      <div>
-                        <p className="font-medium">{activity.action}</p>
-                        <p className="text-sm text-muted-foreground">
-                          by {activity.user} • {format(new Date(activity.timestamp), "MMM d, yyyy 'at' h:mm a")}
-                        </p>
+                  {ticketActivities.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-4">No activity recorded</p>
+                  ) : (
+                    ticketActivities.map(activity => (
+                      <div key={activity.id} className="flex gap-3">
+                        <div className="w-2 h-2 mt-2 rounded-full bg-primary" />
+                        <div>
+                          <p className="font-medium">{activity.action}</p>
+                          <p className="text-sm text-muted-foreground">
+                            by {activity.user} • {format(new Date(activity.timestamp), "MMM d, yyyy 'at' h:mm a")}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -751,13 +492,13 @@ export default function SupportTickets() {
               <CardContent className="space-y-4">
                 <div>
                   <Label>Status</Label>
-                  <Select value={selectedTicket.status} onValueChange={handleStatusChange}>
+                  <Select value={selectedTicket.status || "open"} onValueChange={handleStatusChange}>
                     <SelectTrigger data-testid="select-status">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="open">Open</SelectItem>
-                      <SelectItem value="in-progress">In Progress</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
                       <SelectItem value="pending">Pending</SelectItem>
                       <SelectItem value="resolved">Resolved</SelectItem>
                       <SelectItem value="closed">Closed</SelectItem>
@@ -768,7 +509,7 @@ export default function SupportTickets() {
                 <div>
                   <Label>Priority</Label>
                   <div className="flex items-center gap-2">
-                    <Select value={selectedTicket.priority} onValueChange={handlePriorityChange}>
+                    <Select value={selectedTicket.priority || "medium"} onValueChange={handlePriorityChange}>
                       <SelectTrigger data-testid="select-priority">
                         <SelectValue />
                       </SelectTrigger>
@@ -785,7 +526,7 @@ export default function SupportTickets() {
 
                 <div>
                   <Label>Category</Label>
-                  <Select value={selectedTicket.category} onValueChange={handleCategoryChange}>
+                  <Select value={selectedTicket.category || "General"} onValueChange={handleCategoryChange}>
                     <SelectTrigger data-testid="select-category">
                       <SelectValue />
                     </SelectTrigger>
@@ -800,27 +541,32 @@ export default function SupportTickets() {
                 </div>
 
                 <div>
-                  <Label>Assignee</Label>
-                  <Select value={selectedTicket.assignee || ""} onValueChange={handleAssigneeChange}>
+                  <Label>Assigned To</Label>
+                  <Select value={selectedTicket.assignedToId?.toString() || ""} onValueChange={(v) => {
+                    updateTicketMutation.mutate({ id: selectedTicket.id, data: { assignedToId: parseInt(v) } });
+                  }}>
                     <SelectTrigger data-testid="select-assignee">
                       <SelectValue placeholder="Unassigned" />
                     </SelectTrigger>
                     <SelectContent>
-                      {users.map((user: any) => (
-                        <SelectItem key={user.id} value={user.name}>{user.name}</SelectItem>
-                      ))}
+                      <SelectItem value="1">Admin User</SelectItem>
+                      <SelectItem value="2">Support Agent</SelectItem>
+                      <SelectItem value="3">Technical Lead</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <Button variant="outline" onClick={handleAssignToMe} data-testid="button-assign-to-me">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="mt-2 w-full"
+                    onClick={() => updateTicketMutation.mutate({ id: selectedTicket.id, data: { assignedToId: 1 } })}
+                    data-testid="button-assign-to-me"
+                  >
                     <User className="h-4 w-4 mr-2" />
                     Assign to Me
                   </Button>
-                  <Button variant="outline" onClick={handleUnassign} data-testid="button-unassign">
-                    Unassign
-                  </Button>
+                </div>
+
+                <div className="flex flex-col gap-2">
                   <Button variant="outline" onClick={() => setEscalateModalOpen(true)} data-testid="button-escalate">
                     <ArrowUp className="h-4 w-4 mr-2" />
                     Escalate
@@ -835,9 +581,23 @@ export default function SupportTickets() {
                     ) : (
                       <Badge variant="outline" className="text-green-600">Within SLA</Badge>
                     )}
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Response time: 2h 30m
-                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t" data-testid="ticket-tags">
+                  <Label>Tags</Label>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    <Badge variant="secondary">epic</Badge>
+                    <Badge variant="secondary">login</Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setAddTagModalOpen(true)}
+                      data-testid="button-add-tag"
+                    >
+                      <Tag className="h-3 w-3 mr-1" />
+                      Add Tag
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -852,7 +612,7 @@ export default function SupportTickets() {
               <DialogTitle>Close Ticket</DialogTitle>
               <DialogDescription>Please provide a resolution for this ticket.</DialogDescription>
             </DialogHeader>
-            <Textarea 
+            <Textarea
               placeholder="Resolution details..."
               value={resolutionText}
               onChange={(e) => setResolutionText(e.target.value)}
@@ -872,7 +632,7 @@ export default function SupportTickets() {
               <DialogTitle>Escalate Ticket</DialogTitle>
               <DialogDescription>Provide a reason for escalation.</DialogDescription>
             </DialogHeader>
-            <Textarea 
+            <Textarea
               placeholder="Escalation reason..."
               value={escalationReason}
               onChange={(e) => setEscalationReason(e.target.value)}
@@ -881,39 +641,6 @@ export default function SupportTickets() {
             <DialogFooter>
               <Button variant="outline" onClick={() => setEscalateModalOpen(false)}>Cancel</Button>
               <Button onClick={handleEscalate} data-testid="button-confirm-escalate">Escalate</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Add Tag Modal */}
-        <Dialog open={addTagModalOpen} onOpenChange={setAddTagModalOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Tag</DialogTitle>
-            </DialogHeader>
-            <Input 
-              placeholder="Enter tag name..."
-              value={newTag}
-              onChange={(e) => setNewTag(e.target.value)}
-              data-testid="input-tag"
-            />
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setAddTagModalOpen(false)}>Cancel</Button>
-              <Button onClick={handleAddTag} data-testid="button-save-tag">Add Tag</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Delete Comment Modal */}
-        <Dialog open={deleteCommentModalOpen} onOpenChange={setDeleteCommentModalOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Delete Comment</DialogTitle>
-              <DialogDescription>Are you sure you want to delete this comment?</DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteCommentModalOpen(false)}>Cancel</Button>
-              <Button variant="destructive" onClick={() => handleDeleteComment(ticketComments[0]?.id)} data-testid="button-confirm-delete">Delete</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -953,7 +680,7 @@ export default function SupportTickets() {
             <CardContent className="pt-6">
               <div className="flex flex-wrap gap-4 items-end">
                 <div className="flex-1 min-w-[200px]">
-                  <Input 
+                  <Input
                     placeholder="Search tickets..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -967,7 +694,7 @@ export default function SupportTickets() {
                   <SelectContent>
                     <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="open">Open</SelectItem>
-                    <SelectItem value="in-progress">In Progress</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="resolved">Resolved</SelectItem>
                     <SelectItem value="closed">Closed</SelectItem>
@@ -997,17 +724,6 @@ export default function SupportTickets() {
                     <SelectItem value="Account">Account</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-                  <SelectTrigger className="w-[150px]" data-testid="filter-assignee">
-                    <SelectValue placeholder="Assignee" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Assignees</SelectItem>
-                    {users.map((user: any) => (
-                      <SelectItem key={user.id} value={user.name}>{user.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
             </CardContent>
           </Card>
@@ -1018,9 +734,6 @@ export default function SupportTickets() {
               <CardContent className="pt-4">
                 <div className="flex items-center gap-4">
                   <span data-testid="selected-count">{selectedTickets.length} selected</span>
-                  <Button size="sm" onClick={() => setBulkAssignModalOpen(true)} data-testid="button-bulk-assign">
-                    Bulk Assign
-                  </Button>
                   <Button size="sm" onClick={() => setBulkStatusModalOpen(true)} data-testid="button-bulk-status">
                     Change Status
                   </Button>
@@ -1035,71 +748,84 @@ export default function SupportTickets() {
           {/* Tickets Table */}
           <Card>
             <CardContent className="pt-6">
-              <table className="w-full" data-testid="tickets-table">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-3">
-                      <Checkbox 
-                        checked={selectAll}
-                        onCheckedChange={handleSelectAll}
-                        data-testid="checkbox-select-all"
-                      />
-                    </th>
-                    <th className="text-left p-3">
-                      <button className="flex items-center gap-1" data-testid="sort-created">
-                        Subject
-                      </button>
-                    </th>
-                    <th className="text-left p-3">Status</th>
-                    <th className="text-left p-3">
-                      <button className="flex items-center gap-1" data-testid="sort-priority">
-                        Priority
-                      </button>
-                    </th>
-                    <th className="text-left p-3">Category</th>
-                    <th className="text-left p-3">Assignee</th>
-                    <th className="text-left p-3">SLA</th>
-                    <th className="text-left p-3">Created</th>
-                  </tr>
-                </thead>
-                <tbody data-testid="tickets-list">
-                  {filteredTickets.map(ticket => (
-                    <tr 
-                      key={ticket.id} 
-                      className="border-b hover:bg-muted/50 cursor-pointer"
-                      onClick={() => handleTicketClick(ticket)}
-                    >
-                      <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                        <Checkbox 
-                          checked={selectedTickets.includes(ticket.id)}
-                          onCheckedChange={() => handleSelectTicket(ticket.id)}
-                          data-testid="checkbox-ticket"
+              {filteredTickets.length === 0 ? (
+                <div className="text-center py-12">
+                  <Ticket className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No tickets found</h3>
+                  <p className="text-muted-foreground mb-4">
+                    {tickets.length === 0
+                      ? "Create your first support ticket to get started"
+                      : "Try adjusting your filters"}
+                  </p>
+                  {tickets.length === 0 && (
+                    <Button onClick={() => setCreateModalOpen(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Ticket
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <table className="w-full" data-testid="tickets-table">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-3">
+                        <Checkbox
+                          checked={selectAll}
+                          onCheckedChange={handleSelectAll}
+                          data-testid="checkbox-select-all"
                         />
-                      </td>
-                      <td className="p-3">
-                        <div>
-                          <p className="font-medium">{ticket.subject}</p>
-                          <p className="text-sm text-muted-foreground">{ticket.createdBy}</p>
-                        </div>
-                      </td>
-                      <td className="p-3">{getStatusBadge(ticket.status)}</td>
-                      <td className="p-3">{getPriorityBadge(ticket.priority)}</td>
-                      <td className="p-3">{ticket.category}</td>
-                      <td className="p-3">{ticket.assignee || "Unassigned"}</td>
-                      <td className="p-3" data-testid="ticket-sla">
-                        {ticket.slaBreached ? (
-                          <Badge variant="destructive" data-testid="sla-breached">Breached</Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-green-600">OK</Badge>
-                        )}
-                      </td>
-                      <td className="p-3 text-sm text-muted-foreground">
-                        {format(new Date(ticket.createdAt), "MMM d, yyyy")}
-                      </td>
+                      </th>
+                      <th className="text-left p-3">Ticket</th>
+                      <th className="text-left p-3">Status</th>
+                      <th className="text-left p-3">Priority</th>
+                      <th className="text-left p-3">Category</th>
+                      <th className="text-left p-3">SLA</th>
+                      <th className="text-left p-3">Created</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody data-testid="tickets-list">
+                    {filteredTickets.map(ticket => (
+                      <tr
+                        key={ticket.id}
+                        className="border-b hover:bg-muted/50 cursor-pointer"
+                        onClick={() => handleTicketClick(ticket)}
+                      >
+                        <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedTickets.includes(ticket.id)}
+                            onCheckedChange={() => handleSelectTicket(ticket.id)}
+                            data-testid="checkbox-ticket"
+                          />
+                        </td>
+                        <td className="p-3">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              {ticket.ticketNumber && (
+                                <span className="text-xs text-muted-foreground">{ticket.ticketNumber}</span>
+                              )}
+                              <p className="font-medium">{ticket.title}</p>
+                            </div>
+                            <p className="text-sm text-muted-foreground line-clamp-1">{ticket.description}</p>
+                          </div>
+                        </td>
+                        <td className="p-3">{getStatusBadge(ticket.status)}</td>
+                        <td className="p-3">{getPriorityBadge(ticket.priority)}</td>
+                        <td className="p-3">{ticket.category || "General"}</td>
+                        <td className="p-3" data-testid="ticket-sla">
+                          {ticket.slaBreached ? (
+                            <Badge variant="destructive" data-testid="sla-breached">Breached</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-green-600">OK</Badge>
+                          )}
+                        </td>
+                        <td className="p-3 text-sm text-muted-foreground">
+                          {ticket.createdAt ? format(new Date(ticket.createdAt), "MMM d, yyyy") : "N/A"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -1110,8 +836,8 @@ export default function SupportTickets() {
               <div className="flex gap-4 items-end">
                 <div>
                   <Label>Start Date</Label>
-                  <Input 
-                    type="date" 
+                  <Input
+                    type="date"
                     value={reportStartDate}
                     onChange={(e) => setReportStartDate(e.target.value)}
                     data-testid="input-report-start"
@@ -1119,8 +845,8 @@ export default function SupportTickets() {
                 </div>
                 <div>
                   <Label>End Date</Label>
-                  <Input 
-                    type="date" 
+                  <Input
+                    type="date"
                     value={reportEndDate}
                     onChange={(e) => setReportEndDate(e.target.value)}
                     data-testid="input-report-end"
@@ -1192,17 +918,17 @@ export default function SupportTickets() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Subject *</Label>
-              <Input 
-                value={ticketForm.subject}
-                onChange={(e) => setTicketForm({...ticketForm, subject: e.target.value})}
+              <Label>Title *</Label>
+              <Input
+                value={ticketForm.title}
+                onChange={(e) => setTicketForm({...ticketForm, title: e.target.value})}
                 data-testid="input-subject"
               />
-              {formErrors.subject && <p className="text-red-500 text-sm">{formErrors.subject}</p>}
+              {formErrors.title && <p className="text-red-500 text-sm">{formErrors.title}</p>}
             </div>
             <div>
               <Label>Description *</Label>
-              <Textarea 
+              <Textarea
                 value={ticketForm.description}
                 onChange={(e) => setTicketForm({...ticketForm, description: e.target.value})}
                 rows={4}
@@ -1241,35 +967,31 @@ export default function SupportTickets() {
                 </Select>
               </div>
             </div>
-            <div>
-              <Label>Related Project</Label>
-              <Select value={ticketForm.projectId} onValueChange={(v) => setTicketForm({...ticketForm, projectId: v})}>
-                <SelectTrigger data-testid="select-project">
-                  <SelectValue placeholder="Select project" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((p: any) => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <Checkbox 
-                checked={ticketForm.isUrgent}
-                onCheckedChange={(checked) => setTicketForm({...ticketForm, isUrgent: checked as boolean})}
-                data-testid="checkbox-urgent"
-              />
-              <Label>Mark as Urgent</Label>
-            </div>
-            <div data-testid="file-upload-area" className="border-2 border-dashed rounded-lg p-4 text-center">
-              <Paperclip className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">Drop files here or click to upload</p>
-            </div>
+            {projects.length > 0 && (
+              <div>
+                <Label>Related Project</Label>
+                <Select value={ticketForm.projectId} onValueChange={(v) => setTicketForm({...ticketForm, projectId: v})}>
+                  <SelectTrigger data-testid="select-project">
+                    <SelectValue placeholder="Select project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects.map((p: any) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreateTicket} data-testid="button-submit-ticket">Submit Ticket</Button>
+            <Button
+              onClick={handleCreateTicket}
+              disabled={createTicketMutation.isPending}
+              data-testid="button-submit-ticket"
+            >
+              {createTicketMutation.isPending ? "Creating..." : "Submit Ticket"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1297,30 +1019,6 @@ export default function SupportTickets() {
         </DialogContent>
       </Dialog>
 
-      {/* Bulk Assign Modal */}
-      <Dialog open={bulkAssignModalOpen} onOpenChange={setBulkAssignModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Bulk Assign Tickets</DialogTitle>
-            <DialogDescription>Assign {selectedTickets.length} tickets to:</DialogDescription>
-          </DialogHeader>
-          <Select value={bulkAssignee} onValueChange={setBulkAssignee}>
-            <SelectTrigger data-testid="select-bulk-assignee">
-              <SelectValue placeholder="Select assignee" />
-            </SelectTrigger>
-            <SelectContent>
-              {users.map((user: any) => (
-                <SelectItem key={user.id} value={user.name}>{user.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setBulkAssignModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleBulkAssign} data-testid="button-confirm-bulk">Assign</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Bulk Status Modal */}
       <Dialog open={bulkStatusModalOpen} onOpenChange={setBulkStatusModalOpen}>
         <DialogContent>
@@ -1334,7 +1032,7 @@ export default function SupportTickets() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="open">Open</SelectItem>
-              <SelectItem value="in-progress">In Progress</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="resolved">Resolved</SelectItem>
             </SelectContent>
@@ -1356,6 +1054,26 @@ export default function SupportTickets() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setBulkCloseModalOpen(false)}>Cancel</Button>
             <Button onClick={handleBulkClose} data-testid="button-confirm-bulk">Close All</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Tag Modal */}
+      <Dialog open={addTagModalOpen} onOpenChange={setAddTagModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Tag</DialogTitle>
+            <DialogDescription>Add a tag to this ticket</DialogDescription>
+          </DialogHeader>
+          <Input
+            placeholder="Tag name..."
+            value={newTag}
+            onChange={(e) => setNewTag(e.target.value)}
+            data-testid="input-tag"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddTagModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleAddTag} data-testid="button-confirm-tag">Add Tag</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

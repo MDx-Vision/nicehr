@@ -3,23 +3,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { 
-  LogIn, 
-  LogOut, 
-  Eye, 
-  Plus, 
-  Pencil, 
-  Trash2, 
-  Upload, 
-  Download, 
-  Check, 
-  X, 
-  UserPlus, 
+import { Badge } from "@/components/ui/badge";
+import {
+  LogIn,
+  LogOut,
+  Eye,
+  Plus,
+  Pencil,
+  Trash2,
+  Upload,
+  Download,
+  Check,
+  X,
+  UserPlus,
   Send,
-  Activity 
+  Activity,
+  Wifi,
+  WifiOff
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { UserActivityWithUser } from "@shared/schema";
+import { useActivityWebSocket } from "@/hooks/useActivityWebSocket";
 
 const activityIcons: Record<string, typeof Activity> = {
   login: LogIn,
@@ -70,12 +74,15 @@ interface ActivityFeedProps {
   limit?: number;
   showTitle?: boolean;
   className?: string;
+  realtime?: boolean;
 }
 
-export function ActivityFeed({ limit = 10, showTitle = true, className = "" }: ActivityFeedProps) {
+export function ActivityFeed({ limit = 10, showTitle = true, className = "", realtime = true }: ActivityFeedProps) {
+  const { isConnected } = useActivityWebSocket();
+
   const { data: activities = [], isLoading } = useQuery<UserActivityWithUser[]>({
     queryKey: ["/api/activities/recent"],
-    refetchInterval: 60000,
+    refetchInterval: realtime ? 10000 : 60000, // Faster refresh when realtime is enabled
   });
 
   const getInitials = (firstName: string | null, lastName: string | null) => {
@@ -127,10 +134,25 @@ export function ActivityFeed({ limit = 10, showTitle = true, className = "" }: A
     <Card className={className} data-testid="card-activity-feed">
       {showTitle && (
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            Recent Activity
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Recent Activity
+            </CardTitle>
+            {realtime && (
+              isConnected ? (
+                <Badge variant="outline" className="gap-1 text-green-600 border-green-600" data-testid="badge-activity-live">
+                  <Wifi className="h-3 w-3" />
+                  Live
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="gap-1 text-muted-foreground" data-testid="badge-activity-offline">
+                  <WifiOff className="h-3 w-3" />
+                  Offline
+                </Badge>
+              )
+            )}
+          </div>
           <CardDescription>Latest platform activity</CardDescription>
         </CardHeader>
       )}

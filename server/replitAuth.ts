@@ -281,18 +281,19 @@ export async function setupAuth(app: Express) {
     passport.serializeUser((user: Express.User, cb) => cb(null, user));
     passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
-    // Ensure dev user exists in database
+    // Ensure dev user exists in database with admin role
     try {
       await storage.upsertUser({
         id: 'dev-user-local',
         email: 'dev@nicehr.local',
         firstName: 'Dev',
-        lastName: 'User',
+        lastName: 'Admin',
+        role: 'admin',
         profileImageUrl: null,
         accessStatus: 'active',
         invitationId: null,
       });
-      console.log('[DEV MODE] Dev user created/updated in database');
+      console.log('[DEV MODE] Dev admin user created/updated in database');
     } catch (error) {
       console.warn('[DEV MODE] Could not create dev user:', error);
     }

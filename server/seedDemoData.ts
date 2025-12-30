@@ -1,8 +1,8 @@
 import { db } from "./db";
-import { 
-  hospitals, 
-  hospitalUnits, 
-  hospitalModules, 
+import {
+  hospitals,
+  hospitalUnits,
+  hospitalModules,
   hospitalStaff,
   users,
   consultants,
@@ -28,6 +28,7 @@ import {
   budgetCalculations,
   supportTickets,
   timesheets,
+  userActivities,
   timesheetEntries,
   expenses,
   notifications,
@@ -49,6 +50,7 @@ import {
   timelineForecastSnapshots,
   costVarianceSnapshots,
   raciAssignments,
+  projectTeamAssignments,
 } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 
@@ -63,8 +65,38 @@ const demoHospitals = [
     phone: "(312) 555-0100",
     email: "admin@mercyregional.org",
     website: "https://mercyregional.org",
+    // Organizational Info
+    facilityType: "Acute Care",
+    bedCount: 850,
+    traumaLevel: "Level I",
+    teachingStatus: "Academic Medical Center",
+    ownershipType: "Non-profit",
+    healthSystemAffiliation: "Mercy Health System",
+    npiNumber: "1234567890",
+    cmsNumber: "140001",
+    // Technical/IT Info
     emrSystem: "Epic",
+    currentEmrVersion: "Epic 2024",
+    targetEmrSystem: null,
+    dataCenter: "Hybrid",
+    itStaffCount: 120,
+    networkInfrastructure: "10Gbps fiber backbone, redundant WAN connections, Cisco infrastructure",
+    // Implementation-Specific
+    goLiveDate: new Date("2025-06-15"),
+    implementationPhase: "Build",
+    contractValue: "$2,500,000",
+    primaryContactName: "Dr. James Wilson",
+    primaryContactEmail: "jwilson@mercyregional.org",
+    primaryContactPhone: "(312) 555-0105",
+    executiveSponsor: "Sarah Mitchell, CEO",
+    // Compliance
+    jointCommissionAccredited: true,
+    lastAuditDate: new Date("2024-09-15"),
+    hipaaOfficerName: "Patricia Chen",
+    hipaaOfficerEmail: "pchen@mercyregional.org",
+    // General
     totalStaff: 2500,
+    notes: "Primary Epic implementation site. Strong IT team with previous EMR experience.",
     isActive: true,
   },
   {
@@ -77,8 +109,38 @@ const demoHospitals = [
     phone: "(713) 555-0200",
     email: "info@stlukes.org",
     website: "https://stlukeshealthcare.org",
+    // Organizational Info
+    facilityType: "Acute Care",
+    bedCount: 1200,
+    traumaLevel: "Level II",
+    teachingStatus: "Teaching Affiliate",
+    ownershipType: "For-profit",
+    healthSystemAffiliation: "HCA Healthcare",
+    npiNumber: "2345678901",
+    cmsNumber: "450002",
+    // Technical/IT Info
     emrSystem: "Cerner",
+    currentEmrVersion: "Cerner Millennium 2023",
+    targetEmrSystem: "Epic",
+    dataCenter: "Cloud",
+    itStaffCount: 85,
+    networkInfrastructure: "AWS-hosted, 5Gbps dedicated connections",
+    // Implementation-Specific
+    goLiveDate: new Date("2025-09-01"),
+    implementationPhase: "Design",
+    contractValue: "$4,200,000",
+    primaryContactName: "Michael Torres",
+    primaryContactEmail: "mtorres@stlukes.org",
+    primaryContactPhone: "(713) 555-0210",
+    executiveSponsor: "Robert Anderson, CFO",
+    // Compliance
+    jointCommissionAccredited: true,
+    lastAuditDate: new Date("2024-06-20"),
+    hipaaOfficerName: "Jennifer Adams",
+    hipaaOfficerEmail: "jadams@stlukes.org",
+    // General
     totalStaff: 3200,
+    notes: "Migrating from Cerner to Epic. Large multi-facility implementation.",
     isActive: true,
   },
   {
@@ -91,8 +153,38 @@ const demoHospitals = [
     phone: "(206) 555-0300",
     email: "contact@pnwhealth.org",
     website: "https://pnwhealth.org",
+    // Organizational Info
+    facilityType: "Acute Care",
+    bedCount: 650,
+    traumaLevel: "Level III",
+    teachingStatus: "Community Hospital",
+    ownershipType: "Non-profit",
+    healthSystemAffiliation: "Pacific Health Partners",
+    npiNumber: "3456789012",
+    cmsNumber: "500003",
+    // Technical/IT Info
     emrSystem: "Epic",
+    currentEmrVersion: "Epic 2023",
+    targetEmrSystem: null,
+    dataCenter: "On-premise",
+    itStaffCount: 65,
+    networkInfrastructure: "Upgraded to 10Gbps in 2024, new Cisco switches deployed",
+    // Implementation-Specific
+    goLiveDate: new Date("2024-11-15"),
+    implementationPhase: "Optimization",
+    contractValue: "$1,800,000",
+    primaryContactName: "Linda Chen",
+    primaryContactEmail: "lchen@pnwhealth.org",
+    primaryContactPhone: "(206) 555-0315",
+    executiveSponsor: "David Kim, CMO",
+    // Compliance
+    jointCommissionAccredited: true,
+    lastAuditDate: new Date("2024-11-01"),
+    hipaaOfficerName: "Marcus Johnson",
+    hipaaOfficerEmail: "mjohnson@pnwhealth.org",
+    // General
     totalStaff: 1800,
+    notes: "Recent go-live, now in optimization phase. Focus on MyChart adoption.",
     isActive: true,
   },
 ];
@@ -160,6 +252,7 @@ const demoConsultants = [
     positions: ["Senior Implementation Consultant", "Project Lead"],
     bio: "Epic-certified consultant with over 12 years of experience in EMR implementations. Specialized in Emergency Department workflows and clinical documentation optimization.",
     payRate: "150.00",
+    shiftPreference: "day",
     isOnboarded: true,
     isAvailable: true,
   },
@@ -178,6 +271,7 @@ const demoConsultants = [
     positions: ["Implementation Consultant"],
     bio: "Cerner specialist with strong background in acute care settings. Expert in FirstNet ED solutions and clinical order optimization.",
     payRate: "135.00",
+    shiftPreference: "swing",
     isOnboarded: true,
     isAvailable: true,
   },
@@ -196,6 +290,7 @@ const demoConsultants = [
     positions: ["Principal Consultant", "Epic Certified"],
     bio: "Principal-level Epic consultant specializing in population health and patient engagement solutions. Led over 20 successful go-lives.",
     payRate: "175.00",
+    shiftPreference: "day",
     isOnboarded: true,
     isAvailable: true,
   },
@@ -214,6 +309,7 @@ const demoConsultants = [
     positions: ["Clinical Informaticist"],
     bio: "RN-turned-informaticist with hands-on clinical experience. Specializes in medication safety and nursing workflow optimization.",
     payRate: "125.00",
+    shiftPreference: "night",
     isOnboarded: true,
     isAvailable: false,
   },
@@ -232,6 +328,7 @@ const demoConsultants = [
     positions: ["Radiant Specialist"],
     bio: "Epic Radiant and Cardiant certified consultant. Expert in imaging workflow optimization and PACS integration.",
     payRate: "145.00",
+    shiftPreference: "day",
     isOnboarded: true,
     isAvailable: true,
   },
@@ -250,6 +347,7 @@ const demoConsultants = [
     positions: ["Surgical IS Consultant"],
     bio: "Perioperative specialist with extensive OR workflow experience. Expert in surgical scheduling and anesthesia documentation.",
     payRate: "140.00",
+    shiftPreference: "swing",
     isOnboarded: true,
     isAvailable: true,
   },
@@ -268,6 +366,7 @@ const demoConsultants = [
     positions: ["Pediatric Specialist"],
     bio: "Specialized in pediatric and neonatal care workflows. Expert in mother-baby documentation and pediatric-specific build.",
     payRate: "130.00",
+    shiftPreference: "day",
     isOnboarded: true,
     isAvailable: true,
   },
@@ -286,6 +385,7 @@ const demoConsultants = [
     positions: ["Oncology IS Lead"],
     bio: "Oncology informatics expert with deep experience in chemotherapy protocols and cancer registry integration.",
     payRate: "155.00",
+    shiftPreference: "day",
     isOnboarded: true,
     isAvailable: true,
   },
@@ -304,6 +404,7 @@ const demoConsultants = [
     positions: ["Revenue Cycle Analyst"],
     bio: "Revenue cycle specialist focused on Epic Resolute and billing optimization. Strong background in claims management.",
     payRate: "120.00",
+    shiftPreference: "day",
     isOnboarded: true,
     isAvailable: true,
   },
@@ -322,6 +423,7 @@ const demoConsultants = [
     positions: ["Integration Architect"],
     bio: "Senior integration architect with expertise in HL7, FHIR, and healthcare interoperability standards.",
     payRate: "165.00",
+    shiftPreference: "night",
     isOnboarded: true,
     isAvailable: false,
   },
@@ -340,6 +442,7 @@ const demoConsultants = [
     positions: ["Training Lead"],
     bio: "End-user training specialist with expertise in change management and adoption strategies for EMR implementations.",
     payRate: "115.00",
+    shiftPreference: "day",
     isOnboarded: true,
     isAvailable: true,
   },
@@ -358,6 +461,7 @@ const demoConsultants = [
     positions: ["Laboratory Informaticist"],
     bio: "Lab systems specialist with experience in Cerner PathNet and laboratory workflow optimization.",
     payRate: "125.00",
+    shiftPreference: "swing",
     isOnboarded: true,
     isAvailable: true,
   },
@@ -454,11 +558,57 @@ const demoProjects = [
     description: "Complete Epic implementation for Emergency Department and ICU with focus on clinical documentation and orders management. This phase includes go-live support and optimization.",
     startDate: "2024-11-01",
     endDate: "2025-06-30",
+    originalEndDate: "2025-05-31", // Originally planned 1 month earlier
     status: "active" as const,
     estimatedConsultants: 8,
     actualConsultants: 6,
+
+    // Contract Details
+    contractType: "Fixed Price",
+    contractValue: "2850000.00", // What client pays
+    billingRate: "175.00",
+    paymentTerms: "Milestone-based",
+
+    // Budget Breakdown
+    laborBudget: "1800000.00",
+    travelBudget: "280000.00",
+    softwareBudget: "150000.00",
+    trainingBudget: "120000.00",
+    infrastructureBudget: "100000.00",
+    contingencyBudget: "50000.00",
+
+    // Actual Spend
+    laborActual: "1350000.00",
+    travelActual: "195000.00",
+    softwareActual: "145000.00",
+    trainingActual: "85000.00",
+    infrastructureActual: "75000.00",
+    contingencyActual: "0.00",
+
+    // Totals
     estimatedBudget: "2500000.00",
     actualBudget: "1850000.00",
+
+    // ROI & Savings
+    baselineCost: "4200000.00", // What manual processes / old system would cost over 3 years
+    projectedSavings: "1700000.00",
+    actualSavings: "650000.00", // So far - project not complete
+    roiPercentage: "185.00",
+    paybackPeriodMonths: 14,
+
+    // Savings Breakdown
+    savingsLaborEfficiency: "280000.00", // 2 FTE reduction in data entry
+    savingsErrorReduction: "150000.00", // Fewer medication errors, rework
+    savingsRevenueCycle: "120000.00", // Faster claims processing
+    savingsPatientThroughput: "75000.00", // Increased ED capacity
+    savingsCompliance: "25000.00", // Avoided audit findings
+    savingsOther: "0.00",
+    savingsNotes: "Savings calculated based on pre-implementation baseline study. FTE reduction reflects reallocation of 2 chart abstractors to patient care roles. Revenue cycle improvement from 12% reduction in claim denials.",
+
+    // Financial Status
+    invoicedAmount: "2100000.00",
+    paidAmount: "1900000.00",
+
     savings: "650000.00",
   },
   {
@@ -468,11 +618,57 @@ const demoProjects = [
     description: "System-wide optimization of Cerner Millennium including FirstNet upgrade and PowerChart enhancements for improved clinical workflows.",
     startDate: "2024-10-15",
     endDate: "2025-04-15",
+    originalEndDate: "2025-04-15", // On schedule
     status: "active" as const,
     estimatedConsultants: 6,
     actualConsultants: 5,
+
+    // Contract Details
+    contractType: "Time & Materials",
+    contractValue: "2100000.00",
+    billingRate: "165.00",
+    paymentTerms: "Net 30",
+
+    // Budget Breakdown
+    laborBudget: "1350000.00",
+    travelBudget: "180000.00",
+    softwareBudget: "120000.00",
+    trainingBudget: "80000.00",
+    infrastructureBudget: "50000.00",
+    contingencyBudget: "20000.00",
+
+    // Actual Spend
+    laborActual: "1050000.00",
+    travelActual: "165000.00",
+    softwareActual: "118000.00",
+    trainingActual: "72000.00",
+    infrastructureActual: "45000.00",
+    contingencyActual: "0.00",
+
+    // Totals
     estimatedBudget: "1800000.00",
     actualBudget: "1450000.00",
+
+    // ROI & Savings
+    baselineCost: "2800000.00",
+    projectedSavings: "650000.00",
+    actualSavings: "350000.00",
+    roiPercentage: "156.00",
+    paybackPeriodMonths: 18,
+
+    // Savings Breakdown
+    savingsLaborEfficiency: "145000.00",
+    savingsErrorReduction: "85000.00",
+    savingsRevenueCycle: "75000.00",
+    savingsPatientThroughput: "35000.00",
+    savingsCompliance: "10000.00",
+    savingsOther: "0.00",
+    savingsNotes: "Optimization project focused on workflow efficiency. FirstNet upgrade reduced ED documentation time by 23%. PowerChart enhancements improved order entry speed by 18%.",
+
+    // Financial Status
+    invoicedAmount: "1550000.00",
+    paidAmount: "1400000.00",
+
     savings: "350000.00",
   },
   {
@@ -482,11 +678,57 @@ const demoProjects = [
     description: "Implementation and launch of MyChart patient portal with Care Everywhere integration for improved patient engagement and health information exchange.",
     startDate: "2024-12-01",
     endDate: "2025-03-31",
+    originalEndDate: "2025-03-31",
     status: "active" as const,
     estimatedConsultants: 4,
     actualConsultants: 4,
+
+    // Contract Details
+    contractType: "Fixed Price",
+    contractValue: "1100000.00",
+    billingRate: "155.00",
+    paymentTerms: "50% upfront, 50% at go-live",
+
+    // Budget Breakdown
+    laborBudget: "680000.00",
+    travelBudget: "95000.00",
+    softwareBudget: "85000.00",
+    trainingBudget: "55000.00",
+    infrastructureBudget: "25000.00",
+    contingencyBudget: "10000.00",
+
+    // Actual Spend
+    laborActual: "625000.00",
+    travelActual: "88000.00",
+    softwareActual: "82000.00",
+    trainingActual: "50000.00",
+    infrastructureActual: "22000.00",
+    contingencyActual: "8000.00",
+
+    // Totals
     estimatedBudget: "950000.00",
     actualBudget: "875000.00",
+
+    // ROI & Savings
+    baselineCost: "1400000.00", // Baseline: call center costs, manual appointment scheduling, paper statements
+    projectedSavings: "525000.00",
+    actualSavings: "75000.00", // Early in project
+    roiPercentage: "147.00",
+    paybackPeriodMonths: 22,
+
+    // Savings Breakdown - MyChart specific
+    savingsLaborEfficiency: "32000.00", // Reduced call center volume - 15% decrease
+    savingsErrorReduction: "8000.00", // Fewer scheduling errors
+    savingsRevenueCycle: "18000.00", // Online bill pay, faster collections
+    savingsPatientThroughput: "12000.00", // Self-scheduling reduces no-shows by 8%
+    savingsCompliance: "5000.00", // Better patient communication documentation
+    savingsOther: "0.00",
+    savingsNotes: "ROI based on projected 40% patient adoption rate within 6 months. Call center volume expected to decrease 15% based on peer hospital benchmarks. Self-scheduling projected to reduce no-show rate from 12% to 4%.",
+
+    // Financial Status
+    invoicedAmount: "550000.00", // 50% upfront
+    paidAmount: "550000.00",
+
     savings: "75000.00",
   },
   {
@@ -502,6 +744,20 @@ const demoProjects = [
     estimatedBudget: "1200000.00",
     actualBudget: "0.00",
     savings: "0.00",
+  },
+  {
+    id: "project-5",
+    hospitalId: "hospital-2",
+    name: "Radiology PACS Integration - Phase 1",
+    description: "Completed integration of radiology PACS system with Cerner for seamless image viewing and diagnostic workflow.",
+    startDate: "2024-03-01",
+    endDate: "2024-09-30",
+    status: "completed" as const,
+    estimatedConsultants: 4,
+    actualConsultants: 4,
+    estimatedBudget: "650000.00",
+    actualBudget: "625000.00",
+    savings: "180000.00",
   },
 ];
 
@@ -1490,6 +1746,27 @@ const demoRaciAssignments = [
   },
 ];
 
+// Project Team Assignments - Team members assigned to projects
+const demoProjectTeamAssignments = [
+  // Project 1 team
+  { id: "team-1-1", projectId: "project-1", userId: "user-c1", customRoleName: "Project Lead", isPrimary: true },
+  { id: "team-1-2", projectId: "project-1", userId: "user-c2", customRoleName: "Clinical Analyst", isPrimary: false },
+  { id: "team-1-3", projectId: "project-1", userId: "user-c3", customRoleName: "Technical Lead", isPrimary: false },
+  { id: "team-1-4", projectId: "project-1", userId: "user-c4", customRoleName: "Training Coordinator", isPrimary: false },
+  { id: "team-1-5", projectId: "project-1", userId: "user-c5", customRoleName: "Integration Specialist", isPrimary: false },
+  { id: "team-1-6", projectId: "project-1", userId: "user-c6", customRoleName: "Data Migration Lead", isPrimary: false },
+  // Project 2 team
+  { id: "team-2-1", projectId: "project-2", userId: "user-c2", customRoleName: "Optimization Lead", isPrimary: true },
+  { id: "team-2-2", projectId: "project-2", userId: "user-c1", customRoleName: "Executive Sponsor", isPrimary: false },
+  { id: "team-2-3", projectId: "project-2", userId: "user-c5", customRoleName: "Workflow Analyst", isPrimary: false },
+  { id: "team-2-4", projectId: "project-2", userId: "user-c3", customRoleName: "Technical Support", isPrimary: false },
+  // Project 3 team
+  { id: "team-3-1", projectId: "project-3", userId: "user-c4", customRoleName: "Project Manager", isPrimary: true },
+  { id: "team-3-2", projectId: "project-3", userId: "user-c6", customRoleName: "Clinical SME", isPrimary: false },
+  { id: "team-3-3", projectId: "project-3", userId: "user-c7", customRoleName: "Patient Portal Specialist", isPrimary: false },
+  { id: "team-3-4", projectId: "project-3", userId: "user-c8", customRoleName: "Integration Engineer", isPrimary: false },
+];
+
 const demoDocumentTypes = [
   { id: "doctype-1", name: "Resume/CV", description: "Professional resume or curriculum vitae", isRequired: true, hasExpiration: false, category: "Professional" },
   { id: "doctype-2", name: "RN License", description: "Registered Nurse license", isRequired: false, hasExpiration: true, expirationMonths: 24, category: "License" },
@@ -1501,6 +1778,127 @@ const demoDocumentTypes = [
   { id: "doctype-8", name: "W-9 Form", description: "Tax identification form", isRequired: true, hasExpiration: false, category: "Tax" },
   { id: "doctype-9", name: "Proof of Insurance", description: "Professional liability insurance", isRequired: true, hasExpiration: true, expirationMonths: 12, category: "Insurance" },
   { id: "doctype-10", name: "COVID Vaccination", description: "COVID-19 vaccination record", isRequired: false, hasExpiration: false, category: "Health" },
+  { id: "doctype-11", name: "NDA Agreement", description: "Non-disclosure agreement", isRequired: true, hasExpiration: false, category: "Legal" },
+  { id: "doctype-12", name: "Employment Contract", description: "Consultant employment or contractor agreement", isRequired: true, hasExpiration: false, category: "Legal" },
+];
+
+// Consultant documents - onboarded consultants should have their required docs
+const demoConsultantDocuments = [
+  // Consultant 1 - Sarah Chen (Epic certified, available) - All docs approved
+  { id: "doc-1-1", consultantId: "consultant-1", documentTypeId: "doctype-1", fileName: "sarah_chen_resume.pdf", fileUrl: "/documents/sarah_chen_resume.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-15"), notes: "Excellent credentials" },
+  { id: "doc-1-2", consultantId: "consultant-1", documentTypeId: "doctype-3", fileName: "sarah_chen_epic_cert.pdf", fileUrl: "/documents/sarah_chen_epic_cert.pdf", status: "approved" as const, expirationDate: "2027-03-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-15") },
+  { id: "doc-1-3", consultantId: "consultant-1", documentTypeId: "doctype-5", fileName: "sarah_chen_background.pdf", fileUrl: "/documents/sarah_chen_background.pdf", status: "approved" as const, expirationDate: "2025-06-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-16") },
+  { id: "doc-1-4", consultantId: "consultant-1", documentTypeId: "doctype-6", fileName: "sarah_chen_drugscreen.pdf", fileUrl: "/documents/sarah_chen_drugscreen.pdf", status: "approved" as const, expirationDate: "2025-06-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-16") },
+  { id: "doc-1-5", consultantId: "consultant-1", documentTypeId: "doctype-7", fileName: "sarah_chen_hipaa.pdf", fileUrl: "/documents/sarah_chen_hipaa.pdf", status: "approved" as const, expirationDate: "2025-06-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-17") },
+  { id: "doc-1-6", consultantId: "consultant-1", documentTypeId: "doctype-8", fileName: "sarah_chen_w9.pdf", fileUrl: "/documents/sarah_chen_w9.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-17") },
+  { id: "doc-1-7", consultantId: "consultant-1", documentTypeId: "doctype-9", fileName: "sarah_chen_insurance.pdf", fileUrl: "/documents/sarah_chen_insurance.pdf", status: "approved" as const, expirationDate: "2025-06-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-17") },
+  { id: "doc-1-8", consultantId: "consultant-1", documentTypeId: "doctype-11", fileName: "sarah_chen_nda.pdf", fileUrl: "/documents/sarah_chen_nda.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-15") },
+  { id: "doc-1-9", consultantId: "consultant-1", documentTypeId: "doctype-12", fileName: "sarah_chen_contract.pdf", fileUrl: "/documents/sarah_chen_contract.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-15") },
+
+  // Consultant 2 - Michael Rodriguez (Cerner certified, on assignment)
+  { id: "doc-2-1", consultantId: "consultant-2", documentTypeId: "doctype-1", fileName: "michael_rodriguez_resume.pdf", fileUrl: "/documents/michael_rodriguez_resume.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-05-10") },
+  { id: "doc-2-2", consultantId: "consultant-2", documentTypeId: "doctype-4", fileName: "michael_rodriguez_cerner_cert.pdf", fileUrl: "/documents/michael_rodriguez_cerner_cert.pdf", status: "approved" as const, expirationDate: "2026-11-20", reviewedBy: "demo-admin", reviewedAt: new Date("2024-05-10") },
+  { id: "doc-2-3", consultantId: "consultant-2", documentTypeId: "doctype-5", fileName: "michael_rodriguez_background.pdf", fileUrl: "/documents/michael_rodriguez_background.pdf", status: "approved" as const, expirationDate: "2025-05-10", reviewedBy: "demo-admin", reviewedAt: new Date("2024-05-11") },
+  { id: "doc-2-4", consultantId: "consultant-2", documentTypeId: "doctype-6", fileName: "michael_rodriguez_drugscreen.pdf", fileUrl: "/documents/michael_rodriguez_drugscreen.pdf", status: "approved" as const, expirationDate: "2025-05-10", reviewedBy: "demo-admin", reviewedAt: new Date("2024-05-11") },
+  { id: "doc-2-5", consultantId: "consultant-2", documentTypeId: "doctype-7", fileName: "michael_rodriguez_hipaa.pdf", fileUrl: "/documents/michael_rodriguez_hipaa.pdf", status: "approved" as const, expirationDate: "2025-05-10", reviewedBy: "demo-admin", reviewedAt: new Date("2024-05-12") },
+  { id: "doc-2-6", consultantId: "consultant-2", documentTypeId: "doctype-8", fileName: "michael_rodriguez_w9.pdf", fileUrl: "/documents/michael_rodriguez_w9.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-05-12") },
+  { id: "doc-2-7", consultantId: "consultant-2", documentTypeId: "doctype-9", fileName: "michael_rodriguez_insurance.pdf", fileUrl: "/documents/michael_rodriguez_insurance.pdf", status: "approved" as const, expirationDate: "2025-05-10", reviewedBy: "demo-admin", reviewedAt: new Date("2024-05-12") },
+  { id: "doc-2-8", consultantId: "consultant-2", documentTypeId: "doctype-11", fileName: "michael_rodriguez_nda.pdf", fileUrl: "/documents/michael_rodriguez_nda.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-05-10") },
+  { id: "doc-2-9", consultantId: "consultant-2", documentTypeId: "doctype-12", fileName: "michael_rodriguez_contract.pdf", fileUrl: "/documents/michael_rodriguez_contract.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-05-10") },
+
+  // Consultant 3 - Jennifer Williams (Epic & Cerner, on assignment)
+  { id: "doc-3-1", consultantId: "consultant-3", documentTypeId: "doctype-1", fileName: "jennifer_williams_resume.pdf", fileUrl: "/documents/jennifer_williams_resume.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-04-20") },
+  { id: "doc-3-2", consultantId: "consultant-3", documentTypeId: "doctype-3", fileName: "jennifer_williams_epic_cert.pdf", fileUrl: "/documents/jennifer_williams_epic_cert.pdf", status: "approved" as const, expirationDate: "2026-08-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-04-20") },
+  { id: "doc-3-3", consultantId: "consultant-3", documentTypeId: "doctype-4", fileName: "jennifer_williams_cerner_cert.pdf", fileUrl: "/documents/jennifer_williams_cerner_cert.pdf", status: "approved" as const, expirationDate: "2027-01-10", reviewedBy: "demo-admin", reviewedAt: new Date("2024-04-20") },
+  { id: "doc-3-4", consultantId: "consultant-3", documentTypeId: "doctype-5", fileName: "jennifer_williams_background.pdf", fileUrl: "/documents/jennifer_williams_background.pdf", status: "approved" as const, expirationDate: "2025-04-20", reviewedBy: "demo-admin", reviewedAt: new Date("2024-04-21") },
+  { id: "doc-3-5", consultantId: "consultant-3", documentTypeId: "doctype-7", fileName: "jennifer_williams_hipaa.pdf", fileUrl: "/documents/jennifer_williams_hipaa.pdf", status: "approved" as const, expirationDate: "2025-04-20", reviewedBy: "demo-admin", reviewedAt: new Date("2024-04-22") },
+  { id: "doc-3-6", consultantId: "consultant-3", documentTypeId: "doctype-8", fileName: "jennifer_williams_w9.pdf", fileUrl: "/documents/jennifer_williams_w9.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-04-22") },
+  { id: "doc-3-7", consultantId: "consultant-3", documentTypeId: "doctype-11", fileName: "jennifer_williams_nda.pdf", fileUrl: "/documents/jennifer_williams_nda.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-04-20") },
+  { id: "doc-3-8", consultantId: "consultant-3", documentTypeId: "doctype-12", fileName: "jennifer_williams_contract.pdf", fileUrl: "/documents/jennifer_williams_contract.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-04-20") },
+
+  // Consultant 4 - David Kim (Epic, available) - has an expiring document
+  { id: "doc-4-1", consultantId: "consultant-4", documentTypeId: "doctype-1", fileName: "david_kim_resume.pdf", fileUrl: "/documents/david_kim_resume.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-03-01") },
+  { id: "doc-4-2", consultantId: "consultant-4", documentTypeId: "doctype-3", fileName: "david_kim_epic_cert.pdf", fileUrl: "/documents/david_kim_epic_cert.pdf", status: "approved" as const, expirationDate: "2025-09-30", reviewedBy: "demo-admin", reviewedAt: new Date("2024-03-01") },
+  { id: "doc-4-3", consultantId: "consultant-4", documentTypeId: "doctype-5", fileName: "david_kim_background.pdf", fileUrl: "/documents/david_kim_background.pdf", status: "approved" as const, expirationDate: "2025-01-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-03-02"), notes: "Expiring soon - renewal needed" },
+  { id: "doc-4-4", consultantId: "consultant-4", documentTypeId: "doctype-7", fileName: "david_kim_hipaa.pdf", fileUrl: "/documents/david_kim_hipaa.pdf", status: "approved" as const, expirationDate: "2025-03-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-03-03") },
+  { id: "doc-4-5", consultantId: "consultant-4", documentTypeId: "doctype-8", fileName: "david_kim_w9.pdf", fileUrl: "/documents/david_kim_w9.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-03-03") },
+  { id: "doc-4-6", consultantId: "consultant-4", documentTypeId: "doctype-11", fileName: "david_kim_nda.pdf", fileUrl: "/documents/david_kim_nda.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-03-01") },
+  { id: "doc-4-7", consultantId: "consultant-4", documentTypeId: "doctype-12", fileName: "david_kim_contract.pdf", fileUrl: "/documents/david_kim_contract.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-03-01") },
+
+  // Consultant 5 - Amanda Foster (Meditech, available)
+  { id: "doc-5-1", consultantId: "consultant-5", documentTypeId: "doctype-1", fileName: "amanda_foster_resume.pdf", fileUrl: "/documents/amanda_foster_resume.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-07-01") },
+  { id: "doc-5-2", consultantId: "consultant-5", documentTypeId: "doctype-5", fileName: "amanda_foster_background.pdf", fileUrl: "/documents/amanda_foster_background.pdf", status: "approved" as const, expirationDate: "2025-07-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-07-02") },
+  { id: "doc-5-3", consultantId: "consultant-5", documentTypeId: "doctype-7", fileName: "amanda_foster_hipaa.pdf", fileUrl: "/documents/amanda_foster_hipaa.pdf", status: "approved" as const, expirationDate: "2025-07-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-07-03") },
+  { id: "doc-5-4", consultantId: "consultant-5", documentTypeId: "doctype-8", fileName: "amanda_foster_w9.pdf", fileUrl: "/documents/amanda_foster_w9.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-07-03") },
+  { id: "doc-5-5", consultantId: "consultant-5", documentTypeId: "doctype-11", fileName: "amanda_foster_nda.pdf", fileUrl: "/documents/amanda_foster_nda.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-07-01") },
+  { id: "doc-5-6", consultantId: "consultant-5", documentTypeId: "doctype-12", fileName: "amanda_foster_contract.pdf", fileUrl: "/documents/amanda_foster_contract.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-07-01") },
+
+  // Consultant 6 - Robert Thompson (Epic, on assignment)
+  { id: "doc-6-1", consultantId: "consultant-6", documentTypeId: "doctype-1", fileName: "robert_thompson_resume.pdf", fileUrl: "/documents/robert_thompson_resume.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-02-15") },
+  { id: "doc-6-2", consultantId: "consultant-6", documentTypeId: "doctype-3", fileName: "robert_thompson_epic_cert.pdf", fileUrl: "/documents/robert_thompson_epic_cert.pdf", status: "approved" as const, expirationDate: "2026-05-20", reviewedBy: "demo-admin", reviewedAt: new Date("2024-02-15") },
+  { id: "doc-6-3", consultantId: "consultant-6", documentTypeId: "doctype-5", fileName: "robert_thompson_background.pdf", fileUrl: "/documents/robert_thompson_background.pdf", status: "approved" as const, expirationDate: "2025-02-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-02-16") },
+  { id: "doc-6-4", consultantId: "consultant-6", documentTypeId: "doctype-7", fileName: "robert_thompson_hipaa.pdf", fileUrl: "/documents/robert_thompson_hipaa.pdf", status: "approved" as const, expirationDate: "2025-02-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-02-17") },
+  { id: "doc-6-5", consultantId: "consultant-6", documentTypeId: "doctype-8", fileName: "robert_thompson_w9.pdf", fileUrl: "/documents/robert_thompson_w9.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-02-17") },
+  { id: "doc-6-6", consultantId: "consultant-6", documentTypeId: "doctype-11", fileName: "robert_thompson_nda.pdf", fileUrl: "/documents/robert_thompson_nda.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-02-15") },
+  { id: "doc-6-7", consultantId: "consultant-6", documentTypeId: "doctype-12", fileName: "robert_thompson_contract.pdf", fileUrl: "/documents/robert_thompson_contract.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-02-15") },
+
+  // Consultant 7 - Emily Martinez (Epic, available) - RN license
+  { id: "doc-7-1", consultantId: "consultant-7", documentTypeId: "doctype-1", fileName: "emily_martinez_resume.pdf", fileUrl: "/documents/emily_martinez_resume.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-08-01") },
+  { id: "doc-7-2", consultantId: "consultant-7", documentTypeId: "doctype-2", fileName: "emily_martinez_rn_license.pdf", fileUrl: "/documents/emily_martinez_rn_license.pdf", status: "approved" as const, expirationDate: "2026-08-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-08-01") },
+  { id: "doc-7-3", consultantId: "consultant-7", documentTypeId: "doctype-3", fileName: "emily_martinez_epic_cert.pdf", fileUrl: "/documents/emily_martinez_epic_cert.pdf", status: "approved" as const, expirationDate: "2027-02-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-08-01") },
+  { id: "doc-7-4", consultantId: "consultant-7", documentTypeId: "doctype-5", fileName: "emily_martinez_background.pdf", fileUrl: "/documents/emily_martinez_background.pdf", status: "approved" as const, expirationDate: "2025-08-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-08-02") },
+  { id: "doc-7-5", consultantId: "consultant-7", documentTypeId: "doctype-7", fileName: "emily_martinez_hipaa.pdf", fileUrl: "/documents/emily_martinez_hipaa.pdf", status: "approved" as const, expirationDate: "2025-08-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-08-03") },
+  { id: "doc-7-6", consultantId: "consultant-7", documentTypeId: "doctype-8", fileName: "emily_martinez_w9.pdf", fileUrl: "/documents/emily_martinez_w9.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-08-03") },
+  { id: "doc-7-7", consultantId: "consultant-7", documentTypeId: "doctype-11", fileName: "emily_martinez_nda.pdf", fileUrl: "/documents/emily_martinez_nda.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-08-01") },
+  { id: "doc-7-8", consultantId: "consultant-7", documentTypeId: "doctype-12", fileName: "emily_martinez_contract.pdf", fileUrl: "/documents/emily_martinez_contract.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-08-01") },
+
+  // Consultant 8 - James Wilson (Allscripts, available)
+  { id: "doc-8-1", consultantId: "consultant-8", documentTypeId: "doctype-1", fileName: "james_wilson_resume.pdf", fileUrl: "/documents/james_wilson_resume.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-09-01") },
+  { id: "doc-8-2", consultantId: "consultant-8", documentTypeId: "doctype-5", fileName: "james_wilson_background.pdf", fileUrl: "/documents/james_wilson_background.pdf", status: "approved" as const, expirationDate: "2025-09-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-09-02") },
+  { id: "doc-8-3", consultantId: "consultant-8", documentTypeId: "doctype-7", fileName: "james_wilson_hipaa.pdf", fileUrl: "/documents/james_wilson_hipaa.pdf", status: "approved" as const, expirationDate: "2025-09-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-09-03") },
+  { id: "doc-8-4", consultantId: "consultant-8", documentTypeId: "doctype-8", fileName: "james_wilson_w9.pdf", fileUrl: "/documents/james_wilson_w9.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-09-03") },
+  { id: "doc-8-5", consultantId: "consultant-8", documentTypeId: "doctype-11", fileName: "james_wilson_nda.pdf", fileUrl: "/documents/james_wilson_nda.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-09-01") },
+  { id: "doc-8-6", consultantId: "consultant-8", documentTypeId: "doctype-12", fileName: "james_wilson_contract.pdf", fileUrl: "/documents/james_wilson_contract.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-09-01") },
+
+  // Consultant 9 - Lisa Anderson (Epic, on assignment)
+  { id: "doc-9-1", consultantId: "consultant-9", documentTypeId: "doctype-1", fileName: "lisa_anderson_resume.pdf", fileUrl: "/documents/lisa_anderson_resume.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-01-15") },
+  { id: "doc-9-2", consultantId: "consultant-9", documentTypeId: "doctype-3", fileName: "lisa_anderson_epic_cert.pdf", fileUrl: "/documents/lisa_anderson_epic_cert.pdf", status: "approved" as const, expirationDate: "2026-07-20", reviewedBy: "demo-admin", reviewedAt: new Date("2024-01-15") },
+  { id: "doc-9-3", consultantId: "consultant-9", documentTypeId: "doctype-5", fileName: "lisa_anderson_background.pdf", fileUrl: "/documents/lisa_anderson_background.pdf", status: "approved" as const, expirationDate: "2025-01-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-01-16") },
+  { id: "doc-9-4", consultantId: "consultant-9", documentTypeId: "doctype-7", fileName: "lisa_anderson_hipaa.pdf", fileUrl: "/documents/lisa_anderson_hipaa.pdf", status: "approved" as const, expirationDate: "2025-01-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-01-17") },
+  { id: "doc-9-5", consultantId: "consultant-9", documentTypeId: "doctype-8", fileName: "lisa_anderson_w9.pdf", fileUrl: "/documents/lisa_anderson_w9.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-01-17") },
+  { id: "doc-9-6", consultantId: "consultant-9", documentTypeId: "doctype-11", fileName: "lisa_anderson_nda.pdf", fileUrl: "/documents/lisa_anderson_nda.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-01-15") },
+  { id: "doc-9-7", consultantId: "consultant-9", documentTypeId: "doctype-12", fileName: "lisa_anderson_contract.pdf", fileUrl: "/documents/lisa_anderson_contract.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-01-15") },
+
+  // Consultant 10 - Christopher Lee (Cerner, unavailable) - Some docs pending
+  { id: "doc-10-1", consultantId: "consultant-10", documentTypeId: "doctype-1", fileName: "christopher_lee_resume.pdf", fileUrl: "/documents/christopher_lee_resume.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-10-01") },
+  { id: "doc-10-2", consultantId: "consultant-10", documentTypeId: "doctype-4", fileName: "christopher_lee_cerner_cert.pdf", fileUrl: "/documents/christopher_lee_cerner_cert.pdf", status: "approved" as const, expirationDate: "2026-12-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-10-01") },
+  { id: "doc-10-3", consultantId: "consultant-10", documentTypeId: "doctype-5", fileName: "christopher_lee_background.pdf", fileUrl: "/documents/christopher_lee_background.pdf", status: "pending" as const, notes: "Waiting for results from vendor" },
+  { id: "doc-10-4", consultantId: "consultant-10", documentTypeId: "doctype-7", fileName: "christopher_lee_hipaa.pdf", fileUrl: "/documents/christopher_lee_hipaa.pdf", status: "approved" as const, expirationDate: "2025-10-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-10-03") },
+  { id: "doc-10-5", consultantId: "consultant-10", documentTypeId: "doctype-8", fileName: "christopher_lee_w9.pdf", fileUrl: "/documents/christopher_lee_w9.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-10-03") },
+  { id: "doc-10-6", consultantId: "consultant-10", documentTypeId: "doctype-11", fileName: "christopher_lee_nda.pdf", fileUrl: "/documents/christopher_lee_nda.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-10-01") },
+
+  // Consultant 11 - Patricia Brown (Epic, available)
+  { id: "doc-11-1", consultantId: "consultant-11", documentTypeId: "doctype-1", fileName: "patricia_brown_resume.pdf", fileUrl: "/documents/patricia_brown_resume.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-11-01") },
+  { id: "doc-11-2", consultantId: "consultant-11", documentTypeId: "doctype-3", fileName: "patricia_brown_epic_cert.pdf", fileUrl: "/documents/patricia_brown_epic_cert.pdf", status: "approved" as const, expirationDate: "2027-05-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-11-01") },
+  { id: "doc-11-3", consultantId: "consultant-11", documentTypeId: "doctype-5", fileName: "patricia_brown_background.pdf", fileUrl: "/documents/patricia_brown_background.pdf", status: "approved" as const, expirationDate: "2025-11-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-11-02") },
+  { id: "doc-11-4", consultantId: "consultant-11", documentTypeId: "doctype-7", fileName: "patricia_brown_hipaa.pdf", fileUrl: "/documents/patricia_brown_hipaa.pdf", status: "approved" as const, expirationDate: "2025-11-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-11-03") },
+  { id: "doc-11-5", consultantId: "consultant-11", documentTypeId: "doctype-8", fileName: "patricia_brown_w9.pdf", fileUrl: "/documents/patricia_brown_w9.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-11-03") },
+  { id: "doc-11-6", consultantId: "consultant-11", documentTypeId: "doctype-9", fileName: "patricia_brown_insurance.pdf", fileUrl: "/documents/patricia_brown_insurance.pdf", status: "approved" as const, expirationDate: "2025-11-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-11-03") },
+  { id: "doc-11-7", consultantId: "consultant-11", documentTypeId: "doctype-11", fileName: "patricia_brown_nda.pdf", fileUrl: "/documents/patricia_brown_nda.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-11-01") },
+  { id: "doc-11-8", consultantId: "consultant-11", documentTypeId: "doctype-12", fileName: "patricia_brown_contract.pdf", fileUrl: "/documents/patricia_brown_contract.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-11-01") },
+
+  // Consultant 12 - Daniel Wilson (Epic & Cerner, on assignment)
+  { id: "doc-12-1", consultantId: "consultant-12", documentTypeId: "doctype-1", fileName: "daniel_wilson_resume.pdf", fileUrl: "/documents/daniel_wilson_resume.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-01") },
+  { id: "doc-12-2", consultantId: "consultant-12", documentTypeId: "doctype-3", fileName: "daniel_wilson_epic_cert.pdf", fileUrl: "/documents/daniel_wilson_epic_cert.pdf", status: "approved" as const, expirationDate: "2026-10-20", reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-01") },
+  { id: "doc-12-3", consultantId: "consultant-12", documentTypeId: "doctype-4", fileName: "daniel_wilson_cerner_cert.pdf", fileUrl: "/documents/daniel_wilson_cerner_cert.pdf", status: "approved" as const, expirationDate: "2027-03-15", reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-01") },
+  { id: "doc-12-4", consultantId: "consultant-12", documentTypeId: "doctype-5", fileName: "daniel_wilson_background.pdf", fileUrl: "/documents/daniel_wilson_background.pdf", status: "approved" as const, expirationDate: "2025-06-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-02") },
+  { id: "doc-12-5", consultantId: "consultant-12", documentTypeId: "doctype-6", fileName: "daniel_wilson_drugscreen.pdf", fileUrl: "/documents/daniel_wilson_drugscreen.pdf", status: "approved" as const, expirationDate: "2025-06-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-02") },
+  { id: "doc-12-6", consultantId: "consultant-12", documentTypeId: "doctype-7", fileName: "daniel_wilson_hipaa.pdf", fileUrl: "/documents/daniel_wilson_hipaa.pdf", status: "approved" as const, expirationDate: "2025-06-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-03") },
+  { id: "doc-12-7", consultantId: "consultant-12", documentTypeId: "doctype-8", fileName: "daniel_wilson_w9.pdf", fileUrl: "/documents/daniel_wilson_w9.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-03") },
+  { id: "doc-12-8", consultantId: "consultant-12", documentTypeId: "doctype-9", fileName: "daniel_wilson_insurance.pdf", fileUrl: "/documents/daniel_wilson_insurance.pdf", status: "approved" as const, expirationDate: "2025-06-01", reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-03") },
+  { id: "doc-12-9", consultantId: "consultant-12", documentTypeId: "doctype-10", fileName: "daniel_wilson_covid.pdf", fileUrl: "/documents/daniel_wilson_covid.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-01") },
+  { id: "doc-12-10", consultantId: "consultant-12", documentTypeId: "doctype-11", fileName: "daniel_wilson_nda.pdf", fileUrl: "/documents/daniel_wilson_nda.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-01") },
+  { id: "doc-12-11", consultantId: "consultant-12", documentTypeId: "doctype-12", fileName: "daniel_wilson_contract.pdf", fileUrl: "/documents/daniel_wilson_contract.pdf", status: "approved" as const, reviewedBy: "demo-admin", reviewedAt: new Date("2024-06-01") },
 ];
 
 const demoCourses = [
@@ -1731,6 +2129,490 @@ const demoSyncEvents = [
     resourceId: "patient-001",
     externalId: "epic-pt-789",
     details: { dataType: "encounter" },
+  },
+];
+
+// Demo Project Tasks for Dashboard
+const demoProjectTasks = [
+  // Epic EHR Implementation tasks
+  {
+    id: "task-1",
+    projectId: "project-1",
+    title: "Complete ED workflow documentation",
+    description: "Document all Emergency Department workflows for Epic implementation",
+    priority: "high" as const,
+    status: "in_progress" as const,
+    dueDate: "2025-01-02",
+    assignedTo: "user-c1", // Sarah Chen
+  },
+  {
+    id: "task-2",
+    projectId: "project-1",
+    title: "Review ICU order sets with clinical team",
+    description: "Validate all ICU-specific order sets with the clinical leadership",
+    priority: "high" as const,
+    status: "pending" as const,
+    dueDate: "2025-01-05",
+    assignedTo: "user-c3", // Emily Davis
+  },
+  {
+    id: "task-3",
+    projectId: "project-1",
+    title: "Configure medication administration records",
+    description: "Set up MAR templates for nursing documentation",
+    priority: "medium" as const,
+    status: "pending" as const,
+    dueDate: "2025-01-08",
+    assignedTo: "user-c4", // David Kim
+  },
+  {
+    id: "task-4",
+    projectId: "project-1",
+    title: "Test physician order entry workflows",
+    description: "Complete end-to-end testing of CPOE functionality",
+    priority: "high" as const,
+    status: "pending" as const,
+    dueDate: "2025-01-10",
+    assignedTo: "user-c1", // Sarah Chen
+  },
+  // Cerner Millennium Optimization tasks
+  {
+    id: "task-5",
+    projectId: "project-2",
+    title: "Analyze FirstNet response time metrics",
+    description: "Review performance data and identify optimization opportunities",
+    priority: "medium" as const,
+    status: "in_progress" as const,
+    dueDate: "2025-01-03",
+    assignedTo: "user-c2", // Michael Johnson
+  },
+  {
+    id: "task-6",
+    projectId: "project-2",
+    title: "Deploy PowerChart enhancements to production",
+    description: "Coordinate deployment of approved workflow improvements",
+    priority: "high" as const,
+    status: "pending" as const,
+    dueDate: "2025-01-06",
+    assignedTo: "user-c2", // Michael Johnson
+  },
+  // MyChart Patient Portal tasks
+  {
+    id: "task-7",
+    projectId: "project-3",
+    title: "Configure patient self-scheduling rules",
+    description: "Set up appointment type availability for patient scheduling",
+    priority: "medium" as const,
+    status: "completed" as const,
+    dueDate: "2024-12-28",
+    completedAt: new Date("2024-12-27T16:30:00Z"),
+    assignedTo: "user-c3", // Emily Davis
+  },
+  {
+    id: "task-8",
+    projectId: "project-3",
+    title: "Test Care Everywhere data exchange",
+    description: "Validate HIE connectivity with external health systems",
+    priority: "high" as const,
+    status: "in_progress" as const,
+    dueDate: "2025-01-04",
+    assignedTo: "user-c10", // Christopher Lee (Integration Architect)
+  },
+  {
+    id: "task-9",
+    projectId: "project-3",
+    title: "Train patient access staff on MyChart activation",
+    description: "Conduct training sessions for front desk staff",
+    priority: "medium" as const,
+    status: "pending" as const,
+    dueDate: "2025-01-07",
+    assignedTo: "user-c11", // Michelle Taylor (Training Lead)
+  },
+  {
+    id: "task-10",
+    projectId: "project-1",
+    title: "Validate lab result routing rules",
+    description: "Ensure lab results route correctly to ordering providers",
+    priority: "low" as const,
+    status: "pending" as const,
+    dueDate: "2025-01-12",
+    assignedTo: "user-c12", // Daniel Wilson (Lab Systems)
+  },
+];
+
+// Demo User Activities for Recent Activity Feed
+const demoUserActivities = [
+  {
+    id: "activity-1",
+    userId: "user-c1",
+    activityType: "update" as const,
+    resourceType: "project",
+    resourceId: "project-1",
+    resourceName: "Epic EHR Implementation - Phase 2",
+    description: "Updated project timeline and milestones",
+    createdAt: new Date(Date.now() - 1000 * 60 * 15), // 15 minutes ago
+  },
+  {
+    id: "activity-2",
+    userId: "user-c3",
+    activityType: "approve" as const,
+    resourceType: "document",
+    resourceId: "doc-1-1",
+    resourceName: "ED Workflow Documentation v2.1",
+    description: "Approved workflow documentation for ED module",
+    createdAt: new Date(Date.now() - 1000 * 60 * 45), // 45 minutes ago
+  },
+  {
+    id: "activity-3",
+    userId: "user-c2",
+    activityType: "create" as const,
+    resourceType: "ticket",
+    resourceId: "ticket-new-1",
+    resourceName: "FirstNet Performance Issue",
+    description: "Created support ticket for performance optimization",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
+  },
+  {
+    id: "activity-4",
+    userId: "user-c10",
+    activityType: "submit" as const,
+    resourceType: "timesheet",
+    resourceId: "ts-weekly-1",
+    resourceName: "Week of Dec 23, 2024",
+    description: "Submitted weekly timesheet for approval",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 3), // 3 hours ago
+  },
+  {
+    id: "activity-5",
+    userId: "user-c11",
+    activityType: "create" as const,
+    resourceType: "training",
+    resourceId: "training-session-1",
+    resourceName: "MyChart Staff Training - Session 3",
+    description: "Scheduled training session for patient access team",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5), // 5 hours ago
+  },
+  {
+    id: "activity-6",
+    userId: "demo-admin",
+    activityType: "assign" as const,
+    resourceType: "consultant",
+    resourceId: "consultant-5",
+    resourceName: "Emily Johnson",
+    description: "Assigned to Epic EHR Implementation project",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 8), // 8 hours ago
+  },
+  {
+    id: "activity-7",
+    userId: "user-c4",
+    activityType: "update" as const,
+    resourceType: "task",
+    resourceId: "task-3",
+    resourceName: "Configure medication administration records",
+    description: "Updated task status and added notes",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 12), // 12 hours ago
+  },
+  {
+    id: "activity-8",
+    userId: "user-c6",
+    activityType: "upload" as const,
+    resourceType: "document",
+    resourceId: "doc-surgery-1",
+    resourceName: "OR Integration Specifications.pdf",
+    description: "Uploaded surgical workflow documentation",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
+  },
+  {
+    id: "activity-9",
+    userId: "user-c8",
+    activityType: "approve" as const,
+    resourceType: "expense",
+    resourceId: "exp-travel-1",
+    resourceName: "Travel Reimbursement - Miami Site Visit",
+    description: "Approved travel expense report",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 36), // 1.5 days ago
+  },
+  {
+    id: "activity-10",
+    userId: "user-c7",
+    activityType: "create" as const,
+    resourceType: "report",
+    resourceId: "eod-report-1",
+    resourceName: "EOD Report - Dec 26, 2024",
+    description: "Submitted end-of-day status report",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48), // 2 days ago
+  },
+];
+
+// Demo Timesheets for Performance Metrics (using current month dates)
+const currentYear = new Date().getFullYear();
+const currentMonth = new Date().getMonth();
+
+// Helper to get week start/end dates for current month
+const getWeekDates = (weekNum: number) => {
+  const start = new Date(currentYear, currentMonth, 1 + (weekNum * 7));
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  return {
+    start: start.toISOString().split('T')[0],
+    end: end.toISOString().split('T')[0],
+  };
+};
+
+const week1 = getWeekDates(0);
+const week2 = getWeekDates(1);
+const week3 = getWeekDates(2);
+
+const demoTimesheets = [
+  {
+    id: "timesheet-1",
+    consultantId: "consultant-1",
+    projectId: "project-1",
+    weekStartDate: week1.start,
+    weekEndDate: week1.end,
+    status: "approved" as const,
+    totalHours: 45,
+    regularHours: 40,
+    overtimeHours: 5,
+    notes: "Epic ED workflow optimization",
+  },
+  {
+    id: "timesheet-2",
+    consultantId: "consultant-2",
+    projectId: "project-1",
+    weekStartDate: week1.start,
+    weekEndDate: week1.end,
+    status: "approved" as const,
+    totalHours: 42,
+    regularHours: 40,
+    overtimeHours: 2,
+    notes: "Revenue cycle training sessions",
+  },
+  {
+    id: "timesheet-3",
+    consultantId: "consultant-3",
+    projectId: "project-2",
+    weekStartDate: week1.start,
+    weekEndDate: week1.end,
+    status: "approved" as const,
+    totalHours: 40,
+    regularHours: 40,
+    overtimeHours: 0,
+    notes: "Cerner migration data validation",
+  },
+  {
+    id: "timesheet-4",
+    consultantId: "consultant-4",
+    projectId: "project-1",
+    weekStartDate: week2.start,
+    weekEndDate: week2.end,
+    status: "approved" as const,
+    totalHours: 48,
+    regularHours: 40,
+    overtimeHours: 8,
+    notes: "Surgical workflows and OR integration",
+  },
+  {
+    id: "timesheet-5",
+    consultantId: "consultant-5",
+    projectId: "project-3",
+    weekStartDate: week2.start,
+    weekEndDate: week2.end,
+    status: "approved" as const,
+    totalHours: 38,
+    regularHours: 38,
+    overtimeHours: 0,
+    notes: "System upgrades and testing",
+  },
+  {
+    id: "timesheet-6",
+    consultantId: "consultant-6",
+    projectId: "project-2",
+    weekStartDate: week3.start,
+    weekEndDate: week3.end,
+    status: "approved" as const,
+    totalHours: 44,
+    regularHours: 40,
+    overtimeHours: 4,
+    notes: "End-user training preparation",
+  },
+  {
+    id: "timesheet-7",
+    consultantId: "consultant-7",
+    projectId: "project-1",
+    weekStartDate: week3.start,
+    weekEndDate: week3.end,
+    status: "approved" as const,
+    totalHours: 40,
+    regularHours: 40,
+    overtimeHours: 0,
+    notes: "Pharmacy module configuration",
+  },
+  {
+    id: "timesheet-8",
+    consultantId: "consultant-8",
+    projectId: "project-3",
+    weekStartDate: week3.start,
+    weekEndDate: week3.end,
+    status: "approved" as const,
+    totalHours: 46,
+    regularHours: 40,
+    overtimeHours: 6,
+    notes: "Go-live support preparation",
+  },
+];
+
+// Demo Support Tickets for Ticket Resolution Rate
+const demoSupportTickets = [
+  {
+    id: "ticket-1",
+    ticketNumber: "TKT-2024-001",
+    projectId: "project-1",
+    reportedById: "user-c1",
+    assignedToId: "consultant-1",
+    title: "Epic MyChart login timeout issue",
+    description: "Users experiencing timeout after 5 minutes of inactivity",
+    category: "access" as const,
+    priority: "high" as const,
+    status: "resolved" as const,
+    resolution: "Adjusted session timeout settings from 5 to 30 minutes",
+    responseTime: 45,
+    resolutionTime: 180,
+  },
+  {
+    id: "ticket-2",
+    ticketNumber: "TKT-2024-002",
+    projectId: "project-1",
+    reportedById: "user-c2",
+    assignedToId: "consultant-2",
+    title: "Revenue cycle report formatting",
+    description: "Monthly revenue reports showing incorrect date format",
+    category: "technical" as const,
+    priority: "medium" as const,
+    status: "resolved" as const,
+    resolution: "Updated report template date format to MM/DD/YYYY",
+    responseTime: 30,
+    resolutionTime: 120,
+  },
+  {
+    id: "ticket-3",
+    ticketNumber: "TKT-2024-003",
+    projectId: "project-2",
+    reportedById: "user-c3",
+    assignedToId: "consultant-3",
+    title: "Cerner data migration validation errors",
+    description: "Patient records showing duplicate entries after migration",
+    category: "integration" as const,
+    priority: "critical" as const,
+    status: "resolved" as const,
+    resolution: "Implemented deduplication logic and re-ran migration scripts",
+    responseTime: 15,
+    resolutionTime: 480,
+  },
+  {
+    id: "ticket-4",
+    ticketNumber: "TKT-2024-004",
+    projectId: "project-1",
+    reportedById: "user-c4",
+    assignedToId: "consultant-4",
+    title: "OR scheduling conflict",
+    description: "Double-booking allowed in surgical scheduling module",
+    category: "workflow" as const,
+    priority: "high" as const,
+    status: "closed" as const,
+    resolution: "Enabled conflict detection rules and validation",
+    responseTime: 20,
+    resolutionTime: 240,
+  },
+  {
+    id: "ticket-5",
+    ticketNumber: "TKT-2024-005",
+    projectId: "project-1",
+    reportedById: "user-c5",
+    assignedToId: "consultant-1",
+    title: "ED triage form missing fields",
+    description: "Custom assessment fields not appearing in triage forms",
+    category: "technical" as const,
+    priority: "medium" as const,
+    status: "resolved" as const,
+    resolution: "Added missing fields to form builder configuration",
+    responseTime: 60,
+    resolutionTime: 90,
+  },
+  {
+    id: "ticket-6",
+    ticketNumber: "TKT-2024-006",
+    projectId: "project-3",
+    reportedById: "user-c6",
+    assignedToId: "consultant-5",
+    title: "Performance degradation on reports",
+    description: "Weekly reports taking 10+ minutes to generate",
+    category: "technical" as const,
+    priority: "high" as const,
+    status: "in_progress" as const,
+    resolution: null,
+    responseTime: 25,
+    resolutionTime: null,
+  },
+  {
+    id: "ticket-7",
+    ticketNumber: "TKT-2024-007",
+    projectId: "project-2",
+    reportedById: "user-c7",
+    assignedToId: "consultant-6",
+    title: "User access request for new department",
+    description: "Need to provision Epic access for 15 new oncology staff",
+    category: "access" as const,
+    priority: "medium" as const,
+    status: "resolved" as const,
+    resolution: "Created user accounts and assigned appropriate role templates",
+    responseTime: 35,
+    resolutionTime: 60,
+  },
+  {
+    id: "ticket-8",
+    ticketNumber: "TKT-2024-008",
+    projectId: "project-1",
+    reportedById: "user-c8",
+    assignedToId: "consultant-7",
+    title: "Pharmacy order verification issue",
+    description: "Some orders skipping pharmacist verification step",
+    category: "workflow" as const,
+    priority: "critical" as const,
+    status: "resolved" as const,
+    resolution: "Fixed order routing rules and added verification checkpoint",
+    responseTime: 10,
+    resolutionTime: 150,
+  },
+  {
+    id: "ticket-9",
+    ticketNumber: "TKT-2024-009",
+    projectId: "project-3",
+    reportedById: "user-c9",
+    assignedToId: "consultant-8",
+    title: "Training environment sync issue",
+    description: "Test data not refreshing in training environment",
+    category: "training" as const,
+    priority: "low" as const,
+    status: "open" as const,
+    resolution: null,
+    responseTime: null,
+    resolutionTime: null,
+  },
+  {
+    id: "ticket-10",
+    ticketNumber: "TKT-2024-010",
+    projectId: "project-1",
+    reportedById: "user-c10",
+    assignedToId: "consultant-1",
+    title: "Lab results interface delay",
+    description: "Lab results taking 30+ seconds to appear in patient chart",
+    category: "integration" as const,
+    priority: "high" as const,
+    status: "closed" as const,
+    resolution: "Optimized interface engine and increased polling frequency",
+    responseTime: 20,
+    resolutionTime: 360,
   },
 ];
 
@@ -2978,7 +3860,47 @@ export async function seedDemoData() {
   try {
     console.log("Seeding hospitals...");
     for (const hospital of demoHospitals) {
-      await db.insert(hospitals).values(hospital).onConflictDoNothing();
+      await db.insert(hospitals).values(hospital).onConflictDoUpdate({
+        target: hospitals.id,
+        set: {
+          name: hospital.name,
+          address: hospital.address,
+          city: hospital.city,
+          state: hospital.state,
+          zipCode: hospital.zipCode,
+          phone: hospital.phone,
+          email: hospital.email,
+          website: hospital.website,
+          facilityType: hospital.facilityType,
+          bedCount: hospital.bedCount,
+          traumaLevel: hospital.traumaLevel,
+          teachingStatus: hospital.teachingStatus,
+          ownershipType: hospital.ownershipType,
+          healthSystemAffiliation: hospital.healthSystemAffiliation,
+          npiNumber: hospital.npiNumber,
+          cmsNumber: hospital.cmsNumber,
+          emrSystem: hospital.emrSystem,
+          currentEmrVersion: hospital.currentEmrVersion,
+          targetEmrSystem: hospital.targetEmrSystem,
+          dataCenter: hospital.dataCenter,
+          itStaffCount: hospital.itStaffCount,
+          networkInfrastructure: hospital.networkInfrastructure,
+          goLiveDate: hospital.goLiveDate,
+          implementationPhase: hospital.implementationPhase,
+          contractValue: hospital.contractValue,
+          primaryContactName: hospital.primaryContactName,
+          primaryContactEmail: hospital.primaryContactEmail,
+          primaryContactPhone: hospital.primaryContactPhone,
+          executiveSponsor: hospital.executiveSponsor,
+          jointCommissionAccredited: hospital.jointCommissionAccredited,
+          lastAuditDate: hospital.lastAuditDate,
+          hipaaOfficerName: hospital.hipaaOfficerName,
+          hipaaOfficerEmail: hospital.hipaaOfficerEmail,
+          totalStaff: hospital.totalStaff,
+          notes: hospital.notes,
+          isActive: hospital.isActive,
+        },
+      });
     }
 
     console.log("Seeding hospital units...");
@@ -3034,7 +3956,17 @@ export async function seedDemoData() {
         role: "consultant",
         isActive: true,
         accessStatus: "active",
-      }).onConflictDoNothing();
+      }).onConflictDoUpdate({
+        target: users.id,
+        set: {
+          email: consultant.email,
+          firstName: consultant.firstName,
+          lastName: consultant.lastName,
+          role: "consultant",
+          isActive: true,
+          accessStatus: "active",
+        },
+      });
 
       await db.insert(consultants).values({
         id: consultant.id,
@@ -3048,9 +3980,26 @@ export async function seedDemoData() {
         positions: consultant.positions,
         bio: consultant.bio,
         payRate: consultant.payRate,
+        shiftPreference: consultant.shiftPreference,
         isOnboarded: consultant.isOnboarded,
         isAvailable: consultant.isAvailable,
-      }).onConflictDoNothing();
+      }).onConflictDoUpdate({
+        target: consultants.id,
+        set: {
+          phone: consultant.phone,
+          city: consultant.city,
+          state: consultant.state,
+          yearsExperience: consultant.yearsExperience,
+          emrSystems: consultant.emrSystems,
+          modules: consultant.modules,
+          positions: consultant.positions,
+          bio: consultant.bio,
+          payRate: consultant.payRate,
+          shiftPreference: consultant.shiftPreference,
+          isOnboarded: consultant.isOnboarded,
+          isAvailable: consultant.isAvailable,
+        },
+      });
     }
 
     console.log("Seeding document types...");
@@ -3058,9 +4007,59 @@ export async function seedDemoData() {
       await db.insert(documentTypes).values(docType).onConflictDoNothing();
     }
 
+    console.log("Seeding consultant documents...");
+    for (const doc of demoConsultantDocuments) {
+      await db.insert(consultantDocuments).values(doc).onConflictDoNothing();
+    }
+
     console.log("Seeding projects...");
     for (const project of demoProjects) {
-      await db.insert(projects).values(project).onConflictDoNothing();
+      await db.insert(projects).values(project).onConflictDoUpdate({
+        target: projects.id,
+        set: {
+          name: project.name,
+          description: project.description,
+          startDate: project.startDate,
+          endDate: project.endDate,
+          originalEndDate: project.originalEndDate,
+          status: project.status,
+          estimatedConsultants: project.estimatedConsultants,
+          actualConsultants: project.actualConsultants,
+          contractType: project.contractType,
+          contractValue: project.contractValue,
+          billingRate: project.billingRate,
+          paymentTerms: project.paymentTerms,
+          laborBudget: project.laborBudget,
+          travelBudget: project.travelBudget,
+          softwareBudget: project.softwareBudget,
+          trainingBudget: project.trainingBudget,
+          infrastructureBudget: project.infrastructureBudget,
+          contingencyBudget: project.contingencyBudget,
+          laborActual: project.laborActual,
+          travelActual: project.travelActual,
+          softwareActual: project.softwareActual,
+          trainingActual: project.trainingActual,
+          infrastructureActual: project.infrastructureActual,
+          contingencyActual: project.contingencyActual,
+          estimatedBudget: project.estimatedBudget,
+          actualBudget: project.actualBudget,
+          baselineCost: project.baselineCost,
+          projectedSavings: project.projectedSavings,
+          actualSavings: project.actualSavings,
+          roiPercentage: project.roiPercentage,
+          paybackPeriodMonths: project.paybackPeriodMonths,
+          savingsLaborEfficiency: project.savingsLaborEfficiency,
+          savingsErrorReduction: project.savingsErrorReduction,
+          savingsRevenueCycle: project.savingsRevenueCycle,
+          savingsPatientThroughput: project.savingsPatientThroughput,
+          savingsCompliance: project.savingsCompliance,
+          savingsOther: project.savingsOther,
+          savingsNotes: project.savingsNotes,
+          invoicedAmount: project.invoicedAmount,
+          paidAmount: project.paidAmount,
+          savings: project.savings,
+        },
+      });
     }
 
     console.log("Seeding project phases...");
@@ -3086,6 +4085,41 @@ export async function seedDemoData() {
     console.log("Seeding project milestones...");
     for (const milestone of demoProjectMilestones) {
       await db.insert(projectMilestones).values(milestone).onConflictDoNothing();
+    }
+
+    console.log("Seeding project tasks...");
+    for (const task of demoProjectTasks) {
+      await db.insert(projectTasks).values(task).onConflictDoNothing();
+    }
+
+    console.log("Seeding user activities...");
+    for (const activity of demoUserActivities) {
+      await db.insert(userActivities).values(activity).onConflictDoNothing();
+    }
+
+    console.log("Seeding timesheets for performance metrics...");
+    for (const timesheet of demoTimesheets) {
+      await db.insert(timesheets).values(timesheet).onConflictDoUpdate({
+        target: timesheets.id,
+        set: {
+          weekStartDate: timesheet.weekStartDate,
+          weekEndDate: timesheet.weekEndDate,
+          totalHours: timesheet.totalHours,
+          regularHours: timesheet.regularHours,
+          overtimeHours: timesheet.overtimeHours,
+          status: timesheet.status,
+        },
+      });
+    }
+
+    console.log("Seeding support tickets for performance metrics...");
+    for (const ticket of demoSupportTickets) {
+      await db.insert(supportTickets).values(ticket).onConflictDoNothing();
+    }
+
+    console.log("Seeding project team assignments...");
+    for (const assignment of demoProjectTeamAssignments) {
+      await db.insert(projectTeamAssignments).values(assignment).onConflictDoNothing();
     }
 
     console.log("Seeding RACI assignments...");

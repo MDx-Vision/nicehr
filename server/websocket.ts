@@ -6,7 +6,7 @@ import cookie from 'cookie';
 import cookieSignature from 'cookie-signature';
 
 interface WebSocketMessage {
-  type: 'message' | 'join' | 'leave' | 'typing' | 'read' | 'subscribe_notifications' | 'unsubscribe_notifications' | 'subscribe_dashboard' | 'unsubscribe_dashboard';
+  type: 'message' | 'join' | 'leave' | 'typing' | 'read' | 'subscribe_notifications' | 'unsubscribe_notifications' | 'subscribe_dashboard' | 'unsubscribe_dashboard' | 'subscribe_activities' | 'unsubscribe_activities';
   channelId?: string;
   content?: string;
   messageId?: string;
@@ -18,6 +18,7 @@ interface AuthenticatedWebSocket extends WebSocket {
   channels: Set<string>;
   subscribedToNotifications: boolean;
   subscribedToDashboard: boolean;
+  subscribedToActivities: boolean;
   isAlive: boolean;
 }
 
@@ -133,6 +134,7 @@ export function setupWebSocket(server: Server) {
     client.isAlive = true;
     client.subscribedToNotifications = false;
     client.subscribedToDashboard = false;
+    client.subscribedToActivities = false;
     client.userId = (req as any).userId;
     client.userRole = (req as any).userRole;
 
@@ -301,6 +303,18 @@ export function setupWebSocket(server: Server) {
 
           case 'unsubscribe_dashboard':
             client.subscribedToDashboard = false;
+            break;
+
+          case 'subscribe_activities':
+            client.subscribedToActivities = true;
+            client.send(JSON.stringify({
+              type: 'activities_subscribed',
+              message: 'Subscribed to activity updates'
+            }));
+            break;
+
+          case 'unsubscribe_activities':
+            client.subscribedToActivities = false;
             break;
         }
       } catch (error) {
@@ -558,4 +572,20 @@ export async function broadcastDashboardUpdate() {
   });
 
   await Promise.all(updatePromises);
+}
+
+// Broadcast new activity to all subscribed clients
+export async function broadcastActivityUpdate(activity: any) {
+  allClients.forEach(client => {
+    if (client.subscribedToActivities && client.readyState === WebSocket.OPEN) {
+      try {
+        client.send(JSON.stringify({
+          type: 'new_activity',
+          activity
+        }));
+      } catch (error) {
+        console.error('Error broadcasting activity update:', error);
+      }
+    }
+  });
 }

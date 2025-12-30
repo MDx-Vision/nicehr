@@ -29,4 +29,4 @@ Thumbs.db
 # Test artifacts
 cypress/screenshots/
 cypress/videos/
-coverage/
+coverage/remote-support/.env

@@ -252,8 +252,43 @@ export const hospitals = pgTable("hospitals", {
   phone: varchar("phone"),
   email: varchar("email"),
   website: varchar("website"),
-  emrSystem: varchar("emr_system"),
+
+  // Organizational Info
+  facilityType: varchar("facility_type"), // Acute Care, Ambulatory, Long-term Care, Behavioral Health
+  bedCount: integer("bed_count"),
+  traumaLevel: varchar("trauma_level"), // Level I, II, III, IV, V, None
+  teachingStatus: varchar("teaching_status"), // Academic, Community, Teaching Affiliate
+  ownershipType: varchar("ownership_type"), // Non-profit, For-profit, Government, Religious
+  healthSystemAffiliation: varchar("health_system_affiliation"),
+  npiNumber: varchar("npi_number"), // National Provider Identifier
+  cmsNumber: varchar("cms_number"), // CMS Certification Number
+
+  // Technical/IT Info
+  emrSystem: varchar("emr_system"), // Current EMR
+  currentEmrVersion: varchar("current_emr_version"),
+  targetEmrSystem: varchar("target_emr_system"), // What they're migrating to
+  dataCenter: varchar("data_center"), // On-premise, Cloud, Hybrid
+  itStaffCount: integer("it_staff_count"),
+  networkInfrastructure: text("network_infrastructure"),
+
+  // Implementation-Specific
+  goLiveDate: timestamp("go_live_date"),
+  implementationPhase: varchar("implementation_phase"),
+  contractValue: varchar("contract_value"),
+  primaryContactName: varchar("primary_contact_name"),
+  primaryContactEmail: varchar("primary_contact_email"),
+  primaryContactPhone: varchar("primary_contact_phone"),
+  executiveSponsor: varchar("executive_sponsor"),
+
+  // Compliance
+  jointCommissionAccredited: boolean("joint_commission_accredited").default(false),
+  lastAuditDate: timestamp("last_audit_date"),
+  hipaaOfficerName: varchar("hipaa_officer_name"),
+  hipaaOfficerEmail: varchar("hipaa_officer_email"),
+
+  // General
   totalStaff: integer("total_staff"),
+  notes: text("notes"),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -334,12 +369,63 @@ export const projects = pgTable("projects", {
   description: text("description"),
   startDate: date("start_date").notNull(),
   endDate: date("end_date").notNull(),
+  originalEndDate: date("original_end_date"), // For tracking schedule slippage
   status: projectStatusEnum("status").default("draft").notNull(),
+
+  // Staffing
   estimatedConsultants: integer("estimated_consultants").default(0),
   actualConsultants: integer("actual_consultants").default(0),
+
+  // Contract Details
+  contractType: varchar("contract_type"), // Fixed Price, Time & Materials, Retainer, Hybrid
+  contractValue: decimal("contract_value", { precision: 12, scale: 2 }), // What client pays
+  billingRate: decimal("billing_rate", { precision: 10, scale: 2 }), // Hourly rate if T&M
+  paymentTerms: varchar("payment_terms"), // Net 30, Net 45, Milestone-based, etc.
+
+  // Budget Breakdown (What it costs to deliver)
+  laborBudget: decimal("labor_budget", { precision: 12, scale: 2 }),
+  travelBudget: decimal("travel_budget", { precision: 12, scale: 2 }),
+  softwareBudget: decimal("software_budget", { precision: 12, scale: 2 }),
+  trainingBudget: decimal("training_budget", { precision: 12, scale: 2 }),
+  infrastructureBudget: decimal("infrastructure_budget", { precision: 12, scale: 2 }),
+  contingencyBudget: decimal("contingency_budget", { precision: 12, scale: 2 }),
+
+  // Actual Spend
+  laborActual: decimal("labor_actual", { precision: 12, scale: 2 }),
+  travelActual: decimal("travel_actual", { precision: 12, scale: 2 }),
+  softwareActual: decimal("software_actual", { precision: 12, scale: 2 }),
+  trainingActual: decimal("training_actual", { precision: 12, scale: 2 }),
+  infrastructureActual: decimal("infrastructure_actual", { precision: 12, scale: 2 }),
+  contingencyActual: decimal("contingency_actual", { precision: 12, scale: 2 }),
+
+  // Legacy totals (computed from breakdown)
   estimatedBudget: decimal("estimated_budget", { precision: 12, scale: 2 }),
   actualBudget: decimal("actual_budget", { precision: 12, scale: 2 }),
+
+  // ROI & Savings
+  baselineCost: decimal("baseline_cost", { precision: 12, scale: 2 }), // What it would cost without project/optimization
+  projectedSavings: decimal("projected_savings", { precision: 12, scale: 2 }),
+  actualSavings: decimal("actual_savings", { precision: 12, scale: 2 }),
+  savingsBreakdown: jsonb("savings_breakdown"), // { laborEfficiency: 25000, errorReduction: 15000, etc. }
+  roiPercentage: decimal("roi_percentage", { precision: 6, scale: 2 }),
+  paybackPeriodMonths: integer("payback_period_months"),
+
+  // Savings Categories (for detailed tracking)
+  savingsLaborEfficiency: decimal("savings_labor_efficiency", { precision: 12, scale: 2 }), // FTE reduction/reallocation
+  savingsErrorReduction: decimal("savings_error_reduction", { precision: 12, scale: 2 }), // Reduced rework, malpractice
+  savingsRevenueCycle: decimal("savings_revenue_cycle", { precision: 12, scale: 2 }), // Faster billing, fewer denials
+  savingsPatientThroughput: decimal("savings_patient_throughput", { precision: 12, scale: 2 }), // More patients served
+  savingsCompliance: decimal("savings_compliance", { precision: 12, scale: 2 }), // Avoided penalties, audit costs
+  savingsOther: decimal("savings_other", { precision: 12, scale: 2 }),
+  savingsNotes: text("savings_notes"), // Explanation of how savings were calculated
+
+  // Financial Status
+  invoicedAmount: decimal("invoiced_amount", { precision: 12, scale: 2 }),
+  paidAmount: decimal("paid_amount", { precision: 12, scale: 2 }),
+
+  // Legacy field kept for backwards compatibility
   savings: decimal("savings", { precision: 12, scale: 2 }),
+
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

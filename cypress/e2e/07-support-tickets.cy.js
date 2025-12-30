@@ -7,8 +7,50 @@ describe('Support Tickets', () => {
     role: 'admin'
   };
 
-  // Note: Component uses local demo data, not API mocks
-  // Demo data includes tickets like "Login issue with Epic system"
+  const mockTickets = [
+    {
+      id: 1,
+      title: 'Login issue with Epic system',
+      description: 'Unable to log in to Epic. Getting timeout errors after entering credentials.',
+      status: 'open',
+      priority: 'high',
+      category: 'technical',
+      reportedById: 1,
+      assignedToId: 2,
+      projectId: 1,
+      slaDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 2,
+      title: 'Training schedule request',
+      description: 'Need to schedule EMR training for new staff members.',
+      status: 'in_progress',
+      priority: 'medium',
+      category: 'training',
+      reportedById: 2,
+      assignedToId: 1,
+      projectId: 1,
+      slaDeadline: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 3,
+      title: 'Data migration question',
+      description: 'Question about patient data migration from legacy system.',
+      status: 'resolved',
+      priority: 'low',
+      category: 'data',
+      reportedById: 3,
+      assignedToId: 1,
+      projectId: 2,
+      slaDeadline: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  ];
 
   beforeEach(() => {
     cy.clearCookies();
@@ -19,6 +61,21 @@ describe('Support Tickets', () => {
       statusCode: 200,
       body: testUser
     }).as('getUser');
+
+    cy.intercept('GET', '/api/support-tickets', {
+      statusCode: 200,
+      body: mockTickets
+    }).as('getTickets');
+
+    cy.intercept('POST', '/api/support-tickets', {
+      statusCode: 201,
+      body: { id: 4, ...mockTickets[0], title: 'New ticket' }
+    }).as('createTicket');
+
+    cy.intercept('PATCH', '/api/support-tickets/*', {
+      statusCode: 200,
+      body: mockTickets[0]
+    }).as('updateTicket');
 
     cy.visit('/support-tickets');
     cy.wait('@getUser');

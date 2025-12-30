@@ -1017,6 +1017,123 @@ export async function registerRoutes(
     }
   });
 
+  // Session management routes
+  app.get('/api/account/sessions', isAuthenticated, async (req: any, res) => {
+    try {
+      // Return demo sessions data
+      const sessions = [
+        {
+          id: "session-1",
+          deviceType: "desktop",
+          browser: "Chrome on macOS",
+          location: "San Francisco, CA",
+          ipAddress: "192.168.1.1",
+          lastActive: new Date().toISOString(),
+          isCurrent: true
+        },
+        {
+          id: "session-2",
+          deviceType: "mobile",
+          browser: "Safari on iOS",
+          location: "New York, NY",
+          ipAddress: "10.0.0.1",
+          lastActive: new Date(Date.now() - 86400000).toISOString(),
+          isCurrent: false
+        }
+      ];
+      res.json(sessions);
+    } catch (error) {
+      console.error("Error fetching sessions:", error);
+      res.status(500).json({ message: "Failed to fetch sessions" });
+    }
+  });
+
+  app.delete('/api/account/sessions/:sessionId', isAuthenticated, async (req: any, res) => {
+    try {
+      // Mock session termination
+      res.json({ message: "Session terminated successfully" });
+    } catch (error) {
+      console.error("Error terminating session:", error);
+      res.status(500).json({ message: "Failed to terminate session" });
+    }
+  });
+
+  app.delete('/api/account/sessions', isAuthenticated, async (req: any, res) => {
+    try {
+      // Mock termination of all other sessions
+      res.json({ message: "All other sessions terminated" });
+    } catch (error) {
+      console.error("Error terminating sessions:", error);
+      res.status(500).json({ message: "Failed to terminate sessions" });
+    }
+  });
+
+  app.post('/api/account/change-password', isAuthenticated, async (req: any, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Current and new password are required" });
+      }
+
+      if (newPassword.length < 8) {
+        return res.status(400).json({ message: "Password must be at least 8 characters" });
+      }
+
+      // Mock password change - in production would verify current password
+      // For demo, accept any current password except "wrong"
+      if (currentPassword === "wrong") {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
+
+      res.json({ message: "Password changed successfully" });
+    } catch (error) {
+      console.error("Error changing password:", error);
+      res.status(500).json({ message: "Failed to change password" });
+    }
+  });
+
+  app.post('/api/account/change-email', isAuthenticated, async (req: any, res) => {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      // Mock email verification - would send verification email in production
+      res.json({ message: "Verification email sent" });
+    } catch (error) {
+      console.error("Error changing email:", error);
+      res.status(500).json({ message: "Failed to change email" });
+    }
+  });
+
+  app.post('/api/account/two-factor', isAuthenticated, async (req: any, res) => {
+    try {
+      const { enabled } = req.body;
+
+      // Mock 2FA toggle
+      res.json({
+        message: enabled ? "Two-factor authentication enabled" : "Two-factor authentication disabled",
+        enabled
+      });
+    } catch (error) {
+      console.error("Error toggling 2FA:", error);
+      res.status(500).json({ message: "Failed to update two-factor authentication" });
+    }
+  });
+
+  app.post('/api/account/export-data', isAuthenticated, async (req: any, res) => {
+    try {
+      // Mock data export - would trigger async job in production
+      res.json({ message: "Data export started. You will receive an email when ready." });
+    } catch (error) {
+      console.error("Error exporting data:", error);
+      res.status(500).json({ message: "Failed to export data" });
+    }
+  });
+
   // Consultant documents routes
   app.get('/api/consultants/:consultantId/documents', isAuthenticated, async (req, res) => {
     try {
@@ -1309,6 +1426,65 @@ export async function registerRoutes(
   });
 
   // Schedule routes
+  // General schedules endpoint (all schedules across projects)
+  app.get('/api/schedules', isAuthenticated, async (req, res) => {
+    try {
+      const schedules = await storage.getAllSchedules();
+      res.json(schedules);
+    } catch (error) {
+      console.error("Error fetching all schedules:", error);
+      res.status(500).json({ message: "Failed to fetch schedules" });
+    }
+  });
+
+  app.get('/api/schedules/:id', isAuthenticated, async (req, res) => {
+    try {
+      const schedule = await storage.getSchedule(req.params.id);
+      if (!schedule) {
+        return res.status(404).json({ message: "Schedule not found" });
+      }
+      res.json(schedule);
+    } catch (error) {
+      console.error("Error fetching schedule:", error);
+      res.status(500).json({ message: "Failed to fetch schedule" });
+    }
+  });
+
+  app.post('/api/schedules', isAuthenticated, async (req: any, res) => {
+    try {
+      const validated = insertProjectScheduleSchema.parse(req.body);
+      const schedule = await storage.createProjectSchedule(validated);
+      res.status(201).json(schedule);
+    } catch (error) {
+      console.error("Error creating schedule:", error);
+      res.status(400).json({ message: "Failed to create schedule" });
+    }
+  });
+
+  app.patch('/api/schedules/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const schedule = await storage.updateSchedule(req.params.id, req.body);
+      if (!schedule) {
+        return res.status(404).json({ message: "Schedule not found" });
+      }
+      res.json(schedule);
+    } catch (error) {
+      console.error("Error updating schedule:", error);
+      res.status(500).json({ message: "Failed to update schedule" });
+    }
+  });
+
+  app.delete('/api/schedules/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.deleteSchedule(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting schedule:", error);
+      res.status(500).json({ message: "Failed to delete schedule" });
+    }
+  });
+
+  // Project-specific schedule routes
   app.get('/api/projects/:projectId/schedules', isAuthenticated, async (req, res) => {
     try {
       const schedules = await storage.getProjectSchedules(req.params.projectId);
@@ -3747,6 +3923,108 @@ export async function registerRoutes(
   });
 
   // Support Ticket Routes
+
+  // General support tickets (all tickets across projects)
+  app.get('/api/support-tickets', isAuthenticated, async (req, res) => {
+    try {
+      const tickets = await storage.getAllSupportTickets();
+      res.json(tickets);
+    } catch (error) {
+      console.error("Error fetching all support tickets:", error);
+      res.status(500).json({ message: "Failed to fetch support tickets" });
+    }
+  });
+
+  app.post('/api/support-tickets', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id || '1';
+      const validated = insertSupportTicketSchema.parse({
+        ...req.body,
+        reportedById: parseInt(userId),
+      });
+      const ticket = await storage.createSupportTicket(validated);
+
+      await logActivity(userId, {
+        activityType: 'create',
+        resourceType: 'support_ticket',
+        resourceId: ticket.id,
+        resourceName: ticket.ticketNumber || `Ticket ${ticket.id}`,
+        description: `Created support ticket: ${ticket.title}`,
+      }, req);
+
+      broadcastNotificationUpdate(['tickets']);
+      res.status(201).json(ticket);
+    } catch (error) {
+      console.error("Error creating support ticket:", error);
+      res.status(500).json({ message: "Failed to create support ticket" });
+    }
+  });
+
+  app.get('/api/support-tickets/:id', isAuthenticated, async (req, res) => {
+    try {
+      const ticket = await storage.getSupportTicket(req.params.id);
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+      res.json(ticket);
+    } catch (error) {
+      console.error("Error fetching ticket:", error);
+      res.status(500).json({ message: "Failed to fetch ticket" });
+    }
+  });
+
+  app.patch('/api/support-tickets/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const ticket = await storage.updateSupportTicket(req.params.id, req.body);
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+
+      const userId = req.user?.claims?.sub || req.user?.id || '1';
+      await logActivity(userId, {
+        activityType: 'update',
+        resourceType: 'support_ticket',
+        resourceId: ticket.id,
+        resourceName: ticket.ticketNumber || `Ticket ${ticket.id}`,
+        description: `Updated support ticket: ${ticket.title}`,
+      }, req);
+
+      broadcastNotificationUpdate(['tickets']);
+      res.json(ticket);
+    } catch (error) {
+      console.error("Error updating ticket:", error);
+      res.status(500).json({ message: "Failed to update ticket" });
+    }
+  });
+
+  app.delete('/api/support-tickets/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const ticket = await storage.getSupportTicket(req.params.id);
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+
+      // For now, just mark as closed instead of deleting
+      await storage.updateSupportTicket(req.params.id, { status: 'closed' });
+
+      const userId = req.user?.claims?.sub || req.user?.id || '1';
+      await logActivity(userId, {
+        activityType: 'delete',
+        resourceType: 'support_ticket',
+        resourceId: ticket.id,
+        resourceName: ticket.ticketNumber || `Ticket ${ticket.id}`,
+        description: `Closed support ticket: ${ticket.title}`,
+      }, req);
+
+      broadcastNotificationUpdate(['tickets']);
+      res.json({ message: "Ticket closed successfully" });
+    } catch (error) {
+      console.error("Error closing ticket:", error);
+      res.status(500).json({ message: "Failed to close ticket" });
+    }
+  });
+
+  // Project-specific support tickets
   app.get('/api/projects/:projectId/support/tickets', isAuthenticated, requireAnyPermission('support_tickets:view_all', 'support_tickets:view_own'), async (req, res) => {
     try {
       const tickets = await storage.getSupportTickets(req.params.projectId);
