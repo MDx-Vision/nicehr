@@ -1,16 +1,29 @@
-// Email Service using Resend integration
-// Reference: Replit Resend connector blueprint
+// Email Service with SendGrid (production/HIPAA) and Resend (development) support
+// For HIPAA compliance, use SendGrid Pro plan with signed BAA
 
 import { Resend } from 'resend';
+import sgMail from '@sendgrid/mail';
 
+// Environment detection
+const isProduction = process.env.NODE_ENV === 'production';
+const useSendGrid = !!process.env.SENDGRID_API_KEY;
+const useResend = !!process.env.REPLIT_CONNECTORS_HOSTNAME || !!process.env.REPL_IDENTITY;
+
+// Initialize SendGrid if API key is present
+if (process.env.SENDGRID_API_KEY) {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+  console.log('[Email] SendGrid initialized (HIPAA-compliant mode)');
+}
+
+// Resend connector settings (Replit development)
 let connectionSettings: any;
 
-async function getCredentials() {
+async function getResendCredentials() {
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-  const xReplitToken = process.env.REPL_IDENTITY 
-    ? 'repl ' + process.env.REPL_IDENTITY 
-    : process.env.WEB_REPL_RENEWAL 
-    ? 'depl ' + process.env.WEB_REPL_RENEWAL 
+  const xReplitToken = process.env.REPL_IDENTITY
+    ? 'repl ' + process.env.REPL_IDENTITY
+    : process.env.WEB_REPL_RENEWAL
+    ? 'depl ' + process.env.WEB_REPL_RENEWAL
     : null;
 
   if (!xReplitToken) {
@@ -33,18 +46,26 @@ async function getCredentials() {
   return { apiKey: connectionSettings.settings.api_key, fromEmail: connectionSettings.settings.from_email };
 }
 
-// WARNING: Never cache this client.
+// WARNING: Never cache this client for Resend.
 // Access tokens expire, so a new client must be created each time.
 async function getResendClient() {
-  const { apiKey, fromEmail } = await getCredentials();
+  const { apiKey, fromEmail } = await getResendCredentials();
   return {
     client: new Resend(apiKey),
     fromEmail
   };
 }
 
+// Get the from email address based on environment
+function getFromEmail(): string {
+  if (useSendGrid) {
+    return process.env.SENDGRID_FROM_EMAIL || 'NICEHR <noreply@nicehr.com>';
+  }
+  return 'NICEHR <noreply@nicehr.com>';
+}
+
 // Email template types
-export type EmailTemplateType = 
+export type EmailTemplateType =
   | 'welcome'
   | 'schedule_assigned'
   | 'schedule_updated'
@@ -119,6 +140,17 @@ export interface InvoiceEmailData {
   message?: string;
 }
 
+// Get base URL for email links
+function getBaseUrl(): string {
+  if (process.env.APP_URL) {
+    return process.env.APP_URL;
+  }
+  if (process.env.REPLIT_DEV_DOMAIN) {
+    return 'https://' + process.env.REPLIT_DEV_DOMAIN;
+  }
+  return 'https://nicehr.replit.app';
+}
+
 // Email templates with subject and body
 const emailTemplates: Record<EmailTemplateType, { subject: string; getHtml: (data: any) => string }> = {
   welcome: {
@@ -146,7 +178,7 @@ const emailTemplates: Record<EmailTemplateType, { subject: string; getHtml: (dat
       <li>Browse available projects and opportunities</li>
     </ul>
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.REPLIT_DEV_DOMAIN ? 'https://' + process.env.REPLIT_DEV_DOMAIN : 'https://nicehr.replit.app'}/profile" style="background: #0891b2; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">Complete Your Profile</a>
+      <a href="${getBaseUrl()}/profile" style="background: #0891b2; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">Complete Your Profile</a>
     </div>
     <p style="font-size: 14px; color: #64748b;">If you have any questions, please contact our support team.</p>
     <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
@@ -182,7 +214,7 @@ const emailTemplates: Record<EmailTemplateType, { subject: string; getHtml: (dat
       </table>
     </div>
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.REPLIT_DEV_DOMAIN ? 'https://' + process.env.REPLIT_DEV_DOMAIN : 'https://nicehr.replit.app'}/my-schedule" style="background: #0891b2; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">View My Schedule</a>
+      <a href="${getBaseUrl()}/my-schedule" style="background: #0891b2; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">View My Schedule</a>
     </div>
     <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
     <p style="font-size: 12px; color: #94a3b8; text-align: center;">NICEHR - Connecting Healthcare Professionals with Opportunities</p>
@@ -217,7 +249,7 @@ const emailTemplates: Record<EmailTemplateType, { subject: string; getHtml: (dat
       </table>
     </div>
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.REPLIT_DEV_DOMAIN ? 'https://' + process.env.REPLIT_DEV_DOMAIN : 'https://nicehr.replit.app'}/my-schedule" style="background: #f59e0b; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">View Updated Schedule</a>
+      <a href="${getBaseUrl()}/my-schedule" style="background: #f59e0b; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">View Updated Schedule</a>
     </div>
     <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
     <p style="font-size: 12px; color: #94a3b8; text-align: center;">NICEHR - Connecting Healthcare Professionals with Opportunities</p>
@@ -252,7 +284,7 @@ const emailTemplates: Record<EmailTemplateType, { subject: string; getHtml: (dat
     </div>
     <p style="font-size: 16px;">Please contact us if you have any questions about this cancellation.</p>
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.REPLIT_DEV_DOMAIN ? 'https://' + process.env.REPLIT_DEV_DOMAIN : 'https://nicehr.replit.app'}/my-schedule" style="background: #64748b; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">View My Schedule</a>
+      <a href="${getBaseUrl()}/my-schedule" style="background: #64748b; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">View My Schedule</a>
     </div>
     <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
     <p style="font-size: 12px; color: #94a3b8; text-align: center;">NICEHR - Connecting Healthcare Professionals with Opportunities</p>
@@ -282,7 +314,7 @@ const emailTemplates: Record<EmailTemplateType, { subject: string; getHtml: (dat
     </div>
     <p style="font-size: 16px;">Your document is now on file and valid for upcoming assignments.</p>
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.REPLIT_DEV_DOMAIN ? 'https://' + process.env.REPLIT_DEV_DOMAIN : 'https://nicehr.replit.app'}/my-documents" style="background: #22c55e; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">View My Documents</a>
+      <a href="${getBaseUrl()}/my-documents" style="background: #22c55e; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">View My Documents</a>
     </div>
     <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
     <p style="font-size: 12px; color: #94a3b8; text-align: center;">NICEHR - Connecting Healthcare Professionals with Opportunities</p>
@@ -314,7 +346,7 @@ const emailTemplates: Record<EmailTemplateType, { subject: string; getHtml: (dat
     ` : ''}
     <p style="font-size: 16px;">Please review the feedback and upload an updated document.</p>
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.REPLIT_DEV_DOMAIN ? 'https://' + process.env.REPLIT_DEV_DOMAIN : 'https://nicehr.replit.app'}/my-documents" style="background: #ef4444; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">Upload New Document</a>
+      <a href="${getBaseUrl()}/my-documents" style="background: #ef4444; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">Upload New Document</a>
     </div>
     <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
     <p style="font-size: 12px; color: #94a3b8; text-align: center;">NICEHR - Connecting Healthcare Professionals with Opportunities</p>
@@ -344,7 +376,7 @@ const emailTemplates: Record<EmailTemplateType, { subject: string; getHtml: (dat
     </div>
     <p style="font-size: 16px;">Please upload an updated document to maintain your eligibility for assignments.</p>
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.REPLIT_DEV_DOMAIN ? 'https://' + process.env.REPLIT_DEV_DOMAIN : 'https://nicehr.replit.app'}/my-documents" style="background: #f59e0b; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">Update Document</a>
+      <a href="${getBaseUrl()}/my-documents" style="background: #f59e0b; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">Update Document</a>
     </div>
     <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
     <p style="font-size: 12px; color: #94a3b8; text-align: center;">NICEHR - Connecting Healthcare Professionals with Opportunities</p>
@@ -379,7 +411,7 @@ const emailTemplates: Record<EmailTemplateType, { subject: string; getHtml: (dat
     </div>
     <p style="font-size: 16px;">Log in to view the full project details and respond to this invitation.</p>
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.REPLIT_DEV_DOMAIN ? 'https://' + process.env.REPLIT_DEV_DOMAIN : 'https://nicehr.replit.app'}/projects" style="background: #8b5cf6; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">View Project</a>
+      <a href="${getBaseUrl()}/projects" style="background: #8b5cf6; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">View Project</a>
     </div>
     <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
     <p style="font-size: 12px; color: #94a3b8; text-align: center;">NICEHR - Connecting Healthcare Professionals with Opportunities</p>
@@ -409,7 +441,7 @@ const emailTemplates: Record<EmailTemplateType, { subject: string; getHtml: (dat
     </div>
     <p style="font-size: 16px;">If you did not request this deletion or have changed your mind, please log in and cancel the request in your Account Settings.</p>
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.REPLIT_DEV_DOMAIN ? 'https://' + process.env.REPLIT_DEV_DOMAIN : 'https://nicehr.replit.app'}/account" style="background: #64748b; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">View Account Settings</a>
+      <a href="${getBaseUrl()}/account" style="background: #64748b; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">View Account Settings</a>
     </div>
     <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
     <p style="font-size: 12px; color: #94a3b8; text-align: center;">NICEHR - Connecting Healthcare Professionals with Opportunities</p>
@@ -443,22 +475,20 @@ const emailTemplates: Record<EmailTemplateType, { subject: string; getHtml: (dat
 </body>
 </html>`
   },
+
   staff_invitation: {
     subject: 'You\'ve Been Invited to Join NICEHR',
     getHtml: (data: StaffInvitationData) => {
-      const roleDisplay = data.role === 'consultant' ? 'Healthcare Consultant' : 
-                         data.role === 'hospital_staff' ? 'Hospital Staff' : 
+      const roleDisplay = data.role === 'consultant' ? 'Healthcare Consultant' :
+                         data.role === 'hospital_staff' ? 'Hospital Staff' :
                          data.role === 'admin' ? 'Administrator' : data.role;
-      const expiresFormatted = new Date(data.expiresAt).toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
+      const expiresFormatted = new Date(data.expiresAt).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
       });
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-        ? 'https://' + process.env.REPLIT_DEV_DOMAIN 
-        : 'https://nicehr.replit.app';
-      
+
       return `
 <!DOCTYPE html>
 <html>
@@ -477,7 +507,7 @@ const emailTemplates: Record<EmailTemplateType, { subject: string; getHtml: (dat
     ${data.message ? `<div style="background: #e0f2fe; border-left: 4px solid #0891b2; padding: 15px; margin: 20px 0; border-radius: 0 6px 6px 0;"><p style="margin: 0; font-size: 14px; color: #0c4a6e;">"${data.message}"</p></div>` : ''}
     <p style="font-size: 16px;">NICEHR is a comprehensive healthcare consultant management platform designed to streamline workforce operations across healthcare facilities.</p>
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${baseUrl}/api/login" style="background: #0891b2; color: white; padding: 14px 35px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block; font-size: 16px;">Accept Invitation & Sign In</a>
+      <a href="${getBaseUrl()}/api/login" style="background: #0891b2; color: white; padding: 14px 35px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block; font-size: 16px;">Accept Invitation & Sign In</a>
     </div>
     <div style="background: #fef3c7; border-radius: 6px; padding: 15px; margin: 20px 0;">
       <p style="margin: 0; font-size: 14px; color: #92400e;"><strong>Important:</strong> This invitation expires on <strong>${expiresFormatted}</strong>. Please sign in with the email address this invitation was sent to (${data.email}).</p>
@@ -490,13 +520,10 @@ const emailTemplates: Record<EmailTemplateType, { subject: string; getHtml: (dat
 </html>`;
     }
   },
+
   invoice_sent: {
     subject: 'Invoice from NICEHR',
     getHtml: (data: InvoiceEmailData) => {
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN
-        ? 'https://' + process.env.REPLIT_DEV_DOMAIN
-        : 'https://nicehr.replit.app';
-
       const lineItemsHtml = data.lineItems && data.lineItems.length > 0
         ? data.lineItems.map(item => `
             <tr>
@@ -566,7 +593,7 @@ const emailTemplates: Record<EmailTemplateType, { subject: string; getHtml: (dat
     </div>
 
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${baseUrl}/invoices" style="background: #0891b2; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">View Invoice Online</a>
+      <a href="${getBaseUrl()}/invoices" style="background: #0891b2; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">View Invoice Online</a>
     </div>
 
     <p style="font-size: 14px; color: #64748b;">If you have any questions about this invoice, please contact us.</p>
@@ -582,6 +609,45 @@ const emailTemplates: Record<EmailTemplateType, { subject: string; getHtml: (dat
 // Import storage for database logging
 import { storage } from './storage';
 
+/**
+ * Sends an email using SendGrid (production) or Resend (development)
+ * SendGrid is used for HIPAA compliance in production environments
+ */
+async function sendEmailViaProvider(
+  to: string,
+  subject: string,
+  html: string
+): Promise<void> {
+  // Production mode - use SendGrid (HIPAA-compliant)
+  if (useSendGrid) {
+    const msg = {
+      to,
+      from: getFromEmail(),
+      subject,
+      html,
+    };
+    await sgMail.send(msg);
+    console.log(`[Email] Sent via SendGrid to ${to}`);
+    return;
+  }
+
+  // Replit development mode - use Resend
+  if (useResend) {
+    const { client, fromEmail } = await getResendClient();
+    await client.emails.send({
+      from: fromEmail || 'NICEHR <noreply@nicehr.com>',
+      to: [to],
+      subject,
+      html
+    });
+    console.log(`[Email] Sent via Resend to ${to}`);
+    return;
+  }
+
+  // No email provider configured
+  console.warn(`[Email] No email provider configured. Would have sent to ${to}: ${subject}`);
+}
+
 // Main email sending function
 export async function sendEmail(
   to: string,
@@ -595,14 +661,7 @@ export async function sendEmail(
       throw new Error(`Unknown email template: ${templateType}`);
     }
 
-    const { client, fromEmail } = await getResendClient();
-    
-    const result = await client.emails.send({
-      from: fromEmail || 'NICEHR <noreply@nicehr.com>',
-      to: [to],
-      subject: template.subject,
-      html: template.getHtml(data)
-    });
+    await sendEmailViaProvider(to, template.subject, template.getHtml(data));
 
     // Log to database
     await storage.createEmailNotification({
@@ -614,7 +673,7 @@ export async function sendEmail(
       metadata: data,
       sentAt: new Date(),
     });
-    
+
     console.log(`[Email] Sent ${templateType} email to ${to}`);
 
     return { success: true };
@@ -634,7 +693,7 @@ export async function sendEmail(
     } catch (logError) {
       console.error('[Email] Failed to log email error:', logError);
     }
-    
+
     console.error(`[Email] Failed to send ${templateType} email to ${to}:`, error.message);
 
     return { success: false, error: error.message };
@@ -649,14 +708,14 @@ export async function shouldSendEmail(user: { emailNotifications?: boolean; emai
 // Notification helper functions
 export async function sendWelcomeEmail(user: { id: string; email: string | null; firstName: string | null; role: string; emailNotifications?: boolean }) {
   if (!await shouldSendEmail(user)) return;
-  
+
   await sendEmail(
     user.email!,
     'welcome',
     {
       firstName: user.firstName || 'User',
-      role: user.role === 'consultant' ? 'Healthcare Consultant' : 
-            user.role === 'hospital_staff' ? 'Hospital Staff' : 
+      role: user.role === 'consultant' ? 'Healthcare Consultant' :
+            user.role === 'hospital_staff' ? 'Hospital Staff' :
             user.role === 'admin' ? 'Administrator' : user.role
     },
     user.id
@@ -676,7 +735,7 @@ export async function sendScheduleAssignedEmail(
   scheduleData: { projectName: string; hospitalName: string; shiftDate: string; shiftTime: string; shiftType: string }
 ) {
   if (!await shouldSendEmail(user)) return;
-  
+
   await sendEmail(
     user.email!,
     'schedule_assigned',
@@ -693,7 +752,7 @@ export async function sendScheduleUpdatedEmail(
   scheduleData: { projectName: string; hospitalName: string; shiftDate: string; shiftTime: string; shiftType: string }
 ) {
   if (!await shouldSendEmail(user)) return;
-  
+
   await sendEmail(
     user.email!,
     'schedule_updated',
@@ -710,7 +769,7 @@ export async function sendScheduleCancelledEmail(
   scheduleData: { projectName: string; hospitalName: string; shiftDate: string; shiftTime: string }
 ) {
   if (!await shouldSendEmail(user)) return;
-  
+
   await sendEmail(
     user.email!,
     'schedule_cancelled',
@@ -727,7 +786,7 @@ export async function sendDocumentApprovedEmail(
   documentType: string
 ) {
   if (!await shouldSendEmail(user)) return;
-  
+
   await sendEmail(
     user.email!,
     'document_approved',
@@ -745,7 +804,7 @@ export async function sendDocumentRejectedEmail(
   rejectionReason?: string
 ) {
   if (!await shouldSendEmail(user)) return;
-  
+
   await sendEmail(
     user.email!,
     'document_rejected',
@@ -764,7 +823,7 @@ export async function sendDocumentExpiringEmail(
   expirationDate: string
 ) {
   if (!await shouldSendEmail(user)) return;
-  
+
   await sendEmail(
     user.email!,
     'document_expiring',
@@ -782,7 +841,7 @@ export async function sendProjectInvitationEmail(
   projectData: { projectName: string; hospitalName: string; startDate: string; endDate: string }
 ) {
   if (!await shouldSendEmail(user)) return;
-  
+
   await sendEmail(
     user.email!,
     'project_invitation',
@@ -799,7 +858,7 @@ export async function sendAccountDeletionRequestedEmail(
   requestDate: string
 ) {
   if (!user.email) return;
-  
+
   await sendEmail(
     user.email,
     'account_deletion_requested',

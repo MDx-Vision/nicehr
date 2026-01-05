@@ -413,7 +413,7 @@ export default function Training() {
   // Handlers
   const handleCreateModule = () => {
     const newModule: TrainingModule = {
-      id: `mod-${Date.now()}`,
+      id: crypto.randomUUID(),
       name: moduleForm.name,
       description: moduleForm.description,
       category: moduleForm.category,
@@ -433,7 +433,7 @@ export default function Training() {
   const handleAddContent = () => {
     if (selectedModule) {
       const newContent: ModuleContent = {
-        id: `content-${Date.now()}`,
+        id: crypto.randomUUID(),
         title: contentForm.title,
         type: contentForm.type as any,
         url: contentForm.url,
@@ -493,7 +493,7 @@ export default function Training() {
 
   const handleCreateAssessment = () => {
     const newAssessment: Assessment = {
-      id: `assess-${Date.now()}`,
+      id: crypto.randomUUID(),
       name: assessmentForm.name,
       description: assessmentForm.description,
       type: assessmentForm.type as any,
@@ -511,7 +511,7 @@ export default function Training() {
   const handleAddQuestion = () => {
     if (selectedAssessment) {
       const newQuestion: Question = {
-        id: `q-${Date.now()}`,
+        id: crypto.randomUUID(),
         text: questionForm.text,
         type: questionForm.type as any,
         options: [questionForm.option1, questionForm.option2, questionForm.option3, questionForm.option4].filter(Boolean),
@@ -601,7 +601,7 @@ export default function Training() {
 
   const handleCreateArticle = () => {
     const newArticle: KBArticle = {
-      id: `kb-${Date.now()}`,
+      id: crypto.randomUUID(),
       title: articleForm.title,
       content: articleForm.content,
       category: articleForm.category,

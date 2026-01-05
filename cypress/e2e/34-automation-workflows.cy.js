@@ -263,7 +263,7 @@ describe('Automation Workflows', () => {
       cy.intercept('GET', '/api/automation/executions/exec-123/timeout', {
         statusCode: 408,
         body: { timedOut: true, duration: 300, maxDuration: 120 }
-      }).as('timeout');
+      }).as('workflowTimeout');
 
       cy.contains('Dashboard').should('be.visible');
     });

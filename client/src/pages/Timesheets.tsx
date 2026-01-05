@@ -519,7 +519,7 @@ export default function Timesheets() {
     const project = projects.find((p: any) => String(p.id) === formData.projectId);
 
     const newEntry: TimesheetEntry = {
-      id: `ts-${Date.now()}`,
+      id: crypto.randomUUID(),
       consultantId: "c-current",
       consultantName: "Current User",
       projectId: formData.projectId,
