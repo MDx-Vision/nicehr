@@ -268,7 +268,7 @@ export default function Schedules() {
     setSignedIn(true);
 
     const newRecord: SignInRecord = {
-      id: `record-${Date.now()}`,
+      id: crypto.randomUUID(),
       date: format(new Date(), "yyyy-MM-dd"),
       signInTime: time,
       shiftId: shifts[0]?.id || "unknown"
@@ -337,7 +337,7 @@ export default function Schedules() {
   // Handle handoff note submission
   const handleSubmitHandoff = () => {
     const newNote: HandoffNote = {
-      id: `handoff-${Date.now()}`,
+      id: crypto.randomUUID(),
       date: format(new Date(), "yyyy-MM-dd"),
       summary: handoffForm.summary,
       outstandingItems: handoffForm.outstandingItems,

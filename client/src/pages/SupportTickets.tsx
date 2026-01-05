@@ -253,7 +253,7 @@ export default function SupportTickets() {
     if (!commentText.trim() || !selectedTicket) return;
 
     const newComment: Comment = {
-      id: `comment-${Date.now()}`,
+      id: crypto.randomUUID(),
       ticketId: selectedTicket.id,
       author: "Current User",
       content: commentText,

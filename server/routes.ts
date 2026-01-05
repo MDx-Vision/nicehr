@@ -123,6 +123,69 @@ import {
   sendInvoiceEmailToRecipient,
 } from "./emailService";
 
+// =============================================================================
+// QUERY PARAMETER VALIDATION HELPERS
+// =============================================================================
+// Type-safe query parameter parsing to avoid unsafe type casting
+
+type QueryParam = string | string[] | undefined;
+
+/**
+ * Safely parse a string query parameter
+ */
+function parseStringParam(value: QueryParam): string | undefined {
+  if (typeof value === 'string' && value.trim()) {
+    return value.trim();
+  }
+  return undefined;
+}
+
+/**
+ * Safely parse a string array query parameter (handles both single and array values)
+ */
+function parseStringArrayParam(value: QueryParam): string[] | undefined {
+  if (!value) return undefined;
+  if (Array.isArray(value)) {
+    return value.filter((v): v is string => typeof v === 'string' && v.trim() !== '');
+  }
+  if (typeof value === 'string' && value.trim()) {
+    return [value.trim()];
+  }
+  return undefined;
+}
+
+/**
+ * Safely parse a boolean query parameter
+ */
+function parseBooleanParam(value: QueryParam): boolean | undefined {
+  if (typeof value === 'string') {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+  }
+  return undefined;
+}
+
+/**
+ * Safely parse an integer query parameter
+ */
+function parseIntParam(value: QueryParam, defaultValue?: number): number | undefined {
+  if (typeof value === 'string') {
+    const parsed = parseInt(value, 10);
+    if (!isNaN(parsed)) return parsed;
+  }
+  return defaultValue;
+}
+
+/**
+ * Safely parse an enum query parameter
+ */
+function parseEnumParam<T extends string>(value: QueryParam, validValues: readonly T[]): T | undefined {
+  if (typeof value === 'string' && validValues.includes(value as T)) {
+    return value as T;
+  }
+  return undefined;
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -763,11 +826,12 @@ export async function registerRoutes(
 
   app.get('/api/consultants/search', isAuthenticated, async (req, res) => {
     try {
+      const shiftPreferenceValues = ['day', 'night', 'swing'] as const;
       const filters = {
-        location: req.query.location as string,
-        shiftPreference: req.query.shiftPreference as any,
-        isAvailable: req.query.isAvailable === 'true',
-        isOnboarded: req.query.isOnboarded === 'true',
+        location: parseStringParam(req.query.location),
+        shiftPreference: parseEnumParam(req.query.shiftPreference, shiftPreferenceValues),
+        isAvailable: parseBooleanParam(req.query.isAvailable) ?? false,
+        isOnboarded: parseBooleanParam(req.query.isOnboarded) ?? false,
       };
       const consultants = await storage.searchConsultants(filters);
       res.json(consultants);
@@ -854,26 +918,22 @@ export async function registerRoutes(
   // Consultant directory endpoint with filtering, sorting, and pagination
   app.get('/api/directory/consultants', isAuthenticated, async (req, res) => {
     try {
+      const availabilityValues = ['available', 'unavailable', 'all'] as const;
+      const sortByValues = ['name', 'experience', 'location', 'rating'] as const;
+      const orderValues = ['asc', 'desc'] as const;
+
       const params = {
-        search: req.query.search as string | undefined,
-        emrSystems: req.query['emrSystems[]'] 
-          ? (Array.isArray(req.query['emrSystems[]']) 
-              ? req.query['emrSystems[]'] as string[] 
-              : [req.query['emrSystems[]'] as string])
-          : undefined,
-        availability: req.query.availability as 'available' | 'unavailable' | 'all' | undefined,
-        experienceMin: req.query.experienceMin ? parseInt(req.query.experienceMin as string, 10) : undefined,
-        experienceMax: req.query.experienceMax ? parseInt(req.query.experienceMax as string, 10) : undefined,
-        modules: req.query['modules[]']
-          ? (Array.isArray(req.query['modules[]'])
-              ? req.query['modules[]'] as string[]
-              : [req.query['modules[]'] as string])
-          : undefined,
-        shiftPreference: req.query.shiftPreference as string | undefined,
-        sortBy: req.query.sortBy as 'name' | 'experience' | 'location' | 'rating' | undefined,
-        order: req.query.order as 'asc' | 'desc' | undefined,
-        page: req.query.page ? parseInt(req.query.page as string, 10) : 1,
-        pageSize: req.query.pageSize ? parseInt(req.query.pageSize as string, 10) : 12,
+        search: parseStringParam(req.query.search),
+        emrSystems: parseStringArrayParam(req.query['emrSystems[]']),
+        availability: parseEnumParam(req.query.availability, availabilityValues),
+        experienceMin: parseIntParam(req.query.experienceMin),
+        experienceMax: parseIntParam(req.query.experienceMax),
+        modules: parseStringArrayParam(req.query['modules[]']),
+        shiftPreference: parseStringParam(req.query.shiftPreference),
+        sortBy: parseEnumParam(req.query.sortBy, sortByValues),
+        order: parseEnumParam(req.query.order, orderValues),
+        page: parseIntParam(req.query.page, 1) ?? 1,
+        pageSize: parseIntParam(req.query.pageSize, 12) ?? 12,
       };
 
       const result = await storage.searchConsultantsDirectory(params);

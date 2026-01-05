@@ -6,8 +6,19 @@ import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
+import crypto from "crypto";
 import { storage } from "./storage";
 import { logActivity } from "./activityLogger";
+
+// Generate a random session secret for development if not provided
+const getDevSessionSecret = (): string => {
+  if (process.env.SESSION_SECRET) {
+    return process.env.SESSION_SECRET;
+  }
+  console.warn('[SECURITY WARNING] SESSION_SECRET not set. Using randomly generated secret for development.');
+  console.warn('[SECURITY WARNING] Set SESSION_SECRET environment variable for production.');
+  return crypto.randomBytes(32).toString('hex');
+};
 
 const getOidcConfig = memoize(
   async () => {
@@ -244,7 +255,7 @@ export async function setupAuth(app: Express) {
     console.log('[DEV MODE] Skipping Replit auth, using mock session for local development');
     app.set("trust proxy", 1);
     app.use(session({
-      secret: process.env.SESSION_SECRET || 'dev-session-secret',
+      secret: getDevSessionSecret(),
       resave: false,
       saveUninitialized: false,
       cookie: { secure: false, sameSite: 'lax' }
