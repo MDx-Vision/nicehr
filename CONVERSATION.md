@@ -296,16 +296,53 @@ PORT=4000 npm run dev
 
 ---
 
+## Task 6: Production Deployment Preparation
+
+### Changes Made
+
+1. **`server/objectStorage.ts`** - Updated for dual-mode operation:
+   - Replit development: Uses sidecar proxy authentication
+   - Production: Uses standard GCS service account credentials
+   - Auto-detects environment based on env variables
+
+2. **`server/emailService.ts`** - Added SendGrid for HIPAA compliance:
+   - SendGrid for production (HIPAA-compliant with BAA)
+   - Resend maintained for Replit development
+   - Auto-detects which provider to use
+
+3. **`.env.example`** - Comprehensive production config:
+   - All required environment variables documented
+   - HIPAA compliance notes included
+   - Examples for each credential type
+
+4. **`DEPLOYMENT_REQUIREMENTS.md`** - Created deployment guide:
+   - Complete checklist of required credentials
+   - Step-by-step setup for each service
+   - BAA signing checklist
+   - Template for gathering credentials
+
+### Files Ready for Deployment
+
+| File | Purpose |
+|------|---------|
+| `DEPLOYMENT_REQUIREMENTS.md` | Downloadable checklist for user |
+| `.env.example` | Template for production environment |
+| `server/objectStorage.ts` | Production-ready GCS |
+| `server/emailService.ts` | Production-ready email |
+
+---
+
 ## Next Steps (When Ready for Deployment)
 
-1. **Choose HIPAA-compliant host** (AWS/GCP/Azure recommended)
-2. **Sign BAAs** with hosting, email (SendGrid), and storage providers
-3. **Update `objectStorage.ts`** for production GCS credentials
-4. **Switch email service** from Resend to SendGrid
-5. **Create production `.env`** with all required variables
-6. **Verify Daily.co credentials** for video service
-7. **Set up SSL/TLS certificates**
-8. **Configure monitoring and alerting**
+User needs to provide (see `DEPLOYMENT_REQUIREMENTS.md`):
+
+1. **Hosting decision** - AWS/GCP/Azure with BAA
+2. **Database connection string** - PostgreSQL with SSL
+3. **SendGrid credentials** - API key from Pro plan
+4. **Daily.co credentials** - API key and domain
+5. **Google Cloud Storage** - Service account JSON
+6. **Domain name** - For SSL and APP_URL
+7. **Sign all BAAs** - Checklist in deployment guide
 
 ---
 
