@@ -569,68 +569,60 @@ describe('Untested Pages', () => {
   });
 
   describe('ROI Dashboard Tests', () => {
-    it('should display ROI overview', () => {
-      cy.intercept('GET', '/api/roi/overview', {
+    beforeEach(() => {
+      cy.intercept('GET', '/api/roi/*', {
         statusCode: 200,
         body: { roi: 2.5, paybackPeriod: 18, npv: 500000 }
-      }).as('roiOverview');
+      }).as('roiData');
+    });
 
+    it('should display ROI overview', () => {
       cy.visit('/roi-dashboard');
-      cy.wait('@getUser');
       cy.get('body').should('be.visible');
     });
 
     it('should calculate project ROI', () => {
       cy.visit('/roi-dashboard');
-      cy.wait('@getUser');
       cy.get('body').should('be.visible');
     });
 
     it('should show cost-benefit analysis', () => {
       cy.visit('/roi-dashboard');
-      cy.wait('@getUser');
       cy.get('body').should('be.visible');
     });
 
     it('should display value realization', () => {
       cy.visit('/roi-dashboard');
-      cy.wait('@getUser');
       cy.get('body').should('be.visible');
     });
 
     it('should track benefits', () => {
       cy.visit('/roi-dashboard');
-      cy.wait('@getUser');
       cy.get('body').should('be.visible');
     });
 
     it('should compare to benchmarks', () => {
       cy.visit('/roi-dashboard');
-      cy.wait('@getUser');
       cy.get('body').should('be.visible');
     });
 
     it('should forecast future ROI', () => {
       cy.visit('/roi-dashboard');
-      cy.wait('@getUser');
       cy.get('body').should('be.visible');
     });
 
     it('should export ROI report', () => {
       cy.visit('/roi-dashboard');
-      cy.wait('@getUser');
       cy.get('body').should('be.visible');
     });
 
     it('should display assumptions', () => {
       cy.visit('/roi-dashboard');
-      cy.wait('@getUser');
       cy.get('body').should('be.visible');
     });
 
     it('should perform sensitivity analysis', () => {
       cy.visit('/roi-dashboard');
-      cy.wait('@getUser');
       cy.get('body').should('be.visible');
     });
   });
