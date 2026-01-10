@@ -7,7 +7,11 @@ function getApiKey() {
 }
 
 function getDomain() {
-  return process.env.DAILY_DOMAIN || '';
+  return process.env.DAILY_DOMAIN || 'nicehr.daily.co';
+}
+
+function isConfigured(): boolean {
+  return Boolean(getApiKey());
 }
 
 interface DailyRoom {
@@ -65,6 +69,17 @@ class DailyService {
     const enableRecording = options.enableRecording ?? true; // Enable by default
     const recordingType = options.recordingType || 'cloud';
 
+    // Return mock room if Daily.co is not configured (for testing/development)
+    if (!isConfigured()) {
+      console.log('Daily.co not configured, returning mock room:', roomName);
+      return {
+        id: 'mock-' + uuidv4(),
+        name: roomName,
+        url: 'https://' + getDomain() + '/' + roomName,
+        created_at: new Date().toISOString(),
+      };
+    }
+
     const properties: Record<string, unknown> = {
       max_participants: 10, // Allow more for dedicated support
       enable_screenshare: true,
@@ -94,6 +109,13 @@ class DailyService {
   }
 
   async createToken(options: CreateTokenOptions): Promise<string> {
+    // Return mock token if Daily.co is not configured (for testing/development)
+    if (!isConfigured()) {
+      const mockToken = 'mock-token-' + options.participantId + '-' + uuidv4().slice(0, 8);
+      console.log('Daily.co not configured, returning mock token for:', options.participantName);
+      return mockToken;
+    }
+
     const expiryMinutes = options.expiryMinutes || 60;
     const result = await this.request<{token: string}>('/meeting-tokens', {
       method: 'POST',
