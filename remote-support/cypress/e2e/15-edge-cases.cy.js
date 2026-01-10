@@ -3,6 +3,11 @@
 
 describe('Edge Cases', () => {
   const API_URL = Cypress.env('apiUrl') || 'http://localhost:3002';
+  let testRequesterId = 1500;
+
+  beforeEach(() => {
+    testRequesterId++;
+  });
 
   describe('Concurrent Sessions', () => {
     it('handles multiple simultaneous requests', () => {
@@ -28,7 +33,7 @@ describe('Edge Cases', () => {
 
     it('prevents duplicate session for same requester', () => {
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: 'First request',
@@ -37,7 +42,7 @@ describe('Edge Cases', () => {
 
         // Try to create another while first is active
         cy.createSupportRequest({
-          requesterId: 5,
+          requesterId: testRequesterId,
           hospitalId: 1,
           department: 'ER',
           issueSummary: 'Duplicate request',
@@ -45,13 +50,13 @@ describe('Edge Cases', () => {
           expect(secondResponse.status).to.be.oneOf([200, 400, 409]);
         });
 
-        cy.endSupportSession(sessionId, { endedBy: 5 });
+        cy.endSupportSession(sessionId, { endedBy: testRequesterId });
       });
     });
 
     it('handles rapid session creation and cancellation', () => {
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: 'Quick cancel test',
@@ -71,7 +76,7 @@ describe('Edge Cases', () => {
       const maxSummary = 'A'.repeat(500);
 
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: maxSummary,
@@ -79,14 +84,14 @@ describe('Edge Cases', () => {
         expect(response.status).to.be.oneOf([200, 201, 400]);
 
         if (response.body.sessionId) {
-          cy.endSupportSession(response.body.sessionId, { endedBy: 5 });
+          cy.endSupportSession(response.body.sessionId, { endedBy: testRequesterId });
         }
       });
     });
 
     it('handles minimum length issue summary', () => {
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: 'A',
@@ -94,14 +99,14 @@ describe('Edge Cases', () => {
         expect(response.status).to.be.oneOf([200, 201, 400]);
 
         if (response.body.sessionId) {
-          cy.endSupportSession(response.body.sessionId, { endedBy: 5 });
+          cy.endSupportSession(response.body.sessionId, { endedBy: testRequesterId });
         }
       });
     });
 
     it('handles empty issue summary', () => {
       cy.apiPost('/api/support/request', {
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: '',
@@ -114,16 +119,16 @@ describe('Edge Cases', () => {
       cy.setConsultantStatus(1, 'available');
 
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: 'Rating boundary test',
       }).then((createResponse) => {
         const sessionId = createResponse.body.sessionId;
 
-        cy.endSupportSession(sessionId, { endedBy: 5 }).then(() => {
+        cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
           // Test minimum rating
-          cy.rateSession(sessionId, { rating: 1, raterId: 5 }).then((response) => {
+          cy.rateSession(sessionId, { rating: 1, raterId: testRequesterId }).then((response) => {
             expect(response.status).to.be.oneOf([200, 400]);
           });
         });
@@ -134,19 +139,19 @@ describe('Edge Cases', () => {
       cy.setConsultantStatus(1, 'available');
 
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: 'Invalid rating test',
       }).then((createResponse) => {
         const sessionId = createResponse.body.sessionId;
 
-        cy.endSupportSession(sessionId, { endedBy: 5 }).then(() => {
-          cy.rateSession(sessionId, { rating: 0, raterId: 5 }).then((response) => {
+        cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
+          cy.rateSession(sessionId, { rating: 0, raterId: testRequesterId }).then((response) => {
             expect(response.status).to.be.oneOf([200, 400]);
           });
 
-          cy.rateSession(sessionId, { rating: 6, raterId: 5 }).then((response) => {
+          cy.rateSession(sessionId, { rating: 6, raterId: testRequesterId }).then((response) => {
             expect(response.status).to.be.oneOf([200, 400]);
           });
         });
@@ -157,7 +162,7 @@ describe('Edge Cases', () => {
   describe('Special Characters', () => {
     it('handles unicode in issue summary', () => {
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: 'Test with émojis 🏥 and ünïcödé',
@@ -165,7 +170,7 @@ describe('Edge Cases', () => {
         expect(response.status).to.be.oneOf([200, 201]);
 
         if (response.body.sessionId) {
-          cy.endSupportSession(response.body.sessionId, { endedBy: 5 });
+          cy.endSupportSession(response.body.sessionId, { endedBy: testRequesterId });
         }
       });
     });
@@ -174,14 +179,14 @@ describe('Edge Cases', () => {
       cy.setConsultantStatus(1, 'available');
 
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: 'Special chars feedback test',
       }).then((createResponse) => {
         const sessionId = createResponse.body.sessionId;
 
-        cy.endSupportSession(sessionId, { endedBy: 5 }).then(() => {
+        cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
           cy.rateSession(sessionId, {
             rating: 4,
             feedback: 'Great! <script>alert("xss")</script> & "quotes"',
@@ -195,7 +200,7 @@ describe('Edge Cases', () => {
 
     it('handles newlines in issue summary', () => {
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: 'Line 1\nLine 2\nLine 3',
@@ -203,14 +208,14 @@ describe('Edge Cases', () => {
         expect(response.status).to.be.oneOf([200, 201]);
 
         if (response.body.sessionId) {
-          cy.endSupportSession(response.body.sessionId, { endedBy: 5 });
+          cy.endSupportSession(response.body.sessionId, { endedBy: testRequesterId });
         }
       });
     });
 
     it('handles SQL injection attempts', () => {
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: "'; DROP TABLE sessions; --",
@@ -218,7 +223,7 @@ describe('Edge Cases', () => {
         expect(response.status).to.be.oneOf([200, 201, 400]);
 
         if (response.body.sessionId) {
-          cy.endSupportSession(response.body.sessionId, { endedBy: 5 });
+          cy.endSupportSession(response.body.sessionId, { endedBy: testRequesterId });
         }
       });
     });
@@ -227,14 +232,14 @@ describe('Edge Cases', () => {
   describe('State Transitions', () => {
     it('cannot transition completed session to active', () => {
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: 'State transition test',
       }).then((createResponse) => {
         const sessionId = createResponse.body.sessionId;
 
-        cy.endSupportSession(sessionId, { endedBy: 5 }).then(() => {
+        cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
           // Try to start completed session
           cy.startSupportSession(sessionId).then((response) => {
             expect(response.status).to.be.oneOf([200, 400]);
@@ -247,7 +252,7 @@ describe('Edge Cases', () => {
       cy.setConsultantStatus(1, 'available');
 
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: 'Cancel active test',
@@ -262,22 +267,22 @@ describe('Edge Cases', () => {
           });
         });
 
-        cy.endSupportSession(sessionId, { endedBy: 5 });
+        cy.endSupportSession(sessionId, { endedBy: testRequesterId });
       });
     });
 
     it('handles ending already ended session', () => {
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: 'Double end test',
       }).then((createResponse) => {
         const sessionId = createResponse.body.sessionId;
 
-        cy.endSupportSession(sessionId, { endedBy: 5 }).then(() => {
+        cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
           // Try to end again
-          cy.endSupportSession(sessionId, { endedBy: 5 }).then((response) => {
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then((response) => {
             expect(response.status).to.be.oneOf([200, 400]);
           });
         });
@@ -288,17 +293,17 @@ describe('Edge Cases', () => {
       cy.setConsultantStatus(1, 'available');
 
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: 'Double rating test',
       }).then((createResponse) => {
         const sessionId = createResponse.body.sessionId;
 
-        cy.endSupportSession(sessionId, { endedBy: 5 }).then(() => {
-          cy.rateSession(sessionId, { rating: 5, raterId: 5 }).then(() => {
+        cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
+          cy.rateSession(sessionId, { rating: 5, raterId: testRequesterId }).then(() => {
             // Try to rate again
-            cy.rateSession(sessionId, { rating: 1, raterId: 5 }).then((response) => {
+            cy.rateSession(sessionId, { rating: 1, raterId: testRequesterId }).then((response) => {
               expect(response.status).to.be.oneOf([200, 400, 409]);
             });
           });
@@ -328,7 +333,7 @@ describe('Edge Cases', () => {
 
     it('handles non-existent hospital ID', () => {
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 99999,
         department: 'ER',
         issueSummary: 'Invalid hospital test',
@@ -339,7 +344,7 @@ describe('Edge Cases', () => {
 
     it('handles non-existent department', () => {
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'NonExistent',
         issueSummary: 'Invalid department test',
@@ -377,7 +382,7 @@ describe('Edge Cases', () => {
   describe('Date/Time Edge Cases', () => {
     it('handles schedule for past date', () => {
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         consultantId: 1,
         department: 'ER',
@@ -391,7 +396,7 @@ describe('Edge Cases', () => {
 
     it('handles schedule for far future date', () => {
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         consultantId: 1,
         department: 'ER',
@@ -405,7 +410,7 @@ describe('Edge Cases', () => {
 
     it('handles zero duration session', () => {
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         consultantId: 1,
         department: 'ER',
@@ -419,7 +424,7 @@ describe('Edge Cases', () => {
 
     it('handles very long duration session', () => {
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         consultantId: 1,
         department: 'ER',
@@ -435,7 +440,7 @@ describe('Edge Cases', () => {
   describe('Network and Timeout Scenarios', () => {
     it('handles large payload', () => {
       const largePayload = {
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: 'Large payload test',
@@ -480,7 +485,7 @@ describe('Edge Cases', () => {
       });
 
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: 'No consultants test',
@@ -490,7 +495,7 @@ describe('Edge Cases', () => {
         expect(response.body.status).to.be.oneOf(['pending', 'queued', 'connecting']);
 
         if (response.body.sessionId) {
-          cy.endSupportSession(response.body.sessionId, { endedBy: 5 });
+          cy.endSupportSession(response.body.sessionId, { endedBy: testRequesterId });
         }
       });
 
@@ -504,7 +509,7 @@ describe('Edge Cases', () => {
       cy.setConsultantStatus(1, 'available');
 
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: 'Offline during request test',
@@ -516,7 +521,7 @@ describe('Edge Cases', () => {
           expect(statusResponse.status).to.be.oneOf([200, 400]);
         });
 
-        cy.endSupportSession(sessionId, { endedBy: 5 });
+        cy.endSupportSession(sessionId, { endedBy: testRequesterId });
         cy.setConsultantStatus(1, 'available');
       });
     });

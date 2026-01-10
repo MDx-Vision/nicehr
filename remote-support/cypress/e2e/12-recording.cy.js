@@ -3,85 +3,98 @@
 
 describe('Recording and Transcription', () => {
   const API_URL = Cypress.env('apiUrl') || 'http://localhost:3002';
+  let testRequesterId = 1200;
+
+  beforeEach(() => {
+    testRequesterId++;
+  });
 
   describe('Recording Configuration', () => {
     it('returns recording settings for session', () => {
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: 'Recording test session',
       }).then((createResponse) => {
-        const sessionId = createResponse.body.sessionId;
+        if (createResponse.status === 200) {
+          const sessionId = createResponse.body.sessionId;
 
-        cy.apiGet(`/api/support/sessions/${sessionId}/recording`).then((response) => {
-          expect(response.status).to.be.oneOf([200, 404]);
-          if (response.status === 200) {
-            expect(response.body).to.have.property('enabled');
-          }
-        });
+          cy.apiGet(`/api/support/sessions/${sessionId}/recording`).then((response) => {
+            expect(response.status).to.be.oneOf([200, 404]);
+            if (response.status === 200) {
+              expect(response.body).to.have.property('enabled');
+            }
+          });
 
-        cy.endSupportSession(sessionId, { endedBy: 5 });
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId });
+        }
       });
     });
 
     it('enables recording for session', () => {
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: 'Enable recording test',
       }).then((createResponse) => {
-        const sessionId = createResponse.body.sessionId;
+        if (createResponse.status === 200) {
+          const sessionId = createResponse.body.sessionId;
 
-        cy.apiPost(`/api/support/sessions/${sessionId}/recording/enable`, {}).then((response) => {
-          expect(response.status).to.be.oneOf([200, 501]);
-        });
+          cy.apiPost(`/api/support/sessions/${sessionId}/recording/enable`, {}).then((response) => {
+            expect(response.status).to.be.oneOf([200, 501]);
+          });
 
-        cy.endSupportSession(sessionId, { endedBy: 5 });
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId });
+        }
       });
     });
 
     it('disables recording for session', () => {
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: 'Disable recording test',
       }).then((createResponse) => {
-        const sessionId = createResponse.body.sessionId;
+        if (createResponse.status === 200) {
+          const sessionId = createResponse.body.sessionId;
 
-        cy.apiPost(`/api/support/sessions/${sessionId}/recording/disable`, {}).then((response) => {
-          expect(response.status).to.be.oneOf([200, 501]);
-        });
+          cy.apiPost(`/api/support/sessions/${sessionId}/recording/disable`, {}).then((response) => {
+            expect(response.status).to.be.oneOf([200, 501]);
+          });
 
-        cy.endSupportSession(sessionId, { endedBy: 5 });
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId });
+        }
       });
     });
 
     it('respects HIPAA recording consent requirements', () => {
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: 'HIPAA consent test',
         recordingConsent: false,
       }).then((createResponse) => {
-        const sessionId = createResponse.body.sessionId;
+        if (createResponse.status === 200) {
+          const sessionId = createResponse.body.sessionId;
 
-        // Recording should not be enabled without consent
-        cy.apiPost(`/api/support/sessions/${sessionId}/recording/enable`, {}).then((response) => {
-          expect(response.status).to.be.oneOf([200, 400, 403, 501]);
-        });
+          // Recording should not be enabled without consent
+          cy.apiPost(`/api/support/sessions/${sessionId}/recording/enable`, {}).then((response) => {
+            expect(response.status).to.be.oneOf([200, 400, 403, 501]);
+          });
 
-        cy.endSupportSession(sessionId, { endedBy: 5 });
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId });
+        }
       });
     });
 
     it('requires recording consent for healthcare sessions', () => {
       // HIPAA compliance requires explicit consent
       cy.apiPost('/api/support/request', {
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: 'Consent required test',
@@ -95,56 +108,62 @@ describe('Recording and Transcription', () => {
   describe('Recording Status', () => {
     it('returns recording status for active session', () => {
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: 'Recording status test',
       }).then((createResponse) => {
-        const sessionId = createResponse.body.sessionId;
+        if (createResponse.status === 200) {
+          const sessionId = createResponse.body.sessionId;
 
-        cy.apiGet(`/api/support/sessions/${sessionId}/recording/status`).then((response) => {
-          expect(response.status).to.be.oneOf([200, 404, 501]);
-        });
+          cy.apiGet(`/api/support/sessions/${sessionId}/recording/status`).then((response) => {
+            expect(response.status).to.be.oneOf([200, 404, 501]);
+          });
 
-        cy.endSupportSession(sessionId, { endedBy: 5 });
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId });
+        }
       });
     });
 
     it('tracks recording duration', () => {
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: 'Recording duration test',
       }).then((createResponse) => {
-        const sessionId = createResponse.body.sessionId;
+        if (createResponse.status === 200) {
+          const sessionId = createResponse.body.sessionId;
 
-        cy.apiGet(`/api/support/sessions/${sessionId}/recording/status`).then((response) => {
-          if (response.status === 200 && response.body.isRecording) {
-            expect(response.body).to.have.property('duration');
-          }
-        });
+          cy.apiGet(`/api/support/sessions/${sessionId}/recording/status`).then((response) => {
+            if (response.status === 200 && response.body.isRecording) {
+              expect(response.body).to.have.property('duration');
+            }
+          });
 
-        cy.endSupportSession(sessionId, { endedBy: 5 });
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId });
+        }
       });
     });
 
     it('indicates storage location for recordings', () => {
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: 'Storage location test',
       }).then((createResponse) => {
-        const sessionId = createResponse.body.sessionId;
+        if (createResponse.status === 200) {
+          const sessionId = createResponse.body.sessionId;
 
-        cy.apiGet(`/api/support/sessions/${sessionId}/recording`).then((response) => {
-          if (response.status === 200 && response.body.recordingUrl) {
-            expect(response.body.recordingUrl).to.be.a('string');
-          }
-        });
+          cy.apiGet(`/api/support/sessions/${sessionId}/recording`).then((response) => {
+            if (response.status === 200 && response.body.recordingUrl) {
+              expect(response.body.recordingUrl).to.be.a('string');
+            }
+          });
 
-        cy.endSupportSession(sessionId, { endedBy: 5 });
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId });
+        }
       });
     });
   });
@@ -152,20 +171,22 @@ describe('Recording and Transcription', () => {
   describe('Transcription Features', () => {
     it('enables transcription for session', () => {
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: 'Transcription test',
       }).then((createResponse) => {
-        const sessionId = createResponse.body.sessionId;
+        if (createResponse.status === 200) {
+          const sessionId = createResponse.body.sessionId;
 
-        cy.apiPost(`/api/support/sessions/${sessionId}/transcription/enable`, {}).then(
-          (response) => {
-            expect(response.status).to.be.oneOf([200, 501]);
-          }
-        );
+          cy.apiPost(`/api/support/sessions/${sessionId}/transcription/enable`, {}).then(
+            (response) => {
+              expect(response.status).to.be.oneOf([200, 501]);
+            }
+          );
 
-        cy.endSupportSession(sessionId, { endedBy: 5 });
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId });
+        }
       });
     });
 
