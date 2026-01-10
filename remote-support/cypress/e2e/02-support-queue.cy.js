@@ -101,7 +101,7 @@ describe('Support Queue Management', () => {
           });
 
           cy.cancelSupportRequest(criticalResponse.body.sessionId, testRequesterId + 1);
-          cy.cancelSupportRequest(normalResponse.body.sessionId, 5);
+          cy.cancelSupportRequest(normalResponse.body.sessionId, testRequesterId);
         });
       });
 
@@ -389,7 +389,7 @@ describe('Support Queue Management', () => {
         const sessionId = createResponse.body.sessionId;
 
         // Cancel before accept attempt
-        cy.cancelSupportRequest(sessionId, 6).then(() => {
+        cy.cancelSupportRequest(sessionId, testRequesterId + 1).then(() => {
           cy.setConsultantStatus(1, 'available');
 
           cy.acceptSupportRequest(sessionId, 1).then((response) => {
@@ -423,7 +423,7 @@ describe('Support Queue Management', () => {
           });
 
           // Clean up
-          cy.cancelSupportRequest(r1.body.sessionId, 5);
+          cy.cancelSupportRequest(r1.body.sessionId, testRequesterId);
           cy.cancelSupportRequest(r2.body.sessionId, testRequesterId + 1);
         });
       });
@@ -500,7 +500,7 @@ describe('Support Queue Management', () => {
             }
           });
 
-          cy.cancelSupportRequest(normalResp.body.sessionId, 5);
+          cy.cancelSupportRequest(normalResp.body.sessionId, testRequesterId);
           cy.cancelSupportRequest(criticalResp.body.sessionId, testRequesterId + 1);
         });
       });
@@ -538,7 +538,7 @@ describe('Support Queue Management', () => {
             }
           });
 
-          cy.cancelSupportRequest(normalResp.body.sessionId, 5);
+          cy.cancelSupportRequest(normalResp.body.sessionId, testRequesterId);
           cy.cancelSupportRequest(urgentResp.body.sessionId, testRequesterId + 1);
         });
       });
