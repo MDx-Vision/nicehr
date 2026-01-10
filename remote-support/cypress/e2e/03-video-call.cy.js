@@ -14,7 +14,7 @@ describe('Video Call Session', () => {
       cy.setConsultantStatus(1, 'available');
 
       cy.createSupportRequest({
-        requesterId: 8,
+        requesterId: testRequesterId,
         hospitalId: 2,
         issueSummary: 'Token generation test',
       }).then((createResponse) => {
@@ -22,7 +22,7 @@ describe('Video Call Session', () => {
           const sessionId = createResponse.body.sessionId;
 
           cy.apiPost(`/api/support/join/${sessionId}`, {
-            userId: 8,
+            userId: testRequesterId,
             userName: 'Anna Garcia',
             isConsultant: false,
           }).then((response) => {
@@ -31,7 +31,7 @@ describe('Video Call Session', () => {
             expect(response.body.token).to.be.a('string');
           });
 
-          cy.endSupportSession(sessionId, { endedBy: 8 });
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId });
         }
       });
     });
@@ -40,7 +40,7 @@ describe('Video Call Session', () => {
       cy.setConsultantStatus(2, 'available');
 
       cy.createSupportRequest({
-        requesterId: 8,
+        requesterId: testRequesterId,
         hospitalId: 2,
         department: 'Radiology',
         issueSummary: 'Room URL test',
@@ -49,7 +49,7 @@ describe('Video Call Session', () => {
           const sessionId = createResponse.body.sessionId;
 
           cy.apiPost(`/api/support/join/${sessionId}`, {
-            userId: 8,
+            userId: testRequesterId,
             userName: 'Anna Garcia',
             isConsultant: false,
           }).then((response) => {
@@ -57,7 +57,7 @@ describe('Video Call Session', () => {
             expect(response.body.roomUrl).to.include('daily.co');
           });
 
-          cy.endSupportSession(sessionId, { endedBy: 8 });
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId });
         }
       });
     });
@@ -66,7 +66,7 @@ describe('Video Call Session', () => {
       cy.setConsultantStatus(1, 'available');
 
       cy.createSupportRequest({
-        requesterId: 8,
+        requesterId: testRequesterId,
         hospitalId: 2,
         issueSummary: 'Participant validation test',
       }).then((createResponse) => {
@@ -75,14 +75,14 @@ describe('Video Call Session', () => {
 
           // Valid participant should succeed
           cy.apiPost(`/api/support/join/${sessionId}`, {
-            userId: 8,
+            userId: testRequesterId,
             userName: 'Anna Garcia',
             isConsultant: false,
           }).then((response) => {
             expect(response.status).to.eq(200);
           });
 
-          cy.endSupportSession(sessionId, { endedBy: 8 });
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId });
         }
       });
     });
@@ -91,7 +91,7 @@ describe('Video Call Session', () => {
       cy.setConsultantStatus(2, 'available');
 
       cy.createSupportRequest({
-        requesterId: 8,
+        requesterId: testRequesterId,
         hospitalId: 2,
         issueSummary: 'Non-participant test',
       }).then((createResponse) => {
@@ -108,7 +108,7 @@ describe('Video Call Session', () => {
             expect(response.body.error).to.include('Not authorized');
           });
 
-          cy.endSupportSession(sessionId, { endedBy: 8 });
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId });
         }
       });
     });
@@ -117,7 +117,7 @@ describe('Video Call Session', () => {
       cy.setConsultantStatus(1, 'available');
 
       cy.createSupportRequest({
-        requesterId: 9,
+        requesterId: testRequesterId,
         hospitalId: 2,
         issueSummary: 'Completed session test',
       }).then((createResponse) => {
@@ -125,10 +125,10 @@ describe('Video Call Session', () => {
           const sessionId = createResponse.body.sessionId;
 
           // End the session
-          cy.endSupportSession(sessionId, { endedBy: 9 }).then(() => {
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
             // Try to join completed session
             cy.apiPost(`/api/support/join/${sessionId}`, {
-              userId: 9,
+              userId: testRequesterId,
               userName: 'James Wilson',
               isConsultant: false,
             }).then((response) => {
@@ -144,7 +144,7 @@ describe('Video Call Session', () => {
       cy.setConsultantStatus(2, 'available');
 
       cy.createSupportRequest({
-        requesterId: 8,
+        requesterId: testRequesterId,
         hospitalId: 2,
         department: 'Radiology',
         issueSummary: 'Owner flag test',
@@ -164,14 +164,14 @@ describe('Video Call Session', () => {
             expect(response.body.token).to.be.a('string');
           });
 
-          cy.endSupportSession(sessionId, { endedBy: 8 });
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId });
         }
       });
     });
 
     it('returns 404 for non-existent session', () => {
       cy.apiPost('/api/support/join/99999', {
-        userId: 5,
+        userId: testRequesterId,
         userName: 'Test User',
         isConsultant: false,
       }).then((response) => {
@@ -185,7 +185,7 @@ describe('Video Call Session', () => {
       cy.setConsultantStatus(1, 'available');
 
       cy.createSupportRequest({
-        requesterId: 8,
+        requesterId: testRequesterId,
         hospitalId: 2,
         issueSummary: 'Session start test',
       }).then((createResponse) => {
@@ -197,7 +197,7 @@ describe('Video Call Session', () => {
             expect(response.body.success).to.eq(true);
           });
 
-          cy.endSupportSession(sessionId, { endedBy: 8 });
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId });
         }
       });
     });
@@ -206,7 +206,7 @@ describe('Video Call Session', () => {
       cy.setConsultantStatus(2, 'available');
 
       cy.createSupportRequest({
-        requesterId: 8,
+        requesterId: testRequesterId,
         hospitalId: 2,
         department: 'Radiology',
         issueSummary: 'Start timestamp test',
@@ -221,7 +221,7 @@ describe('Video Call Session', () => {
             });
           });
 
-          cy.endSupportSession(sessionId, { endedBy: 8 });
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId });
         }
       });
     });
@@ -230,7 +230,7 @@ describe('Video Call Session', () => {
       cy.setConsultantStatus(1, 'offline');
 
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         issueSummary: 'Non-connecting start test',
       }).then((createResponse) => {
         const sessionId = createResponse.body.sessionId;
@@ -253,7 +253,7 @@ describe('Video Call Session', () => {
       cy.setConsultantStatus(1, 'available');
 
       cy.createSupportRequest({
-        requesterId: 8,
+        requesterId: testRequesterId,
         hospitalId: 2,
         issueSummary: 'Session end test',
       }).then((createResponse) => {
@@ -261,7 +261,7 @@ describe('Video Call Session', () => {
           const sessionId = createResponse.body.sessionId;
 
           cy.apiPost(`/api/support/start/${sessionId}`).then(() => {
-            cy.endSupportSession(sessionId, { endedBy: 8 }).then((response) => {
+            cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then((response) => {
               expect(response.status).to.eq(200);
               expect(response.body.success).to.eq(true);
             });
@@ -274,7 +274,7 @@ describe('Video Call Session', () => {
       cy.setConsultantStatus(2, 'available');
 
       cy.createSupportRequest({
-        requesterId: 8,
+        requesterId: testRequesterId,
         hospitalId: 2,
         department: 'Radiology',
         issueSummary: 'End timestamp test',
@@ -283,7 +283,7 @@ describe('Video Call Session', () => {
           const sessionId = createResponse.body.sessionId;
 
           cy.apiPost(`/api/support/start/${sessionId}`).then(() => {
-            cy.endSupportSession(sessionId, { endedBy: 8 }).then(() => {
+            cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
               cy.getSupportHistory(8, 'hospital_staff', 1).then((response) => {
                 const session = response.body.find((s) => s.id === sessionId);
                 if (session) {
@@ -300,7 +300,7 @@ describe('Video Call Session', () => {
       cy.setConsultantStatus(1, 'available');
 
       cy.createSupportRequest({
-        requesterId: 9,
+        requesterId: testRequesterId,
         hospitalId: 2,
         issueSummary: 'Duration test',
       }).then((createResponse) => {
@@ -310,7 +310,7 @@ describe('Video Call Session', () => {
           cy.apiPost(`/api/support/start/${sessionId}`).then(() => {
             cy.wait(1000); // Wait 1 second
 
-            cy.endSupportSession(sessionId, { endedBy: 9 }).then((response) => {
+            cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then((response) => {
               expect(response.body.durationSeconds).to.be.a('number');
               expect(response.body.durationSeconds).to.be.gte(0);
             });
@@ -323,7 +323,7 @@ describe('Video Call Session', () => {
       cy.setConsultantStatus(2, 'available');
 
       cy.createSupportRequest({
-        requesterId: 8,
+        requesterId: testRequesterId,
         hospitalId: 2,
         department: 'Radiology',
         issueSummary: 'Free consultant test',
@@ -339,7 +339,7 @@ describe('Video Call Session', () => {
               expect(consultant.status).to.eq('busy');
             });
 
-            cy.endSupportSession(sessionId, { endedBy: 8 }).then(() => {
+            cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
               // Consultant should be available
               cy.getAllConsultants().then((response) => {
                 const consultant = response.body.find((c) => c.id === consultantId);
@@ -355,7 +355,7 @@ describe('Video Call Session', () => {
       cy.setConsultantStatus(1, 'available');
 
       cy.createSupportRequest({
-        requesterId: 8,
+        requesterId: testRequesterId,
         hospitalId: 2,
         issueSummary: 'Resolution notes test',
       }).then((createResponse) => {
@@ -375,7 +375,7 @@ describe('Video Call Session', () => {
     });
 
     it('returns 404 for non-existent session', () => {
-      cy.endSupportSession(99999, { endedBy: 5 }).then((response) => {
+      cy.endSupportSession(99999, { endedBy: testRequesterId }).then((response) => {
         expect(response.status).to.eq(404);
       });
     });
@@ -387,7 +387,7 @@ describe('Video Call Session', () => {
 
       // 1. Create request
       cy.createSupportRequest({
-        requesterId: 8,
+        requesterId: testRequesterId,
         hospitalId: 2,
         department: 'ER',
         urgency: 'normal',
@@ -404,7 +404,7 @@ describe('Video Call Session', () => {
 
           // 3. Join session (get token)
           cy.apiPost(`/api/support/join/${sessionId}`, {
-            userId: 8,
+            userId: testRequesterId,
             userName: 'Anna Garcia',
             isConsultant: false,
           }).then((joinResponse) => {
@@ -419,7 +419,7 @@ describe('Video Call Session', () => {
           });
 
           // 5. End session
-          cy.endSupportSession(sessionId, { endedBy: 8 }).then(() => {
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
             // 6. Verify session completed
             cy.getActiveSession(8).then((response) => {
               expect(response.body).to.be.oneOf([null, '']);
@@ -448,7 +448,7 @@ describe('Video Call Session', () => {
 
       // 1. Create request (goes to queue)
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         issueSummary: 'Queue to completion test',
       }).then((createResponse) => {
@@ -469,7 +469,7 @@ describe('Video Call Session', () => {
 
           // 4. Start and end session
           cy.apiPost(`/api/support/start/${sessionId}`).then(() => {
-            cy.endSupportSession(sessionId, { endedBy: 5 }).then(() => {
+            cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
               // 5. Verify completed
               cy.getActiveSession(5).then((response) => {
                 expect(response.body).to.be.oneOf([null, '']);
@@ -490,14 +490,14 @@ describe('Video Call Session', () => {
 
       // First session
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         department: 'ER',
         issueSummary: 'Concurrent session 1',
       }).then((r1) => {
         // Second session
         cy.createSupportRequest({
-          requesterId: 8,
+          requesterId: testRequesterId,
           hospitalId: 2,
           department: 'Radiology',
           issueSummary: 'Concurrent session 2',
@@ -506,8 +506,8 @@ describe('Video Call Session', () => {
           if (r1.body.status === 'connecting' && r2.body.status === 'connecting') {
             expect(r1.body.consultant.id).to.not.eq(r2.body.consultant.id);
 
-            cy.endSupportSession(r1.body.sessionId, { endedBy: 5 });
-            cy.endSupportSession(r2.body.sessionId, { endedBy: 8 });
+            cy.endSupportSession(r1.body.sessionId, { endedBy: testRequesterId });
+            cy.endSupportSession(r2.body.sessionId, { endedBy: testRequesterId });
           }
         });
       });

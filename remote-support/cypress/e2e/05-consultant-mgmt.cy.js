@@ -3,6 +3,11 @@
 
 describe('Consultant Management', () => {
   const API_URL = Cypress.env('apiUrl') || 'http://localhost:3002';
+  let testRequesterId = 500;
+
+  beforeEach(() => {
+    testRequesterId++;
+  });
 
   describe('List Consultants', () => {
     it('returns all consultants', () => {
@@ -210,7 +215,7 @@ describe('Consultant Management', () => {
       cy.setConsultantStatus(2, 'available');
 
       cy.createSupportRequest({
-        requesterId: 8,
+        requesterId: testRequesterId,
         hospitalId: 2,
         department: 'Radiology',
         issueSummary: 'Active session status test',
@@ -225,7 +230,7 @@ describe('Consultant Management', () => {
             expect(response.body.error).to.include('active session');
           });
 
-          cy.endSupportSession(sessionId, { endedBy: 8 });
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId });
         }
       });
     });

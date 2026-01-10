@@ -11,22 +11,26 @@ describe('Edge Cases', () => {
 
   describe('Concurrent Sessions', () => {
     it('handles multiple simultaneous requests', () => {
+      const baseId = testRequesterId;
       const requests = [];
 
       for (let i = 0; i < 3; i++) {
         requests.push(
           cy.createSupportRequest({
-            requesterId: 5 + i,
+            requesterId: baseId + i,
             hospitalId: 1,
             department: 'ER',
             issueSummary: `Concurrent request ${i}`,
-          })
+          }).then((r) => ({ response: r, requesterId: baseId + i }))
         );
       }
 
-      cy.wrap(Promise.all(requests)).then((responses) => {
-        responses.forEach((response) => {
-          expect(response.status).to.be.oneOf([200, 201, 429]);
+      cy.wrap(Promise.all(requests)).then((results) => {
+        results.forEach((result) => {
+          expect(result.response.status).to.be.oneOf([200, 201, 429]);
+          if (result.response.body.sessionId) {
+            cy.endSupportSession(result.response.body.sessionId, { endedBy: result.requesterId });
+          }
         });
       });
     });
@@ -64,7 +68,7 @@ describe('Edge Cases', () => {
         const sessionId = response.body.sessionId;
 
         // Immediately cancel
-        cy.cancelSupportRequest(sessionId, { cancelledBy: 5 }).then((cancelResponse) => {
+        cy.cancelSupportRequest(sessionId, testRequesterId).then((cancelResponse) => {
           expect(cancelResponse.status).to.be.oneOf([200, 400]);
         });
       });
@@ -190,7 +194,7 @@ describe('Edge Cases', () => {
           cy.rateSession(sessionId, {
             rating: 4,
             feedback: 'Great! <script>alert("xss")</script> & "quotes"',
-            raterId: 5,
+            raterId: testRequesterId,
           }).then((response) => {
             expect(response.status).to.be.oneOf([200, 400]);
           });
@@ -262,7 +266,7 @@ describe('Edge Cases', () => {
         // Start the session
         cy.startSupportSession(sessionId).then(() => {
           // Try to cancel active session
-          cy.cancelSupportRequest(sessionId, { cancelledBy: 5 }).then((response) => {
+          cy.cancelSupportRequest(sessionId, testRequesterId).then((response) => {
             expect(response.status).to.be.oneOf([200, 400]);
           });
         });

@@ -29,7 +29,7 @@ describe('Support Queue Management', () => {
       cy.setConsultantStatus(2, 'offline');
 
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         issueSummary: 'Queue enrichment test',
       }).then((createResponse) => {
         const sessionId = createResponse.body.sessionId;
@@ -41,7 +41,7 @@ describe('Support Queue Management', () => {
           }
         });
 
-        cy.cancelSupportRequest(sessionId, 5);
+        cy.cancelSupportRequest(sessionId, testRequesterId);
       });
 
       cy.setConsultantStatus(1, 'available');
@@ -52,7 +52,7 @@ describe('Support Queue Management', () => {
       cy.setConsultantStatus(1, 'offline');
 
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         issueSummary: 'Hospital name test',
       }).then((createResponse) => {
@@ -65,7 +65,7 @@ describe('Support Queue Management', () => {
           }
         });
 
-        cy.cancelSupportRequest(sessionId, 5);
+        cy.cancelSupportRequest(sessionId, testRequesterId);
       });
 
       cy.setConsultantStatus(1, 'available');
@@ -77,13 +77,13 @@ describe('Support Queue Management', () => {
 
       // Create normal request first
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         urgency: 'normal',
         issueSummary: 'Normal request',
       }).then((normalResponse) => {
         // Create critical request second
         cy.createSupportRequest({
-          requesterId: 6,
+          requesterId: testRequesterId + 1,
           urgency: 'critical',
           issueSummary: 'Critical request',
         }).then((criticalResponse) => {
@@ -100,7 +100,7 @@ describe('Support Queue Management', () => {
             }
           });
 
-          cy.cancelSupportRequest(criticalResponse.body.sessionId, 6);
+          cy.cancelSupportRequest(criticalResponse.body.sessionId, testRequesterId + 1);
           cy.cancelSupportRequest(normalResponse.body.sessionId, 5);
         });
       });
@@ -113,7 +113,7 @@ describe('Support Queue Management', () => {
       cy.setConsultantStatus(1, 'offline');
 
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         department: 'Radiology',
         issueSummary: 'Department test',
       }).then((createResponse) => {
@@ -126,7 +126,7 @@ describe('Support Queue Management', () => {
           }
         });
 
-        cy.cancelSupportRequest(sessionId, 5);
+        cy.cancelSupportRequest(sessionId, testRequesterId);
       });
 
       cy.setConsultantStatus(1, 'available');
@@ -136,7 +136,7 @@ describe('Support Queue Management', () => {
       cy.setConsultantStatus(1, 'offline');
 
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         urgency: 'urgent',
         issueSummary: 'Urgency test',
       }).then((createResponse) => {
@@ -149,7 +149,7 @@ describe('Support Queue Management', () => {
           }
         });
 
-        cy.cancelSupportRequest(sessionId, 5);
+        cy.cancelSupportRequest(sessionId, testRequesterId);
       });
 
       cy.setConsultantStatus(1, 'available');
@@ -159,7 +159,7 @@ describe('Support Queue Management', () => {
       cy.setConsultantStatus(1, 'offline');
 
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         issueSummary: 'Specific issue summary for test',
       }).then((createResponse) => {
         const sessionId = createResponse.body.sessionId;
@@ -171,7 +171,7 @@ describe('Support Queue Management', () => {
           }
         });
 
-        cy.cancelSupportRequest(sessionId, 5);
+        cy.cancelSupportRequest(sessionId, testRequesterId);
       });
 
       cy.setConsultantStatus(1, 'available');
@@ -181,7 +181,7 @@ describe('Support Queue Management', () => {
       cy.setConsultantStatus(1, 'offline');
 
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         issueSummary: 'Timestamp test',
       }).then((createResponse) => {
         const sessionId = createResponse.body.sessionId;
@@ -193,7 +193,7 @@ describe('Support Queue Management', () => {
           }
         });
 
-        cy.cancelSupportRequest(sessionId, 5);
+        cy.cancelSupportRequest(sessionId, testRequesterId);
       });
 
       cy.setConsultantStatus(1, 'available');
@@ -203,7 +203,7 @@ describe('Support Queue Management', () => {
       cy.setConsultantStatus(1, 'available');
 
       cy.createSupportRequest({
-        requesterId: 8,
+        requesterId: testRequesterId,
         hospitalId: 2,
         issueSummary: 'Non-pending exclusion test',
       }).then((createResponse) => {
@@ -215,7 +215,7 @@ describe('Support Queue Management', () => {
             expect(sessionIds).to.not.include(sessionId);
           });
 
-          cy.endSupportSession(sessionId, { endedBy: 8 });
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId });
         }
       });
     });
@@ -227,7 +227,7 @@ describe('Support Queue Management', () => {
       cy.setConsultantStatus(2, 'offline');
 
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         issueSummary: 'Accept test',
       }).then((createResponse) => {
         const sessionId = createResponse.body.sessionId;
@@ -245,7 +245,7 @@ describe('Support Queue Management', () => {
       cy.setConsultantStatus(1, 'offline');
 
       cy.createSupportRequest({
-        requesterId: 6,
+        requesterId: testRequesterId + 1,
         issueSummary: 'Room creation test',
       }).then((createResponse) => {
         const sessionId = createResponse.body.sessionId;
@@ -265,7 +265,7 @@ describe('Support Queue Management', () => {
       cy.setConsultantStatus(2, 'offline');
 
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         issueSummary: 'Room URL test',
       }).then((createResponse) => {
         const sessionId = createResponse.body.sessionId;
@@ -285,7 +285,7 @@ describe('Support Queue Management', () => {
       cy.setConsultantStatus(2, 'offline');
 
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         issueSummary: 'Queue removal test',
       }).then((createResponse) => {
         const sessionId = createResponse.body.sessionId;
@@ -306,7 +306,7 @@ describe('Support Queue Management', () => {
       cy.setConsultantStatus(2, 'offline');
 
       cy.createSupportRequest({
-        requesterId: 6,
+        requesterId: testRequesterId + 1,
         issueSummary: 'Consultant status test',
       }).then((createResponse) => {
         const sessionId = createResponse.body.sessionId;
@@ -327,7 +327,7 @@ describe('Support Queue Management', () => {
       cy.setConsultantStatus(2, 'offline');
 
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         issueSummary: 'Wait time recording test',
       }).then((createResponse) => {
         const sessionId = createResponse.body.sessionId;
@@ -360,7 +360,7 @@ describe('Support Queue Management', () => {
       cy.setConsultantStatus(2, 'offline');
 
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         issueSummary: 'Double accept test',
       }).then((createResponse) => {
         const sessionId = createResponse.body.sessionId;
@@ -383,7 +383,7 @@ describe('Support Queue Management', () => {
       cy.setConsultantStatus(1, 'offline');
 
       cy.createSupportRequest({
-        requesterId: 6,
+        requesterId: testRequesterId + 1,
         issueSummary: 'Race condition test',
       }).then((createResponse) => {
         const sessionId = createResponse.body.sessionId;
@@ -409,12 +409,12 @@ describe('Support Queue Management', () => {
 
       // Create multiple requests
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         urgency: 'normal',
         issueSummary: 'Queue test 1',
       }).then((r1) => {
         cy.createSupportRequest({
-          requesterId: 6,
+          requesterId: testRequesterId + 1,
           urgency: 'urgent',
           issueSummary: 'Queue test 2',
         }).then((r2) => {
@@ -424,7 +424,7 @@ describe('Support Queue Management', () => {
 
           // Clean up
           cy.cancelSupportRequest(r1.body.sessionId, 5);
-          cy.cancelSupportRequest(r2.body.sessionId, 6);
+          cy.cancelSupportRequest(r2.body.sessionId, testRequesterId + 1);
         });
       });
 
@@ -440,11 +440,11 @@ describe('Support Queue Management', () => {
 
       // Create two requests
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         issueSummary: 'Position update test 1',
       }).then((r1) => {
         cy.createSupportRequest({
-          requesterId: 6,
+          requesterId: testRequesterId + 1,
           issueSummary: 'Position update test 2',
         }).then((r2) => {
           // Get initial position
@@ -460,7 +460,7 @@ describe('Support Queue Management', () => {
                 expect(afterResponse.body.position).to.be.lte(initialPosition);
               });
 
-              cy.cancelSupportRequest(r2.body.sessionId, 6);
+              cy.cancelSupportRequest(r2.body.sessionId, testRequesterId + 1);
             });
           });
         });
@@ -478,12 +478,12 @@ describe('Support Queue Management', () => {
       cy.setConsultantStatus(4, 'offline');
 
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         urgency: 'normal',
         issueSummary: 'Normal priority',
       }).then((normalResp) => {
         cy.createSupportRequest({
-          requesterId: 6,
+          requesterId: testRequesterId + 1,
           urgency: 'critical',
           issueSummary: 'Critical priority',
         }).then((criticalResp) => {
@@ -501,7 +501,7 @@ describe('Support Queue Management', () => {
           });
 
           cy.cancelSupportRequest(normalResp.body.sessionId, 5);
-          cy.cancelSupportRequest(criticalResp.body.sessionId, 6);
+          cy.cancelSupportRequest(criticalResp.body.sessionId, testRequesterId + 1);
         });
       });
 
@@ -516,12 +516,12 @@ describe('Support Queue Management', () => {
       cy.setConsultantStatus(4, 'offline');
 
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         urgency: 'normal',
         issueSummary: 'Normal for urgent test',
       }).then((normalResp) => {
         cy.createSupportRequest({
-          requesterId: 6,
+          requesterId: testRequesterId + 1,
           urgency: 'urgent',
           issueSummary: 'Urgent priority',
         }).then((urgentResp) => {
@@ -539,7 +539,7 @@ describe('Support Queue Management', () => {
           });
 
           cy.cancelSupportRequest(normalResp.body.sessionId, 5);
-          cy.cancelSupportRequest(urgentResp.body.sessionId, 6);
+          cy.cancelSupportRequest(urgentResp.body.sessionId, testRequesterId + 1);
         });
       });
 
