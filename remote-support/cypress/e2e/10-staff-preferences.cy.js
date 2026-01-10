@@ -3,6 +3,11 @@
 
 describe('Staff Preferences', () => {
   const API_URL = Cypress.env('apiUrl') || 'http://localhost:3002';
+  let testRequesterId = 1000;
+
+  beforeEach(() => {
+    testRequesterId++;
+  });
 
   describe('Get Preferences', () => {
     it('returns staff preferred consultants', () => {
@@ -272,7 +277,7 @@ describe('Staff Preferences', () => {
       cy.setConsultantStatus(4, 'offline');
 
       cy.createSupportRequest({
-        requesterId: 9,
+        requesterId: testRequesterId,
         hospitalId: 2,
         department: 'Pharmacy', // Emily is Pharmacy expert
         issueSummary: 'Favorite match test',
@@ -280,7 +285,7 @@ describe('Staff Preferences', () => {
         if (response.body.status === 'connecting') {
           // Should match Emily with favorite bonus
           expect(response.body.consultant.id).to.eq(3);
-          cy.endSupportSession(response.body.sessionId, { endedBy: 9 });
+          cy.endSupportSession(response.body.sessionId, { endedBy: testRequesterId });
         }
       });
 

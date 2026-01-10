@@ -215,7 +215,7 @@ describe('Video Call Session', () => {
           const sessionId = createResponse.body.sessionId;
 
           cy.apiPost(`/api/support/start/${sessionId}`).then(() => {
-            cy.getActiveSession(8).then((response) => {
+            cy.getActiveSession(testRequesterId).then((response) => {
               expect(response.body.status).to.eq('active');
               expect(response.body.started_at).to.be.a('string');
             });
@@ -284,7 +284,7 @@ describe('Video Call Session', () => {
 
           cy.apiPost(`/api/support/start/${sessionId}`).then(() => {
             cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
-              cy.getSupportHistory(8, 'hospital_staff', 1).then((response) => {
+              cy.getSupportHistory(testRequesterId, 'hospital_staff', 1).then((response) => {
                 const session = response.body.find((s) => s.id === sessionId);
                 if (session) {
                   expect(session).to.have.property('endedAt');
@@ -398,7 +398,7 @@ describe('Video Call Session', () => {
           const consultantId = createResponse.body.consultant.id;
 
           // 2. Verify connecting status
-          cy.getActiveSession(8).then((response) => {
+          cy.getActiveSession(testRequesterId).then((response) => {
             expect(response.body.status).to.eq('connecting');
           });
 
@@ -413,7 +413,7 @@ describe('Video Call Session', () => {
 
           // 4. Start session
           cy.apiPost(`/api/support/start/${sessionId}`).then(() => {
-            cy.getActiveSession(8).then((response) => {
+            cy.getActiveSession(testRequesterId).then((response) => {
               expect(response.body.status).to.eq('active');
             });
           });
@@ -421,7 +421,7 @@ describe('Video Call Session', () => {
           // 5. End session
           cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
             // 6. Verify session completed
-            cy.getActiveSession(8).then((response) => {
+            cy.getActiveSession(testRequesterId).then((response) => {
               expect(response.body).to.be.oneOf([null, '']);
             });
 
@@ -432,7 +432,7 @@ describe('Video Call Session', () => {
             });
 
             // 8. Rate session
-            cy.rateSupportSession(sessionId, 5, 'Great help!', 8).then((rateResponse) => {
+            cy.rateSupportSession(sessionId, 5, 'Great help!', testRequesterId).then((rateResponse) => {
               expect(rateResponse.body.success).to.eq(true);
             });
           });
@@ -471,7 +471,7 @@ describe('Video Call Session', () => {
           cy.apiPost(`/api/support/start/${sessionId}`).then(() => {
             cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
               // 5. Verify completed
-              cy.getActiveSession(5).then((response) => {
+              cy.getActiveSession(testRequesterId).then((response) => {
                 expect(response.body).to.be.oneOf([null, '']);
               });
             });

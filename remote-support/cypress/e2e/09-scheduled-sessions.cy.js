@@ -3,6 +3,11 @@
 
 describe('Scheduled Sessions', () => {
   const API_URL = Cypress.env('apiUrl') || 'http://localhost:3002';
+  let testRequesterId = 900;
+
+  beforeEach(() => {
+    testRequesterId++;
+  });
 
   const getFutureDate = (daysAhead = 1, hour = 10) => {
     const date = new Date();
@@ -14,7 +19,7 @@ describe('Scheduled Sessions', () => {
   describe('Create Scheduled Session', () => {
     it('creates scheduled session', () => {
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         consultantId: 1,
         hospitalId: 1,
         department: 'ER',
@@ -39,7 +44,7 @@ describe('Scheduled Sessions', () => {
 
     it('validates required fields - consultantId', () => {
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         scheduledAt: getFutureDate(1),
         topic: 'Missing consultant',
       }).then((response) => {
@@ -49,7 +54,7 @@ describe('Scheduled Sessions', () => {
 
     it('validates required fields - scheduledAt', () => {
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         consultantId: 1,
         topic: 'Missing time',
       }).then((response) => {
@@ -59,7 +64,7 @@ describe('Scheduled Sessions', () => {
 
     it('validates required fields - topic', () => {
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         consultantId: 1,
         scheduledAt: getFutureDate(1),
       }).then((response) => {
@@ -72,7 +77,7 @@ describe('Scheduled Sessions', () => {
       pastDate.setDate(pastDate.getDate() - 1);
 
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         consultantId: 1,
         scheduledAt: pastDate.toISOString(),
         topic: 'Past date test',
@@ -84,7 +89,7 @@ describe('Scheduled Sessions', () => {
 
     it('sets default duration (30 min)', () => {
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         consultantId: 2,
         hospitalId: 1,
         scheduledAt: getFutureDate(2),
@@ -96,7 +101,7 @@ describe('Scheduled Sessions', () => {
 
     it('returns enriched response with names', () => {
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         consultantId: 1,
         hospitalId: 1,
         scheduledAt: getFutureDate(3),
@@ -112,7 +117,7 @@ describe('Scheduled Sessions', () => {
   describe('All-Day Sessions', () => {
     it('creates all-day session', () => {
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         consultantId: 1,
         hospitalId: 1,
         scheduledAt: getFutureDate(4),
@@ -128,7 +133,7 @@ describe('Scheduled Sessions', () => {
 
     it('calculates duration from time range', () => {
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         consultantId: 2,
         hospitalId: 1,
         scheduledAt: getFutureDate(5),
@@ -144,7 +149,7 @@ describe('Scheduled Sessions', () => {
 
     it('stores start/end times', () => {
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         consultantId: 1,
         hospitalId: 1,
         scheduledAt: getFutureDate(6),
@@ -165,7 +170,7 @@ describe('Scheduled Sessions', () => {
       endDate.setDate(endDate.getDate() + 7);
 
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         consultantId: 1,
         hospitalId: 1,
         scheduledAt: getFutureDate(1, 14),
@@ -185,7 +190,7 @@ describe('Scheduled Sessions', () => {
       endDate.setDate(endDate.getDate() + 30);
 
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         consultantId: 2,
         hospitalId: 1,
         scheduledAt: getFutureDate(1, 15),
@@ -205,7 +210,7 @@ describe('Scheduled Sessions', () => {
       endDate.setDate(endDate.getDate() + 14);
 
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         consultantId: 1,
         hospitalId: 1,
         scheduledAt: getFutureDate(2, 9),
@@ -224,7 +229,7 @@ describe('Scheduled Sessions', () => {
   describe('Session Updates', () => {
     it('updates scheduled time', () => {
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         consultantId: 1,
         hospitalId: 1,
         scheduledAt: getFutureDate(7),
@@ -244,7 +249,7 @@ describe('Scheduled Sessions', () => {
 
     it('updates duration', () => {
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         consultantId: 2,
         hospitalId: 1,
         scheduledAt: getFutureDate(9),
@@ -262,7 +267,7 @@ describe('Scheduled Sessions', () => {
 
     it('updates topic', () => {
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         consultantId: 1,
         hospitalId: 1,
         scheduledAt: getFutureDate(10),
@@ -280,7 +285,7 @@ describe('Scheduled Sessions', () => {
 
     it('updates notes', () => {
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         consultantId: 2,
         hospitalId: 1,
         scheduledAt: getFutureDate(11),
@@ -308,7 +313,7 @@ describe('Scheduled Sessions', () => {
   describe('Session Cancellation', () => {
     it('cancels scheduled session', () => {
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         consultantId: 1,
         hospitalId: 1,
         scheduledAt: getFutureDate(12),
@@ -316,7 +321,7 @@ describe('Scheduled Sessions', () => {
       }).then((createResponse) => {
         const sessionId = createResponse.body.id;
 
-        cy.cancelScheduledSession(sessionId, 5, 'No longer needed').then((response) => {
+        cy.cancelScheduledSession(sessionId, testRequesterId, 'No longer needed').then((response) => {
           expect(response.status).to.eq(200);
           expect(response.body.success).to.eq(true);
         });
@@ -325,7 +330,7 @@ describe('Scheduled Sessions', () => {
 
     it('requires authorized user', () => {
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         consultantId: 1,
         hospitalId: 1,
         scheduledAt: getFutureDate(13),
@@ -339,13 +344,13 @@ describe('Scheduled Sessions', () => {
         });
 
         // Clean up with authorized user
-        cy.cancelScheduledSession(sessionId, 5, 'Cleanup');
+        cy.cancelScheduledSession(sessionId, testRequesterId, 'Cleanup');
       });
     });
 
     it('stores cancellation reason', () => {
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         consultantId: 2,
         hospitalId: 1,
         scheduledAt: getFutureDate(14),
@@ -353,7 +358,7 @@ describe('Scheduled Sessions', () => {
       }).then((createResponse) => {
         const sessionId = createResponse.body.id;
 
-        cy.cancelScheduledSession(sessionId, 5, 'Meeting moved to next week').then((response) => {
+        cy.cancelScheduledSession(sessionId, testRequesterId, 'Meeting moved to next week').then((response) => {
           expect(response.body.success).to.eq(true);
         });
       });
@@ -363,7 +368,7 @@ describe('Scheduled Sessions', () => {
   describe('Session Confirmation', () => {
     it('consultant can confirm', () => {
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         consultantId: 1,
         hospitalId: 1,
         scheduledAt: getFutureDate(15),
@@ -380,7 +385,7 @@ describe('Scheduled Sessions', () => {
 
     it('updates status to confirmed', () => {
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         consultantId: 2,
         hospitalId: 1,
         scheduledAt: getFutureDate(16),
@@ -396,7 +401,7 @@ describe('Scheduled Sessions', () => {
 
     it('only assigned consultant can confirm', () => {
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         consultantId: 1,
         hospitalId: 1,
         scheduledAt: getFutureDate(17),
@@ -417,7 +422,7 @@ describe('Scheduled Sessions', () => {
       // Create a session first
       const scheduledDate = getFutureDate(20);
       cy.createScheduledSession({
-        requesterId: 5,
+        requesterId: testRequesterId,
         consultantId: 1,
         hospitalId: 1,
         scheduledAt: scheduledDate,
@@ -444,7 +449,7 @@ describe('Scheduled Sessions', () => {
 
   describe('List Sessions', () => {
     it('returns user scheduled sessions', () => {
-      cy.getScheduledSessions(5, 'hospital_staff').then((response) => {
+      cy.getScheduledSessions(testRequesterId, 'hospital_staff').then((response) => {
         expect(response.status).to.eq(200);
         expect(response.body).to.be.an('array');
       });
@@ -458,7 +463,7 @@ describe('Scheduled Sessions', () => {
     });
 
     it('includes enriched names', () => {
-      cy.getScheduledSessions(5, 'hospital_staff').then((response) => {
+      cy.getScheduledSessions(testRequesterId, 'hospital_staff').then((response) => {
         if (response.body.length > 0) {
           expect(response.body[0]).to.have.property('requesterName');
           expect(response.body[0]).to.have.property('consultantName');
@@ -469,7 +474,7 @@ describe('Scheduled Sessions', () => {
 
   describe('Upcoming Sessions', () => {
     it('returns sessions within time window', () => {
-      cy.getUpcomingSessions(5, 1440).then((response) => {
+      cy.getUpcomingSessions(testRequesterId, 1440).then((response) => {
         // 1440 minutes = 24 hours
         expect(response.status).to.eq(200);
         expect(response.body).to.be.an('array');
@@ -477,7 +482,7 @@ describe('Scheduled Sessions', () => {
     });
 
     it('default window is 15 minutes', () => {
-      cy.getUpcomingSessions(5).then((response) => {
+      cy.getUpcomingSessions(testRequesterId).then((response) => {
         expect(response.status).to.eq(200);
       });
     });
