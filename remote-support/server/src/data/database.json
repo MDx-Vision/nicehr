@@ -582,6 +582,72 @@
       "auto_cancelled_reason": null,
       "created_at": "2025-12-29T06:26:01.607Z",
       "updated_at": "2025-12-29T06:26:01.607Z"
+    },
+    {
+      "id": 23,
+      "hospital_id": 1,
+      "requester_id": 6,
+      "consultant_id": null,
+      "department": "Pharmacy",
+      "urgency": "urgent",
+      "status": "pending",
+      "daily_room_name": null,
+      "daily_room_url": null,
+      "issue_summary": "E2E Test: Medication sync issue",
+      "resolution_notes": null,
+      "started_at": null,
+      "ended_at": null,
+      "wait_time_seconds": null,
+      "duration_seconds": null,
+      "rating": null,
+      "feedback": null,
+      "auto_cancelled_reason": null,
+      "created_at": "2026-01-10T15:43:22.214Z",
+      "updated_at": "2026-01-10T15:43:22.214Z"
+    },
+    {
+      "id": 24,
+      "hospital_id": 1,
+      "requester_id": 7,
+      "consultant_id": 1,
+      "department": "ER",
+      "urgency": "normal",
+      "status": "completed",
+      "daily_room_name": "session-24-c0c60e1e",
+      "daily_room_url": "https://nicehr.daily.co/session-24-c0c60e1e",
+      "issue_summary": "E2E Test: Patient intake assistance",
+      "resolution_notes": null,
+      "started_at": null,
+      "ended_at": "2026-01-10T15:45:14.818Z",
+      "wait_time_seconds": null,
+      "duration_seconds": 0,
+      "rating": null,
+      "feedback": null,
+      "auto_cancelled_reason": null,
+      "created_at": "2026-01-10T15:44:36.107Z",
+      "updated_at": "2026-01-10T15:45:14.818Z"
+    },
+    {
+      "id": 25,
+      "hospital_id": 1,
+      "requester_id": 9,
+      "consultant_id": 2,
+      "department": "Lab",
+      "urgency": "normal",
+      "status": "connecting",
+      "daily_room_name": "session-25-602877b1",
+      "daily_room_url": "https://nicehr.daily.co/session-25-602877b1",
+      "issue_summary": "Test",
+      "resolution_notes": null,
+      "started_at": null,
+      "ended_at": null,
+      "wait_time_seconds": null,
+      "duration_seconds": null,
+      "rating": null,
+      "feedback": null,
+      "auto_cancelled_reason": null,
+      "created_at": "2026-01-10T15:46:11.985Z",
+      "updated_at": "2026-01-10T15:46:11.987Z"
     }
   ],
   "consultant_availability": [
@@ -591,21 +657,21 @@
       "status": "available",
       "current_session_id": null,
       "sessions_today": 1,
-      "last_session_ended_at": "2025-12-19T17:38:11.183Z",
+      "last_session_ended_at": "2026-01-10T15:45:14.818Z",
       "last_seen_at": "2025-12-18T22:53:52.820Z",
       "created_at": "2025-12-18T22:53:52.820Z",
-      "updated_at": "2025-12-19T17:38:11.183Z"
+      "updated_at": "2026-01-10T15:45:14.819Z"
     },
     {
       "id": 2,
       "consultant_id": 2,
-      "status": "available",
-      "current_session_id": null,
+      "status": "busy",
+      "current_session_id": 25,
       "sessions_today": 0,
       "last_session_ended_at": "2025-12-20T19:47:59.981Z",
       "last_seen_at": "2025-12-18T22:53:52.821Z",
       "created_at": "2025-12-18T22:53:52.821Z",
-      "updated_at": "2025-12-20T19:47:59.981Z"
+      "updated_at": "2026-01-10T15:46:11.988Z"
     },
     {
       "id": 3,
@@ -1309,16 +1375,72 @@
       "actor_id": 5,
       "metadata": "{\"department\":\"ER\",\"urgency\":\"normal\"}",
       "created_at": "2025-12-29T06:26:01.607Z"
+    },
+    {
+      "id": 76,
+      "session_id": 23,
+      "event_type": "created",
+      "actor_id": 6,
+      "metadata": "{\"department\":\"Pharmacy\",\"urgency\":\"urgent\"}",
+      "created_at": "2026-01-10T15:43:22.215Z"
+    },
+    {
+      "id": 77,
+      "session_id": 24,
+      "event_type": "created",
+      "actor_id": 7,
+      "metadata": "{\"department\":\"ER\",\"urgency\":\"normal\"}",
+      "created_at": "2026-01-10T15:44:36.108Z"
+    },
+    {
+      "id": 78,
+      "session_id": 24,
+      "event_type": "matched",
+      "actor_id": 1,
+      "metadata": "{\"matchReasons\":[\"Department expert (+30)\",\"Rotation balance (-10)\"]}",
+      "created_at": "2026-01-10T15:44:36.112Z"
+    },
+    {
+      "id": 79,
+      "session_id": 24,
+      "event_type": "ended",
+      "actor_id": 7,
+      "metadata": "{\"durationSeconds\":0}",
+      "created_at": "2026-01-10T15:45:04.573Z"
+    },
+    {
+      "id": 80,
+      "session_id": 24,
+      "event_type": "ended",
+      "actor_id": 7,
+      "metadata": "{\"durationSeconds\":0}",
+      "created_at": "2026-01-10T15:45:14.819Z"
+    },
+    {
+      "id": 81,
+      "session_id": 25,
+      "event_type": "created",
+      "actor_id": 9,
+      "metadata": "{\"department\":\"Lab\",\"urgency\":\"normal\"}",
+      "created_at": "2026-01-10T15:46:11.986Z"
+    },
+    {
+      "id": 82,
+      "session_id": 25,
+      "event_type": "matched",
+      "actor_id": 2,
+      "metadata": "{\"matchReasons\":[\"Department experience (+15)\"]}",
+      "created_at": "2026-01-10T15:46:11.988Z"
     }
   ],
   "_autoIncrement": {
     "users": 11,
     "hospitals": 4,
-    "support_sessions": 23,
+    "support_sessions": 26,
     "consultant_availability": 5,
     "consultant_specialties": 9,
     "support_queue": 1,
     "staff_consultant_preferences": 3,
-    "support_session_events": 76
+    "support_session_events": 83
   }
 }
