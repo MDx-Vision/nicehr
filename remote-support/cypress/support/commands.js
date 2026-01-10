@@ -89,8 +89,20 @@ Cypress.Commands.add('getQueuePosition', (sessionId) => {
   return cy.apiGet(`/api/support/queue-position/${sessionId}`);
 });
 
+Cypress.Commands.add('joinSupportSession', (sessionId, options = {}) => {
+  return cy.apiPost(`/api/support/join/${sessionId}`, options);
+});
+
+Cypress.Commands.add('startSupportSession', (sessionId) => {
+  return cy.apiPost(`/api/support/start/${sessionId}`, {});
+});
+
 Cypress.Commands.add('endSupportSession', (sessionId, options = {}) => {
   return cy.apiPost(`/api/support/end/${sessionId}`, options);
+});
+
+Cypress.Commands.add('rateSession', (sessionId, options = {}) => {
+  return cy.apiPost(`/api/support/rate/${sessionId}`, options);
 });
 
 Cypress.Commands.add('rateSupportSession', (sessionId, rating, feedback, userId) => {
@@ -142,6 +154,16 @@ Cypress.Commands.add('addStaffPreference', (staffId, consultantId) => {
 });
 
 Cypress.Commands.add('removeStaffPreference', (staffId, consultantId) => {
+  return cy.apiDelete(`/api/consultants/preferences/${staffId}/${consultantId}`);
+});
+
+// Alias for addStaffPreference
+Cypress.Commands.add('addPreferredConsultant', (staffId, consultantId) => {
+  return cy.apiPost(`/api/consultants/preferences/${staffId}`, { consultantId });
+});
+
+// Alias for removeStaffPreference
+Cypress.Commands.add('removePreferredConsultant', (staffId, consultantId) => {
   return cy.apiDelete(`/api/consultants/preferences/${staffId}/${consultantId}`);
 });
 
