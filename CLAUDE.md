@@ -8,6 +8,35 @@
 - **Database**: PostgreSQL
 - **Testing**: Cypress E2E tests
 
+## Recent Changes (Jan 10, 2026)
+
+### Session: "Remote Support E2E Test Coverage"
+
+**Completed this session:**
+- Created comprehensive E2E test suite for remote-support module
+- 15 test files covering 725+ test scenarios
+- Test categories: P0 (critical), P1 (core), P2 (advanced)
+- Added mock mode for Daily.co (enables testing without API credentials)
+- Custom Cypress commands for all API operations
+- See `remote-support/REMOTE_SUPPORT_TEST_PLAN.md` for full details
+
+**Test Files Created:**
+| Priority | Tests | Coverage |
+|----------|-------|----------|
+| P0 Critical | ~215 | Support requests, queue, video calls, WebSocket |
+| P1 Core | ~195 | Consultant mgmt, smart matching, ratings, analytics |
+| P2 Advanced | ~315 | Scheduling, preferences, errors, auth, edge cases |
+
+**Running Remote Support Tests:**
+```bash
+cd remote-support
+npm install && npx cypress install
+npm run dev:server  # Start backend on port 3002
+npm test            # Run all tests
+```
+
+---
+
 ## Recent Changes (Jan 5, 2026)
 
 ### Session: "Test Coverage Expansion & 100% Pass Rate Achievement"
