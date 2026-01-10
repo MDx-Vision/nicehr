@@ -3,6 +3,11 @@
 
 describe('Video Call Session', () => {
   const API_URL = Cypress.env('apiUrl') || 'http://localhost:3002';
+  let testRequesterId = 300;
+
+  beforeEach(() => {
+    testRequesterId++;
+  });
 
   describe('Session Join', () => {
     it('generates token for valid session', () => {

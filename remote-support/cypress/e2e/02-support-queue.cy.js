@@ -3,6 +3,11 @@
 
 describe('Support Queue Management', () => {
   const API_URL = Cypress.env('apiUrl') || 'http://localhost:3002';
+  let testRequesterId = 200;
+
+  beforeEach(() => {
+    testRequesterId++;
+  });
 
   describe('Queue Retrieval', () => {
     it('returns queue as an array', () => {

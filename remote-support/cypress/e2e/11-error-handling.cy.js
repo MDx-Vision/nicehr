@@ -3,6 +3,11 @@
 
 describe('Error Handling', () => {
   const API_URL = Cypress.env('apiUrl') || 'http://localhost:3002';
+  let testRequesterId = 1100;
+
+  beforeEach(() => {
+    testRequesterId++;
+  });
 
   describe('HTTP Status Codes', () => {
     it('returns 200 for successful operations', () => {

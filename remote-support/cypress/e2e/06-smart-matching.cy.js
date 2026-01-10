@@ -3,8 +3,10 @@
 
 describe('Smart Matching Algorithm', () => {
   const API_URL = Cypress.env('apiUrl') || 'http://localhost:3002';
+  let testRequesterId = 600;
 
   beforeEach(() => {
+    testRequesterId++;
     // Ensure at least one consultant is available
     cy.setConsultantStatus(1, 'available');
     cy.setConsultantStatus(2, 'available');
