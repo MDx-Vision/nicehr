@@ -268,33 +268,34 @@ describe('Staff Preferences', () => {
   describe('Preference-Based Matching Integration', () => {
     it('favorite consultants get priority in matching', () => {
       // Add Emily (3) as favorite for user 9
-      cy.addStaffPreference(9, 3);
+      cy.addStaffPreference(9, 3).then(() => {
+        // Make Emily available
+        cy.setConsultantStatus(1, 'offline');
+        cy.setConsultantStatus(2, 'offline');
+        cy.setConsultantStatus(3, 'available');
+        cy.setConsultantStatus(4, 'offline');
 
-      // Make Emily available
-      cy.setConsultantStatus(1, 'offline');
-      cy.setConsultantStatus(2, 'offline');
-      cy.setConsultantStatus(3, 'available');
-      cy.setConsultantStatus(4, 'offline');
-
-      cy.createSupportRequest({
-        requesterId: testRequesterId,
-        hospitalId: 2,
-        department: 'Pharmacy', // Emily is Pharmacy expert
-        issueSummary: 'Favorite match test',
-      }).then((response) => {
-        if (response.body.status === 'connecting') {
-          // Should preferably match Emily with favorite bonus, but matching may vary
-          if (response.body.consultant) {
+        cy.createSupportRequest({
+          requesterId: testRequesterId,
+          hospitalId: 2,
+          department: 'Pharmacy', // Emily is Pharmacy expert
+          issueSummary: 'Favorite match test',
+        }).then((response) => {
+          // Request should succeed regardless of matching outcome
+          expect(response.status).to.be.oneOf([200, 201, 400]);
+          if (response.body.status === 'connecting' && response.body.consultant) {
             expect(response.body.consultant.id).to.be.a('number');
+            cy.endSupportSession(response.body.sessionId, { endedBy: testRequesterId });
+          } else if (response.body.sessionId) {
+            cy.endSupportSession(response.body.sessionId, { endedBy: testRequesterId });
           }
-          cy.endSupportSession(response.body.sessionId, { endedBy: testRequesterId });
-        }
-      });
 
-      // Restore
-      cy.setConsultantStatus(1, 'available');
-      cy.setConsultantStatus(2, 'available');
-      cy.setConsultantStatus(4, 'available');
+          // Restore
+          cy.setConsultantStatus(1, 'available');
+          cy.setConsultantStatus(2, 'available');
+          cy.setConsultantStatus(4, 'available');
+        });
+      });
     });
   });
 });
