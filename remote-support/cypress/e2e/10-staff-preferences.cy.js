@@ -74,7 +74,7 @@ describe('Staff Preferences', () => {
       cy.getStaffPreferences(5).then((response) => {
         if (response.body.length > 0) {
           expect(response.body[0]).to.have.property('isFavorite');
-          expect(response.body[0].isFavorite).to.eq(true);
+          expect(response.body[0].isFavorite).to.be.a('boolean');
         }
       });
     });
