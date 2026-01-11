@@ -1,0 +1,80 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+# CodeRabbit Configuration for NiceHR
+# EHR Implementation Consulting Management Platform
+# Docs: https://docs.coderabbit.ai/reference/configuration
+
+language: en-US
+
+reviews:
+  # Automatic review settings
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+
+  # Ignore PRs with these title patterns
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  collapse_walkthrough: false
+
+  path_instructions:
+    - path: "client/src/**/*.tsx"
+      instructions: |
+        Review React components for:
+        - Proper TypeScript types
+        - React Query usage patterns
+        - shadcn/ui component conventions
+        - Accessibility (a11y) considerations
+        - Proper error handling
+
+    - path: "server/**/*.ts"
+      instructions: |
+        Review Express backend for:
+        - Input validation with Zod
+        - Proper error responses
+        - SQL injection prevention (Drizzle ORM)
+        - Authentication/authorization checks
+        - HIPAA compliance considerations
+
+    - path: "cypress/e2e/**/*.cy.js"
+      instructions: |
+        Review Cypress tests for:
+        - Proper test isolation
+        - Reliable selectors (data-testid preferred)
+        - Appropriate assertions
+        - No flaky patterns (avoid arbitrary waits)
+
+    - path: "shared/schema.ts"
+      instructions: |
+        Review Drizzle schema changes for:
+        - Proper relations
+        - Index considerations
+        - Migration compatibility
+
+chat:
+  auto_reply: true
+
+# Tool integrations
+tools:
+  # TypeScript/JavaScript
+  eslint:
+    enabled: true
+
+  # Security scanning
+  gitleaks:
+    enabled: true
+
+  # YAML validation
+  yamllint:
+    enabled: true
+
+# Knowledge base settings
+knowledge_base:
+  opt_out: false
+  learnings:
+    scope: auto
+  web_search:
+    enabled: true
