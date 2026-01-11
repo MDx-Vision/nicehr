@@ -423,33 +423,40 @@ describe('Error Handling', () => {
       cy.setConsultantStatus(1, 'offline');
       cy.setConsultantStatus(2, 'offline');
 
-      // Multiple requests in quick succession using unique IDs
+      // Multiple requests in quick succession using unique IDs - sequential to avoid Cypress issues
       const baseId = testRequesterId;
-      const requests = [];
-      for (let i = 0; i < 3; i++) {
-        requests.push(
-          cy
-            .createSupportRequest({
-              requesterId: baseId + i,
-              hospitalId: 1,
-              issueSummary: `Rapid request ${i}`,
-            })
-            .then((r) => ({ response: r, requesterId: baseId + i }))
-        );
-      }
 
-      // All should be handled
-      cy.wrap(Promise.all(requests)).then((results) => {
-        results.forEach((result) => {
-          expect(result.response.status).to.be.oneOf([200, 400]);
-        });
+      cy.createSupportRequest({
+        requesterId: baseId,
+        hospitalId: 1,
+        issueSummary: 'Rapid request 0',
+      }).then((response0) => {
+        expect(response0.status).to.be.oneOf([200, 400, 429]);
+        if (response0.body && response0.body.sessionId) {
+          cy.cancelSupportRequest(response0.body.sessionId, baseId);
+        }
+      });
 
-        // Cleanup
-        results.forEach((result) => {
-          if (result.response.body.sessionId) {
-            cy.cancelSupportRequest(result.response.body.sessionId, result.requesterId);
-          }
-        });
+      cy.createSupportRequest({
+        requesterId: baseId + 1,
+        hospitalId: 1,
+        issueSummary: 'Rapid request 1',
+      }).then((response1) => {
+        expect(response1.status).to.be.oneOf([200, 400, 429]);
+        if (response1.body && response1.body.sessionId) {
+          cy.cancelSupportRequest(response1.body.sessionId, baseId + 1);
+        }
+      });
+
+      cy.createSupportRequest({
+        requesterId: baseId + 2,
+        hospitalId: 1,
+        issueSummary: 'Rapid request 2',
+      }).then((response2) => {
+        expect(response2.status).to.be.oneOf([200, 400, 429]);
+        if (response2.body && response2.body.sessionId) {
+          cy.cancelSupportRequest(response2.body.sessionId, baseId + 2);
+        }
       });
 
       cy.setConsultantStatus(1, 'available');

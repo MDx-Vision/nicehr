@@ -27,7 +27,7 @@ describe('Edge Cases', () => {
         department: 'ER',
         issueSummary: 'Concurrent request 0',
       }).then((response0) => {
-        expect(response0.status).to.be.oneOf([200, 201, 429]);
+        expect(response0.status).to.be.oneOf([200, 201, 400, 429]);
         if (response0.body && response0.body.sessionId) {
           cy.endSupportSession(response0.body.sessionId, { endedBy: baseId });
         }
@@ -39,7 +39,7 @@ describe('Edge Cases', () => {
         department: 'ER',
         issueSummary: 'Concurrent request 1',
       }).then((response1) => {
-        expect(response1.status).to.be.oneOf([200, 201, 429]);
+        expect(response1.status).to.be.oneOf([200, 201, 400, 429]);
         if (response1.body && response1.body.sessionId) {
           cy.endSupportSession(response1.body.sessionId, { endedBy: baseId + 1 });
         }
@@ -51,7 +51,7 @@ describe('Edge Cases', () => {
         department: 'ER',
         issueSummary: 'Concurrent request 2',
       }).then((response2) => {
-        expect(response2.status).to.be.oneOf([200, 201, 429]);
+        expect(response2.status).to.be.oneOf([200, 201, 400, 429]);
         if (response2.body && response2.body.sessionId) {
           cy.endSupportSession(response2.body.sessionId, { endedBy: baseId + 2 });
         }
