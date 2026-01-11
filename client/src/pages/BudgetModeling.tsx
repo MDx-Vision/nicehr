@@ -1030,7 +1030,7 @@ function ScenarioDetailPanel({
           </CardContent>
         </Card>
 
-        {scenario.assumptions && (
+        {Boolean(scenario.assumptions) && (
           <Card className="mb-4">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">

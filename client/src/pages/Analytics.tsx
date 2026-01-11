@@ -64,6 +64,7 @@ interface SavedReportWithDetails extends SavedReport {
   user?: { firstName: string; lastName: string } | null;
   scheduledReports?: ScheduledReport[];
   lastRun?: { status: string; completedAt: string } | null;
+  config?: Record<string, unknown>;
 }
 
 const DATA_SOURCES = [

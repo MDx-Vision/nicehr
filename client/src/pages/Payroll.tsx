@@ -1467,15 +1467,15 @@ export default function Payroll() {
 
   // CSV Export function for batches
   const exportBatchesToCSV = () => {
-    const headers = ["Batch Name", "Status", "Period Start", "Period End", "Pay Date", "Total Amount", "Total Entries", "Created"];
+    const headers = ["Batch Name", "Status", "Period Start", "Period End", "Paid At", "Total Amount", "Consultant Count", "Created"];
     const rows = filteredBatches.map(batch => [
       batch.name || "",
       BATCH_STATUSES.find(s => s.value === batch.status)?.label || batch.status,
       batch.periodStart ? format(new Date(batch.periodStart), "yyyy-MM-dd") : "",
       batch.periodEnd ? format(new Date(batch.periodEnd), "yyyy-MM-dd") : "",
-      batch.payDate ? format(new Date(batch.payDate), "yyyy-MM-dd") : "",
+      batch.paidAt ? format(new Date(batch.paidAt), "yyyy-MM-dd") : "",
       batch.totalAmount || "0",
-      batch.totalEntries?.toString() || "0",
+      batch.consultantCount?.toString() || "0",
       batch.createdAt ? format(new Date(batch.createdAt), "yyyy-MM-dd") : ""
     ]);
 

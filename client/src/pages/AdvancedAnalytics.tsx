@@ -370,14 +370,14 @@ export default function AdvancedAnalytics() {
               </div>
             </div>
 
-            {goLiveReadiness?.latestSnapshot?.riskFactors && asStringArray(goLiveReadiness.latestSnapshot.riskFactors).length > 0 && (
+            {Boolean(goLiveReadiness?.latestSnapshot?.riskFactors) && asStringArray(goLiveReadiness?.latestSnapshot?.riskFactors).length > 0 && (
               <div className="space-y-2">
                 <h4 className="text-sm font-medium flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4 text-orange-500" />
                   Risk Factors
                 </h4>
                 <ul className="space-y-1">
-                  {asStringArray(goLiveReadiness.latestSnapshot.riskFactors).slice(0, 3).map((factor: string, idx: number) => (
+                  {asStringArray(goLiveReadiness?.latestSnapshot?.riskFactors).slice(0, 3).map((factor: string, idx: number) => (
                     <li key={idx} className="text-sm text-muted-foreground flex items-start gap-2">
                       <span className="text-orange-500">•</span>
                       {factor}
@@ -387,14 +387,14 @@ export default function AdvancedAnalytics() {
               </div>
             )}
 
-            {goLiveReadiness?.latestSnapshot?.recommendations && asStringArray(goLiveReadiness.latestSnapshot.recommendations).length > 0 && (
+            {Boolean(goLiveReadiness?.latestSnapshot?.recommendations) && asStringArray(goLiveReadiness?.latestSnapshot?.recommendations).length > 0 && (
               <div className="space-y-2">
                 <h4 className="text-sm font-medium flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-green-500" />
                   Recommendations
                 </h4>
                 <ul className="space-y-1">
-                  {asStringArray(goLiveReadiness.latestSnapshot.recommendations).slice(0, 3).map((rec: string, idx: number) => (
+                  {asStringArray(goLiveReadiness?.latestSnapshot?.recommendations).slice(0, 3).map((rec: string, idx: number) => (
                     <li key={idx} className="text-sm text-muted-foreground flex items-start gap-2">
                       <span className="text-green-500">•</span>
                       {rec}
@@ -603,11 +603,11 @@ export default function AdvancedAnalytics() {
               </div>
             </div>
 
-            {timelineForecast?.latestSnapshot?.scenarioAnalysis && Object.keys(asRecord(timelineForecast.latestSnapshot.scenarioAnalysis)).length > 0 && (
+            {Boolean(timelineForecast?.latestSnapshot?.scenarioAnalysis) && Object.keys(asRecord(timelineForecast?.latestSnapshot?.scenarioAnalysis)).length > 0 && (
               <div className="space-y-2">
                 <h4 className="text-sm font-medium">Scenario Analysis</h4>
                 <div className="grid grid-cols-3 gap-2 text-sm">
-                  {Object.entries(asRecord(timelineForecast.latestSnapshot.scenarioAnalysis)).map(([key, value]: [string, string | number]) => (
+                  {Object.entries(asRecord(timelineForecast?.latestSnapshot?.scenarioAnalysis)).map(([key, value]: [string, string | number]) => (
                     <div key={key} className="p-2 rounded bg-muted/30 text-center">
                       <p className="text-xs text-muted-foreground capitalize">{key}</p>
                       <p className="font-medium">{String(value)}</p>
@@ -617,14 +617,14 @@ export default function AdvancedAnalytics() {
               </div>
             )}
 
-            {timelineForecast?.latestSnapshot?.riskDrivers && asStringArray(timelineForecast.latestSnapshot.riskDrivers).length > 0 && (
+            {Boolean(timelineForecast?.latestSnapshot?.riskDrivers) && asStringArray(timelineForecast?.latestSnapshot?.riskDrivers).length > 0 && (
               <div className="space-y-2">
                 <h4 className="text-sm font-medium flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4 text-orange-500" />
                   Risk Drivers
                 </h4>
                 <ul className="space-y-1">
-                  {asStringArray(timelineForecast.latestSnapshot.riskDrivers).slice(0, 3).map((driver: string, idx: number) => (
+                  {asStringArray(timelineForecast?.latestSnapshot?.riskDrivers).slice(0, 3).map((driver: string, idx: number) => (
                     <li key={idx} className="text-sm text-muted-foreground flex items-start gap-2">
                       <span className="text-orange-500">•</span>
                       {driver}
@@ -728,11 +728,11 @@ export default function AdvancedAnalytics() {
               </div>
             </div>
 
-            {costVariance?.latestSnapshot?.categoryBreakdown && Object.keys(asRecord(costVariance.latestSnapshot.categoryBreakdown)).length > 0 && (
+            {Boolean(costVariance?.latestSnapshot?.categoryBreakdown) && Object.keys(asRecord(costVariance?.latestSnapshot?.categoryBreakdown)).length > 0 && (
               <div className="space-y-3">
                 <h4 className="text-sm font-medium">Category Breakdown</h4>
                 <div className="space-y-2">
-                  {Object.entries(asRecord(costVariance.latestSnapshot.categoryBreakdown)).map(([category, amount]: [string, string | number]) => (
+                  {Object.entries(asRecord(costVariance?.latestSnapshot?.categoryBreakdown)).map(([category, amount]: [string, string | number]) => (
                     <div key={category} className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground capitalize">{category}</span>
                       <span className="font-medium">{formatCurrency(amount)}</span>

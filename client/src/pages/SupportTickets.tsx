@@ -122,11 +122,8 @@ export default function SupportTickets() {
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
       return apiRequest("PATCH", `/api/support-tickets/${id}`, data);
     },
-    onSuccess: (updatedTicket) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/support-tickets"] });
-      if (selectedTicket) {
-        setSelectedTicket({ ...selectedTicket, ...updatedTicket });
-      }
       toast({ title: "Ticket Updated" });
     },
     onError: () => {
@@ -576,7 +573,7 @@ export default function SupportTickets() {
                 <div className="pt-4 border-t">
                   <Label>SLA Status</Label>
                   <div className="mt-2" data-testid="time-to-resolution">
-                    {selectedTicket.slaBreached ? (
+                    {selectedTicket.priority === 'critical' && selectedTicket.status === 'open' && selectedTicket.createdAt && (new Date().getTime() - new Date(selectedTicket.createdAt).getTime() > 4 * 60 * 60 * 1000) ? (
                       <Badge variant="destructive" data-testid="sla-breached">SLA Breached</Badge>
                     ) : (
                       <Badge variant="outline" className="text-green-600">Within SLA</Badge>
@@ -812,7 +809,7 @@ export default function SupportTickets() {
                         <td className="p-3">{getPriorityBadge(ticket.priority)}</td>
                         <td className="p-3">{ticket.category || "General"}</td>
                         <td className="p-3" data-testid="ticket-sla">
-                          {ticket.slaBreached ? (
+                          {ticket.priority === 'critical' && ticket.status === 'open' && ticket.createdAt && (new Date().getTime() - new Date(ticket.createdAt).getTime() > 4 * 60 * 60 * 1000) ? (
                             <Badge variant="destructive" data-testid="sla-breached">Breached</Badge>
                           ) : (
                             <Badge variant="outline" className="text-green-600">OK</Badge>

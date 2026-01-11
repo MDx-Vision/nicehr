@@ -1239,15 +1239,15 @@ function ReportsTab() {
               <div className="text-sm text-muted-foreground">Avg. Overall Score</div>
             </div>
             <div className="p-4 border rounded-lg text-center">
-              <div className="text-2xl font-bold text-green-600">{analytics?.totalCompletedSurveys || 0}</div>
+              <div className="text-2xl font-bold text-green-600">{analytics?.totalScorecards || 0}</div>
               <div className="text-sm text-muted-foreground">Surveys Completed</div>
             </div>
             <div className="p-4 border rounded-lg text-center">
-              <div className="text-2xl font-bold text-blue-600">{analytics?.activeIncidents || 0}</div>
-              <div className="text-sm text-muted-foreground">Active Incidents</div>
+              <div className="text-2xl font-bold text-blue-600">{analytics?.activeScorecards || 0}</div>
+              <div className="text-sm text-muted-foreground">Active Scorecards</div>
             </div>
             <div className="p-4 border rounded-lg text-center">
-              <div className="text-2xl font-bold text-purple-600">{analytics?.avgNpsScore || 0}</div>
+              <div className="text-2xl font-bold text-purple-600">{analytics?.npsScore || 0}</div>
               <div className="text-sm text-muted-foreground">NPS Score</div>
             </div>
           </div>

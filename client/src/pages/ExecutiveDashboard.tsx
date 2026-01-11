@@ -119,6 +119,8 @@ interface KpiDefinition {
   criticalThreshold: string | null;
   isActive: boolean;
   createdAt: string | null;
+  currentValue?: number | string | null;
+  trendDirection?: string | null;
 }
 
 interface KpiSnapshot {
@@ -290,12 +292,12 @@ export default function ExecutiveDashboard() {
     }
   };
 
-  const displayKpis = kpiDefinitions.length > 0 
+  const displayKpis = kpiDefinitions.length > 0
     ? kpiDefinitions.map(kpi => ({
         id: kpi.id,
         name: kpi.name,
-        value: kpi.currentValue || 0,
-        target: kpi.targetValue || 100,
+        value: Number(kpi.currentValue) || 0,
+        target: Number(kpi.targetValue) || 100,
         trend: kpi.trendDirection || "stable",
         change: 0,
         category: kpi.category,
