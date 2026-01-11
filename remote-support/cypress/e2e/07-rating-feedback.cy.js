@@ -3,13 +3,18 @@
 
 describe('Session Rating & Feedback', () => {
   const API_URL = Cypress.env('apiUrl') || 'http://localhost:3002';
+  let testRequesterId = 700;
+
+  beforeEach(() => {
+    testRequesterId++;
+  });
 
   describe('Rating Submission', () => {
     it('submits rating 1 star', () => {
       cy.setConsultantStatus(1, 'available');
 
       cy.createSupportRequest({
-        requesterId: 9,
+        requesterId: testRequesterId,
         hospitalId: 2,
         issueSummary: 'Rating 1 test',
       }).then((createResponse) => {
@@ -17,8 +22,8 @@ describe('Session Rating & Feedback', () => {
           const sessionId = createResponse.body.sessionId;
 
           cy.apiPost(`/api/support/start/${sessionId}`).then(() => {
-            cy.endSupportSession(sessionId, { endedBy: 9 }).then(() => {
-              cy.rateSupportSession(sessionId, 1, '', 9).then((response) => {
+            cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
+              cy.rateSupportSession(sessionId, 1, '', testRequesterId).then((response) => {
                 expect(response.status).to.eq(200);
                 expect(response.body.success).to.eq(true);
               });
@@ -32,7 +37,7 @@ describe('Session Rating & Feedback', () => {
       cy.setConsultantStatus(2, 'available');
 
       cy.createSupportRequest({
-        requesterId: 8,
+        requesterId: testRequesterId,
         hospitalId: 2,
         department: 'Radiology',
         issueSummary: 'Rating 2 test',
@@ -40,8 +45,8 @@ describe('Session Rating & Feedback', () => {
         if (createResponse.body.status === 'connecting') {
           const sessionId = createResponse.body.sessionId;
 
-          cy.endSupportSession(sessionId, { endedBy: 8 }).then(() => {
-            cy.rateSupportSession(sessionId, 2, '', 8).then((response) => {
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
+            cy.rateSupportSession(sessionId, 2, '', testRequesterId).then((response) => {
               expect(response.status).to.eq(200);
             });
           });
@@ -53,15 +58,15 @@ describe('Session Rating & Feedback', () => {
       cy.setConsultantStatus(1, 'available');
 
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         issueSummary: 'Rating 3 test',
       }).then((createResponse) => {
         if (createResponse.body.status === 'connecting') {
           const sessionId = createResponse.body.sessionId;
 
-          cy.endSupportSession(sessionId, { endedBy: 5 }).then(() => {
-            cy.rateSupportSession(sessionId, 3, '', 5).then((response) => {
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
+            cy.rateSupportSession(sessionId, 3, '', testRequesterId).then((response) => {
               expect(response.status).to.eq(200);
             });
           });
@@ -73,7 +78,7 @@ describe('Session Rating & Feedback', () => {
       cy.setConsultantStatus(2, 'available');
 
       cy.createSupportRequest({
-        requesterId: 8,
+        requesterId: testRequesterId,
         hospitalId: 2,
         department: 'Radiology',
         issueSummary: 'Rating 4 test',
@@ -81,8 +86,8 @@ describe('Session Rating & Feedback', () => {
         if (createResponse.body.status === 'connecting') {
           const sessionId = createResponse.body.sessionId;
 
-          cy.endSupportSession(sessionId, { endedBy: 8 }).then(() => {
-            cy.rateSupportSession(sessionId, 4, '', 8).then((response) => {
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
+            cy.rateSupportSession(sessionId, 4, '', testRequesterId).then((response) => {
               expect(response.status).to.eq(200);
             });
           });
@@ -94,15 +99,15 @@ describe('Session Rating & Feedback', () => {
       cy.setConsultantStatus(1, 'available');
 
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         issueSummary: 'Rating 5 test',
       }).then((createResponse) => {
         if (createResponse.body.status === 'connecting') {
           const sessionId = createResponse.body.sessionId;
 
-          cy.endSupportSession(sessionId, { endedBy: 5 }).then(() => {
-            cy.rateSupportSession(sessionId, 5, '', 5).then((response) => {
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
+            cy.rateSupportSession(sessionId, 5, '', testRequesterId).then((response) => {
               expect(response.status).to.eq(200);
             });
           });
@@ -114,7 +119,7 @@ describe('Session Rating & Feedback', () => {
       cy.setConsultantStatus(2, 'available');
 
       cy.createSupportRequest({
-        requesterId: 8,
+        requesterId: testRequesterId,
         hospitalId: 2,
         department: 'Radiology',
         issueSummary: 'Feedback test',
@@ -122,8 +127,8 @@ describe('Session Rating & Feedback', () => {
         if (createResponse.body.status === 'connecting') {
           const sessionId = createResponse.body.sessionId;
 
-          cy.endSupportSession(sessionId, { endedBy: 8 }).then(() => {
-            cy.rateSupportSession(sessionId, 5, 'Excellent service!', 8).then((response) => {
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
+            cy.rateSupportSession(sessionId, 5, 'Excellent service!', testRequesterId).then((response) => {
               expect(response.status).to.eq(200);
               expect(response.body.success).to.eq(true);
             });
@@ -136,15 +141,15 @@ describe('Session Rating & Feedback', () => {
       cy.setConsultantStatus(1, 'available');
 
       cy.createSupportRequest({
-        requesterId: 6,
+        requesterId: testRequesterId,
         hospitalId: 1,
         issueSummary: 'No feedback test',
       }).then((createResponse) => {
         if (createResponse.body.status === 'connecting') {
           const sessionId = createResponse.body.sessionId;
 
-          cy.endSupportSession(sessionId, { endedBy: 6 }).then(() => {
-            cy.rateSupportSession(sessionId, 4, null, 6).then((response) => {
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
+            cy.rateSupportSession(sessionId, 4, null, testRequesterId).then((response) => {
               expect(response.status).to.eq(200);
             });
           });
@@ -154,9 +159,10 @@ describe('Session Rating & Feedback', () => {
 
     it('only requester can rate', () => {
       cy.setConsultantStatus(2, 'available');
+      const originalRequesterId = testRequesterId;
 
       cy.createSupportRequest({
-        requesterId: 8,
+        requesterId: originalRequesterId,
         hospitalId: 2,
         department: 'Radiology',
         issueSummary: 'Auth rate test',
@@ -164,9 +170,9 @@ describe('Session Rating & Feedback', () => {
         if (createResponse.body.status === 'connecting') {
           const sessionId = createResponse.body.sessionId;
 
-          cy.endSupportSession(sessionId, { endedBy: 8 }).then(() => {
+          cy.endSupportSession(sessionId, { endedBy: originalRequesterId }).then(() => {
             // Try to rate as different user
-            cy.rateSupportSession(sessionId, 5, '', 5).then((response) => {
+            cy.rateSupportSession(sessionId, 5, '', originalRequesterId + 100).then((response) => {
               expect(response.status).to.eq(400);
               expect(response.body.error).to.include('Cannot rate');
             });
@@ -181,12 +187,12 @@ describe('Session Rating & Feedback', () => {
       cy.setConsultantStatus(1, 'available');
 
       // Get current preference state
-      cy.getStaffPreferences(5).then((beforeResponse) => {
+      cy.getStaffPreferences(testRequesterId).then((beforeResponse) => {
         const beforePref = beforeResponse.body.find((p) => p.consultantId === 1);
         const beforeCount = beforePref ? beforePref.successfulSessions : 0;
 
         cy.createSupportRequest({
-          requesterId: 5,
+          requesterId: testRequesterId,
           hospitalId: 1,
           department: 'ER',
           issueSummary: 'Session count test',
@@ -194,9 +200,9 @@ describe('Session Rating & Feedback', () => {
           if (createResponse.body.status === 'connecting') {
             const sessionId = createResponse.body.sessionId;
 
-            cy.endSupportSession(sessionId, { endedBy: 5 }).then(() => {
-              cy.rateSupportSession(sessionId, 5, '', 5).then(() => {
-                cy.getStaffPreferences(5).then((afterResponse) => {
+            cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
+              cy.rateSupportSession(sessionId, 5, '', testRequesterId).then(() => {
+                cy.getStaffPreferences(testRequesterId).then((afterResponse) => {
                   const afterPref = afterResponse.body.find((p) => p.consultantId === 1);
                   if (afterPref) {
                     expect(afterPref.successfulSessions).to.be.gte(beforeCount);
@@ -213,7 +219,7 @@ describe('Session Rating & Feedback', () => {
       cy.setConsultantStatus(2, 'available');
 
       cy.createSupportRequest({
-        requesterId: 8,
+        requesterId: testRequesterId,
         hospitalId: 2,
         department: 'Radiology',
         issueSummary: 'Last session test',
@@ -221,9 +227,9 @@ describe('Session Rating & Feedback', () => {
         if (createResponse.body.status === 'connecting') {
           const sessionId = createResponse.body.sessionId;
 
-          cy.endSupportSession(sessionId, { endedBy: 8 }).then(() => {
-            cy.rateSupportSession(sessionId, 4, '', 8).then(() => {
-              cy.getStaffPreferences(8).then((response) => {
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
+            cy.rateSupportSession(sessionId, 4, '', testRequesterId).then(() => {
+              cy.getStaffPreferences(testRequesterId).then((response) => {
                 const pref = response.body.find((p) => p.consultantId === 2);
                 if (pref) {
                   expect(pref.lastSessionAt).to.be.a('string');
@@ -241,9 +247,8 @@ describe('Session Rating & Feedback', () => {
       cy.setConsultantStatus(2, 'offline');
       cy.setConsultantStatus(3, 'offline');
 
-      // User 9 may not have preference with David (4)
       cy.createSupportRequest({
-        requesterId: 9,
+        requesterId: testRequesterId,
         hospitalId: 2,
         department: 'IT',
         issueSummary: 'New preference test',
@@ -251,9 +256,9 @@ describe('Session Rating & Feedback', () => {
         if (createResponse.body.status === 'connecting') {
           const sessionId = createResponse.body.sessionId;
 
-          cy.endSupportSession(sessionId, { endedBy: 9 }).then(() => {
-            cy.rateSupportSession(sessionId, 5, 'Great help!', 9).then(() => {
-              cy.getStaffPreferences(9).then((response) => {
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
+            cy.rateSupportSession(sessionId, 5, 'Great help!', testRequesterId).then(() => {
+              cy.getStaffPreferences(testRequesterId).then((response) => {
                 // Preference should exist or be created
                 expect(response.body).to.be.an('array');
               });
@@ -271,18 +276,19 @@ describe('Session Rating & Feedback', () => {
   describe('Validation', () => {
     it('rejects rating from non-requester', () => {
       cy.setConsultantStatus(1, 'available');
+      const originalRequesterId = testRequesterId;
 
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: originalRequesterId,
         hospitalId: 1,
         issueSummary: 'Non-requester rate test',
       }).then((createResponse) => {
         if (createResponse.body.status === 'connecting') {
           const sessionId = createResponse.body.sessionId;
 
-          cy.endSupportSession(sessionId, { endedBy: 5 }).then(() => {
-            // Try to rate as user 6 (not the requester)
-            cy.rateSupportSession(sessionId, 5, '', 6).then((response) => {
+          cy.endSupportSession(sessionId, { endedBy: originalRequesterId }).then(() => {
+            // Try to rate as different user (not the requester)
+            cy.rateSupportSession(sessionId, 5, '', originalRequesterId + 100).then((response) => {
               expect(response.status).to.eq(400);
             });
           });
@@ -291,7 +297,7 @@ describe('Session Rating & Feedback', () => {
     });
 
     it('rejects invalid session ID', () => {
-      cy.rateSupportSession(99999, 5, '', 5).then((response) => {
+      cy.rateSupportSession(99999, 5, '', testRequesterId).then((response) => {
         expect(response.status).to.eq(400);
       });
     });
@@ -300,7 +306,7 @@ describe('Session Rating & Feedback', () => {
       cy.setConsultantStatus(2, 'available');
 
       cy.createSupportRequest({
-        requesterId: 8,
+        requesterId: testRequesterId,
         hospitalId: 2,
         department: 'Radiology',
         issueSummary: 'Min rating test',
@@ -308,8 +314,8 @@ describe('Session Rating & Feedback', () => {
         if (createResponse.body.status === 'connecting') {
           const sessionId = createResponse.body.sessionId;
 
-          cy.endSupportSession(sessionId, { endedBy: 8 }).then(() => {
-            cy.rateSupportSession(sessionId, 1, '', 8).then((response) => {
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
+            cy.rateSupportSession(sessionId, 1, '', testRequesterId).then((response) => {
               expect(response.status).to.eq(200);
             });
           });
@@ -321,15 +327,15 @@ describe('Session Rating & Feedback', () => {
       cy.setConsultantStatus(1, 'available');
 
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         issueSummary: 'Max rating test',
       }).then((createResponse) => {
         if (createResponse.body.status === 'connecting') {
           const sessionId = createResponse.body.sessionId;
 
-          cy.endSupportSession(sessionId, { endedBy: 5 }).then(() => {
-            cy.rateSupportSession(sessionId, 5, '', 5).then((response) => {
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
+            cy.rateSupportSession(sessionId, 5, '', testRequesterId).then((response) => {
               expect(response.status).to.eq(200);
             });
           });
@@ -343,7 +349,7 @@ describe('Session Rating & Feedback', () => {
       cy.setConsultantStatus(2, 'available');
 
       cy.createSupportRequest({
-        requesterId: 8,
+        requesterId: testRequesterId,
         hospitalId: 2,
         department: 'Radiology',
         issueSummary: 'Short feedback test',
@@ -351,8 +357,8 @@ describe('Session Rating & Feedback', () => {
         if (createResponse.body.status === 'connecting') {
           const sessionId = createResponse.body.sessionId;
 
-          cy.endSupportSession(sessionId, { endedBy: 8 }).then(() => {
-            cy.rateSupportSession(sessionId, 4, 'Good', 8).then((response) => {
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
+            cy.rateSupportSession(sessionId, 4, 'Good', testRequesterId).then((response) => {
               expect(response.status).to.eq(200);
             });
           });
@@ -367,15 +373,15 @@ describe('Session Rating & Feedback', () => {
         'This was an excellent support session. The consultant was very knowledgeable and helped me solve a complex issue with the patient registration system. They walked me through each step patiently and made sure I understood everything before ending the call.';
 
       cy.createSupportRequest({
-        requesterId: 5,
+        requesterId: testRequesterId,
         hospitalId: 1,
         issueSummary: 'Long feedback test',
       }).then((createResponse) => {
         if (createResponse.body.status === 'connecting') {
           const sessionId = createResponse.body.sessionId;
 
-          cy.endSupportSession(sessionId, { endedBy: 5 }).then(() => {
-            cy.rateSupportSession(sessionId, 5, longFeedback, 5).then((response) => {
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
+            cy.rateSupportSession(sessionId, 5, longFeedback, testRequesterId).then((response) => {
               expect(response.status).to.eq(200);
             });
           });
@@ -387,7 +393,7 @@ describe('Session Rating & Feedback', () => {
       cy.setConsultantStatus(2, 'available');
 
       cy.createSupportRequest({
-        requesterId: 8,
+        requesterId: testRequesterId,
         hospitalId: 2,
         department: 'Radiology',
         issueSummary: 'Empty feedback test',
@@ -395,8 +401,8 @@ describe('Session Rating & Feedback', () => {
         if (createResponse.body.status === 'connecting') {
           const sessionId = createResponse.body.sessionId;
 
-          cy.endSupportSession(sessionId, { endedBy: 8 }).then(() => {
-            cy.rateSupportSession(sessionId, 3, '', 8).then((response) => {
+          cy.endSupportSession(sessionId, { endedBy: testRequesterId }).then(() => {
+            cy.rateSupportSession(sessionId, 3, '', testRequesterId).then((response) => {
               expect(response.status).to.eq(200);
             });
           });
