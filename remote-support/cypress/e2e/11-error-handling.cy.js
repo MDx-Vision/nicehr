@@ -5,6 +5,13 @@ describe('Error Handling', () => {
   const API_URL = Cypress.env('apiUrl') || 'http://localhost:3002';
   let testRequesterId = 1100;
 
+  // Reset all consultant statuses before this test file runs
+  before(() => {
+    [1, 2, 3, 4].forEach((id) => {
+      cy.setConsultantStatus(id, 'available');
+    });
+  });
+
   beforeEach(() => {
     testRequesterId++;
   });
