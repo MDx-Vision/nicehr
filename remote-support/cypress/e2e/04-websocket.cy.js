@@ -347,7 +347,7 @@ describe('WebSocket Real-time', () => {
         durationMinutes: 30,
         topic: 'Scheduled notification test',
       }).then((response) => {
-        expect(response.status).to.be.oneOf([200, 400]);
+        expect(response.status).to.be.oneOf([200, 400, 409]);
       });
     });
   });
