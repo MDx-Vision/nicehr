@@ -8,6 +8,29 @@
 import type { Request, Response, NextFunction } from 'express';
 
 /**
+ * Represents an authenticated user with required id field.
+ */
+interface AuthenticatedUser {
+  id: number;
+  [key: string]: unknown;
+}
+
+/**
+ * Type guard to check if a value is an authenticated user with numeric id.
+ *
+ * @param user - The user object to validate
+ * @returns True if the user has a valid numeric id
+ */
+function isAuthenticatedUser(user: unknown): user is AuthenticatedUser {
+  return (
+    typeof user === 'object' &&
+    user !== null &&
+    'id' in user &&
+    typeof (user as AuthenticatedUser).id === 'number'
+  );
+}
+
+/**
  * Represents a single audit log entry for PHI access tracking.
  * All fields align with HIPAA audit requirements.
  */
@@ -34,18 +57,18 @@ export async function logPHIAccess(entry: AuditLogEntry): Promise<void> {
   const timestamp = new Date().toISOString();
   const logEntry = { ...entry, timestamp };
 
-  // Log to console in development
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`[HIPAA AUDIT] ${timestamp}`, {
-      user: entry.userId,
-      action: entry.action,
-      resource: `${entry.resourceType}:${entry.resourceId}`,
-    });
-  }
-
-  // In production, write to secure audit log database
-  // TODO: Implement database storage with append-only, tamper-evident table
   try {
+    // Log to console in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[HIPAA AUDIT] ${timestamp}`, {
+        user: entry.userId,
+        action: entry.action,
+        resource: `${entry.resourceType}:${entry.resourceId}`,
+      });
+    }
+
+    // In production, write to secure audit log database
+    // TODO: Implement database storage with append-only, tamper-evident table
     if (process.env.NODE_ENV === 'production') {
       // await db.insert(auditLogs).values(logEntry);
       console.log(`[HIPAA AUDIT] ${timestamp}`, JSON.stringify(logEntry));
@@ -80,11 +103,11 @@ export function createAuditMiddleware(
     const originalSend = res.send.bind(res);
 
     res.send = function(body: unknown): Response {
-      // Only log successful responses
-      if (res.statusCode >= 200 && res.statusCode < 300 && req.user) {
+      // Only log successful responses with valid authenticated user
+      if (res.statusCode >= 200 && res.statusCode < 300 && isAuthenticatedUser(req.user)) {
         // Fire async logging but don't block response
         void logPHIAccess({
-          userId: (req.user as { id: number }).id,
+          userId: req.user.id,
           action: methodToAction(req.method),
           resourceType,
           resourceId: req.params.id || 'list',
