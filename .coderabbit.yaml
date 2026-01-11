@@ -54,22 +54,17 @@ reviews:
         - Index considerations
         - Migration compatibility
 
+  # Tool integrations (under reviews)
+  tools:
+    eslint:
+      enabled: true
+    gitleaks:
+      enabled: true
+    yamllint:
+      enabled: true
+
 chat:
   auto_reply: true
-
-# Tool integrations
-tools:
-  # TypeScript/JavaScript
-  eslint:
-    enabled: true
-
-  # Security scanning
-  gitleaks:
-    enabled: true
-
-  # YAML validation
-  yamllint:
-    enabled: true
 
 # Knowledge base settings
 knowledge_base:
