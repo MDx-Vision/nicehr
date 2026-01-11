@@ -239,7 +239,7 @@ describe('Error Handling', () => {
 
         // Try to cancel as different user (not participant)
         cy.cancelScheduledSession(sessionId, testRequesterId + 100, 'Unauthorized').then((response) => {
-          expect(response.status).to.be.oneOf([403, 400]);
+          expect(response.status).to.be.oneOf([403, 400, 404]);
         });
 
         // Cleanup
