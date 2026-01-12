@@ -511,8 +511,6 @@ import {
   schedulingRecommendations,
   autoAssignmentLogs,
   schedulingConfigs,
-  consultantEhrExperience,
-  consultantSkills,
   type SchedulingRecommendation,
   type InsertSchedulingRecommendation,
   type AutoAssignmentLog,
@@ -2009,7 +2007,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(consultants.userId, users.id))
       .orderBy(desc(consultants.createdAt));
 
-    return result.map(row => ({
+    return result.map((row: typeof result[0]) => ({
       ...row.consultant,
       user: row.user,
     }));
@@ -2286,7 +2284,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(projectSchedules, eq(scheduleAssignments.scheduleId, projectSchedules.id))
       .where(eq(scheduleAssignments.consultantId, consultantId));
 
-    return assignments.map(row => ({
+    return assignments.map((row: typeof assignments[0]) => ({
       ...row.assignment,
       schedule: row.schedule || undefined,
     }));
@@ -2301,7 +2299,7 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(projects, eq(projectSchedules.projectId, projects.id))
       .where(eq(scheduleAssignments.consultantId, consultantId));
     
-    return results.map(r => r.projectId);
+    return results.map((r: typeof results[0]) => r.projectId);
   }
 
   async createScheduleAssignment(assignment: InsertScheduleAssignment): Promise<ScheduleAssignment> {
@@ -2543,7 +2541,7 @@ export class DatabaseStorage implements IStorage {
         .limit(20);
     }
 
-    return tasksQuery.map(task => ({
+    return tasksQuery.map((task: typeof tasksQuery[0]) => ({
       id: task.id,
       title: task.title,
       priority: task.priority,
@@ -2814,10 +2812,10 @@ export class DatabaseStorage implements IStorage {
       .from(consultants)
       .where(sql`${consultants.modules} IS NOT NULL AND array_length(${consultants.modules}, 1) > 0`);
 
-    const availableEmrSystems = Array.from(new Set(allEmrSystems.map(r => r.emrSystem).filter(Boolean))).sort();
-    const availableModules = Array.from(new Set(allModules.map(r => r.module).filter(Boolean))).sort();
+    const availableEmrSystems = Array.from(new Set(allEmrSystems.map((r: { emrSystem: string }) => r.emrSystem).filter(Boolean))).sort() as string[];
+    const availableModules = Array.from(new Set(allModules.map((r: { module: string }) => r.module).filter(Boolean))).sort() as string[];
 
-    const formattedConsultants: ConsultantDirectoryItem[] = consultantsResult.map(c => ({
+    const formattedConsultants: ConsultantDirectoryItem[] = consultantsResult.map((c: typeof consultantsResult[0]) => ({
       id: c.id,
       tngId: c.tngId,
       userId: c.userId,
@@ -2874,7 +2872,7 @@ export class DatabaseStorage implements IStorage {
       total: 0,
     };
 
-    documentStats.forEach(stat => {
+    documentStats.forEach((stat: typeof documentStats[0]) => {
       const count = Number(stat.count);
       docCounts[stat.status as keyof typeof docCounts] = count;
       docCounts.total += count;
@@ -3144,7 +3142,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(userActivities.createdAt))
       .limit(limit);
 
-    return results.map((r) => ({
+    return results.map((r: typeof results[0]) => ({
       id: r.id,
       userId: r.userId,
       activityType: r.activityType,
@@ -3391,7 +3389,7 @@ export class DatabaseStorage implements IStorage {
         total: totalDocs,
         complianceRate,
       },
-      activityTrend: activityTrend.map(row => ({
+      activityTrend: activityTrend.map((row: typeof activityTrend[0]) => ({
         date: String(row.date),
         count: Number(row.count),
       })),
@@ -3400,7 +3398,7 @@ export class DatabaseStorage implements IStorage {
         hospital_staff: Number(userCounts?.hospital_staff || 0),
         consultant: Number(userCounts?.consultant || 0),
       },
-      recentActivity: recentActivity.map(row => ({
+      recentActivity: recentActivity.map((row: typeof recentActivity[0]) => ({
         date: String(row.date),
         logins: Number(row.logins),
         actions: Number(row.actions),
@@ -3429,7 +3427,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(projects.hospitalId, hospitalId));
 
     // Get budget calculations for this hospital's projects
-    const projectIds = hospitalProjects.map(p => p.id);
+    const projectIds = hospitalProjects.map((p: typeof hospitalProjects[0]) => p.id);
     let totalSavings = 0;
     let laborSavings = 0;
     let benefitsSavings = 0;
@@ -3439,7 +3437,7 @@ export class DatabaseStorage implements IStorage {
       const budgetCalcs = await db
         .select()
         .from(budgetCalculations)
-        .where(sql`${budgetCalculations.projectId} = ANY(ARRAY[${sql.raw(projectIds.map(id => `'${id}'`).join(','))}]::varchar[])`);
+        .where(sql`${budgetCalculations.projectId} = ANY(ARRAY[${sql.raw(projectIds.map((id: string) => `'${id}'`).join(','))}]::varchar[])`);
 
       for (const calc of budgetCalcs) {
         totalSavings += Number(calc.totalSavings || 0);
@@ -3453,7 +3451,7 @@ export class DatabaseStorage implements IStorage {
 
     // Project breakdown
     const projectBreakdown = await Promise.all(
-      hospitalProjects.map(async (project) => {
+      hospitalProjects.map(async (project: typeof hospitalProjects[0]) => {
         const [assignmentCount] = await db
           .select({ count: sql<number>`COUNT(DISTINCT ${scheduleAssignments.consultantId})` })
           .from(scheduleAssignments)
@@ -3659,8 +3657,8 @@ export class DatabaseStorage implements IStorage {
     let nextRenewalDate: string | null = null;
     let compliantCount = 0;
 
-    const requiredDocuments: TrainingStatus['requiredDocuments'] = allDocTypes.map(docType => {
-      const doc = consultantDocs.find(d => d.documentTypeId === docType.id);
+    const requiredDocuments: TrainingStatus['requiredDocuments'] = allDocTypes.map((docType: typeof allDocTypes[0]) => {
+      const doc = consultantDocs.find((d: typeof consultantDocs[0]) => d.documentTypeId === docType.id);
       
       let status: TrainingStatus['requiredDocuments'][0]['status'] = 'missing';
       let expirationDate: string | null = null;
@@ -4284,7 +4282,7 @@ export class DatabaseStorage implements IStorage {
       )
       .orderBy(desc(goLiveSignIns.signInTime));
 
-    return results.map((row) => ({
+    return results.map((row: typeof results[0]) => ({
       ...row.signIn,
       consultant: row.consultant,
       user: row.user,
@@ -4380,9 +4378,9 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(supportTickets.priority), desc(supportTickets.createdAt));
 
     const ticketsWithAssignee = await Promise.all(
-      results.map(async (row) => {
+      results.map(async (row: typeof results[0]) => {
         let assignedTo: SupportTicketWithDetails['assignedTo'] = null;
-        
+
         if (row.ticket.assignedToId) {
           const consultant = await this.getConsultant(row.ticket.assignedToId);
           if (consultant) {
@@ -4524,9 +4522,9 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(shiftHandoffs.createdAt));
 
     const handoffsWithDetails = await Promise.all(
-      results.map(async (row) => {
+      results.map(async (row: typeof results[0]) => {
         const outgoingConsultant = await this.getConsultant(row.handoff.outgoingConsultantId);
-        const outgoingUser = outgoingConsultant 
+        const outgoingUser = outgoingConsultant
           ? await this.getUser(outgoingConsultant.userId)
           : null;
 
@@ -4699,7 +4697,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(timesheets.consultantId, consultantId))
       .orderBy(desc(timesheets.weekStartDate));
 
-    return Promise.all(results.map((ts) => this.buildTimesheetWithDetails(ts)));
+    return Promise.all(results.map((ts: typeof results[0]) => this.buildTimesheetWithDetails(ts)));
   }
 
   async getAllTimesheets(): Promise<TimesheetWithDetails[]> {
@@ -4709,7 +4707,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(timesheets.weekStartDate))
       .limit(100);
 
-    return Promise.all(results.map((ts) => this.buildTimesheetWithDetails(ts)));
+    return Promise.all(results.map((ts: typeof results[0]) => this.buildTimesheetWithDetails(ts)));
   }
 
   async getTimesheetsByProject(projectId: string): Promise<TimesheetWithDetails[]> {
@@ -4719,7 +4717,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(timesheets.projectId, projectId))
       .orderBy(desc(timesheets.weekStartDate));
 
-    return Promise.all(results.map((ts) => this.buildTimesheetWithDetails(ts)));
+    return Promise.all(results.map((ts: typeof results[0]) => this.buildTimesheetWithDetails(ts)));
   }
 
   async getPendingTimesheets(): Promise<TimesheetWithDetails[]> {
@@ -4729,7 +4727,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(timesheets.status, "submitted"))
       .orderBy(asc(timesheets.submittedAt));
 
-    return Promise.all(results.map((ts) => this.buildTimesheetWithDetails(ts)));
+    return Promise.all(results.map((ts: typeof results[0]) => this.buildTimesheetWithDetails(ts)));
   }
 
   async updateTimesheet(id: string, data: Partial<InsertTimesheet>): Promise<Timesheet | undefined> {
@@ -5003,7 +5001,7 @@ export class DatabaseStorage implements IStorage {
       )
       .orderBy(desc(shiftSwapRequests.createdAt));
 
-    return Promise.all(results.map((req) => this.buildSwapRequestWithDetails(req)));
+    return Promise.all(results.map((req: typeof results[0]) => this.buildSwapRequestWithDetails(req)));
   }
 
   async getPendingSwapRequests(): Promise<ShiftSwapRequestWithDetails[]> {
@@ -5013,7 +5011,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(shiftSwapRequests.status, "pending"))
       .orderBy(asc(shiftSwapRequests.requestedAt));
 
-    return Promise.all(results.map((req) => this.buildSwapRequestWithDetails(req)));
+    return Promise.all(results.map((req: typeof results[0]) => this.buildSwapRequestWithDetails(req)));
   }
 
   async approveSwapRequest(id: string, responderId: string, notes?: string): Promise<ShiftSwapRequest | undefined> {
@@ -5162,7 +5160,7 @@ export class DatabaseStorage implements IStorage {
       : db.select().from(courses);
 
     const results = await query.orderBy(desc(courses.createdAt));
-    return Promise.all(results.map((c) => this.buildCourseWithDetails(c)));
+    return Promise.all(results.map((c: typeof results[0]) => this.buildCourseWithDetails(c)));
   }
 
   async updateCourse(id: string, data: Partial<InsertCourse>): Promise<Course | undefined> {
@@ -5260,7 +5258,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(courseEnrollments.userId, userId))
       .orderBy(desc(courseEnrollments.enrolledAt));
 
-    return Promise.all(results.map((e) => this.buildEnrollmentWithDetails(e)));
+    return Promise.all(results.map((e: typeof results[0]) => this.buildEnrollmentWithDetails(e)));
   }
 
   async getEnrollmentsByCourse(courseId: string): Promise<CourseEnrollmentWithDetails[]> {
@@ -5270,7 +5268,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(courseEnrollments.courseId, courseId))
       .orderBy(desc(courseEnrollments.enrolledAt));
 
-    return Promise.all(results.map((e) => this.buildEnrollmentWithDetails(e)));
+    return Promise.all(results.map((e: typeof results[0]) => this.buildEnrollmentWithDetails(e)));
   }
 
   async updateEnrollmentProgress(id: string, data: { progressPercent?: number; status?: string; completedAt?: Date; ceCreditsEarned?: string; certificateUrl?: string }): Promise<CourseEnrollment | undefined> {
@@ -5460,7 +5458,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(assessmentAttempts.userId, userId))
       .orderBy(desc(assessmentAttempts.startedAt));
 
-    return Promise.all(results.map((a) => this.buildAttemptWithDetails(a)));
+    return Promise.all(results.map((a: typeof results[0]) => this.buildAttemptWithDetails(a)));
   }
 
   async getAttemptsByAssessment(assessmentId: string): Promise<AssessmentAttemptWithDetails[]> {
@@ -5470,7 +5468,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(assessmentAttempts.assessmentId, assessmentId))
       .orderBy(desc(assessmentAttempts.startedAt));
 
-    return Promise.all(results.map((a) => this.buildAttemptWithDetails(a)));
+    return Promise.all(results.map((a: typeof results[0]) => this.buildAttemptWithDetails(a)));
   }
 
   async getAttemptCount(userId: string, assessmentId: string): Promise<number> {
@@ -5546,7 +5544,7 @@ export class DatabaseStorage implements IStorage {
       : db.select().from(loginLabs);
 
     const results = await query.orderBy(desc(loginLabs.scheduledAt));
-    return Promise.all(results.map((l) => this.buildLoginLabWithDetails(l)));
+    return Promise.all(results.map((l: typeof results[0]) => this.buildLoginLabWithDetails(l)));
   }
 
   async updateLoginLab(id: string, data: Partial<InsertLoginLab>): Promise<LoginLab | undefined> {
@@ -5613,7 +5611,7 @@ export class DatabaseStorage implements IStorage {
       .from(loginLabParticipants)
       .where(eq(loginLabParticipants.loginLabId, loginLabId));
 
-    return Promise.all(results.map(async (p) => {
+    return Promise.all(results.map(async (p: typeof results[0]) => {
       const user = await this.getUser(p.userId);
       return {
         ...p,
@@ -5691,7 +5689,7 @@ export class DatabaseStorage implements IStorage {
       : db.select().from(knowledgeArticles);
 
     const results = await queryBuilder.orderBy(desc(knowledgeArticles.updatedAt));
-    return Promise.all(results.map((a) => this.buildArticleWithDetails(a)));
+    return Promise.all(results.map((a: typeof results[0]) => this.buildArticleWithDetails(a)));
   }
 
   async updateArticle(id: string, data: Partial<InsertKnowledgeArticle>): Promise<KnowledgeArticle | undefined> {
@@ -5816,7 +5814,7 @@ export class DatabaseStorage implements IStorage {
       .limit(10);
 
     const recentEnrollments = await Promise.all(
-      recentEnrollmentsResults.map((e) => this.buildEnrollmentWithDetails(e))
+      recentEnrollmentsResults.map((e: typeof recentEnrollmentsResults[0]) => this.buildEnrollmentWithDetails(e))
     );
 
     const popularCoursesResults = await db
@@ -5831,7 +5829,7 @@ export class DatabaseStorage implements IStorage {
       .limit(5);
 
     const popularCourses = await Promise.all(
-      popularCoursesResults.map(async (pc) => {
+      popularCoursesResults.map(async (pc: typeof popularCoursesResults[0]) => {
         const courseResults = await db
           .select()
           .from(courses)
@@ -5922,7 +5920,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(eodReports)
       .where(and(...conditions));
-    return Promise.all(results.map((r) => this.buildEodReportWithDetails(r)));
+    return Promise.all(results.map((r: typeof results[0]) => this.buildEodReportWithDetails(r)));
   }
 
   async createEodReport(report: InsertEodReport): Promise<EodReport> {
@@ -6057,7 +6055,7 @@ export class DatabaseStorage implements IStorage {
       .from(ticketHistory)
       .where(eq(ticketHistory.ticketId, ticketId))
       .orderBy(desc(ticketHistory.createdAt));
-    return Promise.all(results.map((h) => this.buildTicketHistoryWithDetails(h)));
+    return Promise.all(results.map((h: typeof results[0]) => this.buildTicketHistoryWithDetails(h)));
   }
 
   async createTicketHistory(entry: InsertTicketHistory): Promise<TicketHistory> {
@@ -6091,7 +6089,7 @@ export class DatabaseStorage implements IStorage {
       .from(ticketComments)
       .where(eq(ticketComments.ticketId, ticketId))
       .orderBy(asc(ticketComments.createdAt));
-    return Promise.all(results.map((c) => this.buildTicketCommentWithDetails(c)));
+    return Promise.all(results.map((c: typeof results[0]) => this.buildTicketCommentWithDetails(c)));
   }
 
   async createTicketComment(comment: InsertTicketComment): Promise<TicketComment> {
@@ -6240,7 +6238,7 @@ export class DatabaseStorage implements IStorage {
       .limit(10);
 
     const recentReports = await Promise.all(
-      recentReportsResults.map((r) => this.buildEodReportWithDetails(r))
+      recentReportsResults.map((r: typeof recentReportsResults[0]) => this.buildEodReportWithDetails(r))
     );
 
     const reportsByProjectResults = await db
@@ -6254,7 +6252,7 @@ export class DatabaseStorage implements IStorage {
       .limit(10);
 
     const reportsByProject = await Promise.all(
-      reportsByProjectResults.map(async (rp) => {
+      reportsByProjectResults.map(async (rp: typeof reportsByProjectResults[0]) => {
         const project = await this.getProject(rp.projectId);
         return {
           projectId: rp.projectId,
@@ -6475,7 +6473,7 @@ export class DatabaseStorage implements IStorage {
       ? await db.select().from(expenses).where(and(...conditions)).orderBy(desc(expenses.createdAt))
       : await db.select().from(expenses).orderBy(desc(expenses.createdAt));
 
-    return Promise.all(results.map((e) => this.buildExpenseWithDetails(e)));
+    return Promise.all(results.map((e: typeof results[0]) => this.buildExpenseWithDetails(e)));
   }
 
   async getExpense(id: string): Promise<ExpenseWithDetails | undefined> {
@@ -6576,12 +6574,12 @@ export class DatabaseStorage implements IStorage {
       totalExpenses: Number(totalResult[0]?.count) || 0,
       pendingApproval: Number(pendingResult[0]?.count) || 0,
       totalAmount: totalAmountResult[0]?.sum || "0",
-      byCategory: byCategoryResults.map((r) => ({
+      byCategory: byCategoryResults.map((r: typeof byCategoryResults[0]) => ({
         category: r.category,
         count: Number(r.count) || 0,
         amount: r.amount || "0",
       })),
-      byStatus: byStatusResults.map((r) => ({
+      byStatus: byStatusResults.map((r: typeof byStatusResults[0]) => ({
         status: r.status,
         count: Number(r.count) || 0,
         amount: r.amount || "0",
@@ -6676,7 +6674,7 @@ export class DatabaseStorage implements IStorage {
       ? await db.select().from(invoices).where(and(...conditions)).orderBy(desc(invoices.createdAt))
       : await db.select().from(invoices).orderBy(desc(invoices.createdAt));
 
-    return Promise.all(results.map((inv) => this.buildInvoiceWithDetails(inv)));
+    return Promise.all(results.map((inv: typeof results[0]) => this.buildInvoiceWithDetails(inv)));
   }
 
   async getInvoice(id: string): Promise<InvoiceWithDetails | undefined> {
@@ -6949,7 +6947,7 @@ export class DatabaseStorage implements IStorage {
       ? await db.select().from(payrollBatches).where(and(...conditions)).orderBy(desc(payrollBatches.createdAt))
       : await db.select().from(payrollBatches).orderBy(desc(payrollBatches.createdAt));
 
-    return Promise.all(results.map((batch) => this.buildPayrollBatchWithDetails(batch)));
+    return Promise.all(results.map((batch: typeof results[0]) => this.buildPayrollBatchWithDetails(batch)));
   }
 
   async getPayrollBatch(id: string): Promise<PayrollBatchWithDetails | undefined> {
@@ -7041,7 +7039,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(payrollEntries)
       .where(eq(payrollEntries.batchId, batchId));
-    return Promise.all(results.map((entry) => this.buildPayrollEntryWithDetails(entry)));
+    return Promise.all(results.map((entry: typeof results[0]) => this.buildPayrollEntryWithDetails(entry)));
   }
 
   async createPayrollEntry(entry: InsertPayrollEntry): Promise<PayrollEntry> {
@@ -7093,7 +7091,7 @@ export class DatabaseStorage implements IStorage {
       .from(paycheckStubs)
       .where(eq(paycheckStubs.consultantId, consultantId))
       .orderBy(desc(paycheckStubs.payDate));
-    return Promise.all(results.map((stub) => this.buildPaycheckStubWithDetails(stub)));
+    return Promise.all(results.map((stub: typeof results[0]) => this.buildPaycheckStubWithDetails(stub)));
   }
 
   async getPaycheckStub(id: string): Promise<PaycheckStubWithDetails | undefined> {
@@ -7154,7 +7152,7 @@ export class DatabaseStorage implements IStorage {
       .limit(5);
 
     const recentBatches = await Promise.all(
-      recentBatchesResults.map((batch) => this.buildPayrollBatchWithDetails(batch))
+      recentBatchesResults.map((batch: typeof recentBatchesResults[0]) => this.buildPayrollBatchWithDetails(batch))
     );
 
     return {
@@ -7179,7 +7177,7 @@ export class DatabaseStorage implements IStorage {
           .from(budgetScenarios)
           .orderBy(desc(budgetScenarios.createdAt));
 
-    return Promise.all(results.map((scenario) => this.buildBudgetScenarioWithMetrics(scenario)));
+    return Promise.all(results.map((scenario: typeof results[0]) => this.buildBudgetScenarioWithMetrics(scenario)));
   }
 
   async getBudgetScenario(id: string): Promise<BudgetScenarioWithMetrics | undefined> {
@@ -7338,7 +7336,7 @@ export class DatabaseStorage implements IStorage {
       ? await db.select().from(travelBookings).where(and(...conditions)).orderBy(desc(travelBookings.createdAt))
       : await db.select().from(travelBookings).orderBy(desc(travelBookings.createdAt));
 
-    return Promise.all(results.map((b) => this.buildTravelBookingWithDetails(b)));
+    return Promise.all(results.map((b: typeof results[0]) => this.buildTravelBookingWithDetails(b)));
   }
 
   async getTravelBooking(id: string): Promise<TravelBookingWithDetails | undefined> {
@@ -7420,7 +7418,7 @@ export class DatabaseStorage implements IStorage {
       ? await db.select().from(travelItineraries).where(and(...conditions)).orderBy(desc(travelItineraries.startDate))
       : await db.select().from(travelItineraries).orderBy(desc(travelItineraries.startDate));
 
-    return Promise.all(results.map((i) => this.buildTravelItineraryWithDetails(i)));
+    return Promise.all(results.map((i: typeof results[0]) => this.buildTravelItineraryWithDetails(i)));
   }
 
   async getTravelItinerary(id: string): Promise<TravelItineraryWithDetails | undefined> {
@@ -7529,7 +7527,7 @@ export class DatabaseStorage implements IStorage {
       ? await db.select().from(carpoolGroups).where(and(...conditions)).orderBy(desc(carpoolGroups.departureDate))
       : await db.select().from(carpoolGroups).orderBy(desc(carpoolGroups.departureDate));
 
-    return Promise.all(results.map((g) => this.buildCarpoolGroupWithDetails(g)));
+    return Promise.all(results.map((g: typeof results[0]) => this.buildCarpoolGroupWithDetails(g)));
   }
 
   async getCarpoolGroup(id: string): Promise<CarpoolGroupWithDetails | undefined> {
@@ -7584,7 +7582,7 @@ export class DatabaseStorage implements IStorage {
       .from(carpoolMembers)
       .where(eq(carpoolMembers.carpoolId, carpoolId));
 
-    return Promise.all(results.map((m) => this.buildCarpoolMemberWithDetails(m)));
+    return Promise.all(results.map((m: typeof results[0]) => this.buildCarpoolMemberWithDetails(m)));
   }
 
   async getAvailableCarpools(projectId: string, date: string): Promise<CarpoolGroupWithDetails[]> {
@@ -7600,7 +7598,7 @@ export class DatabaseStorage implements IStorage {
       )
       .orderBy(asc(carpoolGroups.departureTime));
 
-    return Promise.all(results.map((g) => this.buildCarpoolGroupWithDetails(g)));
+    return Promise.all(results.map((g: typeof results[0]) => this.buildCarpoolGroupWithDetails(g)));
   }
 
   private async buildCarpoolGroupWithDetails(group: CarpoolGroup): Promise<CarpoolGroupWithDetails> {
@@ -7798,7 +7796,7 @@ export class DatabaseStorage implements IStorage {
       .limit(10);
 
     const upcomingTrips = await Promise.all(
-      upcomingItinerariesResults.map((i) => this.buildTravelItineraryWithDetails(i))
+      upcomingItinerariesResults.map((i: typeof upcomingItinerariesResults[0]) => this.buildTravelItineraryWithDetails(i))
     );
 
     return {
@@ -7807,12 +7805,12 @@ export class DatabaseStorage implements IStorage {
       confirmedBookings: Number(confirmedResult[0]?.count) || 0,
       totalEstimatedCost: estimatedCostResult[0]?.sum || "0",
       totalActualCost: actualCostResult[0]?.sum || "0",
-      bookingsByType: byTypeResults.map((r) => ({
+      bookingsByType: byTypeResults.map((r: typeof byTypeResults[0]) => ({
         type: r.type,
         count: Number(r.count) || 0,
         cost: r.cost || "0",
       })),
-      bookingsByStatus: byStatusResults.map((r) => ({
+      bookingsByStatus: byStatusResults.map((r: typeof byStatusResults[0]) => ({
         status: r.status,
         count: Number(r.count) || 0,
       })),
@@ -7857,14 +7855,14 @@ export class DatabaseStorage implements IStorage {
       .limit(10);
 
     const recentGroups = await Promise.all(
-      recentGroupsResults.map((g) => this.buildCarpoolGroupWithDetails(g))
+      recentGroupsResults.map((g: typeof recentGroupsResults[0]) => this.buildCarpoolGroupWithDetails(g))
     );
 
     return {
       totalGroups: Number(totalResult[0]?.count) || 0,
       openGroups: Number(openResult[0]?.count) || 0,
       totalMembers: Number(totalMembersResult[0]?.count) || 0,
-      groupsByStatus: byStatusResults.map((r) => ({
+      groupsByStatus: byStatusResults.map((r: typeof byStatusResults[0]) => ({
         status: r.status,
         count: Number(r.count) || 0,
       })),
@@ -7893,7 +7891,7 @@ export class DatabaseStorage implements IStorage {
       ? await db.select().from(consultantScorecards).where(and(...conditions)).orderBy(desc(consultantScorecards.createdAt))
       : await db.select().from(consultantScorecards).orderBy(desc(consultantScorecards.createdAt));
 
-    return Promise.all(results.map((s) => this.buildConsultantScorecardWithDetails(s)));
+    return Promise.all(results.map((s: typeof results[0]) => this.buildConsultantScorecardWithDetails(s)));
   }
 
   async createConsultantScorecard(scorecard: InsertConsultantScorecard): Promise<ConsultantScorecard> {
@@ -7956,7 +7954,7 @@ export class DatabaseStorage implements IStorage {
       ? await db.select().from(pulseSurveys).where(and(...conditions)).orderBy(desc(pulseSurveys.createdAt))
       : await db.select().from(pulseSurveys).orderBy(desc(pulseSurveys.createdAt));
 
-    return Promise.all(results.map((s) => this.buildPulseSurveyWithDetails(s)));
+    return Promise.all(results.map((s: typeof results[0]) => this.buildPulseSurveyWithDetails(s)));
   }
 
   async listActivePulseSurveys(): Promise<PulseSurveyWithDetails[]> {
@@ -7971,7 +7969,7 @@ export class DatabaseStorage implements IStorage {
       ))
       .orderBy(desc(pulseSurveys.createdAt));
 
-    return Promise.all(results.map((s) => this.buildPulseSurveyWithDetails(s)));
+    return Promise.all(results.map((s: typeof results[0]) => this.buildPulseSurveyWithDetails(s)));
   }
 
   async createPulseSurvey(survey: InsertPulseSurvey): Promise<PulseSurvey> {
@@ -8030,7 +8028,7 @@ export class DatabaseStorage implements IStorage {
       ? await db.select().from(pulseResponses).where(and(...conditions)).orderBy(desc(pulseResponses.submittedAt))
       : await db.select().from(pulseResponses).orderBy(desc(pulseResponses.submittedAt));
 
-    return Promise.all(results.map((r) => this.buildPulseResponseWithDetails(r)));
+    return Promise.all(results.map((r: typeof results[0]) => this.buildPulseResponseWithDetails(r)));
   }
 
   async createPulseResponse(response: InsertPulseResponse): Promise<PulseResponse> {
@@ -8153,7 +8151,7 @@ export class DatabaseStorage implements IStorage {
       ? await db.select().from(incidents).where(and(...conditions)).orderBy(desc(incidents.createdAt))
       : await db.select().from(incidents).orderBy(desc(incidents.createdAt));
 
-    return Promise.all(results.map((i) => this.buildIncidentWithDetails(i)));
+    return Promise.all(results.map((i: typeof results[0]) => this.buildIncidentWithDetails(i)));
   }
 
   async createIncident(incident: InsertIncident): Promise<Incident> {
@@ -8230,7 +8228,7 @@ export class DatabaseStorage implements IStorage {
       ? await db.select().from(correctiveActions).where(and(...conditions)).orderBy(desc(correctiveActions.createdAt))
       : await db.select().from(correctiveActions).orderBy(desc(correctiveActions.createdAt));
 
-    return Promise.all(results.map((a) => this.buildCorrectiveActionWithDetails(a)));
+    return Promise.all(results.map((a: typeof results[0]) => this.buildCorrectiveActionWithDetails(a)));
   }
 
   async createCorrectiveAction(action: InsertCorrectiveAction): Promise<CorrectiveAction> {
@@ -8327,7 +8325,7 @@ export class DatabaseStorage implements IStorage {
       ? await db.select().from(consultantBadges).where(and(...conditions)).orderBy(desc(consultantBadges.earnedAt))
       : await db.select().from(consultantBadges).orderBy(desc(consultantBadges.earnedAt));
 
-    return Promise.all(results.map((b) => this.buildConsultantBadgeWithDetails(b)));
+    return Promise.all(results.map((b: typeof results[0]) => this.buildConsultantBadgeWithDetails(b)));
   }
 
   async awardBadgeToConsultant(data: InsertConsultantBadge): Promise<ConsultantBadge> {
@@ -8380,7 +8378,7 @@ export class DatabaseStorage implements IStorage {
       ? await db.select().from(pointTransactions).where(and(...conditions)).orderBy(desc(pointTransactions.createdAt))
       : await db.select().from(pointTransactions).orderBy(desc(pointTransactions.createdAt));
 
-    return Promise.all(results.map((t) => this.buildPointTransactionWithDetails(t)));
+    return Promise.all(results.map((t: typeof results[0]) => this.buildPointTransactionWithDetails(t)));
   }
 
   async createPointTransaction(transaction: InsertPointTransaction): Promise<PointTransaction> {
@@ -8437,7 +8435,7 @@ export class DatabaseStorage implements IStorage {
       ? await db.select().from(referrals).where(and(...conditions)).orderBy(desc(referrals.createdAt))
       : await db.select().from(referrals).orderBy(desc(referrals.createdAt));
 
-    return Promise.all(results.map((r) => this.buildReferralWithDetails(r)));
+    return Promise.all(results.map((r: typeof results[0]) => this.buildReferralWithDetails(r)));
   }
 
   async createReferral(referral: InsertReferral): Promise<Referral> {
@@ -8501,7 +8499,7 @@ export class DatabaseStorage implements IStorage {
       ? await db.select().from(complianceChecks).where(and(...conditions)).orderBy(desc(complianceChecks.checkDate))
       : await db.select().from(complianceChecks).orderBy(desc(complianceChecks.checkDate));
 
-    return Promise.all(results.map((c) => this.buildComplianceCheckWithDetails(c)));
+    return Promise.all(results.map((c: typeof results[0]) => this.buildComplianceCheckWithDetails(c)));
   }
 
   async listExpiringComplianceChecks(withinDays: number): Promise<ComplianceCheckWithDetails[]> {
@@ -8519,7 +8517,7 @@ export class DatabaseStorage implements IStorage {
       ))
       .orderBy(asc(complianceChecks.expirationDate));
 
-    return Promise.all(results.map((c) => this.buildComplianceCheckWithDetails(c)));
+    return Promise.all(results.map((c: typeof results[0]) => this.buildComplianceCheckWithDetails(c)));
   }
 
   async createComplianceCheck(check: InsertComplianceCheck): Promise<ComplianceCheck> {
@@ -8580,7 +8578,7 @@ export class DatabaseStorage implements IStorage {
       ? await db.select().from(complianceAudits).where(and(...conditions)).orderBy(desc(complianceAudits.auditDate))
       : await db.select().from(complianceAudits).orderBy(desc(complianceAudits.auditDate));
 
-    return Promise.all(results.map((a) => this.buildComplianceAuditWithDetails(a)));
+    return Promise.all(results.map((a: typeof results[0]) => this.buildComplianceAuditWithDetails(a)));
   }
 
   async createComplianceAudit(audit: InsertComplianceAudit): Promise<ComplianceAudit> {
@@ -8797,13 +8795,13 @@ export class DatabaseStorage implements IStorage {
     let healthScore = 70; // Base score
 
     // Factor 1: Compliance rate
-    const passedCompliance = complianceData.filter(c => c.status === 'passed').length;
+    const passedCompliance = complianceData.filter((c: typeof complianceData[0]) => c.status === 'passed').length;
     const complianceRate = complianceData.length > 0 ? (passedCompliance / complianceData.length) * 100 : 100;
     healthScore += (complianceRate - 80) * 0.2;
 
     // Factor 2: NPS score impact
-    const npsScores = npsData.map(n => n.score);
-    const avgNps = npsScores.length > 0 ? npsScores.reduce((a, b) => a + b, 0) / npsScores.length : 7;
+    const npsScores = npsData.map((n: typeof npsData[0]) => n.score);
+    const avgNps = npsScores.length > 0 ? npsScores.reduce((a: number, b: number) => a + b, 0) / npsScores.length : 7;
     healthScore += (avgNps - 7) * 2;
 
     // Factor 3: Incident rate impact
@@ -8815,7 +8813,7 @@ export class DatabaseStorage implements IStorage {
     // Generate insights based on data analysis
 
     // Compliance insights
-    const expiringChecks = complianceData.filter(c => {
+    const expiringChecks = complianceData.filter((c: typeof complianceData[0]) => {
       if (!c.expirationDate) return false;
       const expDate = new Date(c.expirationDate);
       return expDate <= new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -8844,7 +8842,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Staffing insights
-    const availableConsultants = allConsultants.filter(c => c.isAvailable && c.isOnboarded);
+    const availableConsultants = allConsultants.filter((c: typeof allConsultants[0]) => c.isAvailable && c.isOnboarded);
     const activeProjectCount = allProjects.length;
     const staffingRatio = availableConsultants.length / Math.max(activeProjectCount, 1);
     if (staffingRatio < 2) {
@@ -8872,11 +8870,11 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Performance insights
-    const avgScores = allScorecards.reduce((acc, s) => {
+    const avgScores = allScorecards.reduce((acc: number[], s: typeof allScorecards[0]) => {
       if (s.overallScore) acc.push(parseFloat(s.overallScore));
       return acc;
     }, [] as number[]);
-    const avgPerformance = avgScores.length > 0 ? avgScores.reduce((a, b) => a + b, 0) / avgScores.length : 0;
+    const avgPerformance = avgScores.length > 0 ? avgScores.reduce((a: number, b: number) => a + b, 0) / avgScores.length : 0;
     if (avgPerformance > 0) {
       insights.push({
         id: `performance-${now.getTime()}`,
@@ -8902,7 +8900,7 @@ export class DatabaseStorage implements IStorage {
 
     // Incident trend insight
     if (recentIncidents.length > 0) {
-      const criticalIncidents = recentIncidents.filter(i => i.severity === 'critical' || i.severity === 'high');
+      const criticalIncidents = recentIncidents.filter((i: typeof recentIncidents[0]) => i.severity === 'critical' || i.severity === 'high');
       insights.push({
         id: `incidents-${now.getTime()}`,
         type: criticalIncidents.length > 2 ? 'warning' : 'trend',
@@ -8946,11 +8944,11 @@ export class DatabaseStorage implements IStorage {
 
     // Generate consultant recommendations (top performers)
     const consultantScores = await Promise.all(
-      allConsultants.slice(0, 10).map(async (c) => {
+      allConsultants.slice(0, 10).map(async (c: typeof allConsultants[0]) => {
         const user = await db.select().from(users).where(eq(users.id, c.userId)).limit(1);
         const scores = await db.select().from(consultantScorecards).where(eq(consultantScorecards.consultantId, c.id)).limit(5);
-        const avgScore = scores.length > 0 
-          ? scores.reduce((sum, s) => sum + (parseFloat(s.overallScore || '0')), 0) / scores.length 
+        const avgScore = scores.length > 0
+          ? scores.reduce((sum: number, s: typeof scores[0]) => sum + (parseFloat(s.overallScore || '0')), 0) / scores.length
           : 0;
         return {
           consultantId: c.id,
@@ -8965,9 +8963,9 @@ export class DatabaseStorage implements IStorage {
 
     // Attrition risk analysis (simplified)
     const attritionRisks = allConsultants
-      .filter(c => c.isOnboarded)
+      .filter((c: typeof allConsultants[0]) => c.isOnboarded)
       .slice(0, 5)
-      .map(c => ({
+      .map((c: typeof allConsultants[0]) => ({
         consultantId: c.id,
         consultantName: 'Consultant',
         riskLevel: Math.random() > 0.7 ? 'high' : Math.random() > 0.5 ? 'medium' : 'low' as 'low' | 'medium' | 'high',
@@ -9139,7 +9137,7 @@ export class DatabaseStorage implements IStorage {
   async generateContractNumber(): Promise<string> {
     const year = new Date().getFullYear();
     const allContracts = await db.select({ contractNumber: contracts.contractNumber }).from(contracts);
-    const yearContracts = allContracts.filter(c => c.contractNumber?.startsWith(`NICEHR-${year}`));
+    const yearContracts = allContracts.filter((c: typeof allContracts[0]) => c.contractNumber?.startsWith(`NICEHR-${year}`));
     const nextNum = yearContracts.length + 1;
     return `NICEHR-${year}-${String(nextNum).padStart(5, '0')}`;
   }
@@ -9245,7 +9243,7 @@ export class DatabaseStorage implements IStorage {
 
   async listChatChannels(userId: string, filters?: { projectId?: string; channelType?: string }): Promise<ChatChannelWithDetails[]> {
     const userMemberships = await db.select({ channelId: channelMembers.channelId }).from(channelMembers).where(eq(channelMembers.userId, userId));
-    const memberChannelIds = userMemberships.map(m => m.channelId);
+    const memberChannelIds = userMemberships.map((m: typeof userMemberships[0]) => m.channelId);
 
     if (memberChannelIds.length === 0) return [];
 
@@ -9896,8 +9894,8 @@ export class DatabaseStorage implements IStorage {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-    const reportsThisWeek = allReportRuns.filter(r => r.createdAt && r.createdAt >= oneWeekAgo).length;
-    const exportsThisWeek = allExportLogs.filter(e => e.createdAt && e.createdAt >= oneWeekAgo).length;
+    const reportsThisWeek = allReportRuns.filter((r: typeof allReportRuns[0]) => r.createdAt && r.createdAt >= oneWeekAgo).length;
+    const exportsThisWeek = allExportLogs.filter((e: typeof allExportLogs[0]) => e.createdAt && e.createdAt >= oneWeekAgo).length;
 
     const categoryMap = new Map<string, number>();
     for (const template of allTemplates) {
@@ -10098,7 +10096,7 @@ export class DatabaseStorage implements IStorage {
 
     return {
       ...questionnaire,
-      skills: skills.map(s => ({ ...s.skill, skillItem: s.skillItem! })),
+      skills: skills.map((s: typeof skills[0]) => ({ ...s.skill, skillItem: s.skillItem! })),
       ehrExperience: ehrExp,
       certifications: certs,
     };
@@ -11381,17 +11379,17 @@ export class DatabaseStorage implements IStorage {
   // Integration Analytics
   async getIntegrationAnalytics(): Promise<IntegrationAnalytics> {
     const allConnections = await db.select().from(integrationConnections);
-    const activeConnections = allConnections.filter(c => c.isActive && c.status === 'connected');
-    
+    const activeConnections = allConnections.filter((c: typeof allConnections[0]) => c.isActive && c.status === 'connected');
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todaysJobs = await db.select().from(syncJobs)
       .where(gte(syncJobs.createdAt, today));
-    
-    const successfulJobs = todaysJobs.filter(j => j.status === 'completed');
-    
-    const connectionsByProvider = allConnections.reduce((acc, conn) => {
-      const existing = acc.find(p => p.provider === conn.provider);
+
+    const successfulJobs = todaysJobs.filter((j: typeof todaysJobs[0]) => j.status === 'completed');
+
+    const connectionsByProvider = allConnections.reduce((acc: Array<{ provider: string; count: number; status: string }>, conn: typeof allConnections[0]) => {
+      const existing = acc.find((p: { provider: string }) => p.provider === conn.provider);
       if (existing) {
         existing.count++;
       } else {
@@ -11405,7 +11403,7 @@ export class DatabaseStorage implements IStorage {
       .limit(10);
 
     const recentSyncJobs: SyncJobWithDetails[] = await Promise.all(
-      recentJobs.map(async (job) => {
+      recentJobs.map(async (job: typeof recentJobs[0]) => {
         const [connection] = await db.select().from(integrationConnections)
           .where(eq(integrationConnections.id, job.connectionId));
         const eventCount = await db.select({ count: sql<number>`count(*)` })
@@ -11443,8 +11441,8 @@ export class DatabaseStorage implements IStorage {
 
   async getEhrMonitoringAnalytics(): Promise<EhrMonitoringAnalytics> {
     const allSystems = await db.select().from(ehrSystems);
-    const operationalSystems = allSystems.filter(s => s.status === 'operational');
-    const degradedSystems = allSystems.filter(s => s.status === 'degraded' || s.status === 'partial_outage');
+    const operationalSystems = allSystems.filter((s: typeof allSystems[0]) => s.status === 'operational');
+    const degradedSystems = allSystems.filter((s: typeof allSystems[0]) => s.status === 'degraded' || s.status === 'partial_outage');
     
     const activeIncidentsRaw = await db.select().from(ehrIncidents)
       .where(and(
@@ -11456,13 +11454,13 @@ export class DatabaseStorage implements IStorage {
       ))
       .orderBy(desc(ehrIncidents.startedAt));
 
-    const systemsWithIncidents = new Set(activeIncidentsRaw.map(i => i.ehrSystemId)).size;
-    
-    const avgUptime = allSystems.reduce((sum, s) => sum + parseFloat(s.uptimePercent || '0'), 0) / (allSystems.length || 1);
-    const avgResponseTime = allSystems.reduce((sum, s) => sum + (s.avgResponseTime || 0), 0) / (allSystems.length || 1);
+    const systemsWithIncidents = new Set(activeIncidentsRaw.map((i: typeof activeIncidentsRaw[0]) => i.ehrSystemId)).size;
+
+    const avgUptime = allSystems.reduce((sum: number, s: typeof allSystems[0]) => sum + parseFloat(s.uptimePercent || '0'), 0) / (allSystems.length || 1);
+    const avgResponseTime = allSystems.reduce((sum: number, s: typeof allSystems[0]) => sum + (s.avgResponseTime || 0), 0) / (allSystems.length || 1);
 
     const activeIncidents: EhrIncidentWithDetails[] = await Promise.all(
-      activeIncidentsRaw.slice(0, 10).map(async (incident) => {
+      activeIncidentsRaw.slice(0, 10).map(async (incident: typeof activeIncidentsRaw[0]) => {
         const [ehrSystem] = await db.select().from(ehrSystems)
           .where(eq(ehrSystems.id, incident.ehrSystemId));
         
@@ -11500,8 +11498,8 @@ export class DatabaseStorage implements IStorage {
       })
     );
 
-    const systemsByVendor = allSystems.reduce((acc, sys) => {
-      const existing = acc.find(v => v.vendor === sys.vendor);
+    const systemsByVendor = allSystems.reduce((acc: Array<{ vendor: string; count: number; avgUptime: number }>, sys: typeof allSystems[0]) => {
+      const existing = acc.find((v: { vendor: string; count: number; avgUptime: number }) => v.vendor === sys.vendor);
       if (existing) {
         existing.count++;
         existing.avgUptime = (existing.avgUptime + parseFloat(sys.uptimePercent || '0')) / 2;
@@ -11525,7 +11523,7 @@ export class DatabaseStorage implements IStorage {
 
   async getEscalationAnalytics(): Promise<EscalationAnalytics> {
     const allTriggers = await db.select().from(escalationTriggers);
-    const activeTriggers = allTriggers.filter(t => t.isActive);
+    const activeTriggers = allTriggers.filter((t: typeof allTriggers[0]) => t.isActive);
     
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -11538,9 +11536,9 @@ export class DatabaseStorage implements IStorage {
     const weeksEvents = await db.select().from(escalationEvents)
       .where(gte(escalationEvents.createdAt, weekAgo));
     
-    const eventsByType = allTriggers.reduce((acc, trigger) => {
-      const count = weeksEvents.filter(e => e.triggerId === trigger.id).length;
-      const existing = acc.find(t => t.type === trigger.triggerType);
+    const eventsByType = allTriggers.reduce((acc: Array<{ type: string; count: number }>, trigger: typeof allTriggers[0]) => {
+      const count = weeksEvents.filter((e: typeof weeksEvents[0]) => e.triggerId === trigger.id).length;
+      const existing = acc.find((t: { type: string; count: number }) => t.type === trigger.triggerType);
       if (existing) {
         existing.count += count;
       } else {
@@ -11549,7 +11547,7 @@ export class DatabaseStorage implements IStorage {
       return acc;
     }, [] as Array<{ type: string; count: number }>);
     
-    const acknowledgedEvents = weeksEvents.filter(e => e.acknowledgedAt);
+    const acknowledgedEvents = weeksEvents.filter((e: typeof weeksEvents[0]) => e.acknowledgedAt);
     const acknowledgementRate = weeksEvents.length > 0 
       ? (acknowledgedEvents.length / weeksEvents.length) * 100 
       : 100;
@@ -11559,7 +11557,7 @@ export class DatabaseStorage implements IStorage {
       .limit(10);
 
     const avgResponseTime = acknowledgedEvents.length > 0
-      ? acknowledgedEvents.reduce((sum, e) => {
+      ? acknowledgedEvents.reduce((sum: number, e: typeof acknowledgedEvents[0]) => {
           const created = new Date(e.createdAt!);
           const acknowledged = new Date(e.acknowledgedAt!);
           return sum + (acknowledged.getTime() - created.getTime()) / 60000; // minutes
@@ -11567,7 +11565,7 @@ export class DatabaseStorage implements IStorage {
       : 0;
 
     const recentEvents = await Promise.all(
-      recentEventsRaw.map(async (event) => {
+      recentEventsRaw.map(async (event: typeof recentEventsRaw[0]) => {
         const [trigger] = await db.select({
           id: escalationTriggers.id,
           name: escalationTriggers.name,
@@ -11667,12 +11665,12 @@ export class DatabaseStorage implements IStorage {
     const totalTasks = tasks.length || 1;
     const taskProgress = (completedTasks / totalTasks) * 100;
 
-    const mitigatedRisks = risks.filter(r => r.status === 'mitigated' || r.status === 'closed').length;
+    const mitigatedRisks = risks.filter(r => r.status === 'resolved' || r.status === 'mitigating').length;
     const totalRisks = risks.length || 1;
     const riskMitigation = (mitigatedRisks / totalRisks) * 100;
 
-    const requiredRoles = teamAssignments.filter(t => t.isRequired).length;
-    const filledRoles = teamAssignments.filter(t => t.isRequired && t.consultantId).length;
+    const requiredRoles = teamAssignments.filter(t => t.isActive).length;
+    const filledRoles = teamAssignments.filter(t => t.isActive && t.userId).length;
     const staffingScore = requiredRoles > 0 ? (filledRoles / requiredRoles) * 100 : 100;
 
     const trainingScore = taskProgress * 0.8 + phaseProgress * 0.2;
@@ -11700,12 +11698,12 @@ export class DatabaseStorage implements IStorage {
     };
 
     const riskFactors = risks
-      .filter(r => r.status === 'open' || r.status === 'in_progress')
+      .filter(r => r.status === 'identified' || r.status === 'mitigating')
       .map(r => ({
         id: r.id,
         title: r.title,
-        severity: r.severity,
-        impact: r.impactDescription
+        severity: r.impact,
+        impact: r.description
       }));
 
     const recommendations: string[] = [];
@@ -11772,7 +11770,7 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
-    const uniqueConsultants = new Set(allTimesheets.map(t => t.consultantId));
+    const uniqueConsultants = new Set(allTimesheets.map((t: typeof allTimesheets[0]) => t.consultantId));
     const totalConsultants = uniqueConsultants.size || 1;
 
     let scheduledHours = 0;
@@ -11867,9 +11865,9 @@ export class DatabaseStorage implements IStorage {
     const totalTasks = tasks.length || 1;
     const taskProgress = completedTasks / totalTasks;
 
-    const highRisks = risks.filter(r => 
-      (r.severity === 'high' || r.severity === 'critical') && 
-      (r.status === 'open' || r.status === 'in_progress')
+    const highRisks = risks.filter(r =>
+      (r.impact === 'high' || r.impact === 'critical') &&
+      (r.status === 'identified' || r.status === 'mitigating')
     ).length;
 
     const projectDuration = Math.ceil((endDate.getTime() - new Date(project.startDate).getTime()) / (1000 * 60 * 60 * 24));
@@ -11887,12 +11885,12 @@ export class DatabaseStorage implements IStorage {
     const confidenceLevel = Math.max(50, 95 - (Math.abs(varianceDays) * 2) - (highRisks * 5));
 
     const riskDrivers = risks
-      .filter(r => r.status === 'open' || r.status === 'in_progress')
+      .filter(r => r.status === 'identified' || r.status === 'mitigating')
       .map(r => ({
         id: r.id,
         title: r.title,
-        severity: r.severity,
-        potentialDelayDays: r.severity === 'critical' ? 7 : r.severity === 'high' ? 3 : 1
+        severity: r.impact,
+        potentialDelayDays: r.impact === 'critical' ? 7 : r.impact === 'high' ? 3 : 1
       }));
 
     const scenarioAnalysis = {
@@ -12325,7 +12323,7 @@ export class DatabaseStorage implements IStorage {
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(autoAssignmentLogs.startedAt));
 
-    return logs.map(row => ({
+    return logs.map((row: typeof logs[0]) => ({
       ...row.log,
       project: row.project ? {
         id: row.project.id,
@@ -12402,25 +12400,25 @@ export class DatabaseStorage implements IStorage {
           lastName: user?.lastName || null,
           profileImageUrl: user?.profileImageUrl || null,
         },
-        ehrExperience: ehrExp.map(e => ({
+        ehrExperience: ehrExp.map((e: typeof ehrExp[0]) => ({
           ehrSystem: e.ehrSystem,
           yearsExperience: e.yearsExperience,
           proficiency: e.proficiency,
           isCertified: e.isCertified,
         })),
-        skills: skills.map(s => ({
+        skills: skills.map((s: typeof skills[0]) => ({
           skillItemId: s.skillItemId,
           proficiency: s.proficiency,
           yearsExperience: s.yearsExperience,
           isCertified: s.isCertified,
         })),
-        ratings: ratings.map(r => ({
+        ratings: ratings.map((r: typeof ratings[0]) => ({
           overallRating: r.overallRating,
           mannerism: r.mannerism,
           professionalism: r.professionalism,
           knowledge: r.knowledge,
         })),
-        availabilityBlocks: availability.map(a => ({
+        availabilityBlocks: availability.map((a: typeof availability[0]) => ({
           type: a.type,
           startDate: a.startDate,
           endDate: a.endDate,
@@ -12485,25 +12483,25 @@ export class DatabaseStorage implements IStorage {
         lastName: user?.lastName || null,
         profileImageUrl: user?.profileImageUrl || null,
       },
-      ehrExperience: ehrExp.map(e => ({
+      ehrExperience: ehrExp.map((e: typeof ehrExp[0]) => ({
         ehrSystem: e.ehrSystem,
         yearsExperience: e.yearsExperience,
         proficiency: e.proficiency,
         isCertified: e.isCertified,
       })),
-      skills: skills.map(s => ({
+      skills: skills.map((s: typeof skills[0]) => ({
         skillItemId: s.skillItemId,
         proficiency: s.proficiency,
         yearsExperience: s.yearsExperience,
         isCertified: s.isCertified,
       })),
-      ratings: ratings.map(r => ({
+      ratings: ratings.map((r: typeof ratings[0]) => ({
         overallRating: r.overallRating,
         mannerism: r.mannerism,
         professionalism: r.professionalism,
         knowledge: r.knowledge,
       })),
-      availabilityBlocks: availability.map(a => ({
+      availabilityBlocks: availability.map((a: typeof availability[0]) => ({
         type: a.type,
         startDate: a.startDate,
         endDate: a.endDate,
@@ -12540,7 +12538,7 @@ export class DatabaseStorage implements IStorage {
         const assignments = await db.select()
           .from(scheduleAssignments)
           .where(eq(scheduleAssignments.scheduleId, schedule.id));
-        assignedConsultants.push(...assignments.map(a => a.consultantId));
+        assignedConsultants.push(...assignments.map((a: typeof assignments[0]) => a.consultantId));
       }
 
       results.push({
@@ -12558,12 +12556,12 @@ export class DatabaseStorage implements IStorage {
         consultantsNeeded: row.requirement.consultantsNeeded,
         shiftType: row.requirement.shiftType,
         notes: row.requirement.notes,
-        scheduleDates: schedules.map(s => ({
+        scheduleDates: schedules.map((s: typeof schedules[0]) => ({
           scheduleId: s.id,
           date: s.scheduleDate,
           shiftType: s.shiftType,
         })),
-        alreadyAssignedConsultantIds: [...new Set(assignedConsultants)],
+        alreadyAssignedConsultantIds: Array.from(new Set(assignedConsultants)),
       });
     }
 
@@ -12601,7 +12599,7 @@ export class DatabaseStorage implements IStorage {
       const assignments = await db.select()
         .from(scheduleAssignments)
         .where(eq(scheduleAssignments.scheduleId, schedule.id));
-      assignedConsultants.push(...assignments.map(a => a.consultantId));
+      assignedConsultants.push(...assignments.map((a: typeof assignments[0]) => a.consultantId));
     }
 
     return {
@@ -12619,12 +12617,12 @@ export class DatabaseStorage implements IStorage {
       consultantsNeeded: row.requirement.consultantsNeeded,
       shiftType: row.requirement.shiftType,
       notes: row.requirement.notes,
-      scheduleDates: schedules.map(s => ({
+      scheduleDates: schedules.map((s: typeof schedules[0]) => ({
         scheduleId: s.id,
         date: s.scheduleDate,
         shiftType: s.shiftType,
       })),
-      alreadyAssignedConsultantIds: [...new Set(assignedConsultants)],
+      alreadyAssignedConsultantIds: Array.from(new Set(assignedConsultants)),
     };
   }
 }

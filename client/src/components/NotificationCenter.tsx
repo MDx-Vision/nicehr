@@ -197,7 +197,7 @@ export function NotificationCenter() {
                         {notification.message}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                        {notification.createdAt ? formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true }) : 'Recently'}
                       </p>
                     </div>
                   </div>

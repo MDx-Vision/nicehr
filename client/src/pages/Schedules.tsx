@@ -52,6 +52,17 @@ interface HandoffNote {
   createdAt?: string;
 }
 
+// Alias for Schedule used in shift-related state
+type Shift = Schedule;
+
+interface SignInRecord {
+  id: string;
+  date: string;
+  signInTime: string;
+  signOutTime?: string;
+  shiftId?: string;
+}
+
 export default function Schedules() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -271,7 +282,7 @@ export default function Schedules() {
       id: crypto.randomUUID(),
       date: format(new Date(), "yyyy-MM-dd"),
       signInTime: time,
-      shiftId: shifts[0]?.id || "unknown"
+      shiftId: schedulesData[0]?.id || "unknown"
     };
     setSignInRecords([...signInRecords, newRecord]);
 
@@ -338,11 +349,12 @@ export default function Schedules() {
   const handleSubmitHandoff = () => {
     const newNote: HandoffNote = {
       id: crypto.randomUUID(),
-      date: format(new Date(), "yyyy-MM-dd"),
+      projectId: projectFilter || "unknown",
+      fromConsultantId: consultantFilter || "unknown",
+      shiftDate: format(new Date(), "yyyy-MM-dd"),
       summary: handoffForm.summary,
       outstandingItems: handoffForm.outstandingItems,
       priority: handoffForm.priority as "low" | "medium" | "high",
-      createdBy: "Current User",
       acknowledged: false
     };
 
@@ -962,8 +974,8 @@ export default function Schedules() {
                 <Label>Date</Label>
                 <Input
                   type="date"
-                  value={selectedShift.scheduleDate || selectedShift.date}
-                  onChange={(e) => setSelectedShift({...selectedShift, scheduleDate: e.target.value, date: e.target.value})}
+                  value={selectedShift.scheduleDate}
+                  onChange={(e) => setSelectedShift({...selectedShift, scheduleDate: e.target.value})}
                   data-testid="input-shift-date"
                 />
               </div>
@@ -971,7 +983,7 @@ export default function Schedules() {
                 <Label>Shift Type</Label>
                 <Select
                   value={selectedShift.shiftType}
-                  onValueChange={(val) => setSelectedShift({...selectedShift, shiftType: val})}
+                  onValueChange={(val) => setSelectedShift({...selectedShift, shiftType: val as "day" | "night" | "swing"})}
                   data-testid="select-shift-type"
                 >
                   <SelectTrigger data-testid="select-shift-type">
@@ -1010,7 +1022,7 @@ export default function Schedules() {
                     id: selectedShift.id,
                     data: {
                       projectId: selectedShift.projectId,
-                      scheduleDate: selectedShift.scheduleDate || selectedShift.date,
+                      scheduleDate: selectedShift.scheduleDate,
                       shiftType: selectedShift.shiftType,
                       notes: selectedShift.notes
                     }
