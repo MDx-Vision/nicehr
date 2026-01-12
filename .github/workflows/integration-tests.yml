@@ -1,0 +1,57 @@
+# =============================================================================
+# Integration Tests Workflow
+# =============================================================================
+# Runs integration tests against a real PostgreSQL database
+# Triggered on PRs and pushes to main
+# =============================================================================
+
+name: Integration Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: '20'
+  TEST_DATABASE_URL: postgresql://testuser:testpass@localhost:5432/nicehr_test
+
+jobs:
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: nicehr_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U testuser -d nicehr_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run integration tests
+        run: npm run test:integration
+        env:
+          TEST_DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
