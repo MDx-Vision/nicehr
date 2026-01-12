@@ -242,7 +242,7 @@ export async function setupAuth(app: Express) {
         claims: { sub: 'ci-test-user', email: 'test@example.com', first_name: 'Test', last_name: 'User' },
         expires_at: Math.floor(Date.now() / 1000) + 3600
       };
-      req.isAuthenticated = () => true;
+      req.isAuthenticated = function(this: Express.Request): this is Express.AuthenticatedRequest { return true; };
       next();
     });
     passport.serializeUser((user: Express.User, cb) => cb(null, user));
@@ -276,7 +276,7 @@ export async function setupAuth(app: Express) {
 
     app.use((req, res, next) => {
       (req as any).user = devUser;
-      req.isAuthenticated = () => true;
+      req.isAuthenticated = function(this: Express.Request): this is Express.AuthenticatedRequest { return true; };
       next();
     });
 
