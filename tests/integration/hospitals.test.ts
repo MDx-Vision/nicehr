@@ -244,7 +244,7 @@ describe('Hospital Integration Tests', () => {
         .from(schema.projects)
         .where(eq(schema.projects.hospitalId, testData.hospital.id));
 
-      expect(projects.length).toBeGreaterThanOrEqual(3);
+      expect(projects).toHaveLength(3);
     });
 
     it('retrieves only active projects for hospital', async () => {

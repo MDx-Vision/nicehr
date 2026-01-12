@@ -25,7 +25,7 @@
 - [ ] Add to CI pipeline with PostgreSQL service
 
 ### Files to Create
-```
+```text
 tests/
 ├── integration/
 │   ├── setup.ts              # DB connection, cleanup
@@ -72,7 +72,7 @@ tests/
 - [ ] Add webhook signature verification tests
 
 ### Files to Create
-```
+```text
 tests/
 ├── contracts/
 │   ├── daily.co/
@@ -121,7 +121,7 @@ tests/
 - [ ] Add performance regression tests to CI
 
 ### Files to Create
-```
+```text
 tests/
 ├── load/
 │   ├── k6/
@@ -186,7 +186,7 @@ tests/
 - [ ] Create security test suite for CI
 
 ### Files to Create
-```
+```text
 tests/
 ├── security/
 │   ├── injection.test.ts     # SQL, XSS, command injection
@@ -238,7 +238,7 @@ tests/
 - [ ] Document accessibility features
 
 ### Files to Create
-```
+```text
 tests/
 ├── accessibility/
 │   ├── axe.config.js
@@ -281,7 +281,7 @@ Cypress.Commands.add('checkA11y', (context, options) => {
 
 ## Implementation Timeline
 
-```
+```text
 Week 1-2:   Phase 1 - Integration tests (database)
 Week 3:     Phase 2 - Contract tests (external APIs)
 Week 4-5:   Phase 3 - Load/stress testing

@@ -4,6 +4,30 @@
  */
 
 import { execSync } from 'child_process';
+import { Pool } from 'pg';
+
+/**
+ * Wait for database to be ready with retry logic
+ */
+async function waitForDatabase(connectionString: string, maxRetries = 10, delayMs = 1000): Promise<void> {
+  const pool = new Pool({ connectionString });
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await pool.query('SELECT 1');
+      await pool.end();
+      console.log('✅ Database connection established');
+      return;
+    } catch (error) {
+      if (attempt === maxRetries) {
+        await pool.end();
+        throw new Error(`Database not ready after ${maxRetries} attempts: ${(error as Error).message}`);
+      }
+      console.log(`⏳ Waiting for database... (attempt ${attempt}/${maxRetries})`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+}
 
 export default async function globalSetup() {
   console.log('\n🔧 Setting up integration test environment...\n');
@@ -15,6 +39,10 @@ export default async function globalSetup() {
   process.env.DATABASE_URL = testDbUrl;
 
   try {
+    // Wait for database to be ready before pushing schema
+    console.log('🔌 Checking database connectivity...');
+    await waitForDatabase(testDbUrl);
+
     // Push schema to test database
     console.log('📦 Pushing database schema...');
     execSync('npm run db:push', {

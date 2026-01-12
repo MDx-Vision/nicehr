@@ -59,7 +59,11 @@ export async function cleanDatabase() {
     try {
       await database.execute(sql.raw(`TRUNCATE TABLE "${table}" CASCADE`));
     } catch (error) {
-      // Table might not exist, skip
+      const message = (error as Error).message;
+      // Only silently skip if table doesn't exist (expected during initial setup)
+      if (!message.includes('does not exist')) {
+        console.warn(`Warning: Failed to truncate table "${table}": ${message}`);
+      }
     }
   }
 
