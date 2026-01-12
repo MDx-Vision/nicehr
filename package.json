@@ -9,7 +9,11 @@
     "build": "node --import tsx script/build.ts",
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "test:integration": "jest --config jest.integration.config.js",
+    "test:integration:watch": "jest --config jest.integration.config.js --watch",
+    "db:test:up": "docker-compose -f docker-compose.test.yml up -d",
+    "db:test:down": "docker-compose -f docker-compose.test.yml down -v"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
