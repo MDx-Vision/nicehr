@@ -928,6 +928,63 @@ These were example features we wanted to replicate in our own system:
 
 ---
 
+## FEATURE FLAG IMPLEMENTATION PATTERN
+
+When adding new modules to NiceHR, use the feature flag pattern to ensure safe rollout:
+
+### Environment Variables
+```bash
+# .env
+ENABLE_TDR=true
+ENABLE_EXECUTIVE_METRICS=true
+```
+
+### Server-side Implementation
+```typescript
+// server/routes.ts
+const FEATURES = {
+  TDR: process.env.ENABLE_TDR === 'true',
+  EXECUTIVE_METRICS: process.env.ENABLE_EXECUTIVE_METRICS === 'true',
+};
+
+// Conditionally mount routes
+if (FEATURES.TDR) {
+  app.use('/api', tdrRoutes);
+  console.log('[TDR] TDR module enabled');
+}
+
+if (FEATURES.EXECUTIVE_METRICS) {
+  app.use('/api', executiveMetricsRoutes);
+  console.log('[Executive Metrics] Executive Metrics module enabled');
+}
+```
+
+### Client-side Implementation
+```typescript
+// client/src/App.tsx - Conditionally render routes
+<Route path="/tdr" component={() => <ProtectedRoute component={TDR} />} />
+<Route path="/executive-metrics" component={() => <ProtectedRoute component={ExecutiveMetrics} />} />
+
+// client/src/components/AppSidebar.tsx - Conditionally show nav items
+{ id: "tdr", title: "TDR", url: "/tdr", icon: "ClipboardCheck", roles: ["admin", "hospital_leadership"] },
+{ id: "executive-metrics", title: "Executive Metrics", url: "/executive-metrics", icon: "TrendingUp", roles: ["admin", "hospital_leadership"] },
+```
+
+### Database Schema Pattern
+When adding new tables:
+1. Add tables to `shared/schema.ts` with unique names
+2. Use pgEnum for status/type fields with unique enum names (prefix to avoid conflicts)
+3. Reference existing tables (projects, hospitals, users) via foreign keys
+4. Run `npm run db:push` to create tables
+
+### Rollback
+If anything breaks:
+1. **Instant:** Set feature flag to `false` → feature disappears
+2. **Code:** `git revert` the commits
+3. **Database:** Tables remain but are unused when flag is off
+
+---
+
 ## NEXT STEPS
 
 **Optional Integrations (Future):**
