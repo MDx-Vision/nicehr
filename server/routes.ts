@@ -122,6 +122,8 @@ import {
   sendAccountDeletionRequestedEmail,
   sendInvoiceEmailToRecipient,
 } from "./emailService";
+import { FEATURES } from "@shared/featureFlags";
+import tdrRoutes from "./routes/tdr";
 
 // =============================================================================
 // QUERY PARAMETER VALIDATION HELPERS
@@ -220,6 +222,12 @@ export async function registerRoutes(
   // HIPAA: Touch session on each request to extend active sessions
   // This works with rolling: true to reset the 15-minute inactivity timer
   app.use(sessionTouchMiddleware());
+
+  // TDR (Technical Dress Rehearsal) Module - Feature Flagged
+  if (FEATURES.TDR_MODULE) {
+    app.use('/api', tdrRoutes);
+    console.log('[TDR] TDR module enabled');
+  }
 
   // Seed RBAC roles and permissions at startup
   try {

@@ -7338,3 +7338,204 @@ export interface AdvancedAnalyticsSummary {
     projectsUnderBudget: number;
   };
 }
+
+// =============================================================================
+// TDR (Technical Dress Rehearsal) Tables
+// =============================================================================
+
+// TDR Event Status enum
+export const tdrEventStatusEnum = pgEnum("tdr_event_status", ["scheduled", "in_progress", "completed", "cancelled"]);
+export const tdrEventTypeEnum = pgEnum("tdr_event_type", ["full", "partial", "integration_only"]);
+export const tdrChecklistCategoryEnum = pgEnum("tdr_checklist_category", ["infrastructure", "integrations", "data_migration", "workflows", "support"]);
+export const tdrPriorityEnum = pgEnum("tdr_priority", ["low", "medium", "high", "critical"]);
+export const tdrTestStatusEnum = pgEnum("tdr_test_status", ["pending", "passed", "failed", "blocked", "skipped"]);
+export const tdrIssueStatusEnum = pgEnum("tdr_issue_status", ["open", "in_progress", "resolved", "deferred", "wont_fix"]);
+export const tdrIssueSeverityEnum = pgEnum("tdr_issue_severity", ["low", "medium", "high", "critical"]);
+export const tdrRecommendationEnum = pgEnum("tdr_recommendation", ["go", "conditional_go", "no_go"]);
+
+// TDR Events - Schedule rehearsals
+export const tdrEvents = pgTable("tdr_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  scheduledDate: timestamp("scheduled_date").notNull(),
+  startTime: varchar("start_time"),
+  endTime: varchar("end_time"),
+  status: tdrEventStatusEnum("status").default("scheduled"),
+  type: tdrEventTypeEnum("type").default("full"),
+  leaderId: varchar("leader_id").references(() => users.id),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_tdr_events_project_id").on(table.projectId),
+  index("idx_tdr_events_scheduled_date").on(table.scheduledDate),
+]);
+
+export const insertTdrEventSchema = createInsertSchema(tdrEvents);
+export type TdrEvent = typeof tdrEvents.$inferSelect;
+export type InsertTdrEvent = typeof tdrEvents.$inferInsert;
+
+// TDR Checklist Items
+export const tdrChecklistItems = pgTable("tdr_checklist_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  tdrEventId: varchar("tdr_event_id").references(() => tdrEvents.id),
+  category: tdrChecklistCategoryEnum("category").notNull(),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  isCompleted: boolean("is_completed").default(false),
+  completedBy: varchar("completed_by").references(() => users.id),
+  completedAt: timestamp("completed_at"),
+  priority: tdrPriorityEnum("priority").default("medium"),
+  sortOrder: integer("sort_order").default(0),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_tdr_checklist_project_id").on(table.projectId),
+  index("idx_tdr_checklist_category").on(table.category),
+]);
+
+export const insertTdrChecklistItemSchema = createInsertSchema(tdrChecklistItems);
+export type TdrChecklistItem = typeof tdrChecklistItems.$inferSelect;
+export type InsertTdrChecklistItem = typeof tdrChecklistItems.$inferInsert;
+
+// TDR Test Scenarios
+export const tdrTestScenarios = pgTable("tdr_test_scenarios", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  tdrEventId: varchar("tdr_event_id").references(() => tdrEvents.id),
+  category: varchar("category").notNull(), // workflow, integration, performance, security, downtime
+  title: varchar("title").notNull(),
+  description: text("description"),
+  expectedResult: text("expected_result"),
+  actualResult: text("actual_result"),
+  status: tdrTestStatusEnum("status").default("pending"),
+  testedBy: varchar("tested_by").references(() => users.id),
+  testedAt: timestamp("tested_at"),
+  priority: tdrPriorityEnum("priority").default("medium"),
+  department: varchar("department"), // ED, ICU, OR, Lab, Pharmacy, etc.
+  stepsToReproduce: text("steps_to_reproduce"),
+  attachments: jsonb("attachments"), // screenshots, logs
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_tdr_test_scenarios_project_id").on(table.projectId),
+  index("idx_tdr_test_scenarios_status").on(table.status),
+]);
+
+export const insertTdrTestScenarioSchema = createInsertSchema(tdrTestScenarios);
+export type TdrTestScenario = typeof tdrTestScenarios.$inferSelect;
+export type InsertTdrTestScenario = typeof tdrTestScenarios.$inferInsert;
+
+// TDR Issues (separate from go-live tickets)
+export const tdrIssues = pgTable("tdr_issues", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  tdrEventId: varchar("tdr_event_id").references(() => tdrEvents.id),
+  testScenarioId: varchar("test_scenario_id").references(() => tdrTestScenarios.id),
+  issueNumber: varchar("issue_number"),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  category: varchar("category"), // technical, workflow, integration, data, training
+  severity: tdrIssueSeverityEnum("severity").default("medium"),
+  status: tdrIssueStatusEnum("status").default("open"),
+  assignedTo: varchar("assigned_to").references(() => users.id),
+  reportedBy: varchar("reported_by").references(() => users.id),
+  resolution: text("resolution"),
+  resolvedAt: timestamp("resolved_at"),
+  dueDate: timestamp("due_date"),
+  blocksGoLive: boolean("blocks_go_live").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_tdr_issues_project_id").on(table.projectId),
+  index("idx_tdr_issues_status").on(table.status),
+  index("idx_tdr_issues_severity").on(table.severity),
+]);
+
+export const insertTdrIssueSchema = createInsertSchema(tdrIssues);
+export type TdrIssue = typeof tdrIssues.$inferSelect;
+export type InsertTdrIssue = typeof tdrIssues.$inferInsert;
+
+// TDR Integration Test Results
+export const tdrIntegrationTests = pgTable("tdr_integration_tests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  tdrEventId: varchar("tdr_event_id").references(() => tdrEvents.id),
+  interfaceName: varchar("interface_name").notNull(), // ADT, Lab, Pharmacy, Radiology, etc.
+  interfaceType: varchar("interface_type"), // HL7, FHIR, API, File
+  sourceSystem: varchar("source_system"),
+  targetSystem: varchar("target_system"),
+  direction: varchar("direction"), // inbound, outbound, bidirectional
+  testType: varchar("test_type"), // connectivity, data_validation, performance, error_handling
+  status: tdrTestStatusEnum("status").default("pending"),
+  messagesSent: integer("messages_sent").default(0),
+  messagesReceived: integer("messages_received").default(0),
+  errorsCount: integer("errors_count").default(0),
+  responseTimeMs: integer("response_time_ms"),
+  testedAt: timestamp("tested_at"),
+  testedBy: varchar("tested_by").references(() => users.id),
+  notes: text("notes"),
+  errorLog: text("error_log"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_tdr_integration_tests_project_id").on(table.projectId),
+  index("idx_tdr_integration_tests_status").on(table.status),
+]);
+
+export const insertTdrIntegrationTestSchema = createInsertSchema(tdrIntegrationTests);
+export type TdrIntegrationTest = typeof tdrIntegrationTests.$inferSelect;
+export type InsertTdrIntegrationTest = typeof tdrIntegrationTests.$inferInsert;
+
+// TDR Downtime Procedure Tests
+export const tdrDowntimeTests = pgTable("tdr_downtime_tests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  tdrEventId: varchar("tdr_event_id").references(() => tdrEvents.id),
+  procedureName: varchar("procedure_name").notNull(),
+  procedureType: varchar("procedure_type"), // planned_downtime, unplanned_downtime, backup, restore, failover
+  description: text("description"),
+  expectedDurationMinutes: integer("expected_duration_minutes"),
+  actualDurationMinutes: integer("actual_duration_minutes"),
+  status: tdrTestStatusEnum("status").default("pending"),
+  testedAt: timestamp("tested_at"),
+  testedBy: varchar("tested_by").references(() => users.id),
+  stepsCompleted: jsonb("steps_completed"), // array of step statuses
+  issues: text("issues"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_tdr_downtime_tests_project_id").on(table.projectId),
+]);
+
+export const insertTdrDowntimeTestSchema = createInsertSchema(tdrDowntimeTests);
+export type TdrDowntimeTest = typeof tdrDowntimeTests.$inferSelect;
+export type InsertTdrDowntimeTest = typeof tdrDowntimeTests.$inferInsert;
+
+// TDR Readiness Scores (aggregated)
+export const tdrReadinessScores = pgTable("tdr_readiness_scores", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  tdrEventId: varchar("tdr_event_id").references(() => tdrEvents.id),
+  calculatedAt: timestamp("calculated_at").defaultNow(),
+  technicalScore: integer("technical_score"), // 0-100
+  dataScore: integer("data_score"), // 0-100
+  staffScore: integer("staff_score"), // 0-100
+  supportScore: integer("support_score"), // 0-100
+  processScore: integer("process_score"), // 0-100
+  overallScore: integer("overall_score"), // weighted average
+  recommendation: tdrRecommendationEnum("recommendation"),
+  criticalIssuesCount: integer("critical_issues_count"),
+  highIssuesCount: integer("high_issues_count"),
+  notes: text("notes"),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+}, (table) => [
+  index("idx_tdr_readiness_scores_project_id").on(table.projectId),
+  index("idx_tdr_readiness_scores_calculated_at").on(table.calculatedAt),
+]);
+
+export const insertTdrReadinessScoreSchema = createInsertSchema(tdrReadinessScores);
+export type TdrReadinessScore = typeof tdrReadinessScores.$inferSelect;
+export type InsertTdrReadinessScore = typeof tdrReadinessScores.$inferInsert;

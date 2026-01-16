@@ -75,6 +75,7 @@ import AdvancedAnalytics from "@/pages/AdvancedAnalytics";
 import RaciMatrix from "@/pages/RaciMatrix";
 import AutoScheduling from "@/pages/AutoScheduling";
 import RemoteSupport from "@/pages/RemoteSupport";
+import TDRManagement from "@/pages/TDR";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/not-found";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
@@ -213,6 +214,7 @@ function Router() {
       <Route path="/onboarding" component={() => <ProtectedRoute component={ConsultantOnboarding} />} />
       <Route path="/command-center" component={() => <ProtectedRoute component={CommandCenter} />} />
       <Route path="/remote-support" component={() => <ProtectedRoute component={RemoteSupport} />} />
+      <Route path="/tdr" component={() => <ProtectedRoute component={TDRManagement} />} />
       <Route path="/timesheets" component={() => <ProtectedRoute component={Timesheets} />} />
       <Route path="/availability" component={() => <ProtectedRoute component={Availability} />} />
       <Route path="/shift-swaps" component={() => <ProtectedRoute component={ShiftSwaps} />} />
