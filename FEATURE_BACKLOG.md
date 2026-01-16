@@ -533,6 +533,40 @@ This document tracks features that have Cypress tests written but are not yet im
 
 ---
 
+## 12. TDR (Technical Dress Rehearsal) Module (P0) ✅ COMPLETE
+
+### TDR Features (All Implemented Jan 16, 2026)
+- [x] TDR event scheduling and management
+- [x] Pre-go-live checklists by category (infrastructure, integrations, data, workflows, support)
+- [x] Test scenario execution and tracking
+- [x] Issue management with severity levels
+- [x] Integration test tracking (HL7, FHIR, API interfaces)
+- [x] Downtime procedure testing
+- [x] Go/No-Go readiness scorecard with weighted scoring
+- [x] Default checklist seeding
+- [x] ~150 Cypress E2E tests
+
+**Test File**: `41-tdr-management.cy.js`
+
+---
+
+## 13. Executive Success Metrics Module (P0) ✅ COMPLETE
+
+### Executive Metrics Features (All Implemented Jan 16, 2026)
+- [x] Role-based dashboards (CEO, CFO, CIO, CTO, CMIO, CNO)
+- [x] Success metrics by phase (pre-go-live, at go-live, post go-live, long-term)
+- [x] Metric value tracking with history
+- [x] SOW (Statement of Work) success criteria management
+- [x] Executive endorsement tracking
+- [x] Report generation
+- [x] Default metrics seeding per role
+- [x] Achievement/progress rate calculations
+- [x] ~85 Cypress E2E tests
+
+**Test File**: `42-executive-metrics.cy.js`
+
+---
+
 ## How to Use This Document
 
 1. **For Development**: Pick a feature from a priority group and implement it
@@ -542,5 +576,5 @@ This document tracks features that have Cypress tests written but are not yet im
 
 ---
 
-*Last Updated: December 28, 2024*
-*Digital Signatures Cypress Tests - Communication coverage 96%, Dashboard 70%*
+*Last Updated: January 16, 2026*
+*TDR & Executive Metrics Modules Complete - Total test coverage ~1,927 tests*

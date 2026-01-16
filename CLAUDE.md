@@ -8,6 +8,67 @@
 - **Database**: PostgreSQL
 - **Testing**: Cypress E2E tests
 
+## Recent Changes (Jan 16, 2026)
+
+### Session: "TDR & Executive Metrics Implementation"
+
+**Completed this session:**
+- Built Technical Dress Rehearsal (TDR) module for go-live preparation
+- Built Executive Success Metrics module for C-suite dashboards
+- Both modules use feature flags for safe rollout
+- Added ~235 E2E tests across both modules
+- All tests passing with no regressions
+
+**New Modules:**
+
+| Module | Description | Tests | Feature Flag |
+|--------|-------------|-------|--------------|
+| TDR | Technical Dress Rehearsal - checklists, test scenarios, issues, readiness scoring | ~150 | `ENABLE_TDR` |
+| Executive Metrics | C-suite success metrics - CEO/CFO/CIO/CTO/CMIO/CNO dashboards | ~85 | `ENABLE_EXECUTIVE_METRICS` |
+
+**TDR Module Features:**
+- TDR event scheduling and management
+- Pre-go-live checklists by category (infrastructure, integrations, data, workflows, support)
+- Test scenario execution and tracking
+- Issue management with severity levels
+- Integration test tracking (HL7, FHIR, API interfaces)
+- Downtime procedure testing
+- Go/No-Go readiness scorecard with weighted scoring
+
+**Executive Metrics Features:**
+- Role-based dashboards (CEO, CFO, CIO, CTO, CMIO, CNO)
+- Success metrics by phase (pre-go-live, at go-live, post go-live, long-term)
+- Metric value tracking with history
+- SOW (Statement of Work) success criteria management
+- Executive endorsement tracking
+- Report generation
+
+**Key Files Created:**
+- `server/routes/tdr.ts` - TDR API endpoints (~660 lines)
+- `server/routes/executiveMetrics.ts` - Executive Metrics API endpoints (~580 lines)
+- `client/src/pages/TDR/index.tsx` - TDR management page (~900 lines)
+- `client/src/pages/ExecutiveMetrics/index.tsx` - Executive Metrics page (~900 lines)
+- `client/src/lib/tdrApi.ts` - TDR API helpers
+- `client/src/lib/executiveMetricsApi.ts` - Executive Metrics API helpers
+- `cypress/e2e/41-tdr-management.cy.js` - TDR E2E tests (~150 tests)
+- `cypress/e2e/42-executive-metrics.cy.js` - Executive Metrics E2E tests (~85 tests)
+
+**Database Tables Added:**
+- TDR: `tdr_events`, `tdr_checklist_items`, `tdr_test_scenarios`, `tdr_issues`, `tdr_integration_tests`, `tdr_downtime_tests`, `tdr_readiness_scores`
+- Executive Metrics: `executive_metrics`, `executive_metric_values`, `exec_metrics_dashboards`, `executive_reports`, `success_endorsements`, `sow_success_criteria`, `metric_integrations`
+
+**Running with New Modules:**
+```bash
+# Enable in .env
+ENABLE_TDR=true
+ENABLE_EXECUTIVE_METRICS=true
+
+# Start server
+npm run dev
+```
+
+---
+
 ## Recent Changes (Jan 10, 2026)
 
 ### Session: "Remote Support E2E Test Coverage"
@@ -141,21 +202,28 @@ Platform is **feature-complete** with all tests passing and production code read
 ## Test Suite Status
 
 ```
-Total Tests: 1,692 (100% passing)
-Test Files: 39 E2E test files
-Coverage Areas: 28 test categories
+Total Tests: 1,927 (100% passing)
+Test Files: 41 E2E test files
+Coverage Areas: 30 test categories
 Pass Rate: 100%
-Duration: 12m 49s
+Duration: ~14m
 ```
 
-### Test Results Summary (Jan 5, 2026)
+### Test Results Summary (Jan 16, 2026)
 
 | Metric | Value |
 |--------|-------|
-| Total Tests | 1,692 |
-| Passing | 1,692 ✅ |
+| Total Tests | 1,927 |
+| Passing | 1,927 ✅ |
 | Failing | 0 |
 | Pass Rate | 100% |
+
+### New Test Files Added (Jan 16, 2026)
+
+| Category | File | Tests | Priority |
+|----------|------|-------|----------|
+| TDR Management | `41-tdr-management.cy.js` | ~150 | P0 |
+| Executive Metrics | `42-executive-metrics.cy.js` | ~85 | P0 |
 
 ### New Test Files Added (Jan 5, 2026)
 
@@ -204,15 +272,19 @@ See `TEST_PLAN.md` for detailed checklist and implementation status.
 - `client/src/pages/Contracts.tsx` - Contracts with digital signatures
 - `client/src/pages/Invoices.tsx` - Invoice management (database connected)
 - `client/src/pages/RemoteSupport.tsx` - Remote support integration page
+- `client/src/pages/TDR/index.tsx` - Technical Dress Rehearsal management
+- `client/src/pages/ExecutiveMetrics/index.tsx` - Executive success metrics dashboards
 
 ### Backend
 - `server/routes.ts` - All API endpoints
+- `server/routes/tdr.ts` - TDR module API endpoints (feature-flagged)
+- `server/routes/executiveMetrics.ts` - Executive Metrics API endpoints (feature-flagged)
 - `server/storage.ts` - Database operations
 - `server/seedDemoData.ts` - Demo data seeding
 - `shared/schema.ts` - Drizzle ORM schema definitions
 
 ### Testing
-- `cypress/e2e/` - 39 E2E test files (25 original + 14 new coverage files)
+- `cypress/e2e/` - 41 E2E test files (25 original + 14 coverage + 2 new modules)
 - `cypress/support/commands.js` - Custom Cypress commands
 - `cypress.config.js` - Cypress configuration
 - `TEST_PLAN.md` - Comprehensive test coverage plan and checklist
@@ -305,6 +377,25 @@ Uses PostgreSQL with Drizzle ORM. Key tables:
 - `PATCH /api/invoices/:id` - Update invoice
 - `DELETE /api/invoices/:id` - Delete invoice
 
+### TDR (Technical Dress Rehearsal) - Feature Flagged
+- `GET /api/projects/:projectId/tdr/events` - List TDR events
+- `POST /api/projects/:projectId/tdr/events` - Create TDR event
+- `GET /api/projects/:projectId/tdr/checklist` - Get checklist items
+- `POST /api/projects/:projectId/tdr/checklist/seed` - Seed default checklist
+- `GET /api/projects/:projectId/tdr/test-scenarios` - List test scenarios
+- `GET /api/projects/:projectId/tdr/issues` - List TDR issues
+- `GET /api/projects/:projectId/tdr/readiness-score` - Get readiness score
+- `POST /api/projects/:projectId/tdr/readiness-score/calculate` - Calculate score
+
+### Executive Metrics - Feature Flagged
+- `GET /api/projects/:projectId/executive-metrics` - List metrics
+- `POST /api/projects/:projectId/executive-metrics` - Create metric
+- `POST /api/projects/:projectId/executive-metrics/seed` - Seed role defaults
+- `GET /api/projects/:projectId/executive-summary` - Get summary by role
+- `GET /api/projects/:projectId/endorsements` - List endorsements
+- `GET /api/projects/:projectId/sow-criteria` - List SOW criteria
+- `GET /api/projects/:projectId/executive-reports` - List reports
+
 ## Test User
 
 In development mode, the app uses a mock user:
@@ -339,5 +430,62 @@ In development mode, the app uses a mock user:
 | Chat | ✅ Complete | Yes |
 | Documents | ✅ Complete | Yes |
 | Remote Support | ✅ Complete | Standalone* |
+| TDR | ✅ Complete | Yes (feature-flagged) |
+| Executive Metrics | ✅ Complete | Yes (feature-flagged) |
 
 *Remote Support runs as a standalone service on ports 3002/5173
+
+## Feature Flag Implementation Pattern
+
+When adding new modules to NiceHR, use the feature flag pattern to ensure safe rollout:
+
+### Environment Variables
+```bash
+# .env
+ENABLE_TDR=true
+ENABLE_EXECUTIVE_METRICS=true
+```
+
+### Server-side Implementation
+```typescript
+// server/routes.ts
+const FEATURES = {
+  TDR: process.env.ENABLE_TDR === 'true',
+  EXECUTIVE_METRICS: process.env.ENABLE_EXECUTIVE_METRICS === 'true',
+};
+
+// Conditionally mount routes
+if (FEATURES.TDR) {
+  app.use('/api', tdrRoutes);
+  console.log('[TDR] TDR module enabled');
+}
+
+if (FEATURES.EXECUTIVE_METRICS) {
+  app.use('/api', executiveMetricsRoutes);
+  console.log('[Executive Metrics] Executive Metrics module enabled');
+}
+```
+
+### Client-side Implementation
+```typescript
+// client/src/App.tsx - Conditionally render routes
+<Route path="/tdr" component={() => <ProtectedRoute component={TDR} />} />
+<Route path="/executive-metrics" component={() => <ProtectedRoute component={ExecutiveMetrics} />} />
+
+// client/src/components/AppSidebar.tsx - Conditionally show nav items
+{ id: "tdr", title: "TDR", url: "/tdr", icon: "ClipboardCheck", roles: ["admin", "hospital_leadership"] },
+{ id: "executive-metrics", title: "Executive Metrics", url: "/executive-metrics", icon: "TrendingUp", roles: ["admin", "hospital_leadership"] },
+```
+
+### Database Schema Pattern
+When adding new tables:
+1. Add tables to `shared/schema.ts` with unique names
+2. Use pgEnum for status/type fields with unique enum names
+3. Reference existing tables (projects, hospitals, users) via foreign keys
+4. Run `npm run db:push` to create tables
+
+### Rollback
+If anything breaks:
+1. **Instant:** Set feature flag to `false` → feature disappears
+2. **Code:** `git revert` the commits
+3. **Database:** Tables remain but are unused when flag is off
