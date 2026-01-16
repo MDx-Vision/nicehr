@@ -7573,19 +7573,19 @@ export const sowCriteriaStatusEnum = pgEnum("sow_criteria_status", [
   "pending", "achieved", "not_achieved", "waived"
 ]);
 
-export const integrationSystemTypeEnum = pgEnum("integration_system_type", [
+export const metricIntegrationSystemTypeEnum = pgEnum("metric_integration_system_type", [
   "ehr", "revenue_cycle", "hr", "quality", "help_desk", "analytics", "scheduling"
 ]);
 
-export const integrationConnectionTypeEnum = pgEnum("integration_connection_type", [
+export const metricIntegrationConnectionTypeEnum = pgEnum("metric_integration_connection_type", [
   "api", "hl7", "fhir", "sftp", "manual", "webhook"
 ]);
 
-export const integrationStatusEnum = pgEnum("integration_status", [
+export const metricIntegrationStatusEnum = pgEnum("metric_integration_status", [
   "pending", "connected", "failed", "disabled", "testing"
 ]);
 
-export const reportTypeEnum = pgEnum("report_type", [
+export const execReportTypeEnum = pgEnum("exec_report_type", [
   "weekly", "monthly", "milestone", "custom", "quarterly", "annual"
 ]);
 
@@ -7639,8 +7639,8 @@ export const insertExecutiveMetricValueSchema = createInsertSchema(executiveMetr
 export type ExecutiveMetricValue = typeof executiveMetricValues.$inferSelect;
 export type InsertExecutiveMetricValue = typeof executiveMetricValues.$inferInsert;
 
-// Executive Dashboards - Saved dashboard configurations
-export const executiveDashboards = pgTable("executive_dashboards", {
+// Executive Metrics Dashboards - Saved dashboard configurations for metrics module
+export const execMetricsDashboards = pgTable("exec_metrics_dashboards", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   projectId: varchar("project_id").references(() => projects.id).notNull(),
   executiveRole: executiveRoleEnum("executive_role").notNull(),
@@ -7652,20 +7652,20 @@ export const executiveDashboards = pgTable("executive_dashboards", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
-  index("idx_executive_dashboards_project_id").on(table.projectId),
-  index("idx_executive_dashboards_role").on(table.executiveRole),
+  index("idx_exec_metrics_dashboards_project_id").on(table.projectId),
+  index("idx_exec_metrics_dashboards_role").on(table.executiveRole),
 ]);
 
-export const insertExecutiveDashboardSchema = createInsertSchema(executiveDashboards);
-export type ExecutiveDashboard = typeof executiveDashboards.$inferSelect;
-export type InsertExecutiveDashboard = typeof executiveDashboards.$inferInsert;
+export const insertExecMetricsDashboardSchema = createInsertSchema(execMetricsDashboards);
+export type ExecMetricsDashboard = typeof execMetricsDashboards.$inferSelect;
+export type InsertExecMetricsDashboard = typeof execMetricsDashboards.$inferInsert;
 
 // Executive Reports - Generated reports
 export const executiveReports = pgTable("executive_reports", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   projectId: varchar("project_id").references(() => projects.id).notNull(),
   executiveRole: executiveRoleEnum("executive_role"),
-  reportType: reportTypeEnum("report_type").notNull(),
+  reportType: execReportTypeEnum("exec_report_type").notNull(),
   title: varchar("title").notNull(),
   dateRangeStart: timestamp("date_range_start"),
   dateRangeEnd: timestamp("date_range_end"),
@@ -7737,11 +7737,11 @@ export type InsertSowSuccessCriteria = typeof sowSuccessCriteria.$inferInsert;
 export const metricIntegrations = pgTable("metric_integrations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   hospitalId: varchar("hospital_id").references(() => hospitals.id).notNull(),
-  systemType: integrationSystemTypeEnum("system_type").notNull(),
+  systemType: metricIntegrationSystemTypeEnum("metric_integration_system_type").notNull(),
   systemName: varchar("system_name"), // Epic, Cerner, Workday, etc.
-  connectionType: integrationConnectionTypeEnum("connection_type"),
+  connectionType: metricIntegrationConnectionTypeEnum("metric_integration_connection_type"),
   connectionConfig: jsonb("connection_config"), // encrypted credentials, endpoints
-  status: integrationStatusEnum("status").default("pending"),
+  status: metricIntegrationStatusEnum("metric_integration_status").default("pending"),
   lastSyncAt: timestamp("last_sync_at"),
   syncFrequency: varchar("sync_frequency"), // realtime, hourly, daily, weekly
   dataPoints: jsonb("data_points"), // which metrics this integration provides
