@@ -259,7 +259,7 @@ const NAV_GROUPS: NavGroup[] = [
       { id: "skills", title: "Skills", url: "/skills-questionnaire", icon: "Award", roles: ["consultant"] },
       { id: "my-documents", title: "My Documents", url: "/my-documents", icon: "FileText", roles: ["consultant"] },
       { id: "documents", title: "Documents", url: "/documents", icon: "FileText", roles: ["admin", "hospital_leadership", "hospital_staff"] },
-      { id: "account", title: "Account Settings", url: "/account", icon: "Settings", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
+      { id: "account", title: "Account Settings", url: "/account-settings", icon: "Settings", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
     ],
   },
   {

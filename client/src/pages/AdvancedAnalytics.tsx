@@ -261,14 +261,6 @@ export default function AdvancedAnalytics() {
     },
   });
 
-  if (error) {
-    toast({
-      title: "Error",
-      description: "Failed to load analytics data.",
-      variant: "destructive",
-    });
-  }
-
   if (isLoading) {
     return <LoadingSkeleton />;
   }
