@@ -7539,3 +7539,219 @@ export const tdrReadinessScores = pgTable("tdr_readiness_scores", {
 export const insertTdrReadinessScoreSchema = createInsertSchema(tdrReadinessScores);
 export type TdrReadinessScore = typeof tdrReadinessScores.$inferSelect;
 export type InsertTdrReadinessScore = typeof tdrReadinessScores.$inferInsert;
+
+// =============================================================================
+// Executive Metrics Tables
+// =============================================================================
+
+// Enums for Executive Metrics
+export const executiveRoleEnum = pgEnum("executive_role", [
+  "ceo", "cfo", "cio", "cto", "cmio", "cno"
+]);
+
+export const metricCategoryEnum = pgEnum("metric_category", [
+  "pre_golive", "at_golive", "post_golive", "long_term"
+]);
+
+export const metricStatusEnum = pgEnum("metric_status", [
+  "not_started", "on_track", "at_risk", "achieved", "missed"
+]);
+
+export const metricUnitEnum = pgEnum("metric_unit", [
+  "percentage", "count", "days", "hours", "dollars", "score", "boolean", "trend", "months", "percentile"
+]);
+
+export const endorsementStatusEnum = pgEnum("endorsement_status", [
+  "pending", "approved", "received", "published", "declined"
+]);
+
+export const endorsementTypeEnum = pgEnum("endorsement_type", [
+  "testimonial", "reference", "case_study", "speaking", "press_release"
+]);
+
+export const sowCriteriaStatusEnum = pgEnum("sow_criteria_status", [
+  "pending", "achieved", "not_achieved", "waived"
+]);
+
+export const integrationSystemTypeEnum = pgEnum("integration_system_type", [
+  "ehr", "revenue_cycle", "hr", "quality", "help_desk", "analytics", "scheduling"
+]);
+
+export const integrationConnectionTypeEnum = pgEnum("integration_connection_type", [
+  "api", "hl7", "fhir", "sftp", "manual", "webhook"
+]);
+
+export const integrationStatusEnum = pgEnum("integration_status", [
+  "pending", "connected", "failed", "disabled", "testing"
+]);
+
+export const reportTypeEnum = pgEnum("report_type", [
+  "weekly", "monthly", "milestone", "custom", "quarterly", "annual"
+]);
+
+// Executive Success Metrics - Define what success looks like
+export const executiveMetrics = pgTable("executive_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  hospitalId: varchar("hospital_id").references(() => hospitals.id),
+  executiveRole: executiveRoleEnum("executive_role").notNull(),
+  category: metricCategoryEnum("category").notNull(),
+  metricName: varchar("metric_name").notNull(),
+  description: text("description"),
+  targetValue: varchar("target_value").notNull(),
+  targetUnit: metricUnitEnum("target_unit"),
+  baselineValue: varchar("baseline_value"),
+  currentValue: varchar("current_value"),
+  status: metricStatusEnum("status").default("not_started"),
+  dataSource: varchar("data_source"), // manual, ehr_integration, hr_integration, etc.
+  lastUpdated: timestamp("last_updated"),
+  updatedBy: varchar("updated_by").references(() => users.id),
+  notes: text("notes"),
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_executive_metrics_project_id").on(table.projectId),
+  index("idx_executive_metrics_role").on(table.executiveRole),
+  index("idx_executive_metrics_category").on(table.category),
+  index("idx_executive_metrics_status").on(table.status),
+]);
+
+export const insertExecutiveMetricSchema = createInsertSchema(executiveMetrics);
+export type ExecutiveMetric = typeof executiveMetrics.$inferSelect;
+export type InsertExecutiveMetric = typeof executiveMetrics.$inferInsert;
+
+// Executive Metric Values - Track changes over time
+export const executiveMetricValues = pgTable("executive_metric_values", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  metricId: varchar("metric_id").references(() => executiveMetrics.id).notNull(),
+  value: varchar("value").notNull(),
+  recordedAt: timestamp("recorded_at").defaultNow(),
+  recordedBy: varchar("recorded_by").references(() => users.id),
+  source: varchar("source"), // manual, automated, integration
+  notes: text("notes"),
+}, (table) => [
+  index("idx_executive_metric_values_metric_id").on(table.metricId),
+  index("idx_executive_metric_values_recorded_at").on(table.recordedAt),
+]);
+
+export const insertExecutiveMetricValueSchema = createInsertSchema(executiveMetricValues);
+export type ExecutiveMetricValue = typeof executiveMetricValues.$inferSelect;
+export type InsertExecutiveMetricValue = typeof executiveMetricValues.$inferInsert;
+
+// Executive Dashboards - Saved dashboard configurations
+export const executiveDashboards = pgTable("executive_dashboards", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  executiveRole: executiveRoleEnum("executive_role").notNull(),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  config: jsonb("config"), // widget layout, filters, etc.
+  isDefault: boolean("is_default").default(false),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_executive_dashboards_project_id").on(table.projectId),
+  index("idx_executive_dashboards_role").on(table.executiveRole),
+]);
+
+export const insertExecutiveDashboardSchema = createInsertSchema(executiveDashboards);
+export type ExecutiveDashboard = typeof executiveDashboards.$inferSelect;
+export type InsertExecutiveDashboard = typeof executiveDashboards.$inferInsert;
+
+// Executive Reports - Generated reports
+export const executiveReports = pgTable("executive_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  executiveRole: executiveRoleEnum("executive_role"),
+  reportType: reportTypeEnum("report_type").notNull(),
+  title: varchar("title").notNull(),
+  dateRangeStart: timestamp("date_range_start"),
+  dateRangeEnd: timestamp("date_range_end"),
+  content: jsonb("content"), // metrics snapshot, charts data
+  generatedAt: timestamp("generated_at").defaultNow(),
+  generatedBy: varchar("generated_by").references(() => users.id),
+  format: varchar("format").default("pdf"), // pdf, excel, dashboard
+  fileUrl: varchar("file_url"),
+}, (table) => [
+  index("idx_executive_reports_project_id").on(table.projectId),
+  index("idx_executive_reports_role").on(table.executiveRole),
+  index("idx_executive_reports_generated_at").on(table.generatedAt),
+]);
+
+export const insertExecutiveReportSchema = createInsertSchema(executiveReports);
+export type ExecutiveReport = typeof executiveReports.$inferSelect;
+export type InsertExecutiveReport = typeof executiveReports.$inferInsert;
+
+// Success Endorsements - Track client endorsements
+export const successEndorsements = pgTable("success_endorsements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  hospitalId: varchar("hospital_id").references(() => hospitals.id),
+  executiveRole: executiveRoleEnum("executive_role").notNull(),
+  executiveName: varchar("executive_name").notNull(),
+  executiveTitle: varchar("executive_title"),
+  endorsementType: endorsementTypeEnum("endorsement_type"),
+  content: text("content"),
+  status: endorsementStatusEnum("status").default("pending"),
+  requestedAt: timestamp("requested_at"),
+  receivedAt: timestamp("received_at"),
+  metricsAchieved: jsonb("metrics_achieved"), // which success criteria were met
+  permissionToUse: boolean("permission_to_use").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_success_endorsements_project_id").on(table.projectId),
+  index("idx_success_endorsements_status").on(table.status),
+]);
+
+export const insertSuccessEndorsementSchema = createInsertSchema(successEndorsements);
+export type SuccessEndorsement = typeof successEndorsements.$inferSelect;
+export type InsertSuccessEndorsement = typeof successEndorsements.$inferInsert;
+
+// SOW Success Criteria - Link metrics to contracts
+export const sowSuccessCriteria = pgTable("sow_success_criteria", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  contractId: varchar("contract_id").references(() => contracts.id),
+  executiveRole: executiveRoleEnum("executive_role").notNull(),
+  criteriaText: text("criteria_text").notNull(),
+  metricId: varchar("metric_id").references(() => executiveMetrics.id),
+  targetValue: varchar("target_value"),
+  achievedValue: varchar("achieved_value"),
+  status: sowCriteriaStatusEnum("status").default("pending"),
+  verifiedAt: timestamp("verified_at"),
+  verifiedBy: varchar("verified_by").references(() => users.id),
+  evidence: text("evidence"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_sow_success_criteria_project_id").on(table.projectId),
+  index("idx_sow_success_criteria_status").on(table.status),
+]);
+
+export const insertSowSuccessCriteriaSchema = createInsertSchema(sowSuccessCriteria);
+export type SowSuccessCriteria = typeof sowSuccessCriteria.$inferSelect;
+export type InsertSowSuccessCriteria = typeof sowSuccessCriteria.$inferInsert;
+
+// Integration Configs - Hospital system integrations for metric data
+export const metricIntegrations = pgTable("metric_integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  hospitalId: varchar("hospital_id").references(() => hospitals.id).notNull(),
+  systemType: integrationSystemTypeEnum("system_type").notNull(),
+  systemName: varchar("system_name"), // Epic, Cerner, Workday, etc.
+  connectionType: integrationConnectionTypeEnum("connection_type"),
+  connectionConfig: jsonb("connection_config"), // encrypted credentials, endpoints
+  status: integrationStatusEnum("status").default("pending"),
+  lastSyncAt: timestamp("last_sync_at"),
+  syncFrequency: varchar("sync_frequency"), // realtime, hourly, daily, weekly
+  dataPoints: jsonb("data_points"), // which metrics this integration provides
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_metric_integrations_hospital_id").on(table.hospitalId),
+  index("idx_metric_integrations_status").on(table.status),
+]);
+
+export const insertMetricIntegrationSchema = createInsertSchema(metricIntegrations);
+export type MetricIntegration = typeof metricIntegrations.$inferSelect;
+export type InsertMetricIntegration = typeof metricIntegrations.$inferInsert;

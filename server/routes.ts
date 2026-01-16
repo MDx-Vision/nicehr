@@ -124,6 +124,7 @@ import {
 } from "./emailService";
 import { FEATURES } from "@shared/featureFlags";
 import tdrRoutes from "./routes/tdr";
+import executiveMetricsRoutes from "./routes/executiveMetrics";
 
 // =============================================================================
 // QUERY PARAMETER VALIDATION HELPERS
@@ -227,6 +228,12 @@ export async function registerRoutes(
   if (FEATURES.TDR_MODULE) {
     app.use('/api', tdrRoutes);
     console.log('[TDR] TDR module enabled');
+  }
+
+  // Executive Metrics Module - Feature Flagged
+  if (FEATURES.EXECUTIVE_METRICS) {
+    app.use('/api', executiveMetricsRoutes);
+    console.log('[Executive Metrics] Executive Metrics module enabled');
   }
 
   // Seed RBAC roles and permissions at startup
