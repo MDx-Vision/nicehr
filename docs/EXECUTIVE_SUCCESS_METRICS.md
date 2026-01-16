@@ -317,6 +317,116 @@ The CNO leads nursing workflow transformation and measures success by nurse sati
 
 ---
 
+## Technical Dress Rehearsal (TDR) Metrics
+
+### What is TDR?
+A **Technical Dress Rehearsal** is a practice run of the entire go-live process conducted 2-4 weeks before actual go-live. It validates that all systems, integrations, workflows, and support processes work correctly under realistic conditions.
+
+### TDR Success Metrics
+
+#### Pre-TDR Readiness
+| Metric | Target | How to Track in TNG |
+|--------|--------|---------------------|
+| Data migration complete | 100% of planned data | Migration dashboard |
+| Integration testing complete | All interfaces tested | Integration status |
+| Training completion | >95% of users | Training dashboard |
+| Support team staffing | 100% confirmed | Staffing module |
+| Command center setup | Fully operational | Command center status |
+| Downtime procedures documented | 100% complete | Checklist tracking |
+| Communication plan ready | All templates approved | Communication log |
+
+#### During TDR
+| Metric | Target | How to Track in TNG |
+|--------|--------|---------------------|
+| Cutover steps completed | 100% on schedule | Cutover checklist |
+| System uptime | >99.5% | System monitoring |
+| Interface success rate | >99% | Integration dashboard |
+| Test scenarios passed | >95% | Test case tracking |
+| Critical issues identified | Documented & triaged | Issue tracking |
+| User workflow validation | All departments signed off | Approval workflow |
+| Response time | <3 seconds | Performance monitoring |
+
+#### Post-TDR Assessment
+| Metric | Target | How to Track in TNG |
+|--------|--------|---------------------|
+| Issues resolved | 100% critical, >90% high | Issue tracking |
+| Remediation plan | All items assigned | Task management |
+| Go/No-Go decision | Documented | Decision log |
+| Lessons learned | Documented | Notes/reports |
+| Revised timeline (if needed) | Communicated | Project timeline |
+| Staff confidence level | >80% feel ready | Survey integration |
+
+### TDR Readiness Scorecard
+
+| Category | Weight | Score Components |
+|----------|--------|------------------|
+| **Technical Readiness** | 30% | System uptime, integrations, performance |
+| **Data Readiness** | 20% | Migration complete, validation passed |
+| **Staff Readiness** | 25% | Training complete, competency verified |
+| **Support Readiness** | 15% | Command center, help desk, at-elbow |
+| **Process Readiness** | 10% | Workflows validated, approvals complete |
+
+**Go/No-Go Thresholds:**
+- **GREEN (Go):** Overall score >90%, no critical issues
+- **YELLOW (Conditional Go):** Score 80-90%, remediation plan in place
+- **RED (No-Go):** Score <80% or unresolved critical issues
+
+### TDR Checklist Categories
+
+1. **Infrastructure & Environment**
+   - [ ] Production environment validated
+   - [ ] Network connectivity tested
+   - [ ] Backup/restore procedures verified
+   - [ ] Disaster recovery tested
+   - [ ] Security controls validated
+
+2. **Integrations & Interfaces**
+   - [ ] ADT interfaces tested
+   - [ ] Lab interfaces tested
+   - [ ] Pharmacy interfaces tested
+   - [ ] Radiology interfaces tested
+   - [ ] Third-party system connections verified
+
+3. **Data Migration**
+   - [ ] Patient demographics migrated
+   - [ ] Historical data converted
+   - [ ] Active orders migrated
+   - [ ] Medication lists validated
+   - [ ] Problem lists validated
+
+4. **Workflows & Processes**
+   - [ ] Registration workflow tested
+   - [ ] Order entry workflow tested
+   - [ ] Documentation workflow tested
+   - [ ] Discharge workflow tested
+   - [ ] Downtime procedures tested
+
+5. **Support Operations**
+   - [ ] Command center operational
+   - [ ] Help desk staffed and trained
+   - [ ] At-elbow support assigned
+   - [ ] Escalation paths documented
+   - [ ] Communication channels tested
+
+### Current TNG Implementation Status
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| 11-Phase Lifecycle | ✅ Implemented | Includes "Go-Live Prep" (Phase 8) |
+| Go-Live Command Center | ✅ Implemented | Sign-ins, tickets, handoffs |
+| Phase Steps Tracking | ✅ Implemented | Steps with key activities |
+| Risk Register | ✅ Implemented | Track risks per phase |
+| Milestones | ✅ Implemented | Key deliverables |
+| **TDR Checklist** | ❌ Not Implemented | Need specific TDR readiness checklist |
+| **TDR Test Scenarios** | ❌ Not Implemented | Need test case tracking |
+| **TDR Readiness Scorecard** | ❌ Not Implemented | Need aggregate scoring |
+| **Integration Test Results** | ❌ Not Implemented | Need interface test tracking |
+
+### SOW Language Suggestion
+> "TDR success defined as: >95% of test scenarios passed, all critical issues resolved before go-live, >80% staff confidence rating, and executive sign-off on Go/No-Go decision. TDR must be completed minimum 2 weeks prior to go-live date."
+
+---
+
 ## TNG Platform Integration Requirements
 
 ### Automated Data Integrations (Option B)
