@@ -677,6 +677,7 @@ export default function ExecutiveMetricsPage() {
                         <Button
                           size="sm"
                           variant="ghost"
+                          data-testid="update-metric-value"
                           onClick={() => {
                             setUpdateValueDialog({ open: true, metric });
                             setNewValue(metric.currentValue || "");
