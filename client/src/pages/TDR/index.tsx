@@ -19,12 +19,13 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   createTdrEvent, updateTdrEvent,
   createChecklistItem, completeChecklistItem, uncompleteChecklistItem, seedChecklist,
   createTestScenario, executeTestScenario,
-  createIssue, updateIssue, resolveIssue,
+  createIssue, updateIssue, resolveIssue, createTicketFromIssue,
   createIntegrationTest, updateIntegrationTest,
   createDowntimeTest, updateDowntimeTest,
   calculateReadinessScore, approveReadinessScore,
@@ -37,6 +38,7 @@ import type {
 
 export default function TDRManagement() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
 
@@ -129,12 +131,23 @@ export default function TDRManagement() {
       if (item.isCompleted) {
         return uncompleteChecklistItem(item.id);
       } else {
-        return completeChecklistItem(item.id, "current-user");
+        return completeChecklistItem(item.id, user?.id || "dev-user-local");
       }
     },
-    onSuccess: () => {
+    onSuccess: (data, item) => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/tdr/checklist`] });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/tdr/summary`] });
+      toast({
+        title: item.isCompleted ? "Item unchecked" : "Item completed",
+        description: item.isCompleted ? "Checklist item marked as incomplete" : "Checklist item marked as complete",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error updating checklist",
+        description: error.message || "Failed to update checklist item",
+        variant: "destructive",
+      });
     },
   });
 
@@ -162,7 +175,7 @@ export default function TDRManagement() {
 
   const executeTestMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
-      executeTestScenario(id, { status, userId: "current-user" }),
+      executeTestScenario(id, { status, userId: user?.id || "dev-user-local" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/tdr/test-scenarios`] });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/tdr/summary`] });
@@ -186,6 +199,25 @@ export default function TDRManagement() {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/tdr/issues`] });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/tdr/summary`] });
       toast({ title: "Issue resolved" });
+    },
+  });
+
+  const createTicketMutation = useMutation({
+    mutationFn: (issueId: string) => createTicketFromIssue(issueId),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/tdr/issues`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/support-tickets`] });
+      toast({
+        title: "Support ticket created",
+        description: `Ticket ${data.ticket?.ticketNumber || data.ticket?.id} created from TDR issue`
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to create ticket",
+        description: error.message || "An error occurred",
+        variant: "destructive"
+      });
     },
   });
 
@@ -497,7 +529,11 @@ export default function TDRManagement() {
                           className="flex items-center gap-3 p-2 hover:bg-muted/50 rounded-lg cursor-pointer"
                           onClick={() => toggleChecklistMutation.mutate(item)}
                         >
-                          <Checkbox checked={item.isCompleted || false} />
+                          <Checkbox
+                            checked={item.isCompleted || false}
+                            onCheckedChange={() => toggleChecklistMutation.mutate(item)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
                           <span className={item.isCompleted ? "line-through text-muted-foreground" : ""}>
                             {item.title}
                           </span>
@@ -596,6 +632,23 @@ export default function TDRManagement() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant={issue.status === "resolved" ? "default" : "secondary"}>{issue.status}</Badge>
+                      {issue.supportTicketId && (
+                        <a href="/support-tickets" className="text-sm text-blue-600 hover:underline">
+                          <Badge variant="outline" className="cursor-pointer">
+                            View Ticket
+                          </Badge>
+                        </a>
+                      )}
+                      {!issue.supportTicketId && issue.status !== "resolved" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => createTicketMutation.mutate(issue.id)}
+                          disabled={createTicketMutation.isPending}
+                        >
+                          Create Ticket
+                        </Button>
+                      )}
                       {issue.status !== "resolved" && (
                         <Button
                           size="sm"

@@ -2217,9 +2217,12 @@ export const supportTickets = pgTable("support_tickets", {
   escalatedAt: timestamp("escalated_at"),
   resolvedAt: timestamp("resolved_at"),
   closedAt: timestamp("closed_at"),
+  tdrIssueId: varchar("tdr_issue_id").references(() => tdrIssues.id), // Link to TDR issue if created from TDR
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_support_tickets_tdr_issue_id").on(table.tdrIssueId),
+]);
 
 export const supportTicketsRelations = relations(supportTickets, ({ one }) => ({
   project: one(projects, {
@@ -7446,12 +7449,14 @@ export const tdrIssues = pgTable("tdr_issues", {
   resolvedAt: timestamp("resolved_at"),
   dueDate: timestamp("due_date"),
   blocksGoLive: boolean("blocks_go_live").default(false),
+  supportTicketId: varchar("support_ticket_id").references(() => supportTickets.id), // Link to support ticket if created
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
   index("idx_tdr_issues_project_id").on(table.projectId),
   index("idx_tdr_issues_status").on(table.status),
   index("idx_tdr_issues_severity").on(table.severity),
+  index("idx_tdr_issues_support_ticket_id").on(table.supportTicketId),
 ]);
 
 export const insertTdrIssueSchema = createInsertSchema(tdrIssues);

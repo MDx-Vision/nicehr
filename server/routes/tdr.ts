@@ -8,6 +8,7 @@ import {
   tdrIntegrationTests,
   tdrDowntimeTests,
   tdrReadinessScores,
+  supportTickets,
 } from '@shared/schema';
 import { eq, desc, and, count, sql } from 'drizzle-orm';
 
@@ -35,8 +36,15 @@ router.get('/projects/:projectId/tdr/events', async (req: Request, res: Response
 router.post('/projects/:projectId/tdr/events', async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
+    const eventData = { ...req.body, projectId };
+
+    // Convert scheduledDate string to Date object if present
+    if (eventData.scheduledDate && typeof eventData.scheduledDate === 'string') {
+      eventData.scheduledDate = new Date(eventData.scheduledDate);
+    }
+
     const [event] = await db.insert(tdrEvents)
-      .values({ ...req.body, projectId })
+      .values(eventData)
       .returning();
     res.status(201).json(event);
   } catch (error) {
@@ -437,6 +445,83 @@ router.delete('/tdr/issues/:id', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error deleting TDR issue:', error);
     res.status(500).json({ error: 'Failed to delete TDR issue' });
+  }
+});
+
+// POST /api/tdr/issues/:id/create-ticket
+// Creates a support ticket from a TDR issue
+router.post('/tdr/issues/:id/create-ticket', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Get the TDR issue
+    const [issue] = await db.select().from(tdrIssues).where(eq(tdrIssues.id, id));
+    if (!issue) {
+      return res.status(404).json({ error: 'TDR issue not found' });
+    }
+
+    // Check if ticket already exists
+    if (issue.supportTicketId) {
+      return res.status(400).json({
+        error: 'Support ticket already exists for this TDR issue',
+        ticketId: issue.supportTicketId
+      });
+    }
+
+    // Map TDR severity to support ticket priority
+    const priorityMap: Record<string, string> = {
+      'critical': 'high',
+      'high': 'high',
+      'medium': 'medium',
+      'low': 'low'
+    };
+    const priority = priorityMap[issue.severity || 'medium'] || 'medium';
+
+    // Map TDR category to support ticket category
+    const categoryMap: Record<string, string> = {
+      'technical': 'technical',
+      'workflow': 'workflow',
+      'integration': 'integration',
+      'data': 'data_issue',
+      'training': 'training',
+      'clinical': 'clinical'
+    };
+    const category = categoryMap[issue.category || 'technical'] || 'other';
+
+    // Create support ticket with TDR context
+    const ticketDescription = `${issue.description || ''}\n\n---\n**Created from TDR Issue**\n- Issue Number: ${issue.issueNumber || 'N/A'}\n- Severity: ${issue.severity}\n- Blocks Go-Live: ${issue.blocksGoLive ? 'Yes ⚠️' : 'No'}\n- TDR Event ID: ${issue.tdrEventId || 'N/A'}`;
+
+    const [ticket] = await db.insert(supportTickets)
+      .values({
+        projectId: issue.projectId,
+        title: issue.title,
+        description: ticketDescription,
+        priority: priority as any,
+        category: category as any,
+        status: 'open',
+        reportedById: issue.reportedBy,
+        assignedToId: issue.assignedTo,
+        tdrIssueId: issue.id,
+      })
+      .returning();
+
+    // Update TDR issue with support ticket reference
+    const [updatedIssue] = await db.update(tdrIssues)
+      .set({
+        supportTicketId: ticket.id,
+        updatedAt: new Date()
+      })
+      .where(eq(tdrIssues.id, id))
+      .returning();
+
+    res.status(201).json({
+      ticket,
+      issue: updatedIssue,
+      message: 'Support ticket created successfully from TDR issue'
+    });
+  } catch (error) {
+    console.error('Error creating ticket from TDR issue:', error);
+    res.status(500).json({ error: 'Failed to create support ticket from TDR issue' });
   }
 });
 

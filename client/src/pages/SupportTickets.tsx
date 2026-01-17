@@ -50,6 +50,7 @@ export default function SupportTickets() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [tdrFilter, setTdrFilter] = useState("all"); // all, tdr_only, non_tdr
   const [searchQuery, setSearchQuery] = useState("");
 
   // Selection state
@@ -155,6 +156,8 @@ export default function SupportTickets() {
     if (statusFilter !== "all" && t.status !== statusFilter) return false;
     if (priorityFilter !== "all" && t.priority !== priorityFilter) return false;
     if (categoryFilter !== "all" && t.category !== categoryFilter) return false;
+    if (tdrFilter === "tdr_only" && !t.tdrIssueId) return false;
+    if (tdrFilter === "non_tdr" && t.tdrIssueId) return false;
     if (searchQuery && !t.title?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
@@ -390,6 +393,26 @@ export default function SupportTickets() {
               </CardHeader>
               <CardContent>
                 <p data-testid="ticket-description">{selectedTicket.description}</p>
+
+                {/* TDR Context */}
+                {selectedTicket.tdrIssueId && (
+                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg" data-testid="tdr-context">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">TDR Issue</Badge>
+                      <h4 className="font-medium text-blue-800">Created from Technical Dress Rehearsal</h4>
+                    </div>
+                    <p className="text-sm text-blue-700 mb-2">
+                      This ticket was created from a TDR issue during go-live preparation.
+                    </p>
+                    <a
+                      href="/tdr"
+                      className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                      data-testid="link-view-tdr"
+                    >
+                      View TDR Issue →
+                    </a>
+                  </div>
+                )}
 
                 {/* Resolution */}
                 {selectedTicket.resolution && (
@@ -724,6 +747,16 @@ export default function SupportTickets() {
                     <SelectItem value="Account">Account</SelectItem>
                   </SelectContent>
                 </Select>
+                <Select value={tdrFilter} onValueChange={setTdrFilter}>
+                  <SelectTrigger className="w-[150px]" data-testid="filter-tdr">
+                    <SelectValue placeholder="TDR Filter" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Tickets</SelectItem>
+                    <SelectItem value="tdr_only">TDR Issues Only</SelectItem>
+                    <SelectItem value="non_tdr">Non-TDR Only</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>
@@ -804,6 +837,11 @@ export default function SupportTickets() {
                                 <span className="text-xs text-muted-foreground">{ticket.ticketNumber}</span>
                               )}
                               <p className="font-medium">{ticket.title}</p>
+                              {ticket.tdrIssueId && (
+                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                  TDR
+                                </Badge>
+                              )}
                             </div>
                             <p className="text-sm text-muted-foreground line-clamp-1">{ticket.description}</p>
                           </div>

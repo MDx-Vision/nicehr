@@ -106,6 +106,11 @@ export async function deleteIssue(id: string) {
   await apiRequest("DELETE", `/api/tdr/issues/${id}`);
 }
 
+export async function createTicketFromIssue(issueId: string) {
+  const res = await apiRequest("POST", `/api/tdr/issues/${issueId}/create-ticket`, {});
+  return res.json();
+}
+
 // =============================================================================
 // TDR Integration Tests API
 // =============================================================================
