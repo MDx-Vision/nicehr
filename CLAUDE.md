@@ -10,7 +10,47 @@
 
 ## Recent Changes (Jan 17, 2026)
 
-### Session: "TDR Issues → Support Tickets Integration"
+### Session 3: "Comprehensive Seed Data Addition" (11:00 AM - 11:15 AM)
+
+**Status:** ✅ COMPLETE
+
+**Completed:**
+- Added seed data for Contracts (5 records)
+- Added seed data for Travel Bookings (5 records)
+- Added seed data for Schedules (5 records)
+- Added seed data for EOD Reports (4 records)
+- Added seed data for Invoices (4 records)
+- Added seed data for Invoice Line Items (7 records)
+- Verified all existing seed data (Timesheets, Courses, Documents, etc.)
+- All seed data accessible via API endpoints
+- Entire platform now has comprehensive demo data
+
+**Files Modified:**
+- `server/seedDemoData.ts` - Added 450+ lines of seed data with correct enum values
+- Added imports for: `contracts`, `travelBookings`, `eodReports`, `invoices`, `invoiceLineItems`
+
+**Committed:** `62b4a94` - "Add comprehensive seed data across all platform modules"
+
+### Session 2: "TDR Test Fixes" (Morning)
+
+**Status:** ⚠️ PARTIAL (11 of 37 tests fixed, 26 remaining)
+
+**Completed:**
+- Fixed scroll-lock issues (body `data-scroll-locked` cleanup)
+- Fixed dialog timing issues (added 500ms waits)
+- Fixed selector issues (changed generic to specific selectors)
+- Created comprehensive tracking document: `TDR_TEST_FIXES_CHECKLIST.md`
+- Improved from 117/154 passing to ~128/154 passing
+
+**Committed:** `1cf7c0a`, `d73132d`
+
+**Next Steps:**
+- 26 tests still failing (6 quick wins, 10 moderate, 10 advanced)
+- See `TDR_TEST_FIXES_CHECKLIST.md` for detailed breakdown
+
+### Session 1: "TDR Issues → Support Tickets Integration"
+
+**Status:** ✅ COMPLETE
 
 **Completed this session:**
 - Implemented bi-directional linking between TDR Issues and Support Tickets
