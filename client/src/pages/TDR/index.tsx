@@ -5,7 +5,7 @@ import {
   ClipboardCheck, Calendar, ListChecks, TestTube2, AlertTriangle,
   Network, Clock, Gauge, Plus, Search, Filter, RefreshCw,
   CheckCircle, XCircle, AlertCircle, Play, Pause, ChevronRight,
-  BarChart3, Settings, Download, Users, Shield, Database
+  BarChart3, Settings, Download, Users, Shield, Database, Trash2, Pencil
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,11 +23,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   createTdrEvent, updateTdrEvent,
-  createChecklistItem, completeChecklistItem, uncompleteChecklistItem, seedChecklist,
-  createTestScenario, executeTestScenario,
-  createIssue, updateIssue, resolveIssue, createTicketFromIssue,
-  createIntegrationTest, updateIntegrationTest,
-  createDowntimeTest, updateDowntimeTest,
+  createChecklistItem, completeChecklistItem, uncompleteChecklistItem, seedChecklist, deleteChecklistItem,
+  createTestScenario, executeTestScenario, deleteTestScenario,
+  createIssue, updateIssue, resolveIssue, createTicketFromIssue, deleteIssue,
+  createIntegrationTest, updateIntegrationTest, deleteIntegrationTest,
+  createDowntimeTest, updateDowntimeTest, deleteDowntimeTest,
   calculateReadinessScore, approveReadinessScore,
   type TdrSummary,
 } from "@/lib/tdrApi";
@@ -265,6 +265,52 @@ export default function TDRManagement() {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/tdr/readiness-score`] });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/tdr/summary`] });
       toast({ title: "Readiness score calculated" });
+    },
+  });
+
+  // Delete mutations
+  const deleteChecklistMutation = useMutation({
+    mutationFn: (id: string) => deleteChecklistItem(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/tdr/checklist`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/tdr/summary`] });
+      toast({ title: "Checklist item deleted" });
+    },
+  });
+
+  const deleteTestMutation = useMutation({
+    mutationFn: (id: string) => deleteTestScenario(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/tdr/test-scenarios`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/tdr/summary`] });
+      toast({ title: "Test scenario deleted" });
+    },
+  });
+
+  const deleteIssueMutation = useMutation({
+    mutationFn: (id: string) => deleteIssue(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/tdr/issues`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/tdr/summary`] });
+      toast({ title: "Issue deleted" });
+    },
+  });
+
+  const deleteIntegrationMutation = useMutation({
+    mutationFn: (id: string) => deleteIntegrationTest(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/tdr/integration-tests`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/tdr/summary`] });
+      toast({ title: "Integration test deleted" });
+    },
+  });
+
+  const deleteDowntimeMutation = useMutation({
+    mutationFn: (id: string) => deleteDowntimeTest(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/tdr/downtime-tests`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/tdr/summary`] });
+      toast({ title: "Downtime test deleted" });
     },
   });
 
@@ -538,6 +584,17 @@ export default function TDRManagement() {
                             {item.title}
                           </span>
                           <Badge variant="outline" className="ml-auto">{item.priority}</Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            data-testid="delete-checklist-item"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteChecklistMutation.mutate(item.id);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
                         </div>
                       ))}
                     </div>
@@ -583,6 +640,14 @@ export default function TDRManagement() {
                           </Button>
                         </div>
                       )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        data-testid="delete-test-scenario"
+                        onClick={() => deleteTestMutation.mutate(test.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
                     </div>
                   </div>
                   {test.expectedResult && (
@@ -658,6 +723,31 @@ export default function TDRManagement() {
                           Resolve
                         </Button>
                       )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        data-testid="edit-issue"
+                        onClick={() => {
+                          setIssueForm({
+                            title: issue.title,
+                            description: issue.description || "",
+                            category: issue.category || "technical",
+                            severity: issue.severity || "medium",
+                            blocksGoLive: issue.blocksGoLive || false,
+                          });
+                          setCreateIssueOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        data-testid="delete-issue"
+                        onClick={() => deleteIssueMutation.mutate(issue.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -702,14 +792,22 @@ export default function TDRManagement() {
                       {getStatusBadge(test.status || "pending")}
                       {test.status === "pending" && (
                         <div className="flex gap-1">
-                          <Button size="sm" variant="default" onClick={() => updateIntegrationMutation.mutate({ id: test.id, status: "passed" })}>
+                          <Button size="sm" variant="default" data-testid="mark-integration-passed" onClick={() => updateIntegrationMutation.mutate({ id: test.id, status: "passed" })}>
                             <CheckCircle className="h-4 w-4" />
                           </Button>
-                          <Button size="sm" variant="destructive" onClick={() => updateIntegrationMutation.mutate({ id: test.id, status: "failed" })}>
+                          <Button size="sm" variant="destructive" data-testid="mark-integration-failed" onClick={() => updateIntegrationMutation.mutate({ id: test.id, status: "failed" })}>
                             <XCircle className="h-4 w-4" />
                           </Button>
                         </div>
                       )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        data-testid="delete-integration-test"
+                        onClick={() => deleteIntegrationMutation.mutate(test.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -755,14 +853,22 @@ export default function TDRManagement() {
                       {getStatusBadge(test.status || "pending")}
                       {test.status === "pending" && (
                         <div className="flex gap-1">
-                          <Button size="sm" variant="default" onClick={() => updateDowntimeMutation.mutate({ id: test.id, status: "passed" })}>
+                          <Button size="sm" variant="default" data-testid="mark-downtime-passed" onClick={() => updateDowntimeMutation.mutate({ id: test.id, status: "passed" })}>
                             <CheckCircle className="h-4 w-4" />
                           </Button>
-                          <Button size="sm" variant="destructive" onClick={() => updateDowntimeMutation.mutate({ id: test.id, status: "failed" })}>
+                          <Button size="sm" variant="destructive" data-testid="mark-downtime-failed" onClick={() => updateDowntimeMutation.mutate({ id: test.id, status: "failed" })}>
                             <XCircle className="h-4 w-4" />
                           </Button>
                         </div>
                       )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        data-testid="delete-downtime-test"
+                        onClick={() => deleteDowntimeMutation.mutate(test.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
