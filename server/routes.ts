@@ -125,6 +125,7 @@ import {
 import { FEATURES } from "@shared/featureFlags";
 import tdrRoutes from "./routes/tdr";
 import executiveMetricsRoutes from "./routes/executiveMetrics";
+import changeManagementRoutes from "./routes/changeManagement";
 
 // =============================================================================
 // QUERY PARAMETER VALIDATION HELPERS
@@ -234,6 +235,12 @@ export async function registerRoutes(
   if (FEATURES.EXECUTIVE_METRICS) {
     app.use('/api', executiveMetricsRoutes);
     console.log('[Executive Metrics] Executive Metrics module enabled');
+  }
+
+  // Change Management Module - Feature Flagged
+  if (FEATURES.CHANGE_MANAGEMENT) {
+    app.use('/api', changeManagementRoutes);
+    console.log('[Change Management] Change Management module enabled');
   }
 
   // Seed RBAC roles and permissions at startup

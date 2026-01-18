@@ -7760,3 +7760,164 @@ export const metricIntegrations = pgTable("metric_integrations", {
 export const insertMetricIntegrationSchema = createInsertSchema(metricIntegrations);
 export type MetricIntegration = typeof metricIntegrations.$inferSelect;
 export type InsertMetricIntegration = typeof metricIntegrations.$inferInsert;
+
+// ============================================
+// CHANGE MANAGEMENT MODULE
+// ============================================
+// Change Request tracking for scope, timeline, budget, and process changes
+
+// Change Management Enums
+export const changeRequestCategoryEnum = pgEnum("change_request_category", [
+  "scope",
+  "timeline",
+  "budget",
+  "technical",
+  "process",
+  "resource",
+  "integration",
+  "training"
+]);
+
+export const changeRequestPriorityEnum = pgEnum("change_request_priority", [
+  "low",
+  "medium",
+  "high",
+  "critical"
+]);
+
+export const changeRequestStatusEnum = pgEnum("change_request_status", [
+  "draft",
+  "submitted",
+  "under_review",
+  "approved",
+  "rejected",
+  "implemented",
+  "cancelled"
+]);
+
+export const changeImpactLevelEnum = pgEnum("change_impact_level", [
+  "minimal",
+  "moderate",
+  "significant",
+  "major"
+]);
+
+export const changeImpactAreaEnum = pgEnum("change_impact_area", [
+  "schedule",
+  "budget",
+  "resources",
+  "scope",
+  "risk",
+  "quality",
+  "stakeholders"
+]);
+
+export const changeApprovalDecisionEnum = pgEnum("change_approval_decision", [
+  "pending",
+  "approved",
+  "rejected",
+  "deferred"
+]);
+
+// Change Requests - Main table for tracking change requests
+export const changeRequests = pgTable("change_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  requestNumber: varchar("request_number").notNull(), // CR-001, CR-002, etc.
+  title: varchar("title").notNull(),
+  description: text("description"),
+  category: changeRequestCategoryEnum("category").notNull(),
+  priority: changeRequestPriorityEnum("priority").default("medium"),
+  status: changeRequestStatusEnum("status").default("draft"),
+  impactLevel: changeImpactLevelEnum("impact_level").default("moderate"),
+  requestedById: varchar("requested_by_id").references(() => users.id),
+  requestedByName: varchar("requested_by_name"),
+  justification: text("justification"), // Why is this change needed?
+  proposedSolution: text("proposed_solution"), // How to implement?
+  alternativesConsidered: text("alternatives_considered"),
+  riskIfNotImplemented: text("risk_if_not_implemented"),
+  estimatedEffort: varchar("estimated_effort"), // e.g., "2 weeks", "40 hours"
+  estimatedCost: integer("estimated_cost"), // In dollars
+  targetImplementationDate: timestamp("target_implementation_date"),
+  actualImplementationDate: timestamp("actual_implementation_date"),
+  submittedAt: timestamp("submitted_at"),
+  reviewStartedAt: timestamp("review_started_at"),
+  decidedAt: timestamp("decided_at"),
+  implementedAt: timestamp("implemented_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_change_requests_project_id").on(table.projectId),
+  index("idx_change_requests_status").on(table.status),
+  index("idx_change_requests_category").on(table.category),
+  index("idx_change_requests_priority").on(table.priority),
+  index("idx_change_requests_requested_by").on(table.requestedById),
+]);
+
+export const insertChangeRequestSchema = createInsertSchema(changeRequests);
+export type ChangeRequest = typeof changeRequests.$inferSelect;
+export type InsertChangeRequest = typeof changeRequests.$inferInsert;
+
+// Change Request Impacts - Track multiple impact areas per request
+export const changeRequestImpacts = pgTable("change_request_impacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  changeRequestId: varchar("change_request_id").references(() => changeRequests.id).notNull(),
+  impactArea: changeImpactAreaEnum("impact_area").notNull(),
+  severity: changeRequestPriorityEnum("severity").default("medium"), // reuse priority enum for severity
+  description: text("description"),
+  mitigationPlan: text("mitigation_plan"),
+  affectedItems: text("affected_items"), // Comma-separated list or JSON
+  estimatedDelta: varchar("estimated_delta"), // e.g., "+2 weeks", "+$5000"
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_change_request_impacts_change_request_id").on(table.changeRequestId),
+  index("idx_change_request_impacts_impact_area").on(table.impactArea),
+]);
+
+export const insertChangeRequestImpactSchema = createInsertSchema(changeRequestImpacts);
+export type ChangeRequestImpact = typeof changeRequestImpacts.$inferSelect;
+export type InsertChangeRequestImpact = typeof changeRequestImpacts.$inferInsert;
+
+// Change Request Approvals - Track approval workflow
+export const changeRequestApprovals = pgTable("change_request_approvals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  changeRequestId: varchar("change_request_id").references(() => changeRequests.id).notNull(),
+  approverId: varchar("approver_id").references(() => users.id),
+  approverName: varchar("approver_name"),
+  approverRole: varchar("approver_role"), // e.g., "Project Manager", "Sponsor"
+  approvalOrder: integer("approval_order").default(1), // For sequential approvals
+  decision: changeApprovalDecisionEnum("decision").default("pending"),
+  comments: text("comments"),
+  conditions: text("conditions"), // Conditions for approval if any
+  requestedAt: timestamp("requested_at").defaultNow(),
+  decidedAt: timestamp("decided_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_change_request_approvals_change_request_id").on(table.changeRequestId),
+  index("idx_change_request_approvals_approver_id").on(table.approverId),
+  index("idx_change_request_approvals_decision").on(table.decision),
+]);
+
+export const insertChangeRequestApprovalSchema = createInsertSchema(changeRequestApprovals);
+export type ChangeRequestApproval = typeof changeRequestApprovals.$inferSelect;
+export type InsertChangeRequestApproval = typeof changeRequestApprovals.$inferInsert;
+
+// Change Request Comments/Activity Log
+export const changeRequestComments = pgTable("change_request_comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  changeRequestId: varchar("change_request_id").references(() => changeRequests.id).notNull(),
+  userId: varchar("user_id").references(() => users.id),
+  userName: varchar("user_name"),
+  commentType: varchar("comment_type").default("comment"), // comment, status_change, approval, rejection
+  content: text("content").notNull(),
+  previousStatus: varchar("previous_status"),
+  newStatus: varchar("new_status"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_change_request_comments_change_request_id").on(table.changeRequestId),
+  index("idx_change_request_comments_user_id").on(table.userId),
+]);
+
+export const insertChangeRequestCommentSchema = createInsertSchema(changeRequestComments);
+export type ChangeRequestComment = typeof changeRequestComments.$inferSelect;
+export type InsertChangeRequestComment = typeof changeRequestComments.$inferInsert;

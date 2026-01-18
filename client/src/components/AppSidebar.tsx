@@ -203,6 +203,7 @@ const NAV_GROUPS: NavGroup[] = [
       { id: "remote-support", title: "Remote Support", url: "/remote-support", icon: "Video", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
       { id: "tdr", title: "TDR Management", url: "/tdr", icon: "ClipboardCheck", roles: ["admin", "hospital_leadership", "hospital_staff"] },
       { id: "executive-metrics", title: "Executive Metrics", url: "/executive-metrics", icon: "TrendingUp", roles: ["admin", "hospital_leadership"] },
+      { id: "change-management", title: "Change Management", url: "/change-management", icon: "FileEdit", roles: ["admin", "hospital_leadership", "hospital_staff"] },
       { id: "tickets", title: "Tickets", url: "/support-tickets", icon: "Ticket", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
       { id: "knowledge", title: "Knowledge Base", url: "/knowledge-base", icon: "Book", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
       { id: "eod", title: "EOD Reports", url: "/eod-reports", icon: "FileCheck", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },

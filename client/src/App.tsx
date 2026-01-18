@@ -77,6 +77,7 @@ import AutoScheduling from "@/pages/AutoScheduling";
 import RemoteSupport from "@/pages/RemoteSupport";
 import TDRManagement from "@/pages/TDR";
 import ExecutiveMetrics from "@/pages/ExecutiveMetrics";
+import ChangeManagement from "@/pages/ChangeManagement";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/not-found";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
@@ -217,6 +218,7 @@ function Router() {
       <Route path="/remote-support" component={() => <ProtectedRoute component={RemoteSupport} />} />
       <Route path="/tdr" component={() => <ProtectedRoute component={TDRManagement} />} />
       <Route path="/executive-metrics" component={() => <ProtectedRoute component={ExecutiveMetrics} />} />
+      <Route path="/change-management" component={() => <ProtectedRoute component={ChangeManagement} />} />
       <Route path="/timesheets" component={() => <ProtectedRoute component={Timesheets} />} />
       <Route path="/availability" component={() => <ProtectedRoute component={Availability} />} />
       <Route path="/shift-swaps" component={() => <ProtectedRoute component={ShiftSwaps} />} />
