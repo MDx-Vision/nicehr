@@ -8,6 +8,136 @@
 - **Database**: PostgreSQL
 - **Testing**: Cypress E2E tests
 
+---
+
+## Recent Changes (Jan 18, 2026)
+
+### Session: "ESIGN Act Compliance Implementation"
+
+**Status:** ✅ COMPLETE - 1977/1977 tests passing (100%)
+
+**Completed:**
+- Implemented full ESIGN Act/UETA compliant e-signature features
+- Added 5 new database tables for consent, hashing, intent, review tracking, certificates
+- Created 8 new API endpoints for e-signature compliance
+- Enhanced signing UI with 4-step wizard (Consent → Review → Sign → Complete)
+- Zero regressions - all existing tests still passing
+
+**Key Features Added:**
+- **3-Checkbox Consent Flow**: Hardware/software acknowledgment, paper copy rights, withdrawal consent
+- **Document Review Tracking**: Scroll detection, review duration tracking
+- **Intent Confirmation**: "I intend this to be my legally binding signature" checkbox
+- **Typed Name Verification**: Must match signer's name
+- **SHA-256 Document Hashing**: Tamper-evident cryptographic hash
+- **Signature Certificates**: Unique NICEHR-YYYYMMDD-XXXXXX certificate numbers
+- **Complete Audit Trail**: Full compliance logging
+
+**Database Tables Added:**
+- `esign_consents` - Consent acknowledgments with IP/timestamp
+- `esign_document_hashes` - SHA-256 hashing records
+- `esign_intent_confirmations` - Intent checkbox tracking
+- `esign_review_tracking` - Document review metrics
+- `esign_certificates` - Signature certificates
+
+**API Endpoints Added:**
+- `GET /api/esign/disclosure` - Get ESIGN disclosure text
+- `POST /api/contracts/:id/esign/consent` - Submit consent
+- `POST /api/contracts/:id/esign/review-start` - Track review start
+- `PATCH /api/contracts/:id/esign/review-progress` - Update scroll progress
+- `POST /api/contracts/:signerId/esign/sign` - Enhanced signing
+- `GET /api/contracts/:id/esign/verify` - Verify document integrity
+- `GET /api/contracts/:id/esign/certificate` - Get certificate
+- `GET /api/contracts/:id/esign/audit-trail` - Get audit trail
+
+**Files Created/Modified:**
+- `shared/schema.ts` - Added 5 ESIGN tables (~176 lines)
+- `server/routes/esign.ts` - NEW - API routes (~800 lines)
+- `client/src/pages/Contracts.tsx` - Enhanced SigningDialog with 4-step wizard
+- `cypress/e2e/12-contracts-signatures.cy.js` - Updated tests for new flow
+- `cypress/e2e/11-communication.cy.js` - Updated Digital Signatures tests
+
+---
+
+## Recent Changes (Jan 17, 2026)
+
+### Session 4: "Change Management Module Build"
+
+**Status:** ✅ COMPLETE
+
+**Completed:**
+- Built full ITIL-aligned Change Management module
+- 71 E2E tests covering all functionality
+- Feature-flagged with `ENABLE_CHANGE_MANAGEMENT`
+- All tests passing with zero regressions
+
+**Change Management Features:**
+- Change request lifecycle management (Draft → Submitted → CAB Review → Approved → Implementing → Completed)
+- Risk and impact assessment (Low/Medium/High/Critical)
+- CAB (Change Advisory Board) reviews with comments
+- Implementation scheduling with start/end dates
+- Rollback procedures documentation
+- Post-implementation reviews with success metrics
+
+**Database Tables Added:**
+- `change_requests` - Main change request records
+- `change_approvals` - CAB approval tracking
+- `change_implementations` - Implementation records
+- `change_rollbacks` - Rollback procedures
+- `change_reviews` - Post-implementation reviews
+
+**Files Created:**
+- `server/routes/changeManagement.ts` - API routes (~457 lines)
+- `client/src/pages/ChangeManagement/index.tsx` - UI (~1131 lines)
+- `client/src/lib/changeManagementApi.ts` - API helpers
+- `cypress/e2e/43-change-management.cy.js` - E2E tests (~71 tests)
+
+### Session 3: "Comprehensive Seed Data Addition"
+
+**Status:** ✅ COMPLETE
+
+**Completed:**
+- Added seed data for Contracts (5 records)
+- Added seed data for Travel Bookings (5 records)
+- Added seed data for Schedules (5 records)
+- Added seed data for EOD Reports (4 records)
+- Added seed data for Invoices (4 records)
+- Added seed data for Invoice Line Items (7 records)
+- All seed data verified via API endpoints
+
+### Session 2: "TDR & Executive Metrics Test Fixes"
+
+**Status:** ✅ COMPLETE
+
+**Completed:**
+- Fixed all 37 failing TDR tests (154/154 now passing)
+- Fixed all 18 failing Executive Metrics tests (56/56 now passing)
+- Added missing data-testid attributes
+- Fixed scroll-lock and timing issues
+- Total: 1973/1973 tests passing before ESIGN
+
+### Session 1: "TDR-Tickets Integration"
+
+**Status:** ✅ COMPLETE
+
+**Completed:**
+- Bi-directional linking between TDR Issues and Support Tickets
+- Create ticket from TDR issue functionality
+- TDR filtering and context display in Support Tickets page
+
+---
+
+## Recent Changes (Jan 16, 2026)
+
+### Session: "TDR & Executive Metrics Implementation"
+
+**Completed:**
+- Built Technical Dress Rehearsal (TDR) module for go-live preparation
+- Built Executive Success Metrics module for C-suite dashboards
+- Both modules use feature flags for safe rollout
+- Added ~235 E2E tests across both modules
+
+---
+
 ## Recent Changes (Jan 10, 2026)
 
 ### Session: "Remote Support E2E Test Coverage"
