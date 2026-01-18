@@ -8,6 +8,7 @@ export const FEATURES = {
   TDR_MODULE: process.env.ENABLE_TDR === 'true',
   EXECUTIVE_METRICS: process.env.ENABLE_EXECUTIVE_METRICS === 'true',
   CHANGE_MANAGEMENT: process.env.ENABLE_CHANGE_MANAGEMENT === 'true',
+  CRM_MODULE: process.env.ENABLE_CRM === 'true',
 };
 
 // Helper to check if a feature is enabled

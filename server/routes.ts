@@ -127,6 +127,7 @@ import tdrRoutes from "./routes/tdr";
 import executiveMetricsRoutes from "./routes/executiveMetrics";
 import changeManagementRoutes from "./routes/changeManagement";
 import esignRoutes from "./routes/esign";
+import crmRoutes from "./routes/crm";
 
 // =============================================================================
 // QUERY PARAMETER VALIDATION HELPERS
@@ -248,6 +249,12 @@ export async function registerRoutes(
   // ESIGN Act Compliance Routes (enhancement to contracts)
   app.use('/api', esignRoutes);
   console.log('[ESIGN] ESIGN Act compliance routes enabled');
+
+  // CRM Module - Feature Flagged
+  if (FEATURES.CRM_MODULE) {
+    app.use('/api', crmRoutes);
+    console.log('[CRM] CRM module enabled');
+  }
 
   // Seed RBAC roles and permissions at startup
   try {

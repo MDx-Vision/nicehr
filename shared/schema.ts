@@ -8097,3 +8097,284 @@ export const changeRequestComments = pgTable("change_request_comments", {
 export const insertChangeRequestCommentSchema = createInsertSchema(changeRequestComments);
 export type ChangeRequestComment = typeof changeRequestComments.$inferSelect;
 export type InsertChangeRequestComment = typeof changeRequestComments.$inferInsert;
+
+
+// ============================================================================
+// TNG CRM MODULE
+// ============================================================================
+
+// CRM Enums
+export const crmContactTypeEnum = pgEnum("crm_contact_type", ["lead", "prospect", "customer", "partner", "consultant", "alumni"]);
+export const crmContactStatusEnum = pgEnum("crm_contact_status", ["active", "inactive", "churned", "do_not_contact"]);
+export const crmLeadTemperatureEnum = pgEnum("crm_lead_temperature", ["cold", "warm", "hot"]);
+export const crmLifecycleStageEnum = pgEnum("crm_lifecycle_stage", ["subscriber", "lead", "mql", "sql", "opportunity", "customer", "evangelist"]);
+export const crmCompanyTypeEnum = pgEnum("crm_company_type", ["prospect", "customer", "partner", "vendor", "competitor"]);
+export const crmCompanyStatusEnum = pgEnum("crm_company_status", ["active", "inactive", "churned"]);
+export const crmDealStatusEnum = pgEnum("crm_deal_status", ["open", "won", "lost", "abandoned"]);
+export const crmDealTypeEnum = pgEnum("crm_deal_type", ["new_business", "expansion", "renewal", "upsell"]);
+export const crmPipelineTypeEnum = pgEnum("crm_pipeline_type", ["sales", "recruitment", "partnership", "custom"]);
+export const crmStageTypeEnum = pgEnum("crm_stage_type", ["open", "won", "lost"]);
+export const crmActivityTypeEnum = pgEnum("crm_activity_type", ["email", "call", "meeting", "task", "note", "sms", "linkedin", "whatsapp"]);
+export const crmActivityOutcomeEnum = pgEnum("crm_activity_outcome", ["connected", "voicemail", "no_answer", "busy", "meeting_held", "meeting_cancelled", "email_sent", "email_bounced", "completed", "pending"]);
+
+// CRM Pipelines - Must be defined before deals for FK reference
+export const crmPipelines = pgTable("crm_pipelines", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  type: crmPipelineTypeEnum("type").default("sales"),
+  isDefault: boolean("is_default").default(false),
+  isActive: boolean("is_active").default(true),
+  dealRottingDays: integer("deal_rotting_days").default(14),
+  ownerId: varchar("owner_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_crm_pipelines_type").on(table.type),
+  index("idx_crm_pipelines_is_active").on(table.isActive),
+]);
+
+export const insertCrmPipelineSchema = createInsertSchema(crmPipelines);
+export type CrmPipeline = typeof crmPipelines.$inferSelect;
+export type InsertCrmPipeline = typeof crmPipelines.$inferInsert;
+
+// CRM Pipeline Stages
+export const crmPipelineStages = pgTable("crm_pipeline_stages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  pipelineId: varchar("pipeline_id").references(() => crmPipelines.id).notNull(),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  order: integer("order").default(0),
+  probability: integer("probability").default(0), // 0-100
+  stageType: crmStageTypeEnum("stage_type").default("open"),
+  color: varchar("color").default("#6366f1"),
+  slaDays: integer("sla_days"), // Max days in stage before alert
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_crm_pipeline_stages_pipeline_id").on(table.pipelineId),
+  index("idx_crm_pipeline_stages_order").on(table.order),
+]);
+
+export const insertCrmPipelineStageSchema = createInsertSchema(crmPipelineStages);
+export type CrmPipelineStage = typeof crmPipelineStages.$inferSelect;
+export type InsertCrmPipelineStage = typeof crmPipelineStages.$inferInsert;
+
+// CRM Companies (Accounts)
+export const crmCompanies = pgTable("crm_companies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  externalId: varchar("external_id"),
+  type: crmCompanyTypeEnum("type").default("prospect"),
+  status: crmCompanyStatusEnum("status").default("active"),
+  name: varchar("name").notNull(),
+  legalName: varchar("legal_name"),
+  website: varchar("website"),
+  domain: varchar("domain"),
+  industry: varchar("industry"),
+  companySize: varchar("company_size"),
+  employeeCount: integer("employee_count"),
+  annualRevenue: varchar("annual_revenue"),
+  description: text("description"),
+  logoUrl: varchar("logo_url"),
+  phone: varchar("phone"),
+  addressLine1: varchar("address_line_1"),
+  addressLine2: varchar("address_line_2"),
+  city: varchar("city"),
+  state: varchar("state"),
+  postalCode: varchar("postal_code"),
+  country: varchar("country").default("USA"),
+  linkedinUrl: varchar("linkedin_url"),
+  twitterHandle: varchar("twitter_handle"),
+  parentCompanyId: varchar("parent_company_id"),
+  ownerId: varchar("owner_id").references(() => users.id),
+  accountTier: varchar("account_tier"), // enterprise, mid_market, smb
+  customerSince: timestamp("customer_since"),
+  totalRevenue: decimal("total_revenue", { precision: 12, scale: 2 }),
+  healthScore: integer("health_score"), // 0-100
+  churnRisk: varchar("churn_risk"), // low, medium, high
+  customFields: jsonb("custom_fields"),
+  tags: jsonb("tags").$type<string[]>(),
+  // Healthcare-specific fields
+  facilityType: varchar("facility_type"),
+  bedCount: integer("bed_count"),
+  ehrSystem: varchar("ehr_system"), // Epic, Cerner, MEDITECH, etc.
+  ehrVersion: varchar("ehr_version"),
+  ehrGoLiveDate: timestamp("ehr_go_live_date"),
+  cmsNumber: varchar("cms_number"),
+  npiNumber: varchar("npi_number"),
+  jointCommissionAccredited: boolean("joint_commission_accredited"),
+  traumaLevel: varchar("trauma_level"),
+  teachingStatus: boolean("teaching_status"),
+  // TNG Integration
+  tngHospitalId: varchar("tng_hospital_id").references(() => hospitals.id),
+  lastActivityAt: timestamp("last_activity_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdBy: varchar("created_by").references(() => users.id),
+}, (table) => [
+  index("idx_crm_companies_type").on(table.type),
+  index("idx_crm_companies_status").on(table.status),
+  index("idx_crm_companies_owner_id").on(table.ownerId),
+  index("idx_crm_companies_industry").on(table.industry),
+  index("idx_crm_companies_ehr_system").on(table.ehrSystem),
+  index("idx_crm_companies_tng_hospital_id").on(table.tngHospitalId),
+]);
+
+export const insertCrmCompanySchema = createInsertSchema(crmCompanies);
+export type CrmCompany = typeof crmCompanies.$inferSelect;
+export type InsertCrmCompany = typeof crmCompanies.$inferInsert;
+
+// CRM Contacts
+export const crmContacts = pgTable("crm_contacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  externalId: varchar("external_id"),
+  type: crmContactTypeEnum("type").default("lead"),
+  status: crmContactStatusEnum("status").default("active"),
+  source: varchar("source"), // web form, import, referral, cold outreach
+  firstName: varchar("first_name").notNull(),
+  lastName: varchar("last_name").notNull(),
+  fullName: varchar("full_name"),
+  email: varchar("email"),
+  phone: varchar("phone"),
+  jobTitle: varchar("job_title"),
+  department: varchar("department"),
+  linkedinUrl: varchar("linkedin_url"),
+  twitterHandle: varchar("twitter_handle"),
+  timezone: varchar("timezone"),
+  preferredContactMethod: varchar("preferred_contact_method"), // email, phone, sms, whatsapp
+  preferredContactTime: varchar("preferred_contact_time"), // morning, afternoon, evening
+  companyId: varchar("company_id").references(() => crmCompanies.id),
+  ownerId: varchar("owner_id").references(() => users.id),
+  leadScore: integer("lead_score").default(0), // 0-100
+  leadTemperature: crmLeadTemperatureEnum("lead_temperature").default("cold"),
+  lifecycleStage: crmLifecycleStageEnum("lifecycle_stage").default("lead"),
+  lastContactedAt: timestamp("last_contacted_at"),
+  lastActivityAt: timestamp("last_activity_at"),
+  lastResponseAt: timestamp("last_response_at"),
+  totalInteractions: integer("total_interactions").default(0),
+  emailOpens: integer("email_opens").default(0),
+  emailClicks: integer("email_clicks").default(0),
+  meetingsScheduled: integer("meetings_scheduled").default(0),
+  meetingsCompleted: integer("meetings_completed").default(0),
+  customFields: jsonb("custom_fields"),
+  tags: jsonb("tags").$type<string[]>(),
+  subscribedToMarketing: boolean("subscribed_to_marketing").default(true),
+  unsubscribedAt: timestamp("unsubscribed_at"),
+  gdprConsent: boolean("gdpr_consent").default(false),
+  gdprConsentDate: timestamp("gdpr_consent_date"),
+  // TNG Integration
+  tngConsultantId: varchar("tng_consultant_id").references(() => consultants.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdBy: varchar("created_by").references(() => users.id),
+  deletedAt: timestamp("deleted_at"), // Soft delete
+}, (table) => [
+  index("idx_crm_contacts_type").on(table.type),
+  index("idx_crm_contacts_status").on(table.status),
+  index("idx_crm_contacts_email").on(table.email),
+  index("idx_crm_contacts_company_id").on(table.companyId),
+  index("idx_crm_contacts_owner_id").on(table.ownerId),
+  index("idx_crm_contacts_lead_score").on(table.leadScore),
+  index("idx_crm_contacts_lifecycle_stage").on(table.lifecycleStage),
+  index("idx_crm_contacts_tng_consultant_id").on(table.tngConsultantId),
+]);
+
+export const insertCrmContactSchema = createInsertSchema(crmContacts);
+export type CrmContact = typeof crmContacts.$inferSelect;
+export type InsertCrmContact = typeof crmContacts.$inferInsert;
+
+// CRM Deals (Opportunities)
+export const crmDeals = pgTable("crm_deals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  externalId: varchar("external_id"),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  companyId: varchar("company_id").references(() => crmCompanies.id),
+  primaryContactId: varchar("primary_contact_id").references(() => crmContacts.id),
+  pipelineId: varchar("pipeline_id").references(() => crmPipelines.id).notNull(),
+  stageId: varchar("stage_id").references(() => crmPipelineStages.id).notNull(),
+  stageEnteredAt: timestamp("stage_entered_at").defaultNow(),
+  previousStageId: varchar("previous_stage_id"),
+  ownerId: varchar("owner_id").references(() => users.id),
+  amount: decimal("amount", { precision: 12, scale: 2 }),
+  currency: varchar("currency").default("USD"),
+  recurringAmount: decimal("recurring_amount", { precision: 12, scale: 2 }),
+  recurringFrequency: varchar("recurring_frequency"), // monthly, quarterly, annually
+  probability: integer("probability").default(0), // 0-100
+  weightedAmount: decimal("weighted_amount", { precision: 12, scale: 2 }),
+  expectedCloseDate: timestamp("expected_close_date"),
+  actualCloseDate: timestamp("actual_close_date"),
+  dealType: crmDealTypeEnum("deal_type").default("new_business"),
+  dealSource: varchar("deal_source"), // inbound, outbound, referral, partner
+  status: crmDealStatusEnum("status").default("open"),
+  lostReason: varchar("lost_reason"),
+  lostReasonNotes: text("lost_reason_notes"),
+  competitorId: varchar("competitor_id"),
+  nextStep: text("next_step"),
+  nextActivityDate: timestamp("next_activity_date"),
+  isStale: boolean("is_stale").default(false),
+  customFields: jsonb("custom_fields"),
+  tags: jsonb("tags").$type<string[]>(),
+  // Healthcare-specific fields
+  engagementType: varchar("engagement_type"), // implementation, optimization, support, training, staff_aug
+  ehrModules: jsonb("ehr_modules").$type<string[]>(),
+  estimatedStartDate: timestamp("estimated_start_date"),
+  estimatedDurationWeeks: integer("estimated_duration_weeks"),
+  consultantsNeeded: integer("consultants_needed"),
+  skillRequirements: jsonb("skill_requirements").$type<string[]>(),
+  remoteVsOnsite: varchar("remote_vs_onsite"), // remote, onsite, hybrid
+  // TNG Integration
+  tngProjectId: varchar("tng_project_id").references(() => projects.id),
+  tngContractId: varchar("tng_contract_id").references(() => contracts.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  closedAt: timestamp("closed_at"),
+  createdBy: varchar("created_by").references(() => users.id),
+}, (table) => [
+  index("idx_crm_deals_company_id").on(table.companyId),
+  index("idx_crm_deals_pipeline_id").on(table.pipelineId),
+  index("idx_crm_deals_stage_id").on(table.stageId),
+  index("idx_crm_deals_owner_id").on(table.ownerId),
+  index("idx_crm_deals_status").on(table.status),
+  index("idx_crm_deals_expected_close_date").on(table.expectedCloseDate),
+  index("idx_crm_deals_tng_project_id").on(table.tngProjectId),
+]);
+
+export const insertCrmDealSchema = createInsertSchema(crmDeals);
+export type CrmDeal = typeof crmDeals.$inferSelect;
+export type InsertCrmDeal = typeof crmDeals.$inferInsert;
+
+// CRM Activities
+export const crmActivities = pgTable("crm_activities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: crmActivityTypeEnum("type").notNull(),
+  subtype: varchar("subtype"), // email_sent, email_received, call_outbound, call_inbound, etc.
+  subject: varchar("subject"),
+  description: text("description"),
+  contactId: varchar("contact_id").references(() => crmContacts.id),
+  companyId: varchar("company_id").references(() => crmCompanies.id),
+  dealId: varchar("deal_id").references(() => crmDeals.id),
+  ownerId: varchar("owner_id").references(() => users.id),
+  assignedTo: varchar("assigned_to").references(() => users.id),
+  dueDate: timestamp("due_date"),
+  completedAt: timestamp("completed_at"),
+  durationMinutes: integer("duration_minutes"),
+  outcome: crmActivityOutcomeEnum("outcome"),
+  sentiment: varchar("sentiment"), // positive, neutral, negative
+  nextAction: text("next_action"),
+  isAutomated: boolean("is_automated").default(false),
+  sequenceId: varchar("sequence_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_crm_activities_type").on(table.type),
+  index("idx_crm_activities_contact_id").on(table.contactId),
+  index("idx_crm_activities_company_id").on(table.companyId),
+  index("idx_crm_activities_deal_id").on(table.dealId),
+  index("idx_crm_activities_owner_id").on(table.ownerId),
+  index("idx_crm_activities_due_date").on(table.dueDate),
+]);
+
+export const insertCrmActivitySchema = createInsertSchema(crmActivities);
+export type CrmActivity = typeof crmActivities.$inferSelect;
+export type InsertCrmActivity = typeof crmActivities.$inferInsert;

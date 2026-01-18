@@ -78,6 +78,10 @@ import RemoteSupport from "@/pages/RemoteSupport";
 import TDRManagement from "@/pages/TDR";
 import ExecutiveMetrics from "@/pages/ExecutiveMetrics";
 import ChangeManagement from "@/pages/ChangeManagement";
+import CRM from "@/pages/CRM";
+import CRMContacts from "@/pages/CRM/Contacts";
+import CRMCompanies from "@/pages/CRM/Companies";
+import CRMDeals from "@/pages/CRM/Deals";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/not-found";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
@@ -219,6 +223,10 @@ function Router() {
       <Route path="/tdr" component={() => <ProtectedRoute component={TDRManagement} />} />
       <Route path="/executive-metrics" component={() => <ProtectedRoute component={ExecutiveMetrics} />} />
       <Route path="/change-management" component={() => <ProtectedRoute component={ChangeManagement} />} />
+      <Route path="/crm" component={() => <ProtectedRoute component={CRM} requiredRoles={["admin", "hospital_leadership"]} />} />
+      <Route path="/crm/contacts" component={() => <ProtectedRoute component={CRMContacts} requiredRoles={["admin", "hospital_leadership"]} />} />
+      <Route path="/crm/companies" component={() => <ProtectedRoute component={CRMCompanies} requiredRoles={["admin", "hospital_leadership"]} />} />
+      <Route path="/crm/deals" component={() => <ProtectedRoute component={CRMDeals} requiredRoles={["admin", "hospital_leadership"]} />} />
       <Route path="/timesheets" component={() => <ProtectedRoute component={Timesheets} />} />
       <Route path="/availability" component={() => <ProtectedRoute component={Availability} />} />
       <Route path="/shift-swaps" component={() => <ProtectedRoute component={ShiftSwaps} />} />

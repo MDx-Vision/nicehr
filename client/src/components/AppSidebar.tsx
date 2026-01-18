@@ -74,6 +74,8 @@ import {
   Command,
   Sparkles,
   Video,
+  Contact2,
+  Handshake,
   type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -89,7 +91,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   GraduationCap, Book, Monitor, Ticket, FileCheck, AlertTriangle, DollarSign,
   Receipt, Banknote, TrendingUp, Plane, Luggage, Bus, Target, Award, ShieldCheck,
   FileSignature, MessageCircle, UserCheck, FileBarChart, Gauge, KeyRound, Link2,
-  Star, Briefcase, HeadphonesIcon, PieChart, Sparkles, Video,
+  Star, Briefcase, HeadphonesIcon, PieChart, Sparkles, Video, Contact2, Handshake,
 };
 
 // Simplified navigation structure
@@ -126,6 +128,19 @@ const NAV_GROUPS: NavGroup[] = [
       { id: "my-projects", title: "My Projects", url: "/my-projects", icon: "FolderKanban", roles: ["consultant"] },
       { id: "hospitals", title: "Hospitals", url: "/hospitals", icon: "Building2", roles: ["admin"] },
       { id: "consultants", title: "People", url: "/consultants", icon: "Users", roles: ["admin", "hospital_leadership"] },
+    ],
+  },
+  {
+    id: "crm",
+    label: "CRM",
+    icon: "Handshake",
+    roles: ["admin", "hospital_leadership"],
+    defaultOpen: false,
+    items: [
+      { id: "crm-dashboard", title: "CRM Dashboard", url: "/crm", icon: "LayoutDashboard", roles: ["admin", "hospital_leadership"] },
+      { id: "crm-contacts", title: "Contacts", url: "/crm/contacts", icon: "Contact2", roles: ["admin", "hospital_leadership"] },
+      { id: "crm-companies", title: "Companies", url: "/crm/companies", icon: "Building2", roles: ["admin", "hospital_leadership"] },
+      { id: "crm-deals", title: "Deals", url: "/crm/deals", icon: "Handshake", roles: ["admin", "hospital_leadership"] },
     ],
   },
   {
