@@ -38,8 +38,8 @@
 ## 🚀 Next: TNG CRM Implementation
 
 Documentation ready in `docs/`:
-- `TNG_CRM_MASTER_CHECKLIST.md` - Full implementation guide
-- `TNG_CRM_COMPETITIVE_COMPARISON.md` - Feature comparison
+- `TNG_CRM_MASTER_CHECKLIST.md` - Full implementation guide (3,827 lines, 2,000+ items)
+- `TNG_CRM_COMPETITIVE_COMPARISON.md` - Feature comparison vs 8 competitors
 
 ### CRM Key Sections (24 total)
 1. Architecture & Foundation
@@ -52,6 +52,13 @@ Documentation ready in `docs/`:
 8. AI Intelligence Layer
 9. Healthcare IT Features
 10. Industry-Specific Modules (15 verticals)
+
+### NEW: One-Click CRM Migration (Section 24.20-24.22)
+- **Tier 1 OAuth**: Salesforce, HubSpot, Pipedrive, Zoho, Freshsales, Monday, Copper, Insightly, Nimble, Nutshell
+- **Tier 2 API Key**: GoHighLevel, Keap, ActiveCampaign, Agile CRM, Less Annoying CRM
+- **Tier 3 CSV**: Spreadsheets, Outlook, LinkedIn, Google Sheets
+- Migration wizard with field mapping, validation, rollback
+- Migration concierge white glove service
 
 ---
 

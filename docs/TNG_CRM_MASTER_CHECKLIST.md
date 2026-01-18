@@ -3305,6 +3305,377 @@ Inquiry → Consultation → Proposal → Booked → Planning → Event Day → 
 
 ---
 
+### 24.20 One-Click CRM Migration System
+
+> **Goal:** Make switching to TNG CRM so easy that migration is never a barrier. Users connect their old CRM, we pull everything automatically, map fields intelligently, and they're live in minutes - not weeks.
+
+#### Migration Hub Dashboard
+- [ ] "Import from CRM" prominent in onboarding
+- [ ] Visual migration wizard
+- [ ] Progress tracker (steps completed)
+- [ ] Estimated time remaining
+- [ ] Migration health score
+- [ ] Rollback option (undo migration)
+
+#### Direct CRM Integrations (OAuth Connect)
+
+##### Tier 1: One-Click Connect (Full API Migration)
+- [ ] **Salesforce** - OAuth connect, full data pull
+- [ ] **HubSpot** - OAuth connect, full data pull
+- [ ] **Pipedrive** - OAuth connect, full data pull
+- [ ] **Zoho CRM** - OAuth connect, full data pull
+- [ ] **Close CRM** - OAuth connect, full data pull
+- [ ] **Freshsales** - OAuth connect, full data pull
+- [ ] **Monday CRM** - OAuth connect, full data pull
+- [ ] **Copper CRM** - OAuth connect, full data pull
+- [ ] **Insightly** - OAuth connect, full data pull
+- [ ] **Capsule CRM** - OAuth connect, full data pull
+- [ ] **Nimble** - OAuth connect, full data pull
+- [ ] **Nutshell** - OAuth connect, full data pull
+
+##### Tier 2: API Key Migration
+- [ ] **GoHighLevel** - API key import
+- [ ] **Keap/Infusionsoft** - API key import
+- [ ] **ActiveCampaign** - API key import
+- [ ] **Mailchimp** - API key import (contacts)
+- [ ] **Constant Contact** - API key import
+- [ ] **Drip** - API key import
+- [ ] **Klaviyo** - API key import
+
+##### Tier 3: Export File Import
+- [ ] **Any CRM** - CSV/Excel upload
+- [ ] **Outlook Contacts** - CSV import
+- [ ] **Google Contacts** - CSV/vCard import
+- [ ] **Apple Contacts** - vCard import
+- [ ] **LinkedIn** - Export file import
+- [ ] **Excel/Google Sheets** - Direct import
+
+#### Data Migration - What Gets Imported
+
+##### From Salesforce
+- [ ] Accounts → Companies
+- [ ] Contacts → Contacts
+- [ ] Leads → Contacts (tagged as leads)
+- [ ] Opportunities → Deals
+- [ ] Tasks → Tasks
+- [ ] Events → Activities
+- [ ] Notes → Notes
+- [ ] Emails → Email history
+- [ ] Attachments → Files
+- [ ] Custom Fields → Custom Fields
+- [ ] Users → Users
+- [ ] Reports → Report definitions (where possible)
+- [ ] Campaigns → Campaigns
+- [ ] Campaign Members → Campaign associations
+
+##### From HubSpot
+- [ ] Companies → Companies
+- [ ] Contacts → Contacts
+- [ ] Deals → Deals
+- [ ] Tickets → Support tickets (if module enabled)
+- [ ] Tasks → Tasks
+- [ ] Notes → Notes
+- [ ] Emails → Email history
+- [ ] Calls → Call logs
+- [ ] Meetings → Activities
+- [ ] Custom Properties → Custom Fields
+- [ ] Lists → Segments/Tags
+- [ ] Workflows → Sequences (mapped where possible)
+- [ ] Email Templates → Email Templates
+- [ ] Forms → Forms
+- [ ] Marketing Emails → Email history
+
+##### From Pipedrive
+- [ ] Organizations → Companies
+- [ ] Persons → Contacts
+- [ ] Deals → Deals
+- [ ] Activities → Activities
+- [ ] Notes → Notes
+- [ ] Files → Files
+- [ ] Custom Fields → Custom Fields
+- [ ] Pipelines → Pipelines
+- [ ] Stages → Pipeline Stages
+- [ ] Users → Users
+- [ ] Products → Products/Services
+
+##### From GoHighLevel
+- [ ] Contacts → Contacts
+- [ ] Opportunities → Deals
+- [ ] Pipelines → Pipelines
+- [ ] Campaigns → Sequences
+- [ ] Workflows → Automations (mapped)
+- [ ] Calendars → Calendar
+- [ ] Forms → Forms
+- [ ] Funnels → Landing pages
+- [ ] SMS History → SMS history
+- [ ] Call History → Call logs
+- [ ] Tags → Tags
+
+##### From Zoho CRM
+- [ ] Accounts → Companies
+- [ ] Contacts → Contacts
+- [ ] Leads → Contacts (tagged)
+- [ ] Deals → Deals
+- [ ] Tasks → Tasks
+- [ ] Events → Activities
+- [ ] Calls → Call logs
+- [ ] Notes → Notes
+- [ ] Attachments → Files
+- [ ] Custom Modules → Custom entities
+- [ ] Blueprints → Workflows (mapped)
+- [ ] Email Templates → Email Templates
+
+##### From Close CRM
+- [ ] Leads → Companies + Contacts
+- [ ] Opportunities → Deals
+- [ ] Tasks → Tasks
+- [ ] Activities → Activities
+- [ ] Emails → Email history
+- [ ] Calls → Call logs (with recordings if accessible)
+- [ ] SMS → SMS history
+- [ ] Custom Fields → Custom Fields
+- [ ] Smart Views → Saved filters
+- [ ] Sequences → Sequences
+
+#### Smart Field Mapping
+
+##### Automatic Field Detection
+- [ ] AI-powered field matching (95%+ accuracy)
+- [ ] Detect field types (text, number, date, email, phone, etc.)
+- [ ] Match standard fields automatically
+- [ ] Suggest mappings for custom fields
+- [ ] "Unmapped fields" report for review
+
+##### Field Mapping Interface
+- [ ] Side-by-side source → destination view
+- [ ] Drag-and-drop mapping
+- [ ] Create new custom field from unmapped
+- [ ] Skip field option
+- [ ] Merge multiple fields option
+- [ ] Transform data option (formatting, splitting, combining)
+- [ ] Preview sample data before import
+- [ ] Save mapping template for future imports
+
+##### Data Transformation Rules
+- [ ] Name splitting (Full Name → First + Last)
+- [ ] Name combining (First + Last → Full Name)
+- [ ] Phone formatting (standardize to E.164)
+- [ ] Address parsing (single field → components)
+- [ ] Date format conversion
+- [ ] Currency conversion
+- [ ] Status/stage mapping
+- [ ] Tag concatenation
+- [ ] Picklist value mapping
+- [ ] Default value assignment
+
+#### Relationship Preservation
+- [ ] Contact-to-Company associations maintained
+- [ ] Deal-to-Contact associations maintained
+- [ ] Deal-to-Company associations maintained
+- [ ] Activity-to-Contact/Company/Deal associations
+- [ ] Parent-child company relationships
+- [ ] User ownership assignments
+- [ ] Team assignments
+
+#### Historical Data Import
+- [ ] All historical activities (not just recent)
+- [ ] Email history (full threads where available)
+- [ ] Call recordings (if accessible via API)
+- [ ] Meeting history
+- [ ] Stage change history (deal progression)
+- [ ] Modification timestamps preserved
+- [ ] Created dates preserved
+- [ ] Original record IDs stored (for reference)
+
+#### Duplicate Handling
+- [ ] Pre-import duplicate scan
+- [ ] Duplicate detection rules (email, phone, company name)
+- [ ] Options: Skip, Merge, Create Anyway, Flag for Review
+- [ ] Merge strategy selection (keep newest, keep oldest, manual)
+- [ ] Post-import duplicate report
+
+#### Migration Validation
+
+##### Pre-Migration Checks
+- [ ] API connection test
+- [ ] Permission/scope validation
+- [ ] Record count estimation
+- [ ] Data quality scan
+- [ ] Required field check
+- [ ] Storage space check
+
+##### During Migration
+- [ ] Real-time progress bar
+- [ ] Records processed counter
+- [ ] Error log (live)
+- [ ] Pause/resume capability
+- [ ] Skip problematic records option
+- [ ] Estimated time remaining
+
+##### Post-Migration Validation
+- [ ] Record count comparison (source vs imported)
+- [ ] Data integrity checks
+- [ ] Relationship verification
+- [ ] Sample record review
+- [ ] Missing data report
+- [ ] Error summary report
+
+#### Migration Error Handling
+- [ ] Detailed error messages (not just "failed")
+- [ ] Error categorization (mapping, format, permission, etc.)
+- [ ] Suggested fixes per error
+- [ ] Retry failed records
+- [ ] Export failed records for manual review
+- [ ] Error notification (email/in-app)
+
+#### CSV/Excel Import System
+
+##### Smart CSV Import
+- [ ] Drag-and-drop file upload
+- [ ] Automatic delimiter detection (comma, tab, semicolon)
+- [ ] Encoding detection (UTF-8, ISO-8859, etc.)
+- [ ] Header row detection
+- [ ] Column type inference
+- [ ] Preview first 100 rows
+- [ ] Large file support (100k+ rows)
+
+##### Excel Import
+- [ ] .xlsx and .xls support
+- [ ] Multiple sheet selection
+- [ ] Named range support
+- [ ] Formula result import (not formulas)
+- [ ] Date format handling
+- [ ] Merged cell handling
+
+##### Import Templates
+- [ ] Downloadable CSV templates per entity
+- [ ] Pre-formatted headers
+- [ ] Example data rows
+- [ ] Required field indicators
+- [ ] Allowed values for picklists
+- [ ] Template for each industry module
+
+#### Bulk Import Features
+- [ ] Import queue (multiple imports)
+- [ ] Scheduled imports
+- [ ] Recurring imports (for ongoing sync)
+- [ ] Import up to 1M records
+- [ ] Background processing
+- [ ] Email notification on completion
+
+#### Migration Concierge (White Glove Service)
+- [ ] Request assisted migration
+- [ ] Migration specialist assignment
+- [ ] Screen share migration support
+- [ ] Data cleanup assistance
+- [ ] Custom field setup help
+- [ ] Workflow recreation assistance
+- [ ] Training after migration
+- [ ] 30-day migration support period
+
+#### Post-Migration Features
+
+##### Old CRM Sync (Transition Period)
+- [ ] Optional bidirectional sync during transition
+- [ ] New records sync to TNG
+- [ ] Updates sync to TNG
+- [ ] Configurable sync frequency
+- [ ] Sync conflict resolution
+- [ ] Sync disable when ready
+
+##### Migration Audit Trail
+- [ ] Full log of what was imported
+- [ ] Source record ID mapping
+- [ ] Timestamp of import
+- [ ] User who performed import
+- [ ] Mapping configuration used
+- [ ] Changes made post-import
+
+##### Rollback Capability
+- [ ] One-click rollback (within 30 days)
+- [ ] Selective rollback (specific imports)
+- [ ] Rollback preview (what will be deleted)
+- [ ] Confirmation required
+- [ ] Audit log of rollback
+
+---
+
+### 24.21 Competitor-Specific Migration Guides
+
+#### Salesforce Migration Guide
+- [ ] Step-by-step walkthrough
+- [ ] Permission requirements (API access)
+- [ ] Custom object handling
+- [ ] Workflow/Flow conversion guide
+- [ ] Apex code considerations
+- [ ] AppExchange app alternatives in TNG
+- [ ] Report recreation guide
+- [ ] Dashboard recreation guide
+
+#### HubSpot Migration Guide
+- [ ] Step-by-step walkthrough
+- [ ] Deal pipeline mapping
+- [ ] Workflow → Sequence conversion
+- [ ] List → Segment conversion
+- [ ] Form recreation
+- [ ] Email template migration
+- [ ] Property → Custom field mapping
+- [ ] HubSpot CMS considerations
+
+#### GoHighLevel Migration Guide
+- [ ] Step-by-step walkthrough
+- [ ] Sub-account handling
+- [ ] Funnel → Landing page conversion
+- [ ] Workflow → Automation mapping
+- [ ] Trigger link recreation
+- [ ] Membership area migration
+- [ ] Calendar migration
+- [ ] Reputation management alternatives
+
+#### Pipedrive Migration Guide
+- [ ] Step-by-step walkthrough
+- [ ] Pipeline/stage mapping
+- [ ] Smart contact data migration
+- [ ] Email sync setup
+- [ ] Workflow automation conversion
+- [ ] Products migration
+
+#### Generic CRM Migration Guide
+- [ ] Export instructions for 20+ CRMs
+- [ ] Field mapping best practices
+- [ ] Data cleanup before import
+- [ ] Testing imported data
+- [ ] Team training post-migration
+
+---
+
+### 24.22 Migration Marketing Tools
+
+#### "Import from [Competitor]" Landing Pages
+- [ ] Salesforce migration page
+- [ ] HubSpot migration page
+- [ ] Pipedrive migration page
+- [ ] GoHighLevel migration page
+- [ ] Zoho migration page
+- [ ] Feature comparison tables
+- [ ] Migration time estimates
+- [ ] Customer testimonials (migrated users)
+
+#### Migration Incentives
+- [ ] Free migration assistance (for annual plans)
+- [ ] Extended trial during migration
+- [ ] Data import credits
+- [ ] Onboarding bonus
+- [ ] "Switch & Save" calculator
+
+#### Competitor Sunset Alerts
+- [ ] Monitor competitor pricing changes
+- [ ] Competitor feature deprecation alerts
+- [ ] Targeted outreach to affected users
+- [ ] "We heard [Competitor] is..." campaigns
+
+---
+
 ## IMPLEMENTATION PHASES
 
 ### Phase 1: Foundation (Weeks 1-4)
@@ -3442,13 +3813,15 @@ Inquiry → Consultation → Proposal → Booked → Planning → Event Day → 
 
 ---
 
-*This checklist represents the most comprehensive CRM platform ever designed. It combines the best of GoHighLevel, Salesforce, HubSpot, Pipedrive, Close, and Zoho with NICEHR-specific innovations, a complete legally-compliant e-signature system, 15 industry-specific vertical modules, and an AI-powered workflow suggestion engine that acts as a built-in consultant for every industry.*
+*This checklist represents the most comprehensive CRM platform ever designed. It combines the best of GoHighLevel, Salesforce, HubSpot, Pipedrive, Close, and Zoho with NICEHR-specific innovations, a complete legally-compliant e-signature system, 15 industry-specific vertical modules, an AI-powered workflow suggestion engine, and a one-click migration system that imports from 20+ competitor CRMs.*
 
 **Final Stats:**
 - 24 Major Sections
 - 15 Industry Vertical Modules
-- 75+ Pre-Built Workflow Templates (5+ per industry)
+- 75+ Pre-Built Workflow Templates
+- 20+ One-Click CRM Migrations
 - AI-Powered Suggestion Engine
-- 1,800+ Checklist Items
+- Legal E-Signature System
+- 2,000+ Checklist Items
 - 9 Implementation Phases
 - 48 Weeks to Full Platform

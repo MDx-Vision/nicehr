@@ -393,6 +393,38 @@
 | **White-Label** | Full SaaS resale vs. not available |
 | **AI** | Full suite included vs. expensive add-ons |
 | **Communication** | All channels native vs. integrations required |
+| **Migration** | One-click from 20+ CRMs vs. painful CSV exports |
+
+---
+
+## Migration Comparison
+
+| Feature | TNG CRM | GoHighLevel | Salesforce | HubSpot | Pipedrive | Zoho |
+|---------|:-------:|:-----------:|:----------:|:-------:|:---------:|:----:|
+| **One-Click Migration** | ✅ 20+ CRMs | ❌ | ❌ | ⚠️ Limited | ❌ | ⚠️ Limited |
+| **OAuth Connect Import** | ✅ | ❌ | ❌ | ✅ Some | ❌ | ✅ Some |
+| **AI Field Mapping** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Historical Data** | ✅ Full | N/A | N/A | ⚠️ Limited | N/A | ⚠️ Limited |
+| **Relationship Preservation** | ✅ | N/A | N/A | ⚠️ | N/A | ⚠️ |
+| **Email History Import** | ✅ | ❌ | N/A | ⚠️ | N/A | ⚠️ |
+| **Call Recording Import** | ✅ | ❌ | N/A | ❌ | N/A | ❌ |
+| **Workflow Migration** | ✅ Mapped | N/A | N/A | ❌ | N/A | ❌ |
+| **Rollback Capability** | ✅ 30 days | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Migration Concierge** | ✅ Free | ❌ | $$$ | $$$ | ❌ | $$$ |
+| **Transition Sync Period** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+
+### Migration Time Comparison
+
+| From CRM | To TNG CRM | To Salesforce | To HubSpot |
+|----------|------------|---------------|------------|
+| Salesforce | **15 minutes** | N/A | 2-4 weeks |
+| HubSpot | **15 minutes** | 2-4 weeks | N/A |
+| Pipedrive | **10 minutes** | 1-2 weeks | 1-2 weeks |
+| GoHighLevel | **20 minutes** | 2-3 weeks | 2-3 weeks |
+| Zoho CRM | **15 minutes** | 1-2 weeks | 1-2 weeks |
+| CSV/Excel | **5 minutes** | 30-60 minutes | 30-60 minutes |
+
+**TNG CRM makes migration 10-100x faster than competitors.**
 
 ---
 
