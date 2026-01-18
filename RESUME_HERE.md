@@ -1,7 +1,7 @@
 # RESUME HERE - Quick Start Guide
 
 **Last Session:** January 18, 2026
-**Status:** CRM Core Implementation Complete (Phases 1-3)
+**Status:** CRM Implementation Complete (Phases 1-4)
 
 ---
 
@@ -10,14 +10,14 @@
 | Metric | Value |
 |--------|-------|
 | **Tests** | 1977/1977 passing (100%) |
-| **Branch** | `main` (uncommitted CRM changes) |
-| **Last Stable Commit** | ESIGN compliance + TNG CRM docs |
+| **Branch** | `crm-phase4-activities` |
+| **Last Stable Commit** | Phase 4 Activities & Tasks UI |
 
 ---
 
 ## CRM Implementation Progress
 
-**Status:** Core CRM module implemented and working
+**Status:** CRM module Phases 1-4 complete
 
 ### Completed Today (Jan 18)
 
@@ -37,6 +37,13 @@
 - Kanban board view
 - List view
 - Default pipeline seeding
+
+**Phase 4: Activities & Tasks**
+- ActivityFeed component (timeline view)
+- ActivityForm component (log call/email/meeting/note/task)
+- TasksPanel component (list/create/complete tasks)
+- View dialogs on Contacts, Companies, Deals with activity tabs
+- Activity logging from any record
 
 ### Database Tables Added
 - `crm_pipelines` - Sales/recruitment pipelines
@@ -59,16 +66,16 @@
 
 ## What's Next
 
-### Phase 4: Activities & Tasks
-- [ ] Activity logging UI (calls, emails, meetings, notes)
-- [ ] Activity feed on contacts/companies/deals
-- [ ] Tasks management
-
 ### Phase 5: E2E Tests
 - [ ] `cypress/e2e/44-crm-contacts.cy.js`
 - [ ] `cypress/e2e/45-crm-companies.cy.js`
 - [ ] `cypress/e2e/46-crm-deals.cy.js`
+- [ ] `cypress/e2e/47-crm-activities.cy.js`
 - [ ] Target: 100+ new tests
+
+### After Tests Pass
+- [ ] Merge `crm-phase4-activities` → `main`
+- [ ] Consider Phase 6 enhancements (pipeline settings UI, email integration)
 
 ---
 
@@ -109,9 +116,12 @@ npx tsc --noEmit
 | `client/src/App.tsx` | Added CRM page routes |
 | `client/src/components/AppSidebar.tsx` | Added CRM navigation |
 | `client/src/pages/CRM/index.tsx` | CRM Dashboard |
-| `client/src/pages/CRM/Contacts.tsx` | Contacts page |
-| `client/src/pages/CRM/Companies.tsx` | Companies page |
-| `client/src/pages/CRM/Deals.tsx` | Deals/Pipeline page |
+| `client/src/pages/CRM/Contacts.tsx` | Contacts page + View/Activity dialogs |
+| `client/src/pages/CRM/Companies.tsx` | Companies page + View/Activity dialogs |
+| `client/src/pages/CRM/Deals.tsx` | Deals/Pipeline page + View/Activity dialogs |
+| `client/src/components/crm/ActivityFeed.tsx` | Activity timeline component |
+| `client/src/components/crm/ActivityForm.tsx` | Log activity dialog |
+| `client/src/components/crm/TasksPanel.tsx` | Tasks list/create component |
 | `CRM_BUILD_CHECKLIST.md` | Implementation tracker |
 
 ---

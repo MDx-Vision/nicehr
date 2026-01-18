@@ -87,21 +87,21 @@ CYPRESS_TEST=true npx cypress run
 
 ---
 
-## Phase 4: Activities & Tasks ⬜
+## Phase 4: Activities & Tasks ✅ COMPLETE
 
 ### 4.1 Activity Logging
-- [ ] Log call activity
-- [ ] Log email activity
-- [ ] Log meeting activity
-- [ ] Log note
-- [ ] Activity feed on contact/company/deal
+- [x] Log call activity
+- [x] Log email activity
+- [x] Log meeting activity
+- [x] Log note
+- [x] Activity feed on contact/company/deal
 
 ### 4.2 Tasks
-- [ ] Tasks list
-- [ ] Create task
-- [ ] Task assignment
-- [ ] Task due dates
-- [ ] Task completion
+- [x] Tasks list
+- [x] Create task
+- [x] Task assignment (via ownerId)
+- [x] Task due dates
+- [x] Task completion
 
 **Checkpoint:** Tests pass 1977/1977 ✅
 
@@ -123,21 +123,27 @@ CYPRESS_TEST=true npx cypress run
 
 | Phase | Status | Tests After | Notes |
 |-------|--------|-------------|-------|
-| 1. Foundation | ✅ Complete | - | Feature flag + schema |
-| 2. Core Module | ✅ Complete | - | Dashboard, Contacts, Companies |
-| 3. Pipeline | ✅ Complete | - | Deals, Kanban |
-| 4. Activities | ⬜ Pending | - | Logging, Tasks |
+| 1. Foundation | ✅ Complete | 1977 | Feature flag + schema |
+| 2. Core Module | ✅ Complete | 1977 | Dashboard, Contacts, Companies |
+| 3. Pipeline | ✅ Complete | 1977 | Deals, Kanban |
+| 4. Activities | ✅ Complete | 1977 | Logging, Tasks, Activity Feed |
 | 5. Tests | ⬜ Pending | - | 100+ tests |
 
 ---
 
 ## Files Created
 
-**Frontend:**
+**Frontend - Pages:**
 - `client/src/pages/CRM/index.tsx` - Main CRM Dashboard ✅
-- `client/src/pages/CRM/Contacts.tsx` - Contacts page ✅
-- `client/src/pages/CRM/Companies.tsx` - Companies page ✅
-- `client/src/pages/CRM/Deals.tsx` - Deals/Pipeline page ✅
+- `client/src/pages/CRM/Contacts.tsx` - Contacts page ✅ (+ View/Activity dialogs)
+- `client/src/pages/CRM/Companies.tsx` - Companies page ✅ (+ View/Activity dialogs)
+- `client/src/pages/CRM/Deals.tsx` - Deals/Pipeline page ✅ (+ View/Activity dialogs)
+
+**Frontend - Components (Phase 4):**
+- `client/src/components/crm/ActivityFeed.tsx` - Activity timeline component ✅
+- `client/src/components/crm/ActivityForm.tsx` - Log activity dialog (call/email/meeting/note/task) ✅
+- `client/src/components/crm/TasksPanel.tsx` - Tasks list/create/complete component ✅
+- `client/src/components/crm/index.ts` - Component exports ✅
 
 **Backend:**
 - `server/routes/crm.ts` - CRM API routes (~600 lines) ✅
