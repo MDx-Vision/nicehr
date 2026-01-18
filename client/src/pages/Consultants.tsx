@@ -142,7 +142,7 @@ export default function Consultants() {
     zipCode: "",
     location: "",
     yearsExperience: 0,
-    shiftPreference: "",
+    shiftPreference: "" as "day" | "night" | "swing" | "",
     bio: "",
     payRate: "",
     emrSystems: [] as string[],
@@ -266,12 +266,21 @@ export default function Consultants() {
   };
 
   const handleCreate = () => {
-    createMutation.mutate(formData);
+    createMutation.mutate({
+      ...formData,
+      shiftPreference: formData.shiftPreference || null,
+    });
   };
 
   const handleUpdate = () => {
     if (selectedConsultant) {
-      updateMutation.mutate({ id: selectedConsultant.id, data: formData });
+      updateMutation.mutate({
+        id: selectedConsultant.id,
+        data: {
+          ...formData,
+          shiftPreference: formData.shiftPreference || null,
+        },
+      });
     }
   };
 
@@ -733,9 +742,9 @@ export default function Consultants() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="shiftPreference">Shift Preference</Label>
-                <Select 
-                  value={formData.shiftPreference} 
-                  onValueChange={(value) => setFormData({ ...formData, shiftPreference: value })}
+                <Select
+                  value={formData.shiftPreference}
+                  onValueChange={(value) => setFormData({ ...formData, shiftPreference: value as "day" | "night" | "swing" })}
                 >
                   <SelectTrigger data-testid="select-shift-preference">
                     <SelectValue placeholder="Select shift" />

@@ -2,6 +2,7 @@ import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+// @ts-ignore - no types for cors
 import cors from "cors";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
@@ -77,7 +78,7 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
 
 app.use(
   cors({
-    origin: (origin, callback) => {
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
       // Allow requests with no origin (like mobile apps or curl)
       if (!origin) {
         callback(null, true);

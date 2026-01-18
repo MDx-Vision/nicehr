@@ -5,13 +5,6 @@ describe('Edge Cases', () => {
   const API_URL = Cypress.env('apiUrl') || 'http://localhost:3002';
   let testRequesterId = 1500;
 
-  // Reset all consultant statuses before this test file runs
-  before(() => {
-    [1, 2, 3, 4].forEach((id) => {
-      cy.setConsultantStatus(id, 'available');
-    });
-  });
-
   beforeEach(() => {
     testRequesterId++;
   });
@@ -19,42 +12,26 @@ describe('Edge Cases', () => {
   describe('Concurrent Sessions', () => {
     it('handles multiple simultaneous requests', () => {
       const baseId = testRequesterId;
+      const requests = [];
 
-      // Create requests sequentially to avoid Promise.all issues with Cypress
-      cy.createSupportRequest({
-        requesterId: baseId,
-        hospitalId: 1,
-        department: 'ER',
-        issueSummary: 'Concurrent request 0',
-      }).then((response0) => {
-        expect(response0.status).to.be.oneOf([200, 201, 400, 429]);
-        if (response0.body && response0.body.sessionId) {
-          cy.endSupportSession(response0.body.sessionId, { endedBy: baseId });
-        }
-      });
+      for (let i = 0; i < 3; i++) {
+        requests.push(
+          cy.createSupportRequest({
+            requesterId: baseId + i,
+            hospitalId: 1,
+            department: 'ER',
+            issueSummary: `Concurrent request ${i}`,
+          }).then((r) => ({ response: r, requesterId: baseId + i }))
+        );
+      }
 
-      cy.createSupportRequest({
-        requesterId: baseId + 1,
-        hospitalId: 1,
-        department: 'ER',
-        issueSummary: 'Concurrent request 1',
-      }).then((response1) => {
-        expect(response1.status).to.be.oneOf([200, 201, 400, 429]);
-        if (response1.body && response1.body.sessionId) {
-          cy.endSupportSession(response1.body.sessionId, { endedBy: baseId + 1 });
-        }
-      });
-
-      cy.createSupportRequest({
-        requesterId: baseId + 2,
-        hospitalId: 1,
-        department: 'ER',
-        issueSummary: 'Concurrent request 2',
-      }).then((response2) => {
-        expect(response2.status).to.be.oneOf([200, 201, 400, 429]);
-        if (response2.body && response2.body.sessionId) {
-          cy.endSupportSession(response2.body.sessionId, { endedBy: baseId + 2 });
-        }
+      cy.wrap(Promise.all(requests)).then((results) => {
+        results.forEach((result) => {
+          expect(result.response.status).to.be.oneOf([200, 201, 429]);
+          if (result.response.body.sessionId) {
+            cy.endSupportSession(result.response.body.sessionId, { endedBy: result.requesterId });
+          }
+        });
       });
     });
 
@@ -194,7 +171,7 @@ describe('Edge Cases', () => {
         department: 'ER',
         issueSummary: 'Test with émojis 🏥 and ünïcödé',
       }).then((response) => {
-        expect(response.status).to.be.oneOf([200, 201, 400]);
+        expect(response.status).to.be.oneOf([200, 201]);
 
         if (response.body.sessionId) {
           cy.endSupportSession(response.body.sessionId, { endedBy: testRequesterId });
@@ -232,7 +209,7 @@ describe('Edge Cases', () => {
         department: 'ER',
         issueSummary: 'Line 1\nLine 2\nLine 3',
       }).then((response) => {
-        expect(response.status).to.be.oneOf([200, 201, 400]);
+        expect(response.status).to.be.oneOf([200, 201]);
 
         if (response.body.sessionId) {
           cy.endSupportSession(response.body.sessionId, { endedBy: testRequesterId });
@@ -390,7 +367,7 @@ describe('Edge Cases', () => {
 
     it('handles negative consultant ID', () => {
       cy.getConsultantStats(-1).then((response) => {
-        expect(response.status).to.be.oneOf([200, 400, 404]);
+        expect(response.status).to.be.oneOf([400, 404]);
       });
     });
 
@@ -517,11 +494,9 @@ describe('Edge Cases', () => {
         department: 'ER',
         issueSummary: 'No consultants test',
       }).then((response) => {
-        expect(response.status).to.be.oneOf([200, 201, 400]);
-        // Should be queued since no consultant available, or may be rejected
-        if (response.body.status) {
-          expect(response.body.status).to.be.oneOf(['pending', 'queued', 'connecting', 'error']);
-        }
+        expect(response.status).to.be.oneOf([200, 201]);
+        // Should be queued since no consultant available
+        expect(response.body.status).to.be.oneOf(['pending', 'queued', 'connecting']);
 
         if (response.body.sessionId) {
           cy.endSupportSession(response.body.sessionId, { endedBy: testRequesterId });

@@ -5,13 +5,6 @@ describe('Smart Matching Algorithm', () => {
   const API_URL = Cypress.env('apiUrl') || 'http://localhost:3002';
   let testRequesterId = 600;
 
-  // Reset all consultant statuses before this test file runs
-  before(() => {
-    [1, 2, 3, 4].forEach((id) => {
-      cy.setConsultantStatus(id, 'available');
-    });
-  });
-
   beforeEach(() => {
     testRequesterId++;
     // Ensure at least one consultant is available
@@ -107,10 +100,7 @@ describe('Smart Matching Algorithm', () => {
       }).then((response) => {
         if (response.body.status === 'connecting') {
           expect(response.body.consultant.id).to.eq(2);
-          if (response.body.matchReasons && response.body.matchReasons.length > 0) {
-            const reasons = response.body.matchReasons.join(' ');
-            expect(reasons.toLowerCase()).to.include('expert');
-          }
+          expect(response.body.matchReasons).to.include('Department expert (+30)');
           cy.endSupportSession(response.body.sessionId, { endedBy: 9 });
         }
       });
@@ -186,10 +176,7 @@ describe('Smart Matching Algorithm', () => {
       }).then((response) => {
         if (response.body.status === 'connecting') {
           expect(response.body.consultant.id).to.eq(1);
-          if (response.body.matchReasons && response.body.matchReasons.length > 0) {
-            const reasons = response.body.matchReasons.join(' ').toLowerCase();
-            expect(reasons).to.match(/relationship|history|previous/);
-          }
+          expect(response.body.matchReasons.join(' ')).to.include('relationship');
           cy.endSupportSession(response.body.sessionId, { endedBy: 5 });
         }
       });
@@ -214,10 +201,8 @@ describe('Smart Matching Algorithm', () => {
       }).then((response) => {
         if (response.body.status === 'connecting') {
           expect(response.body.consultant.id).to.eq(2);
-          if (response.body.matchReasons && response.body.matchReasons.length > 0) {
-            const reasons = response.body.matchReasons.join(' ').toLowerCase();
-            expect(reasons).to.match(/rating|score|history|relationship|expert/);
-          }
+          const reasons = response.body.matchReasons.join(' ');
+          expect(reasons).to.include('rating');
           cy.endSupportSession(response.body.sessionId, { endedBy: 8 });
         }
       });

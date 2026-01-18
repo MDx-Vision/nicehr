@@ -207,7 +207,7 @@ export function ActivityFeed({ limit = 10, showTitle = true, className = "", rea
                         </p>
                       )}
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true })}
+                        {activity.createdAt ? formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true }) : 'Recently'}
                       </p>
                     </div>
                   </div>

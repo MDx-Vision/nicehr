@@ -281,7 +281,7 @@ export default function Documents() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {doc.uploadedAt ? format(new Date(doc.uploadedAt), "MMM d, yyyy") : "-"}
+                      {doc.createdAt ? format(new Date(doc.createdAt), "MMM d, yyyy") : "-"}
                     </TableCell>
                     <TableCell>
                       <Button

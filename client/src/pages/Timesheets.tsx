@@ -278,15 +278,15 @@ export default function Timesheets() {
   const [activeTab, setActiveTab] = useState("list");
 
   // Queries
-  const { data: projectsData = [] } = useQuery({
+  const { data: projectsData = [] } = useQuery<{ id: string; name: string }[]>({
     queryKey: ["/api/projects"],
   });
 
-  const { data: consultantsData = [] } = useQuery({
+  const { data: consultantsData = [] } = useQuery<{ id: string; firstName: string; lastName: string }[]>({
     queryKey: ["/api/consultants"],
   });
 
-  const { data: timesheetsData = [] } = useQuery({
+  const { data: timesheetsData = [] } = useQuery<TimesheetEntry[]>({
     queryKey: ["/api/timesheets"],
   });
 

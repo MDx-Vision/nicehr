@@ -41,7 +41,7 @@ export function useNotificationWebSocket() {
 
         if (message.type === 'notification_counts' && message.counts) {
           setNotificationCounts(message.counts);
-          const total = Object.values(message.counts).reduce((sum, count) => sum + (count || 0), 0);
+          const total = Object.values(message.counts).reduce((sum: number, count) => sum + (count || 0), 0);
           setTotalCount(total);
         }
       } catch (error) {

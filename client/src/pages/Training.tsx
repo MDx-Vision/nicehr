@@ -375,7 +375,7 @@ export default function Training() {
   ]);
 
   // Queries for real data (with fallbacks)
-  const { data: consultantsData = [] } = useQuery({
+  const { data: consultantsData = [] } = useQuery<{ id: string; firstName: string; lastName: string }[]>({
     queryKey: ["/api/consultants"],
   });
 
