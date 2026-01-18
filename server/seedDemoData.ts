@@ -56,6 +56,10 @@ import {
   eodReports,
   invoices,
   invoiceLineItems,
+  changeRequests,
+  changeRequestImpacts,
+  changeRequestApprovals,
+  changeRequestComments,
 } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 
@@ -4638,6 +4642,288 @@ export async function seedDemoData() {
 
     // Seed Phase 4 Advanced Analytics data
     await seedPhase4AnalyticsData();
+
+    // Seed Change Management data
+    console.log("Seeding change management data...");
+    const changeRequestData = [
+      {
+        id: "cr-1",
+        projectId: "project-1",
+        requestNumber: "CR-2026-0001",
+        title: "Add pharmacy interface to Epic integration",
+        description: "Request to include the pharmacy module in the Epic interface build. This will enable bidirectional medication orders and dispensing data exchange.",
+        category: "scope" as const,
+        priority: "high" as const,
+        status: "approved" as const,
+        impactLevel: "significant" as const,
+        requestedById: "user-1",
+        requestedByName: "Dr. James Wilson",
+        justification: "Pharmacy is critical for medication reconciliation during go-live. Without this interface, nurses will need to manually enter medications.",
+        proposedSolution: "Add HL7 ADT and RDE message types to the existing interface engine configuration.",
+        estimatedEffort: "80 hours",
+        estimatedCost: "$12,000",
+        targetImplementationDate: new Date("2025-05-01"),
+        submittedAt: new Date("2025-01-10"),
+        decidedAt: new Date("2025-01-12"),
+        createdAt: new Date("2025-01-08"),
+        updatedAt: new Date("2025-01-12"),
+      },
+      {
+        id: "cr-2",
+        projectId: "project-1",
+        requestNumber: "CR-2026-0002",
+        title: "Extend training timeline by 1 week",
+        description: "Request to extend the end-user training period from 3 weeks to 4 weeks to accommodate staff scheduling constraints.",
+        category: "timeline" as const,
+        priority: "medium" as const,
+        status: "submitted" as const,
+        impactLevel: "moderate" as const,
+        requestedById: "user-2",
+        requestedByName: "Sarah Mitchell",
+        justification: "Nursing leadership has indicated that 3 weeks is insufficient to train all shifts without impacting patient care. An additional week allows for overlap training.",
+        proposedSolution: "Extend training from Feb 15-Mar 8 to Feb 15-Mar 15. This still allows 2 weeks before go-live for remediation.",
+        estimatedEffort: "40 hours additional",
+        estimatedCost: "$8,000",
+        targetImplementationDate: new Date("2025-02-01"),
+        submittedAt: new Date("2025-01-15"),
+        createdAt: new Date("2025-01-14"),
+        updatedAt: new Date("2025-01-15"),
+      },
+      {
+        id: "cr-3",
+        projectId: "project-1",
+        requestNumber: "CR-2026-0003",
+        title: "Add 5 additional workstations in ED",
+        description: "Emergency Department requires 5 additional mobile workstations to support the new Epic workflow.",
+        category: "budget" as const,
+        priority: "critical" as const,
+        status: "implemented" as const,
+        impactLevel: "major" as const,
+        requestedById: "user-3",
+        requestedByName: "Michael Rodriguez",
+        justification: "Current workstation density is 1:4 (provider:workstation). Epic workflow requires 1:2 ratio for efficient patient throughput.",
+        proposedSolution: "Procure 5 additional Ergotron mobile workstations with barcode scanners.",
+        estimatedEffort: "16 hours",
+        estimatedCost: "$35,000",
+        targetImplementationDate: new Date("2025-04-15"),
+        actualImplementationDate: new Date("2025-01-10"),
+        submittedAt: new Date("2024-12-20"),
+        decidedAt: new Date("2024-12-22"),
+        implementedAt: new Date("2025-01-10"),
+        createdAt: new Date("2024-12-18"),
+        updatedAt: new Date("2025-01-10"),
+      },
+      {
+        id: "cr-4",
+        projectId: "project-1",
+        requestNumber: "CR-2026-0004",
+        title: "Switch lab interface from HL7 v2.3 to v2.5.1",
+        description: "Lab vendor recommends upgrading the interface specification from HL7 v2.3 to v2.5.1 for better structured data support.",
+        category: "technical" as const,
+        priority: "medium" as const,
+        status: "rejected" as const,
+        impactLevel: "moderate" as const,
+        requestedById: "user-4",
+        requestedByName: "Jennifer Park",
+        justification: "HL7 v2.5.1 provides better support for microbiology results and allows for more granular result codes.",
+        proposedSolution: "Rebuild the outbound lab results interface using v2.5.1 message specification.",
+        estimatedEffort: "120 hours",
+        estimatedCost: "$18,000",
+        targetImplementationDate: new Date("2025-04-01"),
+        submittedAt: new Date("2025-01-05"),
+        decidedAt: new Date("2025-01-08"),
+        createdAt: new Date("2025-01-03"),
+        updatedAt: new Date("2025-01-08"),
+      },
+      {
+        id: "cr-5",
+        projectId: "project-1",
+        requestNumber: "CR-2026-0005",
+        title: "Add after-hours support consultant",
+        description: "Request for one additional consultant to provide 24/7 coverage during the go-live week.",
+        category: "resource" as const,
+        priority: "high" as const,
+        status: "draft" as const,
+        impactLevel: "moderate" as const,
+        requestedById: "user-1",
+        requestedByName: "Dr. James Wilson",
+        justification: "Current staffing model provides coverage from 6am-10pm only. Hospital operates 24/7 and needs support during overnight hours.",
+        proposedSolution: "Engage additional consultant with inpatient experience for overnight shift (10pm-6am) during go-live week.",
+        estimatedEffort: "56 hours",
+        estimatedCost: "$14,000",
+        targetImplementationDate: new Date("2025-06-01"),
+        createdAt: new Date("2025-01-16"),
+        updatedAt: new Date("2025-01-16"),
+      },
+      {
+        id: "cr-6",
+        projectId: "project-2",
+        requestNumber: "CR-2026-0006",
+        title: "Include patient portal in Phase 1",
+        description: "Request to add MyChart patient portal configuration to Phase 1 go-live scope.",
+        category: "scope" as const,
+        priority: "medium" as const,
+        status: "under_review" as const,
+        impactLevel: "significant" as const,
+        requestedById: "user-5",
+        requestedByName: "Lisa Thompson",
+        justification: "Patient portal was originally planned for Phase 2, but hospital marketing has committed to patients that it will be available at go-live.",
+        proposedSolution: "Add MyChart configuration tasks to the project plan and include in Phase 1 training curriculum.",
+        estimatedEffort: "200 hours",
+        estimatedCost: "$45,000",
+        targetImplementationDate: new Date("2025-09-01"),
+        submittedAt: new Date("2025-01-14"),
+        reviewStartedAt: new Date("2025-01-16"),
+        createdAt: new Date("2025-01-12"),
+        updatedAt: new Date("2025-01-16"),
+      },
+    ];
+    for (const changeRequest of changeRequestData) {
+      await db.insert(changeRequests).values(changeRequest).onConflictDoNothing();
+    }
+
+    // Seed Change Request Impacts
+    const changeImpactData = [
+      {
+        id: "impact-1",
+        changeRequestId: "cr-1",
+        impactArea: "scope" as const,
+        description: "Adds 15 new interface message types to the build scope",
+        severity: "medium" as const,
+      },
+      {
+        id: "impact-2",
+        changeRequestId: "cr-1",
+        impactArea: "resources" as const,
+        description: "Requires interface analyst availability for 2 additional weeks",
+        severity: "low" as const,
+      },
+      {
+        id: "impact-3",
+        changeRequestId: "cr-2",
+        impactArea: "schedule" as const,
+        description: "Delays start of remediation week by 7 days",
+        severity: "medium" as const,
+      },
+      {
+        id: "impact-4",
+        changeRequestId: "cr-2",
+        impactArea: "budget" as const,
+        description: "Additional trainer costs for extended training period",
+        severity: "low" as const,
+      },
+      {
+        id: "impact-5",
+        changeRequestId: "cr-3",
+        impactArea: "budget" as const,
+        description: "Hardware procurement exceeds original equipment budget by 15%",
+        severity: "high" as const,
+      },
+      {
+        id: "impact-6",
+        changeRequestId: "cr-6",
+        impactArea: "schedule" as const,
+        description: "May delay go-live if portal build extends beyond Phase 1 timeline",
+        severity: "high" as const,
+      },
+      {
+        id: "impact-7",
+        changeRequestId: "cr-6",
+        impactArea: "resources" as const,
+        description: "Requires dedicated portal analyst - currently not staffed",
+        severity: "high" as const,
+      },
+    ];
+    for (const impact of changeImpactData) {
+      await db.insert(changeRequestImpacts).values(impact).onConflictDoNothing();
+    }
+
+    // Seed Change Request Approvals
+    const changeApprovalData = [
+      {
+        id: "approval-1",
+        changeRequestId: "cr-1",
+        approverId: "user-admin",
+        approverName: "Patricia Chen",
+        approverRole: "Project Director",
+        decision: "approved" as const,
+        comments: "Approved - pharmacy interface is critical for medication safety. Budget increase approved by steering committee.",
+        decidedAt: new Date("2025-01-12"),
+        createdAt: new Date("2025-01-12"),
+      },
+      {
+        id: "approval-2",
+        changeRequestId: "cr-3",
+        approverId: "user-admin",
+        approverName: "Patricia Chen",
+        approverRole: "Project Director",
+        decision: "approved" as const,
+        comments: "Approved per ED medical director request. Critical for patient throughput.",
+        decidedAt: new Date("2024-12-22"),
+        createdAt: new Date("2024-12-22"),
+      },
+      {
+        id: "approval-3",
+        changeRequestId: "cr-4",
+        approverId: "user-admin",
+        approverName: "Patricia Chen",
+        approverRole: "Project Director",
+        decision: "rejected" as const,
+        comments: "Rejected - risk too high to change interface specification at this stage. Lab vendor has confirmed v2.3 meets all requirements. Can revisit post go-live.",
+        decidedAt: new Date("2025-01-08"),
+        createdAt: new Date("2025-01-08"),
+      },
+    ];
+    for (const approval of changeApprovalData) {
+      await db.insert(changeRequestApprovals).values(approval).onConflictDoNothing();
+    }
+
+    // Seed Change Request Comments
+    const changeCommentData = [
+      {
+        id: "comment-1",
+        changeRequestId: "cr-2",
+        userId: "user-1",
+        userName: "Dr. James Wilson",
+        content: "I support this request. The nursing staff has been vocal about the compressed training timeline.",
+        createdAt: new Date("2025-01-15T09:30:00"),
+      },
+      {
+        id: "comment-2",
+        changeRequestId: "cr-2",
+        userId: "user-3",
+        userName: "Michael Rodriguez",
+        content: "Training team has confirmed they can accommodate the extended timeline with current staffing.",
+        createdAt: new Date("2025-01-15T14:15:00"),
+      },
+      {
+        id: "comment-3",
+        changeRequestId: "cr-4",
+        userId: "user-4",
+        userName: "Jennifer Park",
+        content: "Understood. We will proceed with v2.3 as planned and document the v2.5.1 upgrade for Phase 2.",
+        createdAt: new Date("2025-01-08T16:45:00"),
+      },
+      {
+        id: "comment-4",
+        changeRequestId: "cr-6",
+        userId: "user-5",
+        userName: "Lisa Thompson",
+        content: "Marketing has agreed to adjust messaging if needed. However, they strongly prefer portal at go-live.",
+        createdAt: new Date("2025-01-16T10:00:00"),
+      },
+      {
+        id: "comment-5",
+        changeRequestId: "cr-6",
+        userId: "user-admin",
+        userName: "Patricia Chen",
+        content: "Scheduling meeting with steering committee on Thursday to discuss scope implications.",
+        createdAt: new Date("2025-01-16T11:30:00"),
+      },
+    ];
+    for (const comment of changeCommentData) {
+      await db.insert(changeRequestComments).values(comment).onConflictDoNothing();
+    }
 
     console.log("Demo data seeding completed successfully!");
     return { success: true };

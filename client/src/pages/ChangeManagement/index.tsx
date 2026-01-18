@@ -222,8 +222,8 @@ export default function ChangeManagement() {
   const addCommentMutation = useMutation({
     mutationFn: (data: { changeRequestId: string; content: string }) =>
       addComment(data.changeRequestId, {
-        authorId: user?.id || "dev-user-local",
-        authorName: user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : "Dev Admin",
+        userId: user?.id || "dev-user-local",
+        userName: user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : "Dev Admin",
         content: data.content,
       }),
     onSuccess: () => {
@@ -437,7 +437,7 @@ export default function ChangeManagement() {
                         onClick={() => openViewDialog(request)}
                       >
                         <div className="flex items-center gap-3">
-                          <Badge className={statusStyles[request.status]?.color}>
+                          <Badge className={statusStyles[request.status || "draft"]?.color}>
                             {request.status?.replace("_", " ")}
                           </Badge>
                           <div>
@@ -543,7 +543,7 @@ export default function ChangeManagement() {
                         data-testid={`change-request-${request.id}`}
                       >
                         <div className="flex items-center gap-4">
-                          <Badge className={statusStyles[request.status]?.color}>
+                          <Badge className={statusStyles[request.status || "draft"]?.color}>
                             {request.status?.replace("_", " ")}
                           </Badge>
                           <div>
@@ -640,7 +640,7 @@ export default function ChangeManagement() {
                         className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50"
                       >
                         <div className="flex items-center gap-4">
-                          <Badge className={statusStyles[request.status]?.color}>
+                          <Badge className={statusStyles[request.status || "draft"]?.color}>
                             {request.status?.replace("_", " ")}
                           </Badge>
                           <div>
@@ -915,15 +915,15 @@ export default function ChangeManagement() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-muted-foreground">Category</Label>
-                  <p className="font-medium">{categoryLabels[requestDetails.category] || requestDetails.category}</p>
+                  <p className="font-medium">{categoryLabels[requestDetails.category || ""] || requestDetails.category}</p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Priority</Label>
-                  <Badge className={priorityStyles[requestDetails.priority]}>{requestDetails.priority}</Badge>
+                  <Badge className={priorityStyles[requestDetails.priority || "medium"]}>{requestDetails.priority}</Badge>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Impact Level</Label>
-                  <p className="font-medium">{impactLabels[requestDetails.impactLevel] || requestDetails.impactLevel}</p>
+                  <p className="font-medium">{impactLabels[requestDetails.impactLevel || ""] || requestDetails.impactLevel}</p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Target Date</Label>
@@ -1012,7 +1012,7 @@ export default function ChangeManagement() {
                   {requestDetails.comments?.map((comment: any) => (
                     <div key={comment.id} className="p-3 bg-muted/50 rounded-lg">
                       <div className="flex items-center justify-between mb-1">
-                        <p className="font-medium text-sm">{comment.authorName}</p>
+                        <p className="font-medium text-sm">{comment.userName}</p>
                         <p className="text-xs text-muted-foreground">
                           {comment.createdAt && format(new Date(comment.createdAt), "MMM d, yyyy h:mm a")}
                         </p>
