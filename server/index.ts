@@ -117,8 +117,8 @@ const generalLimiter = rateLimit({
   legacyHeaders: false, // Disable X-RateLimit-* headers
   message: { message: "Too many requests, please try again later." },
   skip: (req) => {
-    // Skip rate limiting for health checks
-    return req.path === "/api/health";
+    // Skip rate limiting for health checks and in development mode
+    return req.path === "/api/health" || process.env.NODE_ENV === "development";
   },
 });
 

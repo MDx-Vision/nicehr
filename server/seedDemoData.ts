@@ -51,6 +51,15 @@ import {
   costVarianceSnapshots,
   raciAssignments,
   projectTeamAssignments,
+  contracts,
+  travelBookings,
+  eodReports,
+  invoices,
+  invoiceLineItems,
+  changeRequests,
+  changeRequestImpacts,
+  changeRequestApprovals,
+  changeRequestComments,
 } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 
@@ -4209,8 +4218,712 @@ export async function seedDemoData() {
       await db.insert(workflowExecutions).values(exec).onConflictDoNothing();
     }
 
+    // Seed Contracts
+    console.log("Seeding contracts...");
+    const contractData = [
+      {
+        id: "contract-1",
+        contractNumber: "CONT-2024-001",
+        title: "Independent Consultant Agreement - Sarah Chen",
+        content: "This Independent Consultant Agreement is entered into between NiceHR Consulting and Sarah Chen for consulting services at Memorial Hospital. Services include Epic EMR implementation support, workflow optimization, and clinical training.",
+        consultantId: "consultant-1",
+        projectId: "project-1",
+        hospitalId: "hospital-1",
+        status: "completed" as const,
+        effectiveDate: "2024-11-01",
+        expirationDate: "2025-04-30",
+        metadata: {
+          payRate: "150.00",
+          billableHours: "40",
+          travelReimbursement: true,
+        },
+        completedAt: new Date("2024-11-05"),
+      },
+      {
+        id: "contract-2",
+        contractNumber: "CONT-2024-002",
+        title: "Independent Consultant Agreement - Michael Rodriguez",
+        content: "This Independent Consultant Agreement is entered into between NiceHR Consulting and Michael Rodriguez for consulting services at Memorial Hospital. Services include Revenue Cycle optimization and Epic Resolute configuration.",
+        consultantId: "consultant-2",
+        projectId: "project-1",
+        hospitalId: "hospital-1",
+        status: "completed" as const,
+        effectiveDate: "2024-11-01",
+        expirationDate: "2025-04-30",
+        metadata: {
+          payRate: "150.00",
+          billableHours: "40",
+          travelReimbursement: true,
+        },
+        completedAt: new Date("2024-11-02"),
+      },
+      {
+        id: "contract-3",
+        contractNumber: "CONT-2024-003",
+        title: "Independent Consultant Agreement - Jennifer Williams",
+        content: "This Independent Consultant Agreement is entered into between NiceHR Consulting and Jennifer Williams for consulting services at St. Luke's Medical Center. Services include Cerner optimization and data migration support.",
+        consultantId: "consultant-3",
+        projectId: "project-2",
+        hospitalId: "hospital-2",
+        status: "completed" as const,
+        effectiveDate: "2024-10-15",
+        expirationDate: "2025-03-31",
+        metadata: {
+          payRate: "140.00",
+          billableHours: "40",
+          travelReimbursement: false,
+        },
+        completedAt: new Date("2024-10-18"),
+      },
+      {
+        id: "contract-4",
+        contractNumber: "CONT-2025-004",
+        title: "Independent Consultant Agreement - David Kim",
+        content: "This Independent Consultant Agreement is entered into between NiceHR Consulting and David Kim for consulting services at Pacific Northwest Regional Hospital. Services include Meditech implementation and clinical workflow design.",
+        consultantId: "consultant-4",
+        projectId: "project-3",
+        hospitalId: "hospital-3",
+        status: "pending_signature" as const,
+        effectiveDate: "2025-02-01",
+        expirationDate: "2025-07-31",
+        metadata: {
+          payRate: "155.00",
+          billableHours: "40",
+          travelReimbursement: true,
+        },
+      },
+      {
+        id: "contract-5",
+        contractNumber: "CONT-2025-005",
+        title: "Statement of Work - Epic Go-Live Support",
+        content: "This Statement of Work covers go-live support services for Memorial Hospital Epic implementation, including at-elbow support, issue resolution, and post go-live optimization.",
+        projectId: "project-1",
+        hospitalId: "hospital-1",
+        status: "draft" as const,
+        effectiveDate: "2025-03-01",
+        expirationDate: "2025-04-30",
+        metadata: {
+          totalBudget: "250000.00",
+          consultantCount: 8,
+          supportHours: "24/7",
+        },
+      },
+    ];
+    for (const contract of contractData) {
+      await db.insert(contracts).values(contract).onConflictDoNothing();
+    }
+
+    // Seed Travel Bookings
+    console.log("Seeding travel bookings...");
+    const travelBookingData = [
+      {
+        id: "travel-1",
+        consultantId: "consultant-1",
+        projectId: "project-1",
+        bookingType: "flight" as const,
+        status: "confirmed" as const,
+        departureDate: "2025-01-19",
+        returnDate: "2025-01-26",
+        airline: "United Airlines",
+        flightNumber: "UA 1234",
+        departureAirport: "SFO",
+        arrivalAirport: "ORD",
+        departureTime: "08:00",
+        arrivalTime: "14:30",
+        estimatedCost: "450.00",
+        actualCost: "425.00",
+        confirmationNumber: "ABC123XYZ",
+        notes: "Direct flight, aisle seat confirmed",
+      },
+      {
+        id: "travel-2",
+        consultantId: "consultant-1",
+        projectId: "project-1",
+        bookingType: "hotel" as const,
+        status: "confirmed" as const,
+        hotelName: "Hilton Garden Inn Downtown",
+        hotelAddress: "123 Main St, Chicago, IL 60601",
+        hotelConfirmationNumber: "HILTON456789",
+        checkInDate: "2025-01-19",
+        checkOutDate: "2025-01-26",
+        estimatedCost: "1400.00",
+        actualCost: "1400.00",
+        confirmationNumber: "HILTON456789",
+        notes: "Corporate rate applied, breakfast included",
+      },
+      {
+        id: "travel-3",
+        consultantId: "consultant-2",
+        projectId: "project-1",
+        bookingType: "rental_car" as const,
+        status: "confirmed" as const,
+        departureDate: "2025-01-20",
+        returnDate: "2025-01-27",
+        rentalCompany: "Enterprise",
+        pickupLocation: "Chicago O'Hare Airport",
+        dropoffLocation: "Chicago O'Hare Airport",
+        vehicleType: "Midsize SUV",
+        rentalConfirmationNumber: "ENT789456",
+        estimatedCost: "350.00",
+        actualCost: "350.00",
+        confirmationNumber: "ENT789456",
+        notes: "GPS included, full coverage insurance",
+      },
+      {
+        id: "travel-4",
+        consultantId: "consultant-3",
+        projectId: "project-2",
+        bookingType: "flight" as const,
+        status: "pending" as const,
+        departureDate: "2025-02-01",
+        returnDate: "2025-02-08",
+        airline: "Delta",
+        flightNumber: "DL 5678",
+        departureAirport: "ATL",
+        arrivalAirport: "SEA",
+        departureTime: "10:15",
+        arrivalTime: "13:45",
+        estimatedCost: "520.00",
+        notes: "Awaiting approval for business class upgrade",
+      },
+      {
+        id: "travel-5",
+        consultantId: "consultant-4",
+        projectId: "project-3",
+        bookingType: "hotel" as const,
+        status: "confirmed" as const,
+        hotelName: "Marriott Residence Inn",
+        hotelAddress: "456 Pacific Ave, Portland, OR 97201",
+        hotelConfirmationNumber: "MAR987654",
+        checkInDate: "2025-01-22",
+        checkOutDate: "2025-01-29",
+        estimatedCost: "1050.00",
+        actualCost: "1050.00",
+        confirmationNumber: "MAR987654",
+        notes: "Extended stay, full kitchen suite",
+      },
+    ];
+    for (const booking of travelBookingData) {
+      await db.insert(travelBookings).values(booking).onConflictDoNothing();
+    }
+
+    // Seed Schedules (Shift Schedules)
+    console.log("Seeding schedules...");
+    const scheduleData = [
+      {
+        id: "sched-1",
+        projectId: "project-1",
+        scheduleDate: "2025-01-20",
+        shiftType: "day" as const,
+        status: "approved" as const,
+      },
+      {
+        id: "sched-2",
+        projectId: "project-1",
+        scheduleDate: "2025-01-21",
+        shiftType: "day" as const,
+        status: "approved" as const,
+      },
+      {
+        id: "sched-3",
+        projectId: "project-2",
+        scheduleDate: "2025-01-22",
+        shiftType: "night" as const,
+        status: "approved" as const,
+      },
+      {
+        id: "sched-4",
+        projectId: "project-3",
+        scheduleDate: "2025-01-23",
+        shiftType: "swing" as const,
+        status: "pending" as const,
+      },
+      {
+        id: "sched-5",
+        projectId: "project-1",
+        scheduleDate: "2025-01-24",
+        shiftType: "day" as const,
+        status: "approved" as const,
+      },
+    ];
+    for (const schedule of scheduleData) {
+      await db.insert(projectSchedules).values(schedule).onConflictDoNothing();
+    }
+
+    // Seed EOD Reports
+    console.log("Seeding EOD reports...");
+    const eodReportData = [
+      {
+        id: "eod-1",
+        projectId: "project-1",
+        reportDate: "2025-01-17",
+        submittedById: "user-c1",
+        status: "submitted" as const,
+        issuesResolved: 3,
+        issuesPending: 2,
+        issuesEscalated: 0,
+        resolvedSummary: "Fixed 3 ED workflow issues related to triage documentation",
+        pendingSummary: "Waiting for clinical review on 2 order set configurations",
+        highlights: "Successfully completed ED workflow documentation review and validation with nursing leadership",
+        challenges: "Minor scheduling conflict with pharmacy director meeting caused slight delay",
+        tomorrowPlan: "Finalize medication reconciliation workflows and schedule training session with ED staff",
+      },
+      {
+        id: "eod-2",
+        projectId: "project-1",
+        reportDate: "2025-01-17",
+        submittedById: "user-c2",
+        status: "submitted" as const,
+        issuesResolved: 5,
+        issuesPending: 0,
+        issuesEscalated: 0,
+        resolvedSummary: "Completed all ICU configuration tasks ahead of schedule",
+        highlights: "Configured 15 ICU order sets in test environment and validated critical care flowsheets",
+        tomorrowPlan: "Begin UAT for ICU order sets with clinical staff",
+      },
+      {
+        id: "eod-3",
+        projectId: "project-2",
+        reportDate: "2025-01-16",
+        submittedById: "user-c3",
+        status: "approved" as const,
+        issuesResolved: 2,
+        issuesPending: 1,
+        issuesEscalated: 1,
+        resolvedSummary: "Optimized PowerChart lab results display, reducing load time by 40%",
+        pendingSummary: "Complex lab query performance issue under investigation",
+        challenges: "Database query timeout on complex lab result searches - escalated to Cerner vendor",
+        tomorrowPlan: "Work with vendor on query optimization and test fixes in staging",
+      },
+      {
+        id: "eod-4",
+        projectId: "project-3",
+        reportDate: "2025-01-15",
+        submittedById: "user-c4",
+        status: "submitted" as const,
+        issuesResolved: 4,
+        issuesPending: 0,
+        issuesEscalated: 0,
+        highlights: "Configured MyChart patient portal preferences and proxy access workflows successfully",
+        tomorrowPlan: "Begin staff training on patient activation process",
+      },
+    ];
+    for (const report of eodReportData) {
+      await db.insert(eodReports).values(report).onConflictDoNothing();
+    }
+
+    // Seed Invoices
+    console.log("Seeding invoices...");
+    const invoiceData = [
+      {
+        id: "inv-1",
+        projectId: "project-1",
+        invoiceNumber: "INV-2025-001",
+        invoiceDate: "2025-01-01",
+        dueDate: "2025-01-31",
+        status: "paid" as const,
+        subtotal: "125000.00",
+        taxAmount: "0.00",
+        totalAmount: "125000.00",
+        paidAmount: "125000.00",
+        paidDate: "2025-01-15",
+        paymentMethod: "wire_transfer" as const,
+        notes: "Monthly consulting services - December 2024",
+      },
+      {
+        id: "inv-2",
+        projectId: "project-1",
+        invoiceNumber: "INV-2025-002",
+        invoiceDate: "2025-01-15",
+        dueDate: "2025-02-14",
+        status: "sent" as const,
+        subtotal: "132500.00",
+        taxAmount: "0.00",
+        totalAmount: "132500.00",
+        paidAmount: "0.00",
+        notes: "Monthly consulting services - January 2025 (first half)",
+      },
+      {
+        id: "inv-3",
+        projectId: "project-2",
+        invoiceNumber: "INV-2025-003",
+        invoiceDate: "2025-01-01",
+        dueDate: "2025-01-31",
+        status: "paid" as const,
+        subtotal: "87500.00",
+        taxAmount: "0.00",
+        totalAmount: "87500.00",
+        paidAmount: "87500.00",
+        paidDate: "2025-01-20",
+        paymentMethod: "ach" as const,
+        notes: "Cerner optimization services - December 2024",
+      },
+      {
+        id: "inv-4",
+        projectId: "project-3",
+        invoiceNumber: "INV-2025-004",
+        invoiceDate: "2025-01-10",
+        dueDate: "2025-02-09",
+        status: "draft" as const,
+        subtotal: "45000.00",
+        taxAmount: "0.00",
+        totalAmount: "45000.00",
+        paidAmount: "0.00",
+        notes: "MyChart portal implementation - Phase 1 milestone",
+      },
+    ];
+    for (const invoice of invoiceData) {
+      await db.insert(invoices).values(invoice).onConflictDoNothing();
+    }
+
+    // Seed Invoice Line Items
+    console.log("Seeding invoice line items...");
+    const invoiceLineItemData = [
+      {
+        id: "inv-line-1-1",
+        invoiceId: "inv-1",
+        description: "Senior Consultant - Sarah Chen (160 hours @ $150/hr)",
+        quantity: 160,
+        unitPrice: "150.00",
+        amount: "24000.00",
+      },
+      {
+        id: "inv-line-1-2",
+        invoiceId: "inv-1",
+        description: "Senior Consultant - Michael Rodriguez (160 hours @ $150/hr)",
+        quantity: 160,
+        unitPrice: "150.00",
+        amount: "24000.00",
+      },
+      {
+        id: "inv-line-1-3",
+        invoiceId: "inv-1",
+        description: "Consultant - Jennifer Williams (152 hours @ $125/hr)",
+        quantity: 152,
+        unitPrice: "125.00",
+        amount: "19000.00",
+      },
+      {
+        id: "inv-line-1-4",
+        invoiceId: "inv-1",
+        description: "Travel & Expenses",
+        quantity: 1,
+        unitPrice: "8000.00",
+        amount: "8000.00",
+      },
+      {
+        id: "inv-line-2-1",
+        invoiceId: "inv-2",
+        description: "Senior Consultant - Sarah Chen (168 hours @ $150/hr)",
+        quantity: 168,
+        unitPrice: "150.00",
+        amount: "25200.00",
+      },
+      {
+        id: "inv-line-2-2",
+        invoiceId: "inv-2",
+        description: "Senior Consultant - Michael Rodriguez (162 hours @ $150/hr)",
+        quantity: 162,
+        unitPrice: "150.00",
+        amount: "24300.00",
+      },
+      {
+        id: "inv-line-3-1",
+        invoiceId: "inv-3",
+        description: "Optimization Services - Month of December",
+        quantity: 1,
+        unitPrice: "87500.00",
+        amount: "87500.00",
+      },
+    ];
+    for (const lineItem of invoiceLineItemData) {
+      await db.insert(invoiceLineItems).values(lineItem).onConflictDoNothing();
+    }
+
     // Seed Phase 4 Advanced Analytics data
     await seedPhase4AnalyticsData();
+
+    // Seed Change Management data
+    console.log("Seeding change management data...");
+    const changeRequestData = [
+      {
+        id: "cr-1",
+        projectId: "project-1",
+        requestNumber: "CR-2026-0001",
+        title: "Add pharmacy interface to Epic integration",
+        description: "Request to include the pharmacy module in the Epic interface build. This will enable bidirectional medication orders and dispensing data exchange.",
+        category: "scope" as const,
+        priority: "high" as const,
+        status: "approved" as const,
+        impactLevel: "significant" as const,
+        requestedById: "user-1",
+        requestedByName: "Dr. James Wilson",
+        justification: "Pharmacy is critical for medication reconciliation during go-live. Without this interface, nurses will need to manually enter medications.",
+        proposedSolution: "Add HL7 ADT and RDE message types to the existing interface engine configuration.",
+        estimatedEffort: "80 hours",
+        estimatedCost: "$12,000",
+        targetImplementationDate: new Date("2025-05-01"),
+        submittedAt: new Date("2025-01-10"),
+        decidedAt: new Date("2025-01-12"),
+        createdAt: new Date("2025-01-08"),
+        updatedAt: new Date("2025-01-12"),
+      },
+      {
+        id: "cr-2",
+        projectId: "project-1",
+        requestNumber: "CR-2026-0002",
+        title: "Extend training timeline by 1 week",
+        description: "Request to extend the end-user training period from 3 weeks to 4 weeks to accommodate staff scheduling constraints.",
+        category: "timeline" as const,
+        priority: "medium" as const,
+        status: "submitted" as const,
+        impactLevel: "moderate" as const,
+        requestedById: "user-2",
+        requestedByName: "Sarah Mitchell",
+        justification: "Nursing leadership has indicated that 3 weeks is insufficient to train all shifts without impacting patient care. An additional week allows for overlap training.",
+        proposedSolution: "Extend training from Feb 15-Mar 8 to Feb 15-Mar 15. This still allows 2 weeks before go-live for remediation.",
+        estimatedEffort: "40 hours additional",
+        estimatedCost: "$8,000",
+        targetImplementationDate: new Date("2025-02-01"),
+        submittedAt: new Date("2025-01-15"),
+        createdAt: new Date("2025-01-14"),
+        updatedAt: new Date("2025-01-15"),
+      },
+      {
+        id: "cr-3",
+        projectId: "project-1",
+        requestNumber: "CR-2026-0003",
+        title: "Add 5 additional workstations in ED",
+        description: "Emergency Department requires 5 additional mobile workstations to support the new Epic workflow.",
+        category: "budget" as const,
+        priority: "critical" as const,
+        status: "implemented" as const,
+        impactLevel: "major" as const,
+        requestedById: "user-3",
+        requestedByName: "Michael Rodriguez",
+        justification: "Current workstation density is 1:4 (provider:workstation). Epic workflow requires 1:2 ratio for efficient patient throughput.",
+        proposedSolution: "Procure 5 additional Ergotron mobile workstations with barcode scanners.",
+        estimatedEffort: "16 hours",
+        estimatedCost: "$35,000",
+        targetImplementationDate: new Date("2025-04-15"),
+        actualImplementationDate: new Date("2025-01-10"),
+        submittedAt: new Date("2024-12-20"),
+        decidedAt: new Date("2024-12-22"),
+        implementedAt: new Date("2025-01-10"),
+        createdAt: new Date("2024-12-18"),
+        updatedAt: new Date("2025-01-10"),
+      },
+      {
+        id: "cr-4",
+        projectId: "project-1",
+        requestNumber: "CR-2026-0004",
+        title: "Switch lab interface from HL7 v2.3 to v2.5.1",
+        description: "Lab vendor recommends upgrading the interface specification from HL7 v2.3 to v2.5.1 for better structured data support.",
+        category: "technical" as const,
+        priority: "medium" as const,
+        status: "rejected" as const,
+        impactLevel: "moderate" as const,
+        requestedById: "user-4",
+        requestedByName: "Jennifer Park",
+        justification: "HL7 v2.5.1 provides better support for microbiology results and allows for more granular result codes.",
+        proposedSolution: "Rebuild the outbound lab results interface using v2.5.1 message specification.",
+        estimatedEffort: "120 hours",
+        estimatedCost: "$18,000",
+        targetImplementationDate: new Date("2025-04-01"),
+        submittedAt: new Date("2025-01-05"),
+        decidedAt: new Date("2025-01-08"),
+        createdAt: new Date("2025-01-03"),
+        updatedAt: new Date("2025-01-08"),
+      },
+      {
+        id: "cr-5",
+        projectId: "project-1",
+        requestNumber: "CR-2026-0005",
+        title: "Add after-hours support consultant",
+        description: "Request for one additional consultant to provide 24/7 coverage during the go-live week.",
+        category: "resource" as const,
+        priority: "high" as const,
+        status: "draft" as const,
+        impactLevel: "moderate" as const,
+        requestedById: "user-1",
+        requestedByName: "Dr. James Wilson",
+        justification: "Current staffing model provides coverage from 6am-10pm only. Hospital operates 24/7 and needs support during overnight hours.",
+        proposedSolution: "Engage additional consultant with inpatient experience for overnight shift (10pm-6am) during go-live week.",
+        estimatedEffort: "56 hours",
+        estimatedCost: "$14,000",
+        targetImplementationDate: new Date("2025-06-01"),
+        createdAt: new Date("2025-01-16"),
+        updatedAt: new Date("2025-01-16"),
+      },
+      {
+        id: "cr-6",
+        projectId: "project-2",
+        requestNumber: "CR-2026-0006",
+        title: "Include patient portal in Phase 1",
+        description: "Request to add MyChart patient portal configuration to Phase 1 go-live scope.",
+        category: "scope" as const,
+        priority: "medium" as const,
+        status: "under_review" as const,
+        impactLevel: "significant" as const,
+        requestedById: "user-5",
+        requestedByName: "Lisa Thompson",
+        justification: "Patient portal was originally planned for Phase 2, but hospital marketing has committed to patients that it will be available at go-live.",
+        proposedSolution: "Add MyChart configuration tasks to the project plan and include in Phase 1 training curriculum.",
+        estimatedEffort: "200 hours",
+        estimatedCost: "$45,000",
+        targetImplementationDate: new Date("2025-09-01"),
+        submittedAt: new Date("2025-01-14"),
+        reviewStartedAt: new Date("2025-01-16"),
+        createdAt: new Date("2025-01-12"),
+        updatedAt: new Date("2025-01-16"),
+      },
+    ];
+    for (const changeRequest of changeRequestData) {
+      await db.insert(changeRequests).values(changeRequest).onConflictDoNothing();
+    }
+
+    // Seed Change Request Impacts
+    const changeImpactData = [
+      {
+        id: "impact-1",
+        changeRequestId: "cr-1",
+        impactArea: "scope" as const,
+        description: "Adds 15 new interface message types to the build scope",
+        severity: "medium" as const,
+      },
+      {
+        id: "impact-2",
+        changeRequestId: "cr-1",
+        impactArea: "resources" as const,
+        description: "Requires interface analyst availability for 2 additional weeks",
+        severity: "low" as const,
+      },
+      {
+        id: "impact-3",
+        changeRequestId: "cr-2",
+        impactArea: "schedule" as const,
+        description: "Delays start of remediation week by 7 days",
+        severity: "medium" as const,
+      },
+      {
+        id: "impact-4",
+        changeRequestId: "cr-2",
+        impactArea: "budget" as const,
+        description: "Additional trainer costs for extended training period",
+        severity: "low" as const,
+      },
+      {
+        id: "impact-5",
+        changeRequestId: "cr-3",
+        impactArea: "budget" as const,
+        description: "Hardware procurement exceeds original equipment budget by 15%",
+        severity: "high" as const,
+      },
+      {
+        id: "impact-6",
+        changeRequestId: "cr-6",
+        impactArea: "schedule" as const,
+        description: "May delay go-live if portal build extends beyond Phase 1 timeline",
+        severity: "high" as const,
+      },
+      {
+        id: "impact-7",
+        changeRequestId: "cr-6",
+        impactArea: "resources" as const,
+        description: "Requires dedicated portal analyst - currently not staffed",
+        severity: "high" as const,
+      },
+    ];
+    for (const impact of changeImpactData) {
+      await db.insert(changeRequestImpacts).values(impact).onConflictDoNothing();
+    }
+
+    // Seed Change Request Approvals
+    const changeApprovalData = [
+      {
+        id: "approval-1",
+        changeRequestId: "cr-1",
+        approverId: "user-admin",
+        approverName: "Patricia Chen",
+        approverRole: "Project Director",
+        decision: "approved" as const,
+        comments: "Approved - pharmacy interface is critical for medication safety. Budget increase approved by steering committee.",
+        decidedAt: new Date("2025-01-12"),
+        createdAt: new Date("2025-01-12"),
+      },
+      {
+        id: "approval-2",
+        changeRequestId: "cr-3",
+        approverId: "user-admin",
+        approverName: "Patricia Chen",
+        approverRole: "Project Director",
+        decision: "approved" as const,
+        comments: "Approved per ED medical director request. Critical for patient throughput.",
+        decidedAt: new Date("2024-12-22"),
+        createdAt: new Date("2024-12-22"),
+      },
+      {
+        id: "approval-3",
+        changeRequestId: "cr-4",
+        approverId: "user-admin",
+        approverName: "Patricia Chen",
+        approverRole: "Project Director",
+        decision: "rejected" as const,
+        comments: "Rejected - risk too high to change interface specification at this stage. Lab vendor has confirmed v2.3 meets all requirements. Can revisit post go-live.",
+        decidedAt: new Date("2025-01-08"),
+        createdAt: new Date("2025-01-08"),
+      },
+    ];
+    for (const approval of changeApprovalData) {
+      await db.insert(changeRequestApprovals).values(approval).onConflictDoNothing();
+    }
+
+    // Seed Change Request Comments
+    const changeCommentData = [
+      {
+        id: "comment-1",
+        changeRequestId: "cr-2",
+        userId: "user-1",
+        userName: "Dr. James Wilson",
+        content: "I support this request. The nursing staff has been vocal about the compressed training timeline.",
+        createdAt: new Date("2025-01-15T09:30:00"),
+      },
+      {
+        id: "comment-2",
+        changeRequestId: "cr-2",
+        userId: "user-3",
+        userName: "Michael Rodriguez",
+        content: "Training team has confirmed they can accommodate the extended timeline with current staffing.",
+        createdAt: new Date("2025-01-15T14:15:00"),
+      },
+      {
+        id: "comment-3",
+        changeRequestId: "cr-4",
+        userId: "user-4",
+        userName: "Jennifer Park",
+        content: "Understood. We will proceed with v2.3 as planned and document the v2.5.1 upgrade for Phase 2.",
+        createdAt: new Date("2025-01-08T16:45:00"),
+      },
+      {
+        id: "comment-4",
+        changeRequestId: "cr-6",
+        userId: "user-5",
+        userName: "Lisa Thompson",
+        content: "Marketing has agreed to adjust messaging if needed. However, they strongly prefer portal at go-live.",
+        createdAt: new Date("2025-01-16T10:00:00"),
+      },
+      {
+        id: "comment-5",
+        changeRequestId: "cr-6",
+        userId: "user-admin",
+        userName: "Patricia Chen",
+        content: "Scheduling meeting with steering committee on Thursday to discuss scope implications.",
+        createdAt: new Date("2025-01-16T11:30:00"),
+      },
+    ];
+    for (const comment of changeCommentData) {
+      await db.insert(changeRequestComments).values(comment).onConflictDoNothing();
+    }
 
     console.log("Demo data seeding completed successfully!");
     return { success: true };

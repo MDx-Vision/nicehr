@@ -2217,9 +2217,12 @@ export const supportTickets = pgTable("support_tickets", {
   escalatedAt: timestamp("escalated_at"),
   resolvedAt: timestamp("resolved_at"),
   closedAt: timestamp("closed_at"),
+  tdrIssueId: varchar("tdr_issue_id").references(() => tdrIssues.id), // Link to TDR issue if created from TDR
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_support_tickets_tdr_issue_id").on(table.tdrIssueId),
+]);
 
 export const supportTicketsRelations = relations(supportTickets, ({ one }) => ({
   project: one(projects, {
@@ -5421,6 +5424,182 @@ export type ContractAuditEvent = typeof contractAuditEvents.$inferSelect;
 export type InsertContractAuditEvent = z.infer<typeof insertContractAuditEventSchema>;
 
 // ============================================
+// ESIGN ACT COMPLIANCE
+// ============================================
+
+// ESIGN Consent Sessions - tracks consent to electronic transactions
+export const esignConsents = pgTable("esign_consents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  signerId: varchar("signer_id").references(() => contractSigners.id).notNull(),
+  contractId: varchar("contract_id").references(() => contracts.id).notNull(),
+
+  // ESIGN Act required consent acknowledgments
+  consentGiven: boolean("consent_given").default(false).notNull(),
+  consentTimestamp: timestamp("consent_timestamp"),
+  hardwareSoftwareAcknowledged: boolean("hardware_software_acknowledged").default(false).notNull(),
+  paperCopyRightAcknowledged: boolean("paper_copy_right_acknowledged").default(false).notNull(),
+  consentWithdrawalAcknowledged: boolean("consent_withdrawal_acknowledged").default(false).notNull(),
+
+  // Disclosure text shown to user (stored for legal evidence)
+  disclosureTextVersion: varchar("disclosure_text_version").default("1.0"),
+  disclosureTextHash: varchar("disclosure_text_hash"), // SHA-256 of disclosure shown
+
+  // Attribution data
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  deviceFingerprint: varchar("device_fingerprint"),
+
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_esign_consents_signer_id").on(table.signerId),
+  index("idx_esign_consents_contract_id").on(table.contractId),
+]);
+
+// Document Hashes - tamper-evident document verification
+export const esignDocumentHashes = pgTable("esign_document_hashes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contractId: varchar("contract_id").references(() => contracts.id).notNull(),
+  signatureId: varchar("signature_id").references(() => contractSignatures.id),
+
+  // Document hash at time of signing
+  documentHashSha256: varchar("document_hash_sha256", { length: 64 }).notNull(),
+  hashAlgorithm: varchar("hash_algorithm").default("SHA-256").notNull(),
+  documentVersion: integer("document_version").default(1).notNull(),
+
+  // Hash of what content
+  contentType: varchar("content_type").default("full_document").notNull(), // full_document, rendered_html
+
+  computedAt: timestamp("computed_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_esign_document_hashes_contract_id").on(table.contractId),
+  index("idx_esign_document_hashes_signature_id").on(table.signatureId),
+]);
+
+// Signature Intent Confirmations - captures signer's intent
+export const esignIntentConfirmations = pgTable("esign_intent_confirmations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  signatureId: varchar("signature_id").references(() => contractSignatures.id).notNull(),
+
+  // Intent checkbox and statement
+  intentCheckboxChecked: boolean("intent_checkbox_checked").default(false).notNull(),
+  intentStatement: text("intent_statement").default("I intend this to be my legally binding electronic signature").notNull(),
+
+  // Typed name verification
+  typedNameMatch: boolean("typed_name_match").default(false).notNull(),
+  typedName: varchar("typed_name"),
+  expectedName: varchar("expected_name"),
+
+  confirmedAt: timestamp("confirmed_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_esign_intent_signature_id").on(table.signatureId),
+]);
+
+// Review Tracking - proves document was reviewed
+export const esignReviewTracking = pgTable("esign_review_tracking", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  signerId: varchar("signer_id").references(() => contractSigners.id).notNull(),
+  contractId: varchar("contract_id").references(() => contracts.id).notNull(),
+
+  // Review metrics
+  documentPresentedAt: timestamp("document_presented_at"),
+  reviewStartedAt: timestamp("review_started_at"),
+  reviewCompletedAt: timestamp("review_completed_at"),
+  reviewDurationSeconds: integer("review_duration_seconds"),
+
+  // Scroll tracking
+  scrolledToBottom: boolean("scrolled_to_bottom").default(false).notNull(),
+  maxScrollPercentage: integer("max_scroll_percentage").default(0).notNull(),
+  pageViewCount: integer("page_view_count").default(1).notNull(),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_esign_review_signer_id").on(table.signerId),
+  index("idx_esign_review_contract_id").on(table.contractId),
+]);
+
+// Signature Certificates - legal evidence certificates
+export const esignCertificates = pgTable("esign_certificates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  signatureId: varchar("signature_id").references(() => contractSignatures.id).notNull(),
+  contractId: varchar("contract_id").references(() => contracts.id).notNull(),
+
+  // Certificate identification
+  certificateNumber: varchar("certificate_number").unique().notNull(),
+
+  // Certificate content
+  signerName: varchar("signer_name").notNull(),
+  signerEmail: varchar("signer_email").notNull(),
+  documentTitle: varchar("document_title").notNull(),
+  documentHashSha256: varchar("document_hash_sha256", { length: 64 }).notNull(),
+
+  // Signing details
+  signedAt: timestamp("signed_at").notNull(),
+  signerIpAddress: varchar("signer_ip_address"),
+  signerUserAgent: text("signer_user_agent"),
+
+  // Certificate storage
+  certificatePdfUrl: varchar("certificate_pdf_url"),
+  certificateData: jsonb("certificate_data"), // Full certificate JSON for reconstruction
+
+  // Legal compliance
+  esignActCompliant: boolean("esign_act_compliant").default(true).notNull(),
+  uetaCompliant: boolean("ueta_compliant").default(true).notNull(),
+
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_esign_certificates_signature_id").on(table.signatureId),
+  index("idx_esign_certificates_contract_id").on(table.contractId),
+  index("idx_esign_certificates_number").on(table.certificateNumber),
+]);
+
+// Relations for ESIGN tables
+export const esignConsentsRelations = relations(esignConsents, ({ one }) => ({
+  signer: one(contractSigners, { fields: [esignConsents.signerId], references: [contractSigners.id] }),
+  contract: one(contracts, { fields: [esignConsents.contractId], references: [contracts.id] }),
+}));
+
+export const esignDocumentHashesRelations = relations(esignDocumentHashes, ({ one }) => ({
+  contract: one(contracts, { fields: [esignDocumentHashes.contractId], references: [contracts.id] }),
+  signature: one(contractSignatures, { fields: [esignDocumentHashes.signatureId], references: [contractSignatures.id] }),
+}));
+
+export const esignIntentConfirmationsRelations = relations(esignIntentConfirmations, ({ one }) => ({
+  signature: one(contractSignatures, { fields: [esignIntentConfirmations.signatureId], references: [contractSignatures.id] }),
+}));
+
+export const esignReviewTrackingRelations = relations(esignReviewTracking, ({ one }) => ({
+  signer: one(contractSigners, { fields: [esignReviewTracking.signerId], references: [contractSigners.id] }),
+  contract: one(contracts, { fields: [esignReviewTracking.contractId], references: [contracts.id] }),
+}));
+
+export const esignCertificatesRelations = relations(esignCertificates, ({ one }) => ({
+  signature: one(contractSignatures, { fields: [esignCertificates.signatureId], references: [contractSignatures.id] }),
+  contract: one(contracts, { fields: [esignCertificates.contractId], references: [contracts.id] }),
+}));
+
+// Insert schemas for ESIGN tables
+export const insertEsignConsentSchema = createInsertSchema(esignConsents).omit({ id: true, createdAt: true });
+export const insertEsignDocumentHashSchema = createInsertSchema(esignDocumentHashes).omit({ id: true, createdAt: true });
+export const insertEsignIntentConfirmationSchema = createInsertSchema(esignIntentConfirmations).omit({ id: true, createdAt: true });
+export const insertEsignReviewTrackingSchema = createInsertSchema(esignReviewTracking).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertEsignCertificateSchema = createInsertSchema(esignCertificates).omit({ id: true, createdAt: true });
+
+// Types for ESIGN tables
+export type EsignConsent = typeof esignConsents.$inferSelect;
+export type InsertEsignConsent = z.infer<typeof insertEsignConsentSchema>;
+export type EsignDocumentHash = typeof esignDocumentHashes.$inferSelect;
+export type InsertEsignDocumentHash = z.infer<typeof insertEsignDocumentHashSchema>;
+export type EsignIntentConfirmation = typeof esignIntentConfirmations.$inferSelect;
+export type InsertEsignIntentConfirmation = z.infer<typeof insertEsignIntentConfirmationSchema>;
+export type EsignReviewTracking = typeof esignReviewTracking.$inferSelect;
+export type InsertEsignReviewTracking = z.infer<typeof insertEsignReviewTrackingSchema>;
+export type EsignCertificate = typeof esignCertificates.$inferSelect;
+export type InsertEsignCertificate = z.infer<typeof insertEsignCertificateSchema>;
+
+// ============================================
 // REAL-TIME CHAT
 // ============================================
 
@@ -7338,3 +7517,583 @@ export interface AdvancedAnalyticsSummary {
     projectsUnderBudget: number;
   };
 }
+
+// =============================================================================
+// TDR (Technical Dress Rehearsal) Tables
+// =============================================================================
+
+// TDR Event Status enum
+export const tdrEventStatusEnum = pgEnum("tdr_event_status", ["scheduled", "in_progress", "completed", "cancelled"]);
+export const tdrEventTypeEnum = pgEnum("tdr_event_type", ["full", "partial", "integration_only"]);
+export const tdrChecklistCategoryEnum = pgEnum("tdr_checklist_category", ["infrastructure", "integrations", "data_migration", "workflows", "support"]);
+export const tdrPriorityEnum = pgEnum("tdr_priority", ["low", "medium", "high", "critical"]);
+export const tdrTestStatusEnum = pgEnum("tdr_test_status", ["pending", "passed", "failed", "blocked", "skipped"]);
+export const tdrIssueStatusEnum = pgEnum("tdr_issue_status", ["open", "in_progress", "resolved", "deferred", "wont_fix"]);
+export const tdrIssueSeverityEnum = pgEnum("tdr_issue_severity", ["low", "medium", "high", "critical"]);
+export const tdrRecommendationEnum = pgEnum("tdr_recommendation", ["go", "conditional_go", "no_go"]);
+
+// TDR Events - Schedule rehearsals
+export const tdrEvents = pgTable("tdr_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  scheduledDate: timestamp("scheduled_date").notNull(),
+  startTime: varchar("start_time"),
+  endTime: varchar("end_time"),
+  status: tdrEventStatusEnum("status").default("scheduled"),
+  type: tdrEventTypeEnum("type").default("full"),
+  leaderId: varchar("leader_id").references(() => users.id),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_tdr_events_project_id").on(table.projectId),
+  index("idx_tdr_events_scheduled_date").on(table.scheduledDate),
+]);
+
+export const insertTdrEventSchema = createInsertSchema(tdrEvents);
+export type TdrEvent = typeof tdrEvents.$inferSelect;
+export type InsertTdrEvent = typeof tdrEvents.$inferInsert;
+
+// TDR Checklist Items
+export const tdrChecklistItems = pgTable("tdr_checklist_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  tdrEventId: varchar("tdr_event_id").references(() => tdrEvents.id),
+  category: tdrChecklistCategoryEnum("category").notNull(),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  isCompleted: boolean("is_completed").default(false),
+  completedBy: varchar("completed_by").references(() => users.id),
+  completedAt: timestamp("completed_at"),
+  priority: tdrPriorityEnum("priority").default("medium"),
+  sortOrder: integer("sort_order").default(0),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_tdr_checklist_project_id").on(table.projectId),
+  index("idx_tdr_checklist_category").on(table.category),
+]);
+
+export const insertTdrChecklistItemSchema = createInsertSchema(tdrChecklistItems);
+export type TdrChecklistItem = typeof tdrChecklistItems.$inferSelect;
+export type InsertTdrChecklistItem = typeof tdrChecklistItems.$inferInsert;
+
+// TDR Test Scenarios
+export const tdrTestScenarios = pgTable("tdr_test_scenarios", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  tdrEventId: varchar("tdr_event_id").references(() => tdrEvents.id),
+  category: varchar("category").notNull(), // workflow, integration, performance, security, downtime
+  title: varchar("title").notNull(),
+  description: text("description"),
+  expectedResult: text("expected_result"),
+  actualResult: text("actual_result"),
+  status: tdrTestStatusEnum("status").default("pending"),
+  testedBy: varchar("tested_by").references(() => users.id),
+  testedAt: timestamp("tested_at"),
+  priority: tdrPriorityEnum("priority").default("medium"),
+  department: varchar("department"), // ED, ICU, OR, Lab, Pharmacy, etc.
+  stepsToReproduce: text("steps_to_reproduce"),
+  attachments: jsonb("attachments"), // screenshots, logs
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_tdr_test_scenarios_project_id").on(table.projectId),
+  index("idx_tdr_test_scenarios_status").on(table.status),
+]);
+
+export const insertTdrTestScenarioSchema = createInsertSchema(tdrTestScenarios);
+export type TdrTestScenario = typeof tdrTestScenarios.$inferSelect;
+export type InsertTdrTestScenario = typeof tdrTestScenarios.$inferInsert;
+
+// TDR Issues (separate from go-live tickets)
+export const tdrIssues = pgTable("tdr_issues", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  tdrEventId: varchar("tdr_event_id").references(() => tdrEvents.id),
+  testScenarioId: varchar("test_scenario_id").references(() => tdrTestScenarios.id),
+  issueNumber: varchar("issue_number"),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  category: varchar("category"), // technical, workflow, integration, data, training
+  severity: tdrIssueSeverityEnum("severity").default("medium"),
+  status: tdrIssueStatusEnum("status").default("open"),
+  assignedTo: varchar("assigned_to").references(() => users.id),
+  reportedBy: varchar("reported_by").references(() => users.id),
+  resolution: text("resolution"),
+  resolvedAt: timestamp("resolved_at"),
+  dueDate: timestamp("due_date"),
+  blocksGoLive: boolean("blocks_go_live").default(false),
+  supportTicketId: varchar("support_ticket_id").references(() => supportTickets.id), // Link to support ticket if created
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_tdr_issues_project_id").on(table.projectId),
+  index("idx_tdr_issues_status").on(table.status),
+  index("idx_tdr_issues_severity").on(table.severity),
+  index("idx_tdr_issues_support_ticket_id").on(table.supportTicketId),
+]);
+
+export const insertTdrIssueSchema = createInsertSchema(tdrIssues);
+export type TdrIssue = typeof tdrIssues.$inferSelect;
+export type InsertTdrIssue = typeof tdrIssues.$inferInsert;
+
+// TDR Integration Test Results
+export const tdrIntegrationTests = pgTable("tdr_integration_tests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  tdrEventId: varchar("tdr_event_id").references(() => tdrEvents.id),
+  interfaceName: varchar("interface_name").notNull(), // ADT, Lab, Pharmacy, Radiology, etc.
+  interfaceType: varchar("interface_type"), // HL7, FHIR, API, File
+  sourceSystem: varchar("source_system"),
+  targetSystem: varchar("target_system"),
+  direction: varchar("direction"), // inbound, outbound, bidirectional
+  testType: varchar("test_type"), // connectivity, data_validation, performance, error_handling
+  status: tdrTestStatusEnum("status").default("pending"),
+  messagesSent: integer("messages_sent").default(0),
+  messagesReceived: integer("messages_received").default(0),
+  errorsCount: integer("errors_count").default(0),
+  responseTimeMs: integer("response_time_ms"),
+  testedAt: timestamp("tested_at"),
+  testedBy: varchar("tested_by").references(() => users.id),
+  notes: text("notes"),
+  errorLog: text("error_log"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_tdr_integration_tests_project_id").on(table.projectId),
+  index("idx_tdr_integration_tests_status").on(table.status),
+]);
+
+export const insertTdrIntegrationTestSchema = createInsertSchema(tdrIntegrationTests);
+export type TdrIntegrationTest = typeof tdrIntegrationTests.$inferSelect;
+export type InsertTdrIntegrationTest = typeof tdrIntegrationTests.$inferInsert;
+
+// TDR Downtime Procedure Tests
+export const tdrDowntimeTests = pgTable("tdr_downtime_tests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  tdrEventId: varchar("tdr_event_id").references(() => tdrEvents.id),
+  procedureName: varchar("procedure_name").notNull(),
+  procedureType: varchar("procedure_type"), // planned_downtime, unplanned_downtime, backup, restore, failover
+  description: text("description"),
+  expectedDurationMinutes: integer("expected_duration_minutes"),
+  actualDurationMinutes: integer("actual_duration_minutes"),
+  status: tdrTestStatusEnum("status").default("pending"),
+  testedAt: timestamp("tested_at"),
+  testedBy: varchar("tested_by").references(() => users.id),
+  stepsCompleted: jsonb("steps_completed"), // array of step statuses
+  issues: text("issues"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_tdr_downtime_tests_project_id").on(table.projectId),
+]);
+
+export const insertTdrDowntimeTestSchema = createInsertSchema(tdrDowntimeTests);
+export type TdrDowntimeTest = typeof tdrDowntimeTests.$inferSelect;
+export type InsertTdrDowntimeTest = typeof tdrDowntimeTests.$inferInsert;
+
+// TDR Readiness Scores (aggregated)
+export const tdrReadinessScores = pgTable("tdr_readiness_scores", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  tdrEventId: varchar("tdr_event_id").references(() => tdrEvents.id),
+  calculatedAt: timestamp("calculated_at").defaultNow(),
+  technicalScore: integer("technical_score"), // 0-100
+  dataScore: integer("data_score"), // 0-100
+  staffScore: integer("staff_score"), // 0-100
+  supportScore: integer("support_score"), // 0-100
+  processScore: integer("process_score"), // 0-100
+  overallScore: integer("overall_score"), // weighted average
+  recommendation: tdrRecommendationEnum("recommendation"),
+  criticalIssuesCount: integer("critical_issues_count"),
+  highIssuesCount: integer("high_issues_count"),
+  notes: text("notes"),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+}, (table) => [
+  index("idx_tdr_readiness_scores_project_id").on(table.projectId),
+  index("idx_tdr_readiness_scores_calculated_at").on(table.calculatedAt),
+]);
+
+export const insertTdrReadinessScoreSchema = createInsertSchema(tdrReadinessScores);
+export type TdrReadinessScore = typeof tdrReadinessScores.$inferSelect;
+export type InsertTdrReadinessScore = typeof tdrReadinessScores.$inferInsert;
+
+// =============================================================================
+// Executive Metrics Tables
+// =============================================================================
+
+// Enums for Executive Metrics
+export const executiveRoleEnum = pgEnum("executive_role", [
+  "ceo", "cfo", "cio", "cto", "cmio", "cno"
+]);
+
+export const metricCategoryEnum = pgEnum("metric_category", [
+  "pre_golive", "at_golive", "post_golive", "long_term"
+]);
+
+export const metricStatusEnum = pgEnum("metric_status", [
+  "not_started", "on_track", "at_risk", "achieved", "missed"
+]);
+
+export const metricUnitEnum = pgEnum("metric_unit", [
+  "percentage", "count", "days", "hours", "dollars", "score", "boolean", "trend", "months", "percentile"
+]);
+
+export const endorsementStatusEnum = pgEnum("endorsement_status", [
+  "pending", "approved", "received", "published", "declined"
+]);
+
+export const endorsementTypeEnum = pgEnum("endorsement_type", [
+  "testimonial", "reference", "case_study", "speaking", "press_release"
+]);
+
+export const sowCriteriaStatusEnum = pgEnum("sow_criteria_status", [
+  "pending", "achieved", "not_achieved", "waived"
+]);
+
+export const metricIntegrationSystemTypeEnum = pgEnum("metric_integration_system_type", [
+  "ehr", "revenue_cycle", "hr", "quality", "help_desk", "analytics", "scheduling"
+]);
+
+export const metricIntegrationConnectionTypeEnum = pgEnum("metric_integration_connection_type", [
+  "api", "hl7", "fhir", "sftp", "manual", "webhook"
+]);
+
+export const metricIntegrationStatusEnum = pgEnum("metric_integration_status", [
+  "pending", "connected", "failed", "disabled", "testing"
+]);
+
+export const execReportTypeEnum = pgEnum("exec_report_type", [
+  "weekly", "monthly", "milestone", "custom", "quarterly", "annual"
+]);
+
+// Executive Success Metrics - Define what success looks like
+export const executiveMetrics = pgTable("executive_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  hospitalId: varchar("hospital_id").references(() => hospitals.id),
+  executiveRole: executiveRoleEnum("executive_role").notNull(),
+  category: metricCategoryEnum("category").notNull(),
+  metricName: varchar("metric_name").notNull(),
+  description: text("description"),
+  targetValue: varchar("target_value").notNull(),
+  targetUnit: metricUnitEnum("target_unit"),
+  baselineValue: varchar("baseline_value"),
+  currentValue: varchar("current_value"),
+  status: metricStatusEnum("status").default("not_started"),
+  dataSource: varchar("data_source"), // manual, ehr_integration, hr_integration, etc.
+  lastUpdated: timestamp("last_updated"),
+  updatedBy: varchar("updated_by").references(() => users.id),
+  notes: text("notes"),
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_executive_metrics_project_id").on(table.projectId),
+  index("idx_executive_metrics_role").on(table.executiveRole),
+  index("idx_executive_metrics_category").on(table.category),
+  index("idx_executive_metrics_status").on(table.status),
+]);
+
+export const insertExecutiveMetricSchema = createInsertSchema(executiveMetrics);
+export type ExecutiveMetric = typeof executiveMetrics.$inferSelect;
+export type InsertExecutiveMetric = typeof executiveMetrics.$inferInsert;
+
+// Executive Metric Values - Track changes over time
+export const executiveMetricValues = pgTable("executive_metric_values", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  metricId: varchar("metric_id").references(() => executiveMetrics.id).notNull(),
+  value: varchar("value").notNull(),
+  recordedAt: timestamp("recorded_at").defaultNow(),
+  recordedBy: varchar("recorded_by").references(() => users.id),
+  source: varchar("source"), // manual, automated, integration
+  notes: text("notes"),
+}, (table) => [
+  index("idx_executive_metric_values_metric_id").on(table.metricId),
+  index("idx_executive_metric_values_recorded_at").on(table.recordedAt),
+]);
+
+export const insertExecutiveMetricValueSchema = createInsertSchema(executiveMetricValues);
+export type ExecutiveMetricValue = typeof executiveMetricValues.$inferSelect;
+export type InsertExecutiveMetricValue = typeof executiveMetricValues.$inferInsert;
+
+// Executive Metrics Dashboards - Saved dashboard configurations for metrics module
+export const execMetricsDashboards = pgTable("exec_metrics_dashboards", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  executiveRole: executiveRoleEnum("executive_role").notNull(),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  config: jsonb("config"), // widget layout, filters, etc.
+  isDefault: boolean("is_default").default(false),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_exec_metrics_dashboards_project_id").on(table.projectId),
+  index("idx_exec_metrics_dashboards_role").on(table.executiveRole),
+]);
+
+export const insertExecMetricsDashboardSchema = createInsertSchema(execMetricsDashboards);
+export type ExecMetricsDashboard = typeof execMetricsDashboards.$inferSelect;
+export type InsertExecMetricsDashboard = typeof execMetricsDashboards.$inferInsert;
+
+// Executive Reports - Generated reports
+export const executiveReports = pgTable("executive_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  executiveRole: executiveRoleEnum("executive_role"),
+  reportType: execReportTypeEnum("exec_report_type").notNull(),
+  title: varchar("title").notNull(),
+  dateRangeStart: timestamp("date_range_start"),
+  dateRangeEnd: timestamp("date_range_end"),
+  content: jsonb("content"), // metrics snapshot, charts data
+  generatedAt: timestamp("generated_at").defaultNow(),
+  generatedBy: varchar("generated_by").references(() => users.id),
+  format: varchar("format").default("pdf"), // pdf, excel, dashboard
+  fileUrl: varchar("file_url"),
+}, (table) => [
+  index("idx_executive_reports_project_id").on(table.projectId),
+  index("idx_executive_reports_role").on(table.executiveRole),
+  index("idx_executive_reports_generated_at").on(table.generatedAt),
+]);
+
+export const insertExecutiveReportSchema = createInsertSchema(executiveReports);
+export type ExecutiveReport = typeof executiveReports.$inferSelect;
+export type InsertExecutiveReport = typeof executiveReports.$inferInsert;
+
+// Success Endorsements - Track client endorsements
+export const successEndorsements = pgTable("success_endorsements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  hospitalId: varchar("hospital_id").references(() => hospitals.id),
+  executiveRole: executiveRoleEnum("executive_role").notNull(),
+  executiveName: varchar("executive_name").notNull(),
+  executiveTitle: varchar("executive_title"),
+  endorsementType: endorsementTypeEnum("endorsement_type"),
+  content: text("content"),
+  status: endorsementStatusEnum("status").default("pending"),
+  requestedAt: timestamp("requested_at"),
+  receivedAt: timestamp("received_at"),
+  metricsAchieved: jsonb("metrics_achieved"), // which success criteria were met
+  permissionToUse: boolean("permission_to_use").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_success_endorsements_project_id").on(table.projectId),
+  index("idx_success_endorsements_status").on(table.status),
+]);
+
+export const insertSuccessEndorsementSchema = createInsertSchema(successEndorsements);
+export type SuccessEndorsement = typeof successEndorsements.$inferSelect;
+export type InsertSuccessEndorsement = typeof successEndorsements.$inferInsert;
+
+// SOW Success Criteria - Link metrics to contracts
+export const sowSuccessCriteria = pgTable("sow_success_criteria", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  contractId: varchar("contract_id").references(() => contracts.id),
+  executiveRole: executiveRoleEnum("executive_role").notNull(),
+  criteriaText: text("criteria_text").notNull(),
+  metricId: varchar("metric_id").references(() => executiveMetrics.id),
+  targetValue: varchar("target_value"),
+  achievedValue: varchar("achieved_value"),
+  status: sowCriteriaStatusEnum("status").default("pending"),
+  verifiedAt: timestamp("verified_at"),
+  verifiedBy: varchar("verified_by").references(() => users.id),
+  evidence: text("evidence"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_sow_success_criteria_project_id").on(table.projectId),
+  index("idx_sow_success_criteria_status").on(table.status),
+]);
+
+export const insertSowSuccessCriteriaSchema = createInsertSchema(sowSuccessCriteria);
+export type SowSuccessCriteria = typeof sowSuccessCriteria.$inferSelect;
+export type InsertSowSuccessCriteria = typeof sowSuccessCriteria.$inferInsert;
+
+// Integration Configs - Hospital system integrations for metric data
+export const metricIntegrations = pgTable("metric_integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  hospitalId: varchar("hospital_id").references(() => hospitals.id).notNull(),
+  systemType: metricIntegrationSystemTypeEnum("metric_integration_system_type").notNull(),
+  systemName: varchar("system_name"), // Epic, Cerner, Workday, etc.
+  connectionType: metricIntegrationConnectionTypeEnum("metric_integration_connection_type"),
+  connectionConfig: jsonb("connection_config"), // encrypted credentials, endpoints
+  status: metricIntegrationStatusEnum("metric_integration_status").default("pending"),
+  lastSyncAt: timestamp("last_sync_at"),
+  syncFrequency: varchar("sync_frequency"), // realtime, hourly, daily, weekly
+  dataPoints: jsonb("data_points"), // which metrics this integration provides
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_metric_integrations_hospital_id").on(table.hospitalId),
+  index("idx_metric_integrations_status").on(table.status),
+]);
+
+export const insertMetricIntegrationSchema = createInsertSchema(metricIntegrations);
+export type MetricIntegration = typeof metricIntegrations.$inferSelect;
+export type InsertMetricIntegration = typeof metricIntegrations.$inferInsert;
+
+// ============================================
+// CHANGE MANAGEMENT MODULE
+// ============================================
+// Change Request tracking for scope, timeline, budget, and process changes
+
+// Change Management Enums
+export const changeRequestCategoryEnum = pgEnum("change_request_category", [
+  "scope",
+  "timeline",
+  "budget",
+  "technical",
+  "process",
+  "resource",
+  "integration",
+  "training"
+]);
+
+export const changeRequestPriorityEnum = pgEnum("change_request_priority", [
+  "low",
+  "medium",
+  "high",
+  "critical"
+]);
+
+export const changeRequestStatusEnum = pgEnum("change_request_status", [
+  "draft",
+  "submitted",
+  "under_review",
+  "approved",
+  "rejected",
+  "implemented",
+  "cancelled"
+]);
+
+export const changeImpactLevelEnum = pgEnum("change_impact_level", [
+  "minimal",
+  "moderate",
+  "significant",
+  "major"
+]);
+
+export const changeImpactAreaEnum = pgEnum("change_impact_area", [
+  "schedule",
+  "budget",
+  "resources",
+  "scope",
+  "risk",
+  "quality",
+  "stakeholders"
+]);
+
+export const changeApprovalDecisionEnum = pgEnum("change_approval_decision", [
+  "pending",
+  "approved",
+  "rejected",
+  "deferred"
+]);
+
+// Change Requests - Main table for tracking change requests
+export const changeRequests = pgTable("change_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  requestNumber: varchar("request_number").notNull(), // CR-001, CR-002, etc.
+  title: varchar("title").notNull(),
+  description: text("description"),
+  category: changeRequestCategoryEnum("category").notNull(),
+  priority: changeRequestPriorityEnum("priority").default("medium"),
+  status: changeRequestStatusEnum("status").default("draft"),
+  impactLevel: changeImpactLevelEnum("impact_level").default("moderate"),
+  requestedById: varchar("requested_by_id").references(() => users.id),
+  requestedByName: varchar("requested_by_name"),
+  justification: text("justification"), // Why is this change needed?
+  proposedSolution: text("proposed_solution"), // How to implement?
+  alternativesConsidered: text("alternatives_considered"),
+  riskIfNotImplemented: text("risk_if_not_implemented"),
+  estimatedEffort: varchar("estimated_effort"), // e.g., "2 weeks", "40 hours"
+  estimatedCost: integer("estimated_cost"), // In dollars
+  targetImplementationDate: timestamp("target_implementation_date"),
+  actualImplementationDate: timestamp("actual_implementation_date"),
+  submittedAt: timestamp("submitted_at"),
+  reviewStartedAt: timestamp("review_started_at"),
+  decidedAt: timestamp("decided_at"),
+  implementedAt: timestamp("implemented_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_change_requests_project_id").on(table.projectId),
+  index("idx_change_requests_status").on(table.status),
+  index("idx_change_requests_category").on(table.category),
+  index("idx_change_requests_priority").on(table.priority),
+  index("idx_change_requests_requested_by").on(table.requestedById),
+]);
+
+export const insertChangeRequestSchema = createInsertSchema(changeRequests);
+export type ChangeRequest = typeof changeRequests.$inferSelect;
+export type InsertChangeRequest = typeof changeRequests.$inferInsert;
+
+// Change Request Impacts - Track multiple impact areas per request
+export const changeRequestImpacts = pgTable("change_request_impacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  changeRequestId: varchar("change_request_id").references(() => changeRequests.id).notNull(),
+  impactArea: changeImpactAreaEnum("impact_area").notNull(),
+  severity: changeRequestPriorityEnum("severity").default("medium"), // reuse priority enum for severity
+  description: text("description"),
+  mitigationPlan: text("mitigation_plan"),
+  affectedItems: text("affected_items"), // Comma-separated list or JSON
+  estimatedDelta: varchar("estimated_delta"), // e.g., "+2 weeks", "+$5000"
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_change_request_impacts_change_request_id").on(table.changeRequestId),
+  index("idx_change_request_impacts_impact_area").on(table.impactArea),
+]);
+
+export const insertChangeRequestImpactSchema = createInsertSchema(changeRequestImpacts);
+export type ChangeRequestImpact = typeof changeRequestImpacts.$inferSelect;
+export type InsertChangeRequestImpact = typeof changeRequestImpacts.$inferInsert;
+
+// Change Request Approvals - Track approval workflow
+export const changeRequestApprovals = pgTable("change_request_approvals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  changeRequestId: varchar("change_request_id").references(() => changeRequests.id).notNull(),
+  approverId: varchar("approver_id").references(() => users.id),
+  approverName: varchar("approver_name"),
+  approverRole: varchar("approver_role"), // e.g., "Project Manager", "Sponsor"
+  approvalOrder: integer("approval_order").default(1), // For sequential approvals
+  decision: changeApprovalDecisionEnum("decision").default("pending"),
+  comments: text("comments"),
+  conditions: text("conditions"), // Conditions for approval if any
+  requestedAt: timestamp("requested_at").defaultNow(),
+  decidedAt: timestamp("decided_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_change_request_approvals_change_request_id").on(table.changeRequestId),
+  index("idx_change_request_approvals_approver_id").on(table.approverId),
+  index("idx_change_request_approvals_decision").on(table.decision),
+]);
+
+export const insertChangeRequestApprovalSchema = createInsertSchema(changeRequestApprovals);
+export type ChangeRequestApproval = typeof changeRequestApprovals.$inferSelect;
+export type InsertChangeRequestApproval = typeof changeRequestApprovals.$inferInsert;
+
+// Change Request Comments/Activity Log
+export const changeRequestComments = pgTable("change_request_comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  changeRequestId: varchar("change_request_id").references(() => changeRequests.id).notNull(),
+  userId: varchar("user_id").references(() => users.id),
+  userName: varchar("user_name"),
+  commentType: varchar("comment_type").default("comment"), // comment, status_change, approval, rejection
+  content: text("content").notNull(),
+  previousStatus: varchar("previous_status"),
+  newStatus: varchar("new_status"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_change_request_comments_change_request_id").on(table.changeRequestId),
+  index("idx_change_request_comments_user_id").on(table.userId),
+]);
+
+export const insertChangeRequestCommentSchema = createInsertSchema(changeRequestComments);
+export type ChangeRequestComment = typeof changeRequestComments.$inferSelect;
+export type InsertChangeRequestComment = typeof changeRequestComments.$inferInsert;

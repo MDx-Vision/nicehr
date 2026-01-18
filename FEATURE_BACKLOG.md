@@ -533,6 +533,97 @@ This document tracks features that have Cypress tests written but are not yet im
 
 ---
 
+## 12. TDR (Technical Dress Rehearsal) Module (P0) ✅ COMPLETE
+
+### TDR Features (All Implemented Jan 16, 2026)
+- [x] TDR event scheduling and management
+- [x] Pre-go-live checklists by category (infrastructure, integrations, data, workflows, support)
+- [x] Test scenario execution and tracking
+- [x] Issue management with severity levels
+- [x] Integration test tracking (HL7, FHIR, API interfaces)
+- [x] Downtime procedure testing
+- [x] Go/No-Go readiness scorecard with weighted scoring
+- [x] Default checklist seeding
+- [x] ~150 Cypress E2E tests
+
+**Test File**: `41-tdr-management.cy.js`
+
+---
+
+## 13. Executive Success Metrics Module (P0) ✅ COMPLETE
+
+### Executive Metrics Features (All Implemented Jan 16, 2026)
+- [x] Role-based dashboards (CEO, CFO, CIO, CTO, CMIO, CNO)
+- [x] Success metrics by phase (pre-go-live, at go-live, post go-live, long-term)
+- [x] Metric value tracking with history
+- [x] SOW (Statement of Work) success criteria management
+- [x] Executive endorsement tracking
+- [x] Report generation
+- [x] Default metrics seeding per role
+- [x] Achievement/progress rate calculations
+- [x] ~85 Cypress E2E tests
+
+**Test File**: `42-executive-metrics.cy.js`
+
+---
+
+## Feature Flag Implementation Pattern
+
+When adding new modules to NiceHR, use the feature flag pattern to ensure safe rollout:
+
+### Environment Variables
+```bash
+# .env
+ENABLE_TDR=true
+ENABLE_EXECUTIVE_METRICS=true
+```
+
+### Server-side Implementation
+```typescript
+// server/routes.ts
+const FEATURES = {
+  TDR: process.env.ENABLE_TDR === 'true',
+  EXECUTIVE_METRICS: process.env.ENABLE_EXECUTIVE_METRICS === 'true',
+};
+
+// Conditionally mount routes
+if (FEATURES.TDR) {
+  app.use('/api', tdrRoutes);
+  console.log('[TDR] TDR module enabled');
+}
+
+if (FEATURES.EXECUTIVE_METRICS) {
+  app.use('/api', executiveMetricsRoutes);
+  console.log('[Executive Metrics] Executive Metrics module enabled');
+}
+```
+
+### Client-side Implementation
+```typescript
+// client/src/App.tsx - Conditionally render routes
+<Route path="/tdr" component={() => <ProtectedRoute component={TDR} />} />
+<Route path="/executive-metrics" component={() => <ProtectedRoute component={ExecutiveMetrics} />} />
+
+// client/src/components/AppSidebar.tsx - Conditionally show nav items
+{ id: "tdr", title: "TDR", url: "/tdr", icon: "ClipboardCheck", roles: ["admin", "hospital_leadership"] },
+{ id: "executive-metrics", title: "Executive Metrics", url: "/executive-metrics", icon: "TrendingUp", roles: ["admin", "hospital_leadership"] },
+```
+
+### Database Schema Pattern
+When adding new tables:
+1. Add tables to `shared/schema.ts` with unique names
+2. Use pgEnum for status/type fields with unique enum names (prefix to avoid conflicts)
+3. Reference existing tables (projects, hospitals, users) via foreign keys
+4. Run `npm run db:push` to create tables
+
+### Rollback
+If anything breaks:
+1. **Instant:** Set feature flag to `false` → feature disappears
+2. **Code:** `git revert` the commits
+3. **Database:** Tables remain but are unused when flag is off
+
+---
+
 ## How to Use This Document
 
 1. **For Development**: Pick a feature from a priority group and implement it
@@ -542,5 +633,5 @@ This document tracks features that have Cypress tests written but are not yet im
 
 ---
 
-*Last Updated: December 28, 2024*
-*Digital Signatures Cypress Tests - Communication coverage 96%, Dashboard 70%*
+*Last Updated: January 16, 2026*
+*TDR & Executive Metrics Modules Complete - Total test coverage ~1,927 tests*

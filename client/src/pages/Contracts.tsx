@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import SignatureCanvas from "react-signature-canvas";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +39,9 @@ import {
   FileSignature,
   History,
   Eraser,
+  Shield,
+  AlertCircle,
+  Award,
 } from "lucide-react";
 import type {
   ContractTemplate,
@@ -1130,6 +1133,9 @@ function ContractsTab({
   );
 }
 
+// ESIGN Act Compliance - Signing steps
+type SigningStep = "consent" | "review" | "sign" | "complete";
+
 function SigningDialog({
   contract,
   open,
@@ -1140,21 +1146,88 @@ function SigningDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const sigPadRef = useRef<SignatureCanvas | null>(null);
-  const [agreed, setAgreed] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement | null>(null);
 
-  const signMutation = useMutation({
-    mutationFn: async (data: { signatureData: string }) => {
-      return apiRequest("POST", `/api/contracts/${contract?.id}/sign`, data);
+  // ESIGN compliance state
+  const [step, setStep] = useState<SigningStep>("consent");
+  const [consentAcknowledgments, setConsentAcknowledgments] = useState({
+    hardwareSoftware: false,
+    paperCopyRight: false,
+    consentWithdrawal: false,
+  });
+  const [scrolledToBottom, setScrolledToBottom] = useState(false);
+  const [typedName, setTypedName] = useState("");
+  const [intentConfirmed, setIntentConfirmed] = useState(false);
+  const [agreed, setAgreed] = useState(false);
+  const [certificate, setCertificate] = useState<{ number: string; documentHash: string } | null>(null);
+
+  // Find current user's signer record
+  const currentSigner = contract?.signers?.find((s) => s.userId === user?.id);
+
+  // Reset state when dialog opens/closes
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      setStep("consent");
+      setConsentAcknowledgments({ hardwareSoftware: false, paperCopyRight: false, consentWithdrawal: false });
+      setScrolledToBottom(false);
+      setTypedName("");
+      setIntentConfirmed(false);
+      setAgreed(false);
+      setCertificate(null);
+    }
+    onOpenChange(newOpen);
+  };
+
+  // Consent mutation
+  const consentMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", `/api/contracts/${contract?.id}/esign/consent`, {
+        signerId: currentSigner?.id,
+        hardwareSoftwareAcknowledged: consentAcknowledgments.hardwareSoftware,
+        paperCopyRightAcknowledged: consentAcknowledgments.paperCopyRight,
+        consentWithdrawalAcknowledged: consentAcknowledgments.consentWithdrawal,
+      });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/contracts'] });
-      onOpenChange(false);
-      setAgreed(false);
-      toast({ title: "Contract signed successfully" });
+      // Start review tracking
+      apiRequest("POST", `/api/contracts/${contract?.id}/esign/review-start`, {
+        signerId: currentSigner?.id,
+      });
+      setStep("review");
     },
     onError: () => {
-      toast({ title: "Failed to sign contract", variant: "destructive" });
+      toast({ title: "Failed to record consent", variant: "destructive" });
+    },
+  });
+
+  // Sign mutation (enhanced with ESIGN compliance)
+  const signMutation = useMutation({
+    mutationFn: async (data: { signatureData: string; typedName: string; intentConfirmed: boolean }) => {
+      return apiRequest("POST", `/api/contracts/${contract?.id}/esign/sign`, {
+        signerId: currentSigner?.id,
+        signatureData: data.signatureData,
+        typedName: data.typedName,
+        intentConfirmed: data.intentConfirmed,
+      });
+    },
+    onSuccess: (response: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/contracts'] });
+      setCertificate({
+        number: response.certificate?.number || "Unknown",
+        documentHash: response.certificate?.documentHash || "Unknown",
+      });
+      setStep("complete");
+      toast({ title: "Contract signed successfully" });
+    },
+    onError: (error: any) => {
+      if (error?.message?.includes("CONSENT_REQUIRED")) {
+        toast({ title: "Please complete ESIGN consent first", variant: "destructive" });
+        setStep("consent");
+      } else {
+        toast({ title: "Failed to sign contract", variant: "destructive" });
+      }
     },
   });
 
@@ -1162,9 +1235,70 @@ function SigningDialog({
     sigPadRef.current?.clear();
   };
 
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const maxScroll = target.scrollHeight - target.clientHeight;
+
+    // If content doesn't need scrolling, auto-enable
+    if (maxScroll <= 0) {
+      setScrolledToBottom(true);
+      return;
+    }
+
+    const scrollPercentage = Math.round((target.scrollTop / maxScroll) * 100);
+
+    // Update review progress
+    if (currentSigner?.id && contract?.id) {
+      apiRequest("PATCH", `/api/contracts/${contract.id}/esign/review-progress`, {
+        signerId: currentSigner.id,
+        scrollPercentage,
+        scrolledToBottom: scrollPercentage >= 90,
+      });
+    }
+
+    if (scrollPercentage >= 90) {
+      setScrolledToBottom(true);
+    }
+  };
+
+  // Auto-check if content doesn't need scrolling when review step loads
+  const reviewScrollRef = useRef<HTMLDivElement | null>(null);
+
+  const handleReviewMounted = (element: HTMLDivElement | null) => {
+    reviewScrollRef.current = element;
+  };
+
+  // Use effect to check scroll state after content renders
+  useEffect(() => {
+    if (step === "review" && reviewScrollRef.current) {
+      const element = reviewScrollRef.current;
+      // Small delay to ensure content is rendered
+      const timer = setTimeout(() => {
+        const maxScroll = element.scrollHeight - element.clientHeight;
+        if (maxScroll <= 10) {
+          setScrolledToBottom(true);
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
+
+  const handleConsentSubmit = () => {
+    if (!consentAcknowledgments.hardwareSoftware || !consentAcknowledgments.paperCopyRight || !consentAcknowledgments.consentWithdrawal) {
+      toast({ title: "Please acknowledge all items to proceed", variant: "destructive" });
+      return;
+    }
+    consentMutation.mutate();
+  };
+
   const handleSign = () => {
-    if (!agreed) {
-      toast({ title: "Please agree to the terms", variant: "destructive" });
+    if (!agreed || !intentConfirmed) {
+      toast({ title: "Please confirm your intent and agreement", variant: "destructive" });
+      return;
+    }
+
+    if (!typedName.trim()) {
+      toast({ title: "Please type your name to confirm", variant: "destructive" });
       return;
     }
 
@@ -1174,80 +1308,342 @@ function SigningDialog({
     }
 
     const signatureData = sigPadRef.current?.toDataURL("image/png") || "";
-    signMutation.mutate({ signatureData });
+    signMutation.mutate({ signatureData, typedName, intentConfirmed });
   };
 
   if (!contract) return null;
 
+  const allConsentsGiven = consentAcknowledgments.hardwareSoftware &&
+    consentAcknowledgments.paperCopyRight &&
+    consentAcknowledgments.consentWithdrawal;
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Sign Contract</DialogTitle>
-          <DialogDescription>Review and sign: {contract.title}</DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Contract Content</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[200px] border rounded-md p-3 bg-muted/30">
-                <div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: contract.content }} />
-              </ScrollArea>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Your Signature</CardTitle>
-              <CardDescription>Draw your signature below</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div
-                className="border-2 border-dashed rounded-md bg-white"
-                style={{ touchAction: "none" }}
-                data-testid="signature-canvas"
-              >
-                <SignatureCanvas
-                  ref={sigPadRef}
-                  canvasProps={{
-                    className: "w-full h-[150px]",
-                    style: { width: "100%", height: "150px" },
-                  }}
-                  penColor="black"
-                  backgroundColor="white"
-                />
-              </div>
-              <Button size="sm" variant="outline" onClick={handleClear} data-testid="button-clear-signature">
-                <Eraser className="h-3 w-3 mr-1" />
-                Clear
-              </Button>
-            </CardContent>
-          </Card>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="agree"
-              checked={agreed}
-              onCheckedChange={(checked) => setAgreed(checked === true)}
-              data-testid="checkbox-agree"
-            />
-            <Label htmlFor="agree" className="text-sm">
-              I have read and agree to the terms and conditions of this contract
-            </Label>
+        {/* Step indicator */}
+        <div className="flex items-center justify-center gap-2 mb-4">
+          <div className={`flex items-center gap-1 text-xs ${step === "consent" ? "text-primary font-medium" : "text-muted-foreground"}`}>
+            <Shield className="h-4 w-4" />
+            <span>Consent</span>
+          </div>
+          <div className="w-8 h-px bg-border" />
+          <div className={`flex items-center gap-1 text-xs ${step === "review" ? "text-primary font-medium" : "text-muted-foreground"}`}>
+            <Eye className="h-4 w-4" />
+            <span>Review</span>
+          </div>
+          <div className="w-8 h-px bg-border" />
+          <div className={`flex items-center gap-1 text-xs ${step === "sign" || step === "complete" ? "text-primary font-medium" : "text-muted-foreground"}`}>
+            <PenTool className="h-4 w-4" />
+            <span>Sign</span>
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} data-testid="button-cancel-signing">
-            Cancel
-          </Button>
-          <Button onClick={handleSign} disabled={signMutation.isPending || !agreed} data-testid="button-sign-contract">
-            {signMutation.isPending ? "Signing..." : "Sign Contract"}
-          </Button>
-        </DialogFooter>
+        {/* CONSENT STEP */}
+        {step === "consent" && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-blue-500" />
+                Electronic Signature Consent
+              </DialogTitle>
+              <DialogDescription>
+                Federal law requires your consent before signing electronically
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-3">
+                <p className="font-medium">ESIGN Act Disclosure</p>
+                <p>Before signing documents electronically, please acknowledge the following:</p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-start gap-3 p-3 border rounded-lg">
+                  <Checkbox
+                    id="hardware"
+                    checked={consentAcknowledgments.hardwareSoftware}
+                    onCheckedChange={(checked) =>
+                      setConsentAcknowledgments(prev => ({ ...prev, hardwareSoftware: checked === true }))
+                    }
+                    data-testid="checkbox-hardware"
+                  />
+                  <Label htmlFor="hardware" className="text-sm leading-relaxed cursor-pointer">
+                    <span className="font-medium">Hardware/Software Requirements:</span> I confirm I have access to a computer or device with internet, a current web browser, and can view PDF documents.
+                  </Label>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 border rounded-lg">
+                  <Checkbox
+                    id="paper"
+                    checked={consentAcknowledgments.paperCopyRight}
+                    onCheckedChange={(checked) =>
+                      setConsentAcknowledgments(prev => ({ ...prev, paperCopyRight: checked === true }))
+                    }
+                    data-testid="checkbox-paper"
+                  />
+                  <Label htmlFor="paper" className="text-sm leading-relaxed cursor-pointer">
+                    <span className="font-medium">Right to Paper Copies:</span> I understand I have the right to receive paper copies of any document at no charge.
+                  </Label>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 border rounded-lg">
+                  <Checkbox
+                    id="withdraw"
+                    checked={consentAcknowledgments.consentWithdrawal}
+                    onCheckedChange={(checked) =>
+                      setConsentAcknowledgments(prev => ({ ...prev, consentWithdrawal: checked === true }))
+                    }
+                    data-testid="checkbox-withdraw"
+                  />
+                  <Label htmlFor="withdraw" className="text-sm leading-relaxed cursor-pointer">
+                    <span className="font-medium">Right to Withdraw Consent:</span> I understand I may withdraw my consent to electronic transactions at any time.
+                  </Label>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3 flex gap-2">
+                <AlertCircle className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+                <p className="text-xs text-blue-700 dark:text-blue-300">
+                  This consent complies with the Electronic Signatures in Global and National Commerce Act (ESIGN Act, 15 U.S.C. § 7001) and the Uniform Electronic Transactions Act (UETA).
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => handleOpenChange(false)} data-testid="button-cancel-consent">
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConsentSubmit}
+                disabled={!allConsentsGiven || consentMutation.isPending}
+                data-testid="button-continue-to-review"
+              >
+                {consentMutation.isPending ? "Processing..." : "Continue to Review"}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+
+        {/* REVIEW STEP */}
+        {step === "review" && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Eye className="h-5 w-5 text-blue-500" />
+                Review Contract
+              </DialogTitle>
+              <DialogDescription>
+                Please review the document before signing: {contract.title}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Contract Content</CardTitle>
+                  <CardDescription>Scroll to review the entire document</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div
+                    className="h-[300px] border rounded-md p-3 bg-muted/30 overflow-y-auto"
+                    ref={(el) => { handleReviewMounted(el); }}
+                    onScroll={handleScroll}
+                    data-testid="review-scroll-area"
+                  >
+                    <div
+                      className="prose prose-sm dark:prose-invert max-w-none"
+                      dangerouslySetInnerHTML={{ __html: contract.content }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {!scrolledToBottom && (
+                <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 flex gap-2">
+                  <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 shrink-0" />
+                  <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                    Please scroll through the entire document to continue
+                  </p>
+                </div>
+              )}
+
+              {scrolledToBottom && (
+                <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-3 flex gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
+                  <p className="text-xs text-green-700 dark:text-green-300">
+                    Document reviewed - you may proceed to sign
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setStep("consent")} data-testid="button-back-to-consent">
+                Back
+              </Button>
+              <Button
+                onClick={() => setStep("sign")}
+                disabled={!scrolledToBottom}
+                data-testid="button-continue-to-sign"
+              >
+                Continue to Sign
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+
+        {/* SIGN STEP */}
+        {step === "sign" && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <PenTool className="h-5 w-5 text-blue-500" />
+                Sign Contract
+              </DialogTitle>
+              <DialogDescription>
+                Complete your legally binding electronic signature
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Your Signature</CardTitle>
+                  <CardDescription>Draw your signature below</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div
+                    className="border-2 border-dashed rounded-md bg-white"
+                    style={{ touchAction: "none" }}
+                    data-testid="signature-canvas"
+                  >
+                    <SignatureCanvas
+                      ref={sigPadRef}
+                      canvasProps={{
+                        className: "w-full h-[150px]",
+                        style: { width: "100%", height: "150px" },
+                      }}
+                      penColor="black"
+                      backgroundColor="white"
+                    />
+                  </div>
+                  <Button size="sm" variant="outline" onClick={handleClear} data-testid="button-clear-signature">
+                    <Eraser className="h-3 w-3 mr-1" />
+                    Clear
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="typedName" className="text-sm font-medium">
+                    Type your full legal name to confirm
+                  </Label>
+                  <Input
+                    id="typedName"
+                    value={typedName}
+                    onChange={(e) => setTypedName(e.target.value)}
+                    placeholder="Enter your full name"
+                    className="mt-1"
+                    data-testid="input-typed-name"
+                  />
+                </div>
+
+                <div className="flex items-start gap-3 p-3 border rounded-lg bg-blue-50 dark:bg-blue-950">
+                  <Checkbox
+                    id="intent"
+                    checked={intentConfirmed}
+                    onCheckedChange={(checked) => setIntentConfirmed(checked === true)}
+                    data-testid="checkbox-intent"
+                  />
+                  <Label htmlFor="intent" className="text-sm leading-relaxed cursor-pointer font-medium">
+                    I intend this to be my legally binding electronic signature
+                  </Label>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 border rounded-lg">
+                  <Checkbox
+                    id="agree"
+                    checked={agreed}
+                    onCheckedChange={(checked) => setAgreed(checked === true)}
+                    data-testid="checkbox-agree"
+                  />
+                  <Label htmlFor="agree" className="text-sm leading-relaxed cursor-pointer">
+                    I have read and agree to the terms and conditions of this contract
+                  </Label>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setStep("review")} data-testid="button-back-to-review">
+                Back
+              </Button>
+              <Button
+                onClick={handleSign}
+                disabled={signMutation.isPending || !agreed || !intentConfirmed || !typedName.trim()}
+                data-testid="button-sign-contract"
+              >
+                {signMutation.isPending ? "Signing..." : "Sign Contract"}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+
+        {/* COMPLETE STEP */}
+        {step === "complete" && certificate && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Award className="h-5 w-5 text-green-500" />
+                Signature Complete
+              </DialogTitle>
+              <DialogDescription>
+                Your electronic signature has been recorded
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4 text-center">
+                <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-3" />
+                <p className="font-medium text-green-700 dark:text-green-300">
+                  Document signed successfully!
+                </p>
+              </div>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <FileSignature className="h-4 w-4" />
+                    Signature Certificate
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Certificate Number:</span>
+                    <span className="font-mono text-xs">{certificate.number}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Document Hash (SHA-256):</span>
+                    <span className="font-mono text-xs truncate max-w-[200px]" title={certificate.documentHash}>
+                      {certificate.documentHash.substring(0, 16)}...
+                    </span>
+                  </div>
+                  <Separator className="my-2" />
+                  <p className="text-xs text-muted-foreground">
+                    This signature complies with the ESIGN Act (15 U.S.C. § 7001) and UETA.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <DialogFooter>
+              <Button onClick={() => handleOpenChange(false)} data-testid="button-close-complete">
+                Close
+              </Button>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

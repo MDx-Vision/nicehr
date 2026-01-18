@@ -122,6 +122,11 @@ import {
   sendAccountDeletionRequestedEmail,
   sendInvoiceEmailToRecipient,
 } from "./emailService";
+import { FEATURES } from "@shared/featureFlags";
+import tdrRoutes from "./routes/tdr";
+import executiveMetricsRoutes from "./routes/executiveMetrics";
+import changeManagementRoutes from "./routes/changeManagement";
+import esignRoutes from "./routes/esign";
 
 // =============================================================================
 // QUERY PARAMETER VALIDATION HELPERS
@@ -221,6 +226,28 @@ export async function registerRoutes(
   // HIPAA: Touch session on each request to extend active sessions
   // This works with rolling: true to reset the 15-minute inactivity timer
   app.use(sessionTouchMiddleware());
+
+  // TDR (Technical Dress Rehearsal) Module - Feature Flagged
+  if (FEATURES.TDR_MODULE) {
+    app.use('/api', tdrRoutes);
+    console.log('[TDR] TDR module enabled');
+  }
+
+  // Executive Metrics Module - Feature Flagged
+  if (FEATURES.EXECUTIVE_METRICS) {
+    app.use('/api', executiveMetricsRoutes);
+    console.log('[Executive Metrics] Executive Metrics module enabled');
+  }
+
+  // Change Management Module - Feature Flagged
+  if (FEATURES.CHANGE_MANAGEMENT) {
+    app.use('/api', changeManagementRoutes);
+    console.log('[Change Management] Change Management module enabled');
+  }
+
+  // ESIGN Act Compliance Routes (enhancement to contracts)
+  app.use('/api', esignRoutes);
+  console.log('[ESIGN] ESIGN Act compliance routes enabled');
 
   // Seed RBAC roles and permissions at startup
   try {

@@ -440,9 +440,40 @@ describe('Communication Module', () => {
         body: [{ id: 'proj-1', name: 'Test Project' }]
       }).as('getProjects');
 
+      // Mock ESIGN API endpoints
+      cy.intercept('POST', '/api/contracts/*/esign/consent', {
+        statusCode: 201,
+        body: { message: 'Consent recorded', consent: { id: 'consent-1' } }
+      }).as('esignConsent');
+
+      cy.intercept('POST', '/api/contracts/*/esign/review-start', {
+        statusCode: 201,
+        body: { message: 'Review tracking started' }
+      }).as('esignReviewStart');
+
+      cy.intercept('PATCH', '/api/contracts/*/esign/review-progress', {
+        statusCode: 200,
+        body: { message: 'Review progress updated' }
+      }).as('esignReviewProgress');
+
       cy.visit('/contracts');
       cy.wait('@getUser');
     });
+
+    // Helper function to complete ESIGN consent step
+    const completeConsentStep = () => {
+      cy.get('[data-testid="checkbox-hardware"]').click({ force: true });
+      cy.get('[data-testid="checkbox-paper"]').click({ force: true });
+      cy.get('[data-testid="checkbox-withdraw"]').click({ force: true });
+      cy.get('[data-testid="button-continue-to-review"]').click();
+    };
+
+    // Helper function to complete review step
+    const completeReviewStep = () => {
+      cy.get('[data-testid="review-scroll-area"]').scrollTo('bottom', { ensureScrollable: false });
+      cy.wait(300);
+      cy.get('[data-testid="button-continue-to-sign"]').click({ force: true });
+    };
 
     it('should display pending signatures tab', () => {
       cy.get('[data-testid="tab-pending-signatures"]').should('exist');
@@ -457,12 +488,22 @@ describe('Communication Module', () => {
     it('should open signature dialog when clicking sign button', () => {
       cy.get('[data-testid="tab-pending-signatures"]').click();
       cy.get('[data-testid^="button-sign-"]').first().click();
+      // New flow starts with consent step
+      cy.contains('Electronic Signature Consent').should('be.visible');
+      // Complete consent and review to get to signature
+      completeConsentStep();
+      cy.wait('@esignConsent');
+      completeReviewStep();
       cy.get('[data-testid="signature-canvas"]').should('exist');
     });
 
     it('should display signature canvas for drawing', () => {
       cy.get('[data-testid="tab-pending-signatures"]').click();
       cy.get('[data-testid^="button-sign-"]').first().click();
+      // Complete consent and review to get to signature
+      completeConsentStep();
+      cy.wait('@esignConsent');
+      completeReviewStep();
       cy.get('[data-testid="signature-canvas"]').should('be.visible');
       cy.get('[data-testid="button-clear-signature"]').should('be.visible');
     });
