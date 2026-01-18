@@ -582,9 +582,10 @@ router.post("/crm/deals", async (req: Request, res: Response) => {
       .returning();
 
     res.status(201).json(deal);
-  } catch (error) {
-    console.error("[CRM] Create deal error:", error);
-    res.status(500).json({ error: "Failed to create deal" });
+  } catch (error: any) {
+    const errMsg = error?.message || "Unknown error";
+    console.error("[CRM] Create deal error:", errMsg);
+    res.status(500).json({ error: "Failed to create deal", details: errMsg });
   }
 });
 
