@@ -5424,6 +5424,182 @@ export type ContractAuditEvent = typeof contractAuditEvents.$inferSelect;
 export type InsertContractAuditEvent = z.infer<typeof insertContractAuditEventSchema>;
 
 // ============================================
+// ESIGN ACT COMPLIANCE
+// ============================================
+
+// ESIGN Consent Sessions - tracks consent to electronic transactions
+export const esignConsents = pgTable("esign_consents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  signerId: varchar("signer_id").references(() => contractSigners.id).notNull(),
+  contractId: varchar("contract_id").references(() => contracts.id).notNull(),
+
+  // ESIGN Act required consent acknowledgments
+  consentGiven: boolean("consent_given").default(false).notNull(),
+  consentTimestamp: timestamp("consent_timestamp"),
+  hardwareSoftwareAcknowledged: boolean("hardware_software_acknowledged").default(false).notNull(),
+  paperCopyRightAcknowledged: boolean("paper_copy_right_acknowledged").default(false).notNull(),
+  consentWithdrawalAcknowledged: boolean("consent_withdrawal_acknowledged").default(false).notNull(),
+
+  // Disclosure text shown to user (stored for legal evidence)
+  disclosureTextVersion: varchar("disclosure_text_version").default("1.0"),
+  disclosureTextHash: varchar("disclosure_text_hash"), // SHA-256 of disclosure shown
+
+  // Attribution data
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  deviceFingerprint: varchar("device_fingerprint"),
+
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_esign_consents_signer_id").on(table.signerId),
+  index("idx_esign_consents_contract_id").on(table.contractId),
+]);
+
+// Document Hashes - tamper-evident document verification
+export const esignDocumentHashes = pgTable("esign_document_hashes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contractId: varchar("contract_id").references(() => contracts.id).notNull(),
+  signatureId: varchar("signature_id").references(() => contractSignatures.id),
+
+  // Document hash at time of signing
+  documentHashSha256: varchar("document_hash_sha256", { length: 64 }).notNull(),
+  hashAlgorithm: varchar("hash_algorithm").default("SHA-256").notNull(),
+  documentVersion: integer("document_version").default(1).notNull(),
+
+  // Hash of what content
+  contentType: varchar("content_type").default("full_document").notNull(), // full_document, rendered_html
+
+  computedAt: timestamp("computed_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_esign_document_hashes_contract_id").on(table.contractId),
+  index("idx_esign_document_hashes_signature_id").on(table.signatureId),
+]);
+
+// Signature Intent Confirmations - captures signer's intent
+export const esignIntentConfirmations = pgTable("esign_intent_confirmations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  signatureId: varchar("signature_id").references(() => contractSignatures.id).notNull(),
+
+  // Intent checkbox and statement
+  intentCheckboxChecked: boolean("intent_checkbox_checked").default(false).notNull(),
+  intentStatement: text("intent_statement").default("I intend this to be my legally binding electronic signature").notNull(),
+
+  // Typed name verification
+  typedNameMatch: boolean("typed_name_match").default(false).notNull(),
+  typedName: varchar("typed_name"),
+  expectedName: varchar("expected_name"),
+
+  confirmedAt: timestamp("confirmed_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_esign_intent_signature_id").on(table.signatureId),
+]);
+
+// Review Tracking - proves document was reviewed
+export const esignReviewTracking = pgTable("esign_review_tracking", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  signerId: varchar("signer_id").references(() => contractSigners.id).notNull(),
+  contractId: varchar("contract_id").references(() => contracts.id).notNull(),
+
+  // Review metrics
+  documentPresentedAt: timestamp("document_presented_at"),
+  reviewStartedAt: timestamp("review_started_at"),
+  reviewCompletedAt: timestamp("review_completed_at"),
+  reviewDurationSeconds: integer("review_duration_seconds"),
+
+  // Scroll tracking
+  scrolledToBottom: boolean("scrolled_to_bottom").default(false).notNull(),
+  maxScrollPercentage: integer("max_scroll_percentage").default(0).notNull(),
+  pageViewCount: integer("page_view_count").default(1).notNull(),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_esign_review_signer_id").on(table.signerId),
+  index("idx_esign_review_contract_id").on(table.contractId),
+]);
+
+// Signature Certificates - legal evidence certificates
+export const esignCertificates = pgTable("esign_certificates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  signatureId: varchar("signature_id").references(() => contractSignatures.id).notNull(),
+  contractId: varchar("contract_id").references(() => contracts.id).notNull(),
+
+  // Certificate identification
+  certificateNumber: varchar("certificate_number").unique().notNull(),
+
+  // Certificate content
+  signerName: varchar("signer_name").notNull(),
+  signerEmail: varchar("signer_email").notNull(),
+  documentTitle: varchar("document_title").notNull(),
+  documentHashSha256: varchar("document_hash_sha256", { length: 64 }).notNull(),
+
+  // Signing details
+  signedAt: timestamp("signed_at").notNull(),
+  signerIpAddress: varchar("signer_ip_address"),
+  signerUserAgent: text("signer_user_agent"),
+
+  // Certificate storage
+  certificatePdfUrl: varchar("certificate_pdf_url"),
+  certificateData: jsonb("certificate_data"), // Full certificate JSON for reconstruction
+
+  // Legal compliance
+  esignActCompliant: boolean("esign_act_compliant").default(true).notNull(),
+  uetaCompliant: boolean("ueta_compliant").default(true).notNull(),
+
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_esign_certificates_signature_id").on(table.signatureId),
+  index("idx_esign_certificates_contract_id").on(table.contractId),
+  index("idx_esign_certificates_number").on(table.certificateNumber),
+]);
+
+// Relations for ESIGN tables
+export const esignConsentsRelations = relations(esignConsents, ({ one }) => ({
+  signer: one(contractSigners, { fields: [esignConsents.signerId], references: [contractSigners.id] }),
+  contract: one(contracts, { fields: [esignConsents.contractId], references: [contracts.id] }),
+}));
+
+export const esignDocumentHashesRelations = relations(esignDocumentHashes, ({ one }) => ({
+  contract: one(contracts, { fields: [esignDocumentHashes.contractId], references: [contracts.id] }),
+  signature: one(contractSignatures, { fields: [esignDocumentHashes.signatureId], references: [contractSignatures.id] }),
+}));
+
+export const esignIntentConfirmationsRelations = relations(esignIntentConfirmations, ({ one }) => ({
+  signature: one(contractSignatures, { fields: [esignIntentConfirmations.signatureId], references: [contractSignatures.id] }),
+}));
+
+export const esignReviewTrackingRelations = relations(esignReviewTracking, ({ one }) => ({
+  signer: one(contractSigners, { fields: [esignReviewTracking.signerId], references: [contractSigners.id] }),
+  contract: one(contracts, { fields: [esignReviewTracking.contractId], references: [contracts.id] }),
+}));
+
+export const esignCertificatesRelations = relations(esignCertificates, ({ one }) => ({
+  signature: one(contractSignatures, { fields: [esignCertificates.signatureId], references: [contractSignatures.id] }),
+  contract: one(contracts, { fields: [esignCertificates.contractId], references: [contracts.id] }),
+}));
+
+// Insert schemas for ESIGN tables
+export const insertEsignConsentSchema = createInsertSchema(esignConsents).omit({ id: true, createdAt: true });
+export const insertEsignDocumentHashSchema = createInsertSchema(esignDocumentHashes).omit({ id: true, createdAt: true });
+export const insertEsignIntentConfirmationSchema = createInsertSchema(esignIntentConfirmations).omit({ id: true, createdAt: true });
+export const insertEsignReviewTrackingSchema = createInsertSchema(esignReviewTracking).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertEsignCertificateSchema = createInsertSchema(esignCertificates).omit({ id: true, createdAt: true });
+
+// Types for ESIGN tables
+export type EsignConsent = typeof esignConsents.$inferSelect;
+export type InsertEsignConsent = z.infer<typeof insertEsignConsentSchema>;
+export type EsignDocumentHash = typeof esignDocumentHashes.$inferSelect;
+export type InsertEsignDocumentHash = z.infer<typeof insertEsignDocumentHashSchema>;
+export type EsignIntentConfirmation = typeof esignIntentConfirmations.$inferSelect;
+export type InsertEsignIntentConfirmation = z.infer<typeof insertEsignIntentConfirmationSchema>;
+export type EsignReviewTracking = typeof esignReviewTracking.$inferSelect;
+export type InsertEsignReviewTracking = z.infer<typeof insertEsignReviewTrackingSchema>;
+export type EsignCertificate = typeof esignCertificates.$inferSelect;
+export type InsertEsignCertificate = z.infer<typeof insertEsignCertificateSchema>;
+
+// ============================================
 // REAL-TIME CHAT
 // ============================================
 

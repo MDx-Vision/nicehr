@@ -126,6 +126,7 @@ import { FEATURES } from "@shared/featureFlags";
 import tdrRoutes from "./routes/tdr";
 import executiveMetricsRoutes from "./routes/executiveMetrics";
 import changeManagementRoutes from "./routes/changeManagement";
+import esignRoutes from "./routes/esign";
 
 // =============================================================================
 // QUERY PARAMETER VALIDATION HELPERS
@@ -242,6 +243,10 @@ export async function registerRoutes(
     app.use('/api', changeManagementRoutes);
     console.log('[Change Management] Change Management module enabled');
   }
+
+  // ESIGN Act Compliance Routes (enhancement to contracts)
+  app.use('/api', esignRoutes);
+  console.log('[ESIGN] ESIGN Act compliance routes enabled');
 
   // Seed RBAC roles and permissions at startup
   try {
