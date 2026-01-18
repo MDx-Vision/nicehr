@@ -60,17 +60,17 @@ import { useToast } from "@/hooks/use-toast";
 import { ActivityFeed, ActivityForm, TasksPanel } from "@/components/crm";
 
 interface Deal {
-  id: number;
+  id: string;
   name: string;
-  value: number;
+  amount?: string;
   probability?: number;
   expectedCloseDate?: string;
-  pipelineId: number;
-  stageId: number;
+  pipelineId: string;
+  stageId: string;
   stageName?: string;
-  companyId?: number;
+  companyId?: string;
   companyName?: string;
-  contactId?: number;
+  primaryContactId?: string;
   contactName?: string;
   dealType: string;
   status: string;
@@ -79,7 +79,7 @@ interface Deal {
 }
 
 interface PipelineStage {
-  id: number;
+  id: string;
   name: string;
   order: number;
   probability: number;
@@ -87,9 +87,9 @@ interface PipelineStage {
 }
 
 interface Pipeline {
-  id: number;
+  id: string;
   name: string;
-  pipelineType: string;
+  type: string;
   stages: PipelineStage[];
 }
 
@@ -211,11 +211,10 @@ export default function CRMDeals() {
 
     createDeal.mutate({
       name: formData.get("name") as string,
-      value: parseFloat(formData.get("value") as string) || 0,
+      amount: formData.get("amount") as string,
       probability: parseInt(formData.get("probability") as string) || undefined,
-      expectedCloseDate: formData.get("expectedCloseDate") as string || undefined,
-      pipelineId: selectedPipeline?.id || 1,
-      stageId: firstStage?.id || 1,
+      pipelineId: selectedPipeline?.id || "",
+      stageId: firstStage?.id || "",
       dealType: formData.get("dealType") as string,
       status: "open",
       description: formData.get("description") as string || undefined,
@@ -230,9 +229,8 @@ export default function CRMDeals() {
       id: selectedDeal.id,
       data: {
         name: formData.get("name") as string,
-        value: parseFloat(formData.get("value") as string) || 0,
+        amount: formData.get("amount") as string,
         probability: parseInt(formData.get("probability") as string) || undefined,
-        expectedCloseDate: formData.get("expectedCloseDate") as string || undefined,
         dealType: formData.get("dealType") as string,
         status: formData.get("status") as string,
         description: formData.get("description") as string || undefined,
@@ -240,7 +238,7 @@ export default function CRMDeals() {
     });
   };
 
-  const moveDealToStage = (dealId: number, stageId: number) => {
+  const moveDealToStage = (dealId: string, stageId: string) => {
     updateDeal.mutate({ id: dealId, data: { stageId } });
   };
 
@@ -262,7 +260,7 @@ export default function CRMDeals() {
   const dealsByStage = stages.reduce((acc, stage) => {
     acc[stage.id] = deals?.filter((d) => d.stageId === stage.id) || [];
     return acc;
-  }, {} as Record<number, Deal[]>);
+  }, {} as Record<string, Deal[]>);
 
   return (
     <div className="space-y-6">
@@ -310,8 +308,8 @@ export default function CRMDeals() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="value">Value ($) *</Label>
-                    <Input id="value" name="value" type="number" step="0.01" required data-testid="input-value" />
+                    <Label htmlFor="amount">Amount ($) *</Label>
+                    <Input id="amount" name="amount" type="number" step="0.01" required data-testid="input-amount" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="probability">Probability (%)</Label>
@@ -417,7 +415,7 @@ export default function CRMDeals() {
                   </Badge>
                 </div>
                 <CardDescription className="text-xs">
-                  ${(dealsByStage[stage.id]?.reduce((sum, d) => sum + d.value, 0) || 0).toLocaleString()}
+                  ${(dealsByStage[stage.id]?.reduce((sum, d) => sum + parseFloat(d.amount || "0"), 0) || 0).toLocaleString()}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -473,7 +471,7 @@ export default function CRMDeals() {
                         </DropdownMenu>
                       </div>
                       <div className="text-lg font-bold text-green-500 mb-2">
-                        ${deal.value.toLocaleString()}
+                        ${parseFloat(deal.amount || "0").toLocaleString()}
                       </div>
                       {deal.companyName && (
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -536,7 +534,7 @@ export default function CRMDeals() {
                       <TableCell>
                         <div className="flex items-center gap-1 font-bold text-green-500">
                           <DollarSign className="w-4 h-4" />
-                          {deal.value.toLocaleString()}
+                          {parseFloat(deal.amount || "0").toLocaleString()}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -638,13 +636,13 @@ export default function CRMDeals() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-value">Value ($) *</Label>
+                  <Label htmlFor="edit-amount">Amount ($) *</Label>
                   <Input
-                    id="edit-value"
-                    name="value"
+                    id="edit-amount"
+                    name="amount"
                     type="number"
                     step="0.01"
-                    defaultValue={selectedDeal.value}
+                    defaultValue={selectedDeal.amount || ""}
                     required
                   />
                 </div>
@@ -733,7 +731,7 @@ export default function CRMDeals() {
             </DialogTitle>
             <DialogDescription>
               {selectedDeal?.companyName && `${selectedDeal.companyName} • `}
-              ${selectedDeal?.value?.toLocaleString() || 0}
+              ${parseFloat(selectedDeal?.amount || "0").toLocaleString()}
             </DialogDescription>
           </DialogHeader>
 
@@ -786,9 +784,9 @@ export default function CRMDeals() {
               <TabsContent value="details" className="mt-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Value</p>
+                    <p className="text-sm text-muted-foreground">Amount</p>
                     <p className="font-medium text-lg text-green-500">
-                      ${selectedDeal.value?.toLocaleString() || 0}
+                      ${parseFloat(selectedDeal.amount || "0").toLocaleString()}
                     </p>
                   </div>
                   <div className="space-y-1">
