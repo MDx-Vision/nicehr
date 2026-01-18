@@ -211,7 +211,7 @@ export default function RemoteSupport() {
               {health?.status || "Unknown"}
             </div>
             <p className="text-xs text-muted-foreground">
-              {health?.services.websocket || "0 clients connected"}
+              {health?.services?.websocket || "0 clients connected"}
             </p>
           </CardContent>
         </Card>
@@ -223,7 +223,7 @@ export default function RemoteSupport() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold capitalize">
-              {health?.services.video || "Unknown"}
+              {health?.services?.video || "Unknown"}
             </div>
             <p className="text-xs text-muted-foreground">
               Video service status
