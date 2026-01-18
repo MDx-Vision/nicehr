@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Building2,
   Plus,
@@ -40,6 +41,9 @@ import {
   MoreHorizontal,
   Edit,
   Trash2,
+  Eye,
+  Activity,
+  FileText,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -49,6 +53,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { ActivityFeed, ActivityForm, TasksPanel } from "@/components/crm";
 
 interface Company {
   id: number;
@@ -93,6 +98,8 @@ export default function CRMCompanies() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isActivityFormOpen, setIsActivityFormOpen] = useState(false);
 
   const { data: companies, isLoading } = useQuery<Company[]>({
     queryKey: ["/api/crm/companies", searchTerm, typeFilter],
@@ -459,6 +466,20 @@ export default function CRMCompanies() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => {
                             setSelectedCompany(company);
+                            setIsViewDialogOpen(true);
+                          }}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            View
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {
+                            setSelectedCompany(company);
+                            setIsActivityFormOpen(true);
+                          }}>
+                            <Activity className="w-4 h-4 mr-2" />
+                            Log Activity
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {
+                            setSelectedCompany(company);
                             setIsEditDialogOpen(true);
                           }}>
                             <Edit className="w-4 h-4 mr-2" />
@@ -584,6 +605,140 @@ export default function CRMCompanies() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* View Company Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="w-5 h-5" />
+              {selectedCompany?.name}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedCompany?.industry && `${selectedCompany.industry} • `}
+              {selectedCompany?.domain || "No website"}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedCompany && (
+            <Tabs defaultValue="activities" className="mt-4">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="activities" data-testid="tab-company-activities">
+                  <Activity className="w-4 h-4 mr-2" />
+                  Activities
+                </TabsTrigger>
+                <TabsTrigger value="tasks" data-testid="tab-company-tasks">
+                  <FileText className="w-4 h-4 mr-2" />
+                  Tasks
+                </TabsTrigger>
+                <TabsTrigger value="details" data-testid="tab-company-details">
+                  <Building2 className="w-4 h-4 mr-2" />
+                  Details
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="activities" className="space-y-4 mt-4">
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    onClick={() => setIsActivityFormOpen(true)}
+                    data-testid="button-log-activity-from-company-view"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Log Activity
+                  </Button>
+                </div>
+                <ActivityFeed
+                  companyId={String(selectedCompany.id)}
+                  title="Activity Timeline"
+                  description="Recent interactions with this company"
+                  maxHeight="350px"
+                  showHeader={false}
+                />
+              </TabsContent>
+
+              <TabsContent value="tasks" className="mt-4">
+                <TasksPanel
+                  companyId={String(selectedCompany.id)}
+                  title="Tasks"
+                  description="Tasks related to this company"
+                  maxHeight="350px"
+                />
+              </TabsContent>
+
+              <TabsContent value="details" className="mt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Website</p>
+                    <p className="font-medium flex items-center gap-2">
+                      <Globe className="w-4 h-4" />
+                      {selectedCompany.domain || "-"}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Industry</p>
+                    <p className="font-medium">{selectedCompany.industry || "-"}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Company Type</p>
+                    <div>{getTypeBadge(selectedCompany.companyType)}</div>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Size</p>
+                    <p className="font-medium">{selectedCompany.size ? `${selectedCompany.size} employees` : "-"}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Location</p>
+                    <p className="font-medium flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      {[selectedCompany.city, selectedCompany.state, selectedCompany.country].filter(Boolean).join(", ") || "-"}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Status</p>
+                    <Badge variant="outline">{selectedCompany.status}</Badge>
+                  </div>
+                  {selectedCompany.ehrSystem && (
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">EHR System</p>
+                      <p className="font-medium">{selectedCompany.ehrSystem}</p>
+                    </div>
+                  )}
+                  {selectedCompany.bedCount && (
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Bed Count</p>
+                      <p className="font-medium">{selectedCompany.bedCount}</p>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
+          )}
+
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+              Close
+            </Button>
+            <Button onClick={() => {
+              setIsViewDialogOpen(false);
+              setIsEditDialogOpen(true);
+            }}>
+              <Edit className="w-4 h-4 mr-2" />
+              Edit Company
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Activity Form Dialog */}
+      {selectedCompany && (
+        <ActivityForm
+          open={isActivityFormOpen}
+          onOpenChange={setIsActivityFormOpen}
+          companyId={String(selectedCompany.id)}
+          companyName={selectedCompany.name}
+        />
+      )}
     </div>
   );
 }

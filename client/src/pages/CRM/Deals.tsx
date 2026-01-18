@@ -45,6 +45,9 @@ import {
   ArrowRight,
   LayoutGrid,
   List,
+  Eye,
+  Activity,
+  FileText,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -54,6 +57,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { ActivityFeed, ActivityForm, TasksPanel } from "@/components/crm";
 
 interface Deal {
   id: number;
@@ -101,6 +105,8 @@ export default function CRMDeals() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isActivityFormOpen, setIsActivityFormOpen] = useState(false);
 
   const { data: pipelines, isLoading: loadingPipelines } = useQuery<Pipeline[]>({
     queryKey: ["/api/crm/pipelines"],
@@ -431,6 +437,20 @@ export default function CRMDeals() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => {
                               setSelectedDeal(deal);
+                              setIsViewDialogOpen(true);
+                            }}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              View
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedDeal(deal);
+                              setIsActivityFormOpen(true);
+                            }}>
+                              <Activity className="w-4 h-4 mr-2" />
+                              Log Activity
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedDeal(deal);
                               setIsEditDialogOpen(true);
                             }}>
                               <Edit className="w-4 h-4 mr-2" />
@@ -551,6 +571,20 @@ export default function CRMDeals() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedDeal(deal);
+                              setIsViewDialogOpen(true);
+                            }}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              View
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedDeal(deal);
+                              setIsActivityFormOpen(true);
+                            }}>
+                              <Activity className="w-4 h-4 mr-2" />
+                              Log Activity
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => {
                               setSelectedDeal(deal);
                               setIsEditDialogOpen(true);
@@ -688,6 +722,153 @@ export default function CRMDeals() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* View Deal Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Handshake className="w-5 h-5" />
+              {selectedDeal?.name}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedDeal?.companyName && `${selectedDeal.companyName} • `}
+              ${selectedDeal?.value?.toLocaleString() || 0}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedDeal && (
+            <Tabs defaultValue="activities" className="mt-4">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="activities" data-testid="tab-deal-activities">
+                  <Activity className="w-4 h-4 mr-2" />
+                  Activities
+                </TabsTrigger>
+                <TabsTrigger value="tasks" data-testid="tab-deal-tasks">
+                  <FileText className="w-4 h-4 mr-2" />
+                  Tasks
+                </TabsTrigger>
+                <TabsTrigger value="details" data-testid="tab-deal-details">
+                  <Handshake className="w-4 h-4 mr-2" />
+                  Details
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="activities" className="space-y-4 mt-4">
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    onClick={() => setIsActivityFormOpen(true)}
+                    data-testid="button-log-activity-from-deal-view"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Log Activity
+                  </Button>
+                </div>
+                <ActivityFeed
+                  dealId={String(selectedDeal.id)}
+                  title="Activity Timeline"
+                  description="Recent activities on this deal"
+                  maxHeight="350px"
+                  showHeader={false}
+                />
+              </TabsContent>
+
+              <TabsContent value="tasks" className="mt-4">
+                <TasksPanel
+                  dealId={String(selectedDeal.id)}
+                  title="Tasks"
+                  description="Tasks related to this deal"
+                  maxHeight="350px"
+                />
+              </TabsContent>
+
+              <TabsContent value="details" className="mt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Value</p>
+                    <p className="font-medium text-lg text-green-500">
+                      ${selectedDeal.value?.toLocaleString() || 0}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Probability</p>
+                    <p className="font-medium">{selectedDeal.probability || 0}%</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Stage</p>
+                    <Badge variant="outline">{selectedDeal.stageName || "Unknown"}</Badge>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Expected Close</p>
+                    <p className="font-medium flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      {selectedDeal.expectedCloseDate
+                        ? new Date(selectedDeal.expectedCloseDate).toLocaleDateString()
+                        : "-"}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Company</p>
+                    <p className="font-medium flex items-center gap-2">
+                      <Building2 className="w-4 h-4" />
+                      {selectedDeal.companyName || "-"}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Contact</p>
+                    <p className="font-medium flex items-center gap-2">
+                      <Users className="w-4 h-4" />
+                      {selectedDeal.contactName || "-"}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Deal Type</p>
+                    <p className="font-medium">{selectedDeal.dealType?.replace(/_/g, " ") || "-"}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Status</p>
+                    <Badge variant={selectedDeal.status === "won" ? "default" : selectedDeal.status === "lost" ? "destructive" : "secondary"}>
+                      {selectedDeal.status}
+                    </Badge>
+                  </div>
+                  {selectedDeal.description && (
+                    <div className="col-span-2 space-y-1">
+                      <p className="text-sm text-muted-foreground">Description</p>
+                      <p className="text-sm">{selectedDeal.description}</p>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
+          )}
+
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+              Close
+            </Button>
+            <Button onClick={() => {
+              setIsViewDialogOpen(false);
+              setIsEditDialogOpen(true);
+            }}>
+              <Edit className="w-4 h-4 mr-2" />
+              Edit Deal
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Activity Form Dialog */}
+      {selectedDeal && (
+        <ActivityForm
+          open={isActivityFormOpen}
+          onOpenChange={setIsActivityFormOpen}
+          dealId={String(selectedDeal.id)}
+          dealName={selectedDeal.name}
+          companyId={selectedDeal.companyId ? String(selectedDeal.companyId) : undefined}
+          contactId={selectedDeal.contactId ? String(selectedDeal.contactId) : undefined}
+        />
+      )}
     </div>
   );
 }

@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Users,
   Plus,
@@ -41,6 +42,9 @@ import {
   Edit,
   Trash2,
   Eye,
+  Calendar,
+  FileText,
+  Activity,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -50,6 +54,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { ActivityFeed, ActivityForm, TasksPanel } from "@/components/crm";
 
 interface Contact {
   id: number;
@@ -80,6 +85,8 @@ export default function CRMContacts() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isActivityFormOpen, setIsActivityFormOpen] = useState(false);
 
   const { data: contacts, isLoading } = useQuery<Contact[]>({
     queryKey: ["/api/crm/contacts", searchTerm, typeFilter],
@@ -414,6 +421,20 @@ export default function CRMContacts() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => {
                             setSelectedContact(contact);
+                            setIsViewDialogOpen(true);
+                          }}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            View
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {
+                            setSelectedContact(contact);
+                            setIsActivityFormOpen(true);
+                          }}>
+                            <Activity className="w-4 h-4 mr-2" />
+                            Log Activity
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {
+                            setSelectedContact(contact);
                             setIsEditDialogOpen(true);
                           }}>
                             <Edit className="w-4 h-4 mr-2" />
@@ -553,6 +574,131 @@ export default function CRMContacts() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* View Contact Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              {selectedContact?.firstName} {selectedContact?.lastName}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedContact?.title && `${selectedContact.title} • `}
+              {selectedContact?.email}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedContact && (
+            <Tabs defaultValue="activities" className="mt-4">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="activities" data-testid="tab-contact-activities">
+                  <Activity className="w-4 h-4 mr-2" />
+                  Activities
+                </TabsTrigger>
+                <TabsTrigger value="tasks" data-testid="tab-contact-tasks">
+                  <FileText className="w-4 h-4 mr-2" />
+                  Tasks
+                </TabsTrigger>
+                <TabsTrigger value="details" data-testid="tab-contact-details">
+                  <Users className="w-4 h-4 mr-2" />
+                  Details
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="activities" className="space-y-4 mt-4">
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    onClick={() => setIsActivityFormOpen(true)}
+                    data-testid="button-log-activity-from-view"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Log Activity
+                  </Button>
+                </div>
+                <ActivityFeed
+                  contactId={String(selectedContact.id)}
+                  title="Activity Timeline"
+                  description="Recent interactions with this contact"
+                  maxHeight="350px"
+                  showHeader={false}
+                />
+              </TabsContent>
+
+              <TabsContent value="tasks" className="mt-4">
+                <TasksPanel
+                  contactId={String(selectedContact.id)}
+                  title="Tasks"
+                  description="Tasks related to this contact"
+                  maxHeight="350px"
+                />
+              </TabsContent>
+
+              <TabsContent value="details" className="mt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Email</p>
+                    <p className="font-medium flex items-center gap-2">
+                      <Mail className="w-4 h-4" />
+                      {selectedContact.email}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Phone</p>
+                    <p className="font-medium flex items-center gap-2">
+                      <Phone className="w-4 h-4" />
+                      {selectedContact.phone || "-"}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Contact Type</p>
+                    <div>{getTypeBadge(selectedContact.contactType)}</div>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Lead Temperature</p>
+                    <div>{getTemperatureBadge(selectedContact.leadTemperature) || "-"}</div>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Company</p>
+                    <p className="font-medium flex items-center gap-2">
+                      <Building2 className="w-4 h-4" />
+                      {selectedContact.companyName || "-"}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Status</p>
+                    <Badge variant="outline">{selectedContact.status}</Badge>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+          )}
+
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+              Close
+            </Button>
+            <Button onClick={() => {
+              setIsViewDialogOpen(false);
+              setIsEditDialogOpen(true);
+            }}>
+              <Edit className="w-4 h-4 mr-2" />
+              Edit Contact
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Activity Form Dialog */}
+      {selectedContact && (
+        <ActivityForm
+          open={isActivityFormOpen}
+          onOpenChange={setIsActivityFormOpen}
+          contactId={String(selectedContact.id)}
+          contactName={`${selectedContact.firstName} ${selectedContact.lastName}`}
+        />
+      )}
     </div>
   );
 }
