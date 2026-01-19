@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   Users,
   Building2,
@@ -15,9 +17,11 @@ import {
   DollarSign,
   ArrowUpRight,
   ArrowDownRight,
+  ArrowRight,
   Activity,
   Target,
   Clock,
+  X,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -30,6 +34,8 @@ interface DashboardStats {
 
 export default function CRM() {
   const [activeTab, setActiveTab] = useState("overview");
+  const [showWonRevenuePanel, setShowWonRevenuePanel] = useState(false);
+  const [, navigate] = useLocation();
 
   const { data: stats, isLoading } = useQuery<DashboardStats>({
     queryKey: ["/api/crm/dashboard"],
@@ -94,48 +100,76 @@ export default function CRM() {
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards with Drill-Down */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card data-testid="card-total-contacts">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Contacts</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{dashboardStats.contacts.total}</div>
-            <p className="text-xs text-muted-foreground">
-              {dashboardStats.contacts.leads} leads, {dashboardStats.contacts.customers} customers
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/crm/contacts" className="block">
+          <Card
+            data-testid="card-total-contacts"
+            className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all h-full"
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Contacts</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{dashboardStats.contacts.total}</div>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">
+                  {dashboardStats.contacts.leads} leads, {dashboardStats.contacts.customers} customers
+                </p>
+                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card data-testid="card-total-companies">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Companies</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{dashboardStats.companies.total}</div>
-            <p className="text-xs text-muted-foreground">
-              {dashboardStats.companies.prospects} prospects, {dashboardStats.companies.customers} customers
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/crm/companies" className="block">
+          <Card
+            data-testid="card-total-companies"
+            className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all h-full"
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Companies</CardTitle>
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{dashboardStats.companies.total}</div>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">
+                  {dashboardStats.companies.prospects} prospects, {dashboardStats.companies.customers} customers
+                </p>
+                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card data-testid="card-open-deals">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Open Deals</CardTitle>
-            <Handshake className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{dashboardStats.deals.open}</div>
-            <p className="text-xs text-muted-foreground">
-              ${dashboardStats.deals.totalValue.toLocaleString()} pipeline value
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/crm/deals?status=open" className="block">
+          <Card
+            data-testid="card-open-deals"
+            className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all h-full"
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Open Deals</CardTitle>
+              <Handshake className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{dashboardStats.deals.open}</div>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">
+                  ${dashboardStats.deals.totalValue.toLocaleString()} pipeline value
+                </p>
+                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card data-testid="card-won-revenue">
+        <Card
+          data-testid="card-won-revenue"
+          className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all"
+          onClick={() => setShowWonRevenuePanel(true)}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Won Revenue</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -144,13 +178,60 @@ export default function CRM() {
             <div className="text-2xl font-bold">
               ${dashboardStats.deals.wonValue.toLocaleString()}
             </div>
-            <p className="text-xs text-muted-foreground flex items-center">
-              <ArrowUpRight className="w-3 h-3 mr-1 text-green-500" />
-              <span className="text-green-500">12%</span> from last month
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground flex items-center">
+                <ArrowUpRight className="w-3 h-3 mr-1 text-green-500" />
+                <span className="text-green-500">12%</span> from last month
+              </p>
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Won Revenue Slide-Out Panel */}
+      <Sheet open={showWonRevenuePanel} onOpenChange={setShowWonRevenuePanel}>
+        <SheetContent className="sm:max-w-lg" data-testid="panel-won-revenue">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-green-500" />
+              Won Revenue Details
+            </SheetTitle>
+            <SheetDescription>
+              Breakdown of closed-won deals contributing to ${dashboardStats.deals.wonValue.toLocaleString()} total revenue
+            </SheetDescription>
+          </SheetHeader>
+          <div className="mt-6 space-y-4">
+            <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
+              <div>
+                <p className="text-sm font-medium">Total Won Revenue</p>
+                <p className="text-2xl font-bold text-green-600">${dashboardStats.deals.wonValue.toLocaleString()}</p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-green-500" />
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">Recent Won Deals</h4>
+              <p className="text-sm text-muted-foreground text-center py-8 border rounded-lg">
+                Won deals will appear here once data is available.
+              </p>
+            </div>
+
+            <Button
+              className="w-full"
+              variant="outline"
+              onClick={() => {
+                setShowWonRevenuePanel(false);
+                navigate("/crm/deals?status=won");
+              }}
+              data-testid="button-view-all-won-deals"
+            >
+              View All Won Deals
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Tabs for different views */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
@@ -213,20 +294,40 @@ export default function CRM() {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Sales Pipeline</CardTitle>
-              <CardDescription>Visual overview of your deal stages</CardDescription>
+              <CardDescription>Visual overview of your deal stages - click a stage to view deals</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-5 gap-4">
                 {["Lead", "Qualified", "Proposal", "Negotiation", "Closed"].map((stage) => (
-                  <div key={stage} className="border rounded-lg p-4 min-h-[200px]">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="font-medium">{stage}</h3>
-                      <Badge variant="secondary">0</Badge>
+                  <Link
+                    key={stage}
+                    href={`/crm/deals?stage=${stage.toLowerCase()}`}
+                    className="block"
+                  >
+                    <div
+                      className="border rounded-lg p-4 min-h-[200px] cursor-pointer hover:border-primary/50 hover:shadow-md transition-all"
+                      data-testid={`pipeline-stage-${stage.toLowerCase()}`}
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-medium">{stage}</h3>
+                        <Badge
+                          variant="secondary"
+                          className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+                          data-testid={`badge-stage-${stage.toLowerCase()}`}
+                        >
+                          0
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground text-center py-8">
+                        No deals
+                      </p>
+                      <div className="text-center">
+                        <span className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+                          Click to view <ArrowRight className="h-3 w-3" />
+                        </span>
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground text-center py-8">
-                      No deals
-                    </p>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </CardContent>

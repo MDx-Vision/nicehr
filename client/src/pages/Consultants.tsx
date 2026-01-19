@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useSearch } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -117,6 +118,7 @@ function SummaryCard({
 export default function Consultants() {
   const { isAdmin } = useAuth();
   const { toast } = useToast();
+  const searchString = useSearch();
 
   // State
   const [searchTerm, setSearchTerm] = useState("");
@@ -124,6 +126,15 @@ export default function Consultants() {
   const [shiftFilter, setShiftFilter] = useState<string>("all");
   const [onboardedFilter, setOnboardedFilter] = useState<string>("all");
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+
+  // Read filter from URL query params (drill-down support)
+  useEffect(() => {
+    const params = new URLSearchParams(searchString);
+    const availabilityParam = params.get("availability");
+    if (availabilityParam) {
+      setAvailabilityFilter(availabilityParam);
+    }
+  }, [searchString]);
 
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);

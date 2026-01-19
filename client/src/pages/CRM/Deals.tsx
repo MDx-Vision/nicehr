@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSearch } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -99,14 +100,29 @@ const DEAL_STATUSES = ["open", "won", "lost", "abandoned"];
 export default function CRMDeals() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const searchString = useSearch();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("open");
+  const [stageFilter, setStageFilter] = useState<string>("");
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isActivityFormOpen, setIsActivityFormOpen] = useState(false);
+
+  // Read filters from URL query params (drill-down support)
+  useEffect(() => {
+    const params = new URLSearchParams(searchString);
+    const statusParam = params.get("status");
+    const stageParam = params.get("stage");
+    if (statusParam) {
+      setStatusFilter(statusParam);
+    }
+    if (stageParam) {
+      setStageFilter(stageParam);
+    }
+  }, [searchString]);
 
   const { data: pipelines, isLoading: loadingPipelines } = useQuery<Pipeline[]>({
     queryKey: ["/api/crm/pipelines"],
@@ -118,11 +134,12 @@ export default function CRMDeals() {
   });
 
   const { data: deals, isLoading: loadingDeals } = useQuery<Deal[]>({
-    queryKey: ["/api/crm/deals", searchTerm, statusFilter],
+    queryKey: ["/api/crm/deals", searchTerm, statusFilter, stageFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (searchTerm) params.append("search", searchTerm);
       if (statusFilter && statusFilter !== "all") params.append("status", statusFilter);
+      if (stageFilter) params.append("stage", stageFilter);
       const res = await fetch(`/api/crm/deals?${params}`);
       if (!res.ok) throw new Error("Failed to fetch deals");
       return res.json();

@@ -390,7 +390,7 @@ export default function Dashboard() {
             </Card>
           </Link>
 
-          <Link href="/projects" className="block">
+          <Link href="/projects?status=active" className="block">
             <Card
               data-testid="card-active-projects"
               className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all h-full"
@@ -413,7 +413,7 @@ export default function Dashboard() {
             </Card>
           </Link>
 
-          <Link href="/documents" className="block">
+          <Link href="/documents?status=pending" className="block">
             <Card
               data-testid="card-pending-documents"
               className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all h-full"
@@ -436,7 +436,7 @@ export default function Dashboard() {
             </Card>
           </Link>
 
-          <Link href="/consultants" className="block">
+          <Link href="/consultants?availability=available" className="block">
             <Card
               data-testid="card-active-consultants"
               className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all h-full"

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useSearch } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -39,11 +40,21 @@ import { format } from "date-fns";
 export default function Documents() {
   const { isAdmin } = useAuth();
   const { toast } = useToast();
+  const searchString = useSearch();
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDocument, setSelectedDocument] = useState<ConsultantDocument | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
   const [viewingConsultant, setViewingConsultant] = useState<Consultant | null>(null);
+
+  // Read filter from URL query params (drill-down support)
+  useEffect(() => {
+    const params = new URLSearchParams(searchString);
+    const statusParam = params.get("status");
+    if (statusParam) {
+      setStatusFilter(statusParam);
+    }
+  }, [searchString]);
 
   const { data: consultants, isLoading: consultantsLoading } = useQuery<Consultant[]>({
     queryKey: ["/api/consultants"],

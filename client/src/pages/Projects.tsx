@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useSearch } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -50,11 +51,21 @@ type ProjectFormValues = z.infer<typeof projectFormSchema>;
 export default function Projects() {
   const { isAdmin } = useAuth();
   const { toast } = useToast();
+  const searchString = useSearch();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [viewingProject, setViewingProject] = useState<any | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Read filter from URL query params (drill-down support)
+  useEffect(() => {
+    const params = new URLSearchParams(searchString);
+    const statusParam = params.get("status");
+    if (statusParam) {
+      setStatusFilter(statusParam);
+    }
+  }, [searchString]);
 
   const { data: projects, isLoading } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
