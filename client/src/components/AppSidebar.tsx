@@ -144,6 +144,20 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    id: "integrations",
+    label: "Integrations",
+    icon: "Link2",
+    roles: ["admin", "hospital_leadership"],
+    defaultOpen: false,
+    items: [
+      { id: "integration-hub", title: "Integration Hub", url: "/integrations", icon: "LayoutDashboard", roles: ["admin", "hospital_leadership"] },
+      { id: "integration-servicenow", title: "ServiceNow", url: "/integrations/servicenow", icon: "Server", roles: ["admin", "hospital_leadership"] },
+      { id: "integration-asana", title: "Asana", url: "/integrations/asana", icon: "Activity", roles: ["admin", "hospital_leadership"] },
+      { id: "integration-sap", title: "SAP", url: "/integrations/sap", icon: "Database", roles: ["admin", "hospital_leadership"] },
+      { id: "integration-jira", title: "Jira", url: "/integrations/jira", icon: "Zap", roles: ["admin", "hospital_leadership"] },
+    ],
+  },
+  {
     id: "schedule",
     label: "Schedule",
     icon: "Calendar",
@@ -378,7 +392,14 @@ export function AppSidebar() {
 
   const toggleGroup = (groupId: string) => {
     setOpenGroups((prev) => {
-      const next = { ...prev, [groupId]: !prev[groupId] };
+      const isCurrentlyOpen = prev[groupId];
+      // Accordion behavior: close all others when opening a new one
+      const next: Record<string, boolean> = {};
+      Object.keys(prev).forEach((key) => {
+        next[key] = false;
+      });
+      // Toggle the clicked group
+      next[groupId] = !isCurrentlyOpen;
       saveOpenGroups(next);
       return next;
     });
