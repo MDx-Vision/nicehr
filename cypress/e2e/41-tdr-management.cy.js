@@ -595,8 +595,9 @@ describe('TDR (Technical Dress Rehearsal) Management', () => {
   describe('Integrations Tab', () => {
     beforeEach(() => {
       navigateToTdr();
-      cy.contains('Integrations').click();
-      cy.wait('@getTdrIntegrationTests');
+      // Use role="tablist" to ensure we click the tab, not sidebar menu
+      cy.get('[role="tablist"]').contains('Integrations').click();
+      // Integration tests are already fetched when project is selected, no need to wait
     });
 
     describe('Read Operations', () => {
@@ -930,8 +931,7 @@ describe('TDR (Technical Dress Rehearsal) Management', () => {
 
     describe('Integration Test Form Validation', () => {
       it('should require interface name', () => {
-        cy.contains('Integrations').click();
-        cy.wait('@getTdrIntegrationTests');
+        cy.get('[role="tablist"]').contains('Integrations').click();
         cy.contains('Add Interface').click();
         cy.contains('Add Integration Test').should('be.visible');
         cy.wait(500); // Wait for dialog animation
@@ -1097,8 +1097,7 @@ describe('TDR (Technical Dress Rehearsal) Management', () => {
       cy.wait('@getProjects');
       cy.get('[role="combobox"]').click();
       cy.contains(mockProject.name).click();
-      cy.contains('Integrations').click();
-      cy.wait('@getEmptyIntegrations');
+      cy.get('[role="tablist"]').contains('Integrations').click();
       cy.contains('No integration tests defined').should('be.visible');
     });
 
@@ -1438,13 +1437,13 @@ describe('TDR (Technical Dress Rehearsal) Management', () => {
 
       it('should handle switching tabs rapidly', () => {
         navigateToTdr();
-        cy.contains('Checklist').click();
-        cy.contains('Tests').click();
-        cy.contains('Issues').click();
-        cy.contains('Integrations').click();
-        cy.contains('Downtime').click();
-        cy.contains('Scorecard').click();
-        cy.contains('Dashboard').click();
+        cy.get('[role="tablist"]').contains('Checklist').click();
+        cy.get('[role="tablist"]').contains('Tests').click();
+        cy.get('[role="tablist"]').contains('Issues').click();
+        cy.get('[role="tablist"]').contains('Integrations').click();
+        cy.get('[role="tablist"]').contains('Downtime').click();
+        cy.get('[role="tablist"]').contains('Scorecard').click();
+        cy.get('[role="tablist"]').contains('Dashboard').click();
         // Should handle rapid navigation without errors
       });
     });
