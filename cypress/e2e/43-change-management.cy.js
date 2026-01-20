@@ -214,6 +214,12 @@ describe('Change Management Module', () => {
   };
 
   beforeEach(() => {
+    // Mock authentication
+    cy.intercept('GET', '/api/auth/user', {
+      statusCode: 200,
+      body: { id: 'test-user', email: 'admin@test.com', firstName: 'Test', lastName: 'Admin', role: 'admin' }
+    }).as('getUser');
+
     // Mock project list
     cy.intercept('GET', '/api/projects', { body: [mockProject] }).as('getProjects');
 

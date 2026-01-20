@@ -149,7 +149,7 @@ describe('Executive Metrics Module', () => {
 
   beforeEach(() => {
     // Mock authentication
-    cy.intercept('GET', '/api/user', {
+    cy.intercept('GET', '/api/auth/user', {
       statusCode: 200,
       body: {
         id: 'test-user',
@@ -853,7 +853,7 @@ describe('Executive Metrics Module', () => {
   // ============================================================================
   describe('Role-based Access', () => {
     it('should be accessible by admin users', () => {
-      cy.intercept('GET', '/api/user', {
+      cy.intercept('GET', '/api/auth/user', {
         statusCode: 200,
         body: { id: 'admin-user', email: 'admin@test.com', role: 'admin' },
       }).as('getAdminUser');
@@ -863,7 +863,7 @@ describe('Executive Metrics Module', () => {
     });
 
     it('should be accessible by hospital leadership', () => {
-      cy.intercept('GET', '/api/user', {
+      cy.intercept('GET', '/api/auth/user', {
         statusCode: 200,
         body: { id: 'leadership-user', email: 'leader@test.com', role: 'hospital_leadership' },
       }).as('getLeadershipUser');

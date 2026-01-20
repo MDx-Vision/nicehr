@@ -68,9 +68,20 @@ describe('CRM Companies', () => {
   ];
 
   beforeEach(() => {
-    cy.window().then((win) => {
-      win.localStorage.setItem('auth_token', 'test-token');
-    });
+    cy.clearCookies();
+    cy.clearLocalStorage();
+    cy.clearSessionStorage();
+
+    // Mock authentication
+    cy.intercept('GET', '/api/auth/user', {
+      statusCode: 200,
+      body: { id: 1, email: 'admin@test.com', firstName: 'Test', lastName: 'Admin', role: 'admin' }
+    }).as('getUser');
+
+    cy.intercept('POST', '/api/auth/login', {
+      statusCode: 200,
+      body: { user: { id: 1, email: 'admin@test.com', role: 'admin' } }
+    }).as('loginRequest');
 
     cy.intercept('GET', '/api/crm/companies*', {
       statusCode: 200,
@@ -113,10 +124,12 @@ describe('CRM Companies', () => {
       });
     }).as('createActivity');
 
-    cy.intercept('GET', '/api/auth/session', {
-      statusCode: 200,
-      body: { user: { id: 1, email: 'admin@test.com', role: 'admin' } }
-    }).as('getSession');
+    // Login first
+    cy.visit('/login', { failOnStatusCode: false });
+    cy.get('[data-testid="input-email"]').type('admin@test.com');
+    cy.get('[data-testid="input-password"]').type('password123');
+    cy.get('[data-testid="button-login"]').click();
+    cy.wait('@loginRequest');
   });
 
   describe('Page Load and Display', () => {

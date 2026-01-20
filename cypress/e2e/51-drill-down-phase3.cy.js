@@ -46,14 +46,18 @@ describe('Phase 3 Drill-Down Tests', () => {
 
   describe('Executive Metrics - Summary Cards', () => {
     beforeEach(() => {
-      cy.intercept('GET', '/api/user', { statusCode: 200, body: mockUser }).as('getUser');
+      cy.intercept('GET', '/api/auth/user', { statusCode: 200, body: mockUser }).as('getUser');
       cy.intercept('GET', '/api/projects', { statusCode: 200, body: [mockProject] }).as('getProjects');
-      cy.intercept('GET', '/api/executive-metrics/summary*', { statusCode: 200, body: mockSummary }).as('getSummary');
+      cy.intercept('GET', '/api/projects/*/executive-summary*', { statusCode: 200, body: mockSummary }).as('getSummary');
+      cy.intercept('GET', '/api/projects/*/endorsements', { statusCode: 200, body: [] }).as('getEndorsements');
+      cy.intercept('GET', '/api/projects/*/sow-criteria', { statusCode: 200, body: [] }).as('getSowCriteria');
+      cy.intercept('GET', '/api/projects/*/executive-reports', { statusCode: 200, body: [] }).as('getReports');
 
       cy.visit('/executive-metrics');
       cy.contains('Executive Success Metrics').should('be.visible');
-      cy.get('button').contains('Select a project').click();
-      cy.contains('Test Project').click();
+      cy.get('button').contains('Select a project').click({ force: true });
+      cy.contains(mockProject.name).click();
+      cy.wait('@getSummary');
       cy.get('[data-testid="card-total-metrics"]', { timeout: 10000 }).should('be.visible');
     });
 
@@ -90,14 +94,18 @@ describe('Phase 3 Drill-Down Tests', () => {
 
   describe('Executive Metrics - Progress Bars', () => {
     beforeEach(() => {
-      cy.intercept('GET', '/api/user', { statusCode: 200, body: mockUser }).as('getUser');
+      cy.intercept('GET', '/api/auth/user', { statusCode: 200, body: mockUser }).as('getUser');
       cy.intercept('GET', '/api/projects', { statusCode: 200, body: [mockProject] }).as('getProjects');
-      cy.intercept('GET', '/api/executive-metrics/summary*', { statusCode: 200, body: mockSummary }).as('getSummary');
+      cy.intercept('GET', '/api/projects/*/executive-summary*', { statusCode: 200, body: mockSummary }).as('getSummary');
+      cy.intercept('GET', '/api/projects/*/endorsements', { statusCode: 200, body: [] }).as('getEndorsements');
+      cy.intercept('GET', '/api/projects/*/sow-criteria', { statusCode: 200, body: [] }).as('getSowCriteria');
+      cy.intercept('GET', '/api/projects/*/executive-reports', { statusCode: 200, body: [] }).as('getReports');
 
       cy.visit('/executive-metrics');
       cy.contains('Executive Success Metrics').should('be.visible');
-      cy.get('button').contains('Select a project').click();
-      cy.contains('Test Project').click();
+      cy.get('button').contains('Select a project').click({ force: true });
+      cy.contains(mockProject.name).click();
+      cy.wait('@getSummary');
       cy.get('[data-testid="card-total-metrics"]', { timeout: 10000 }).should('be.visible');
     });
 
@@ -116,7 +124,7 @@ describe('Phase 3 Drill-Down Tests', () => {
 
   describe('ROI Dashboard - KPI Cards', () => {
     beforeEach(() => {
-      cy.intercept('GET', '/api/user', { statusCode: 200, body: mockUser }).as('getUser');
+      cy.intercept('GET', '/api/auth/user', { statusCode: 200, body: mockUser }).as('getUser');
       cy.intercept('GET', '/api/projects', { statusCode: 200, body: [mockProject] }).as('getProjects');
       cy.intercept('GET', '/api/hospitals', { statusCode: 200, body: [{ id: 'h1', name: 'Test Hospital' }] }).as('getHospitals');
       cy.intercept('GET', '/api/projects/p1/surveys', {
@@ -132,7 +140,7 @@ describe('Phase 3 Drill-Down Tests', () => {
       }).as('getQuestions');
       cy.intercept('GET', '/api/consultants*', { statusCode: 200, body: [] }).as('getConsultants');
 
-      cy.visit('/roi-dashboard');
+      cy.visit('/roi');
       cy.get('[data-testid="text-roi-title"]').should('be.visible');
       cy.get('[data-testid="select-project"]').click();
       cy.contains('Test Project').click();
@@ -166,7 +174,7 @@ describe('Phase 3 Drill-Down Tests', () => {
 
   describe('ROI Dashboard - Lists', () => {
     beforeEach(() => {
-      cy.intercept('GET', '/api/user', { statusCode: 200, body: mockUser }).as('getUser');
+      cy.intercept('GET', '/api/auth/user', { statusCode: 200, body: mockUser }).as('getUser');
       cy.intercept('GET', '/api/projects', { statusCode: 200, body: [mockProject] }).as('getProjects');
       cy.intercept('GET', '/api/hospitals', { statusCode: 200, body: [{ id: 'h1', name: 'Test Hospital' }] }).as('getHospitals');
       cy.intercept('GET', '/api/projects/p1/surveys', {
@@ -178,7 +186,7 @@ describe('Phase 3 Drill-Down Tests', () => {
         body: [{ id: 'q1', question: 'How satisfied are you with the implementation?', questionType: 'rating', category: 'satisfaction' }]
       }).as('getQuestions');
 
-      cy.visit('/roi-dashboard');
+      cy.visit('/roi');
       cy.get('[data-testid="text-roi-title"]').should('be.visible');
       cy.get('[data-testid="select-project"]').click();
       cy.contains('Test Project').click();
