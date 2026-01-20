@@ -82,6 +82,12 @@ import CRM from "@/pages/CRM";
 import CRMContacts from "@/pages/CRM/Contacts";
 import CRMCompanies from "@/pages/CRM/Companies";
 import CRMDeals from "@/pages/CRM/Deals";
+import IntegrationHub from "@/pages/Integrations";
+import IntegrationsServiceNow from "@/pages/Integrations/ServiceNow";
+import IntegrationsAsana from "@/pages/Integrations/Asana";
+import IntegrationsSAP from "@/pages/Integrations/SAP";
+import IntegrationsJira from "@/pages/Integrations/Jira";
+import IntegrationsFieldMappings from "@/pages/Integrations/FieldMappings";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/not-found";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
@@ -227,6 +233,12 @@ function Router() {
       <Route path="/crm/contacts" component={() => <ProtectedRoute component={CRMContacts} requiredRoles={["admin", "hospital_leadership"]} />} />
       <Route path="/crm/companies" component={() => <ProtectedRoute component={CRMCompanies} requiredRoles={["admin", "hospital_leadership"]} />} />
       <Route path="/crm/deals" component={() => <ProtectedRoute component={CRMDeals} requiredRoles={["admin", "hospital_leadership"]} />} />
+      <Route path="/integrations" component={() => <ProtectedRoute component={IntegrationHub} requiredRoles={["admin", "hospital_leadership"]} />} />
+      <Route path="/integrations/servicenow" component={() => <ProtectedRoute component={IntegrationsServiceNow} requiredRoles={["admin", "hospital_leadership"]} />} />
+      <Route path="/integrations/asana" component={() => <ProtectedRoute component={IntegrationsAsana} requiredRoles={["admin", "hospital_leadership"]} />} />
+      <Route path="/integrations/sap" component={() => <ProtectedRoute component={IntegrationsSAP} requiredRoles={["admin", "hospital_leadership"]} />} />
+      <Route path="/integrations/jira" component={() => <ProtectedRoute component={IntegrationsJira} requiredRoles={["admin", "hospital_leadership"]} />} />
+      <Route path="/integrations/:id/mappings" component={() => <ProtectedRoute component={IntegrationsFieldMappings} requiredRoles={["admin", "hospital_leadership"]} />} />
       <Route path="/timesheets" component={() => <ProtectedRoute component={Timesheets} />} />
       <Route path="/availability" component={() => <ProtectedRoute component={Availability} />} />
       <Route path="/shift-swaps" component={() => <ProtectedRoute component={ShiftSwaps} />} />
