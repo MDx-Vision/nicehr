@@ -174,6 +174,7 @@ npm run dev
 
 | Hash | Description | Date |
 |------|-------------|------|
+| `11a60db` | Add Legacy Systems Integration backend and update docs | Jan 20, 2026 |
 | `2874d18` | Fix CRM dashboard data transformation - all tests passing | Jan 20, 2026 |
 | `14d28e1` | Fix Legacy Integration E2E tests - all 98 passing | Jan 20, 2026 |
 | `a2b0efb` | Add E2E tests for Legacy Integration feature | Jan 19, 2026 |
