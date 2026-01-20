@@ -161,7 +161,7 @@ export default function IntegrationsSAP() {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/integrations")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/integrations")} data-testid="button-back">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
@@ -186,7 +186,7 @@ export default function IntegrationsSAP() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/integrations")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/integrations")} data-testid="button-back">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
@@ -358,7 +358,7 @@ export default function IntegrationsSAP() {
                 ))}
               </div>
             ) : records.length > 0 ? (
-              <Table>
+              <Table data-testid="table-records">
                 <TableHeader>
                   <TableRow>
                     <TableHead>External ID</TableHead>
@@ -460,7 +460,7 @@ export default function IntegrationsSAP() {
 
       {/* Manual Entry Dialog */}
       <Dialog open={showManualEntry} onOpenChange={setShowManualEntry}>
-        <DialogContent>
+        <DialogContent data-testid="dialog-manual-entry">
           <DialogHeader>
             <DialogTitle>Manual SAP Entry</DialogTitle>
             <DialogDescription>

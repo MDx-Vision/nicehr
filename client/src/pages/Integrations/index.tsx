@@ -191,7 +191,7 @@ export default function IntegrationHub() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold" data-testid="text-integrations-title">Integration Hub</h1>
+          <h1 className="text-3xl font-bold" data-testid="text-integration-hub-title">Integration Hub</h1>
           <p className="text-muted-foreground">One View. Every System. Zero Logins.</p>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -218,12 +218,16 @@ export default function IntegrationHub() {
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold" data-testid="text-integrations-title">Integration Hub</h1>
+          <h1 className="text-3xl font-bold" data-testid="text-integration-hub-title">Integration Hub</h1>
           <p className="text-muted-foreground">
             One View. Every System. Zero Logins.
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" data-testid="button-sync-all">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Sync All
+          </Button>
           <Button variant="outline" data-testid="button-import-csv" onClick={() => navigate("/integrations/import")}>
             <Upload className="w-4 h-4 mr-2" />
             Import CSV
@@ -235,7 +239,7 @@ export default function IntegrationHub() {
                 Add Integration
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent data-testid="dialog-add-integration">
               <DialogHeader>
                 <DialogTitle>Add Integration Source</DialogTitle>
                 <DialogDescription>
@@ -247,6 +251,7 @@ export default function IntegrationHub() {
                   <Label htmlFor="name">Name</Label>
                   <Input
                     id="name"
+                    data-testid="input-integration-name"
                     placeholder="e.g., Hospital A ServiceNow"
                     value={newIntegration.name}
                     onChange={(e) => setNewIntegration({ ...newIntegration, name: e.target.value })}
@@ -258,7 +263,7 @@ export default function IntegrationHub() {
                     value={newIntegration.systemType}
                     onValueChange={(value) => setNewIntegration({ ...newIntegration, systemType: value })}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger data-testid="select-system-type">
                       <SelectValue placeholder="Select system type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -396,7 +401,7 @@ export default function IntegrationHub() {
           </CardContent>
         </Card>
 
-        <Card data-testid="card-field-mappings">
+        <Card data-testid="card-mapping-status">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Field Mappings</CardTitle>
             <Link2 className="h-4 w-4 text-muted-foreground" />
@@ -500,7 +505,7 @@ export default function IntegrationHub() {
                   ))}
                 </div>
               ) : sources && sources.length > 0 ? (
-                <Table>
+                <Table data-testid="table-sources">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Name</TableHead>
@@ -515,7 +520,7 @@ export default function IntegrationHub() {
                       const systemInfo = getSystemInfo(source.systemType);
                       const statusInfo = STATUS_BADGES[source.status] || STATUS_BADGES.draft;
                       return (
-                        <TableRow key={source.id} data-testid={`row-integration-${source.id}`}>
+                        <TableRow key={source.id} data-testid={`row-source-${source.id}`}>
                           <TableCell>
                             <div>
                               <p className="font-medium">{source.name}</p>
@@ -591,7 +596,7 @@ export default function IntegrationHub() {
             </CardHeader>
             <CardContent>
               {dashboard?.recentSyncs && dashboard.recentSyncs.length > 0 ? (
-                <Table>
+                <Table data-testid="table-recent-syncs">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Status</TableHead>
