@@ -39,7 +39,7 @@ const sessionTtl = 15 * 60 * 1000; // 15 minutes - HIPAA automatic logoff requir
 const pgStore = connectPg(session);
 export const sessionStore = new pgStore({
   conString: process.env.DATABASE_URL,
-  createTableIfMissing: false,
+  createTableIfMissing: true, // Auto-create sessions table if missing
   ttl: Math.floor(sessionTtl / 1000), // connect-pg-simple expects seconds
   tableName: "sessions",
   // Prune expired sessions every 5 minutes
