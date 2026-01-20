@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useSearch } from "wouter";
 import { format } from "date-fns";
 import {
   Ticket, Plus, Search, Filter, Download, MessageSquare, Clock,
@@ -40,6 +41,7 @@ interface Activity {
 
 export default function SupportTickets() {
   const { toast } = useToast();
+  const searchString = useSearch();
 
   // View state
   const [activeTab, setActiveTab] = useState("list");
@@ -87,6 +89,15 @@ export default function SupportTickets() {
 
   // Validation state
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
+
+  // Read filter from URL query params (drill-down support)
+  useEffect(() => {
+    const params = new URLSearchParams(searchString);
+    const statusParam = params.get("status");
+    if (statusParam) {
+      setStatusFilter(statusParam);
+    }
+  }, [searchString]);
 
   // Local comments/activities (would be from API in full implementation)
   const [comments, setComments] = useState<Comment[]>([]);

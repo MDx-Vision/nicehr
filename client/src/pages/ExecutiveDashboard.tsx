@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -204,14 +205,17 @@ const MOCK_CHART_DATA = {
 export default function ExecutiveDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const isAdmin = user?.role === "admin";
-  
+
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedTimeRange, setSelectedTimeRange] = useState("30d");
   const [showNewDashboardDialog, setShowNewDashboardDialog] = useState(false);
   const [showWidgetDialog, setShowWidgetDialog] = useState(false);
   const [dashboardName, setDashboardName] = useState("");
   const [dashboardDescription, setDashboardDescription] = useState("");
+  const [selectedKpi, setSelectedKpi] = useState<any | null>(null);
+  const [selectedChartData, setSelectedChartData] = useState<any | null>(null);
 
   const { data: dashboards = [], isLoading: isLoadingDashboards } = useQuery<Dashboard[]>({
     queryKey: ["/api/executive-dashboards"],
@@ -368,7 +372,12 @@ export default function ExecutiveDashboard() {
             {displayKpis.slice(0, 4).map((kpi) => {
               const status = getKpiStatus(kpi.value, kpi.target);
               return (
-                <Card key={kpi.id} className="hover-elevate" data-testid={`kpi-card-${kpi.id}`}>
+                <Card
+                  key={kpi.id}
+                  className="hover-elevate cursor-pointer hover:border-primary/50 transition-all"
+                  data-testid={`kpi-card-${kpi.id}`}
+                  onClick={() => setSelectedKpi(kpi)}
+                >
                   <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground">{kpi.name}</CardTitle>
                     <Badge 
@@ -417,33 +426,46 @@ export default function ExecutiveDashboard() {
               <CardContent>
                 <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={MOCK_CHART_DATA.projectTimeline}>
+                    <AreaChart
+                      data={MOCK_CHART_DATA.projectTimeline}
+                      onClick={(data) => {
+                        if (data?.activePayload?.[0]) {
+                          const payload = data.activePayload[0].payload;
+                          setSelectedChartData({
+                            type: 'project',
+                            label: payload.month,
+                            data: { 'Active Projects': payload.active, 'Completed Projects': payload.completed }
+                          });
+                        }
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                       <XAxis dataKey="month" className="text-xs" />
                       <YAxis className="text-xs" />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: "hsl(var(--card))", 
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
                           border: "1px solid hsl(var(--border))",
                           borderRadius: "var(--radius)"
-                        }} 
+                        }}
                       />
                       <Legend />
-                      <Area 
-                        type="monotone" 
-                        dataKey="active" 
-                        stackId="1" 
-                        stroke="#3b82f6" 
-                        fill="#3b82f6" 
+                      <Area
+                        type="monotone"
+                        dataKey="active"
+                        stackId="1"
+                        stroke="#3b82f6"
+                        fill="#3b82f6"
                         fillOpacity={0.6}
                         name="Active"
                       />
-                      <Area 
-                        type="monotone" 
-                        dataKey="completed" 
-                        stackId="2" 
-                        stroke="#10b981" 
-                        fill="#10b981" 
+                      <Area
+                        type="monotone"
+                        dataKey="completed"
+                        stackId="2"
+                        stroke="#10b981"
+                        fill="#10b981"
                         fillOpacity={0.6}
                         name="Completed"
                       />
@@ -475,18 +497,28 @@ export default function ExecutiveDashboard() {
                         dataKey="value"
                         label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                         labelLine={false}
+                        onClick={(data) => {
+                          if (data) {
+                            setSelectedChartData({
+                              type: 'revenue',
+                              label: data.name,
+                              data: { 'Category': data.name, 'Revenue': `$${data.value.toLocaleString()}` }
+                            });
+                          }
+                        }}
+                        style={{ cursor: 'pointer' }}
                       >
                         {MOCK_CHART_DATA.revenueByCategory.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
-                      <Tooltip 
+                      <Tooltip
                         formatter={(value: number) => formatValue(value, "$")}
-                        contentStyle={{ 
-                          backgroundColor: "hsl(var(--card))", 
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
                           border: "1px solid hsl(var(--border))",
                           borderRadius: "var(--radius)"
-                        }} 
+                        }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -507,31 +539,44 @@ export default function ExecutiveDashboard() {
               <CardContent>
                 <div className="h-[250px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={MOCK_CHART_DATA.consultantUtilization}>
+                    <LineChart
+                      data={MOCK_CHART_DATA.consultantUtilization}
+                      onClick={(data) => {
+                        if (data?.activePayload?.[0]) {
+                          const payload = data.activePayload[0].payload;
+                          setSelectedChartData({
+                            type: 'consultant',
+                            label: payload.week,
+                            data: { 'Utilization': `${payload.utilization}%`, 'Target': `${payload.target}%` }
+                          });
+                        }
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                       <XAxis dataKey="week" className="text-xs" />
                       <YAxis domain={[70, 100]} className="text-xs" />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: "hsl(var(--card))", 
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
                           border: "1px solid hsl(var(--border))",
                           borderRadius: "var(--radius)"
-                        }} 
+                        }}
                       />
                       <Legend />
-                      <Line 
-                        type="monotone" 
-                        dataKey="utilization" 
-                        stroke="#3b82f6" 
-                        strokeWidth={2} 
+                      <Line
+                        type="monotone"
+                        dataKey="utilization"
+                        stroke="#3b82f6"
+                        strokeWidth={2}
                         dot={{ r: 4 }}
                         name="Utilization %"
                       />
-                      <Line 
-                        type="monotone" 
-                        dataKey="target" 
-                        stroke="#f59e0b" 
-                        strokeDasharray="5 5" 
+                      <Line
+                        type="monotone"
+                        dataKey="target"
+                        stroke="#f59e0b"
+                        strokeDasharray="5 5"
                         dot={false}
                         name="Target"
                       />
@@ -552,16 +597,29 @@ export default function ExecutiveDashboard() {
               <CardContent>
                 <div className="h-[250px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={MOCK_CHART_DATA.ticketVolume}>
+                    <BarChart
+                      data={MOCK_CHART_DATA.ticketVolume}
+                      onClick={(data) => {
+                        if (data?.activePayload?.[0]) {
+                          const payload = data.activePayload[0].payload;
+                          setSelectedChartData({
+                            type: 'ticket',
+                            label: payload.day,
+                            data: { 'Tickets Opened': payload.opened, 'Tickets Closed': payload.closed }
+                          });
+                        }
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                       <XAxis dataKey="day" className="text-xs" />
                       <YAxis className="text-xs" />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: "hsl(var(--card))", 
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
                           border: "1px solid hsl(var(--border))",
                           borderRadius: "var(--radius)"
-                        }} 
+                        }}
                       />
                       <Legend />
                       <Bar dataKey="opened" fill="#ef4444" name="Opened" radius={[4, 4, 0, 0]} />
@@ -965,6 +1023,132 @@ export default function ExecutiveDashboard() {
               {createDashboardMutation.isPending ? "Creating..." : "Create Dashboard"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* KPI Detail Dialog */}
+      <Dialog open={!!selectedKpi} onOpenChange={() => setSelectedKpi(null)}>
+        <DialogContent data-testid="dialog-kpi-detail">
+          <DialogHeader>
+            <DialogTitle>KPI Details</DialogTitle>
+            <DialogDescription>View detailed metrics and drill-down to related data</DialogDescription>
+          </DialogHeader>
+          {selectedKpi && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground">KPI Name</p>
+                <p className="font-medium text-lg" data-testid="kpi-detail-name">{selectedKpi.name}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Current Value</p>
+                  <p className="text-2xl font-bold" data-testid="kpi-detail-value">
+                    {formatValue(selectedKpi.value, selectedKpi.unit)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Target</p>
+                  <p className="text-2xl font-bold text-muted-foreground" data-testid="kpi-detail-target">
+                    {formatValue(selectedKpi.target, selectedKpi.unit)}
+                  </p>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Progress</p>
+                <Progress value={Math.min((selectedKpi.value / selectedKpi.target) * 100, 100)} className="h-3" />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {Math.round((selectedKpi.value / selectedKpi.target) * 100)}% of target
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Category</p>
+                  <Badge variant="outline" data-testid="kpi-detail-category">
+                    {selectedKpi.category}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Trend</p>
+                  <div className="flex items-center gap-1" data-testid="kpi-detail-trend">
+                    {getTrendIcon(selectedKpi.trend)}
+                    <span className={selectedKpi.change >= 0 ? "text-green-600" : "text-red-600"}>
+                      {Math.abs(selectedKpi.change)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2 pt-4">
+                {selectedKpi.category === "operations" && (
+                  <Button onClick={() => { setSelectedKpi(null); navigate("/projects"); }} data-testid="button-drill-projects">
+                    View Projects
+                  </Button>
+                )}
+                {selectedKpi.category === "support" && (
+                  <Button onClick={() => { setSelectedKpi(null); navigate("/support-tickets"); }} data-testid="button-drill-tickets">
+                    View Tickets
+                  </Button>
+                )}
+                {selectedKpi.category === "financial" && (
+                  <Button onClick={() => { setSelectedKpi(null); navigate("/analytics"); }} data-testid="button-drill-analytics">
+                    View Analytics
+                  </Button>
+                )}
+                {selectedKpi.category === "training" && (
+                  <Button onClick={() => { setSelectedKpi(null); navigate("/training"); }} data-testid="button-drill-training">
+                    View Training
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => setSelectedKpi(null)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Chart Data Drill-Down Dialog */}
+      <Dialog open={!!selectedChartData} onOpenChange={() => setSelectedChartData(null)}>
+        <DialogContent data-testid="dialog-chart-detail">
+          <DialogHeader>
+            <DialogTitle>Chart Data Details</DialogTitle>
+            <DialogDescription>Drill-down into the selected data point</DialogDescription>
+          </DialogHeader>
+          {selectedChartData && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Data Point</p>
+                <p className="font-medium text-lg" data-testid="chart-detail-label">{selectedChartData.label}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {Object.entries(selectedChartData.data || {}).map(([key, value]) => (
+                  <div key={key}>
+                    <p className="text-sm text-muted-foreground">{key}</p>
+                    <p className="font-bold" data-testid={`chart-detail-${key}`}>
+                      {typeof value === 'number' ? value.toLocaleString() : String(value)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2 pt-4">
+                <Button
+                  onClick={() => {
+                    setSelectedChartData(null);
+                    if (selectedChartData.type === 'project') navigate("/projects");
+                    else if (selectedChartData.type === 'ticket') navigate("/support-tickets");
+                    else if (selectedChartData.type === 'consultant') navigate("/consultants");
+                    else if (selectedChartData.type === 'revenue') navigate("/analytics");
+                  }}
+                  data-testid="button-view-related"
+                >
+                  View Related Data
+                </Button>
+                <Button variant="outline" onClick={() => setSelectedChartData(null)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

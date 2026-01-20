@@ -87,6 +87,7 @@ export default function ExecutiveMetricsPage() {
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [selectedRole, setSelectedRole] = useState<string>("all");
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [updateValueDialog, setUpdateValueDialog] = useState<{
     open: boolean;
     metric: ExecutiveMetric | null;
@@ -101,6 +102,23 @@ export default function ExecutiveMetricsPage() {
     open: boolean;
     criterion: SowCriterion | null;
   }>({ open: false, criterion: null });
+  const [metricDetailDialog, setMetricDetailDialog] = useState<{
+    open: boolean;
+    metric: ExecutiveMetric | null;
+  }>({ open: false, metric: null });
+  const [endorsementDetailDialog, setEndorsementDetailDialog] = useState<{
+    open: boolean;
+    endorsement: SuccessEndorsement | null;
+  }>({ open: false, endorsement: null });
+  const [sowDetailDialog, setSowDetailDialog] = useState<{
+    open: boolean;
+    criterion: SowCriterion | null;
+  }>({ open: false, criterion: null });
+  const [contributingMetricsDialog, setContributingMetricsDialog] = useState<{
+    open: boolean;
+    title: string;
+    metrics: ExecutiveMetric[];
+  }>({ open: false, title: "", metrics: [] });
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -409,7 +427,14 @@ export default function ExecutiveMetricsPage() {
             <>
               {/* Summary Cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                <Card>
+                <Card
+                  className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all"
+                  data-testid="card-total-metrics"
+                  onClick={() => {
+                    setStatusFilter("all");
+                    setActiveTab("metrics");
+                  }}
+                >
                   <CardContent className="pt-6">
                     <div className="flex items-center gap-2">
                       <Target className="h-4 w-4 text-blue-500" />
@@ -418,7 +443,14 @@ export default function ExecutiveMetricsPage() {
                     <p className="text-2xl font-bold">{summary.summary.total}</p>
                   </CardContent>
                 </Card>
-                <Card>
+                <Card
+                  className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all"
+                  data-testid="card-achieved-metrics"
+                  onClick={() => {
+                    setStatusFilter("achieved");
+                    setActiveTab("metrics");
+                  }}
+                >
                   <CardContent className="pt-6">
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className="h-4 w-4 text-emerald-500" />
@@ -429,7 +461,14 @@ export default function ExecutiveMetricsPage() {
                     </p>
                   </CardContent>
                 </Card>
-                <Card>
+                <Card
+                  className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all"
+                  data-testid="card-ontrack-metrics"
+                  onClick={() => {
+                    setStatusFilter("on_track");
+                    setActiveTab("metrics");
+                  }}
+                >
                   <CardContent className="pt-6">
                     <div className="flex items-center gap-2">
                       <TrendingUp className="h-4 w-4 text-green-500" />
@@ -440,7 +479,14 @@ export default function ExecutiveMetricsPage() {
                     </p>
                   </CardContent>
                 </Card>
-                <Card>
+                <Card
+                  className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all"
+                  data-testid="card-atrisk-metrics"
+                  onClick={() => {
+                    setStatusFilter("at_risk");
+                    setActiveTab("metrics");
+                  }}
+                >
                   <CardContent className="pt-6">
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4 text-yellow-500" />
@@ -451,7 +497,14 @@ export default function ExecutiveMetricsPage() {
                     </p>
                   </CardContent>
                 </Card>
-                <Card>
+                <Card
+                  className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all"
+                  data-testid="card-missed-metrics"
+                  onClick={() => {
+                    setStatusFilter("missed");
+                    setActiveTab("metrics");
+                  }}
+                >
                   <CardContent className="pt-6">
                     <div className="flex items-center gap-2">
                       <XCircle className="h-4 w-4 text-red-500" />
@@ -462,7 +515,14 @@ export default function ExecutiveMetricsPage() {
                     </p>
                   </CardContent>
                 </Card>
-                <Card>
+                <Card
+                  className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all"
+                  data-testid="card-notstarted-metrics"
+                  onClick={() => {
+                    setStatusFilter("not_started");
+                    setActiveTab("metrics");
+                  }}
+                >
                   <CardContent className="pt-6">
                     <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4 text-gray-500" />
@@ -481,7 +541,18 @@ export default function ExecutiveMetricsPage() {
                   <CardTitle>Overall Progress</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div>
+                  <div
+                    className="cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded transition-colors"
+                    data-testid="progress-achievement-rate"
+                    onClick={() => {
+                      const achievedMetrics = summary.metrics.filter((m) => m.status === "achieved");
+                      setContributingMetricsDialog({
+                        open: true,
+                        title: "Achieved Metrics",
+                        metrics: achievedMetrics,
+                      });
+                    }}
+                  >
                     <div className="flex justify-between mb-2">
                       <span className="text-sm">Achievement Rate</span>
                       <span className="text-sm font-medium">
@@ -490,7 +561,20 @@ export default function ExecutiveMetricsPage() {
                     </div>
                     <Progress value={summary.achievementRate} className="h-2" />
                   </div>
-                  <div>
+                  <div
+                    className="cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded transition-colors"
+                    data-testid="progress-rate"
+                    onClick={() => {
+                      const progressMetrics = summary.metrics.filter(
+                        (m) => m.status === "achieved" || m.status === "on_track"
+                      );
+                      setContributingMetricsDialog({
+                        open: true,
+                        title: "On Track & Achieved Metrics",
+                        metrics: progressMetrics,
+                      });
+                    }}
+                  >
                     <div className="flex justify-between mb-2">
                       <span className="text-sm">Progress Rate (Achieved + On Track)</span>
                       <span className="text-sm font-medium">
@@ -616,7 +700,23 @@ export default function ExecutiveMetricsPage() {
         {/* Metrics Tab */}
         <TabsContent value="metrics" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold">Success Metrics</h2>
+            <div className="flex items-center gap-4">
+              <h2 className="text-lg font-semibold">Success Metrics</h2>
+              {statusFilter !== "all" && (
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">
+                    Filtered: {METRIC_STATUSES.find((s) => s.value === statusFilter)?.label || statusFilter}
+                  </Badge>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setStatusFilter("all")}
+                  >
+                    Clear
+                  </Button>
+                </div>
+              )}
+            </div>
             <div className="flex gap-2">
               {EXECUTIVE_ROLES.map((role) => (
                 <Button
@@ -635,7 +735,7 @@ export default function ExecutiveMetricsPage() {
 
           {summary?.metrics && summary.metrics.length > 0 ? (
             <Card>
-              <Table>
+              <Table data-testid="metrics-table">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Role</TableHead>
@@ -648,8 +748,15 @@ export default function ExecutiveMetricsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {summary.metrics.map((metric) => (
-                    <TableRow key={metric.id}>
+                  {summary.metrics
+                    .filter((m) => statusFilter === "all" || m.status === statusFilter)
+                    .map((metric) => (
+                    <TableRow
+                      key={metric.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      data-testid={`metric-row-${metric.id}`}
+                      onClick={() => setMetricDetailDialog({ open: true, metric })}
+                    >
                       <TableCell>
                         <Badge variant="outline">
                           {metric.executiveRole.toUpperCase()}
@@ -678,7 +785,8 @@ export default function ExecutiveMetricsPage() {
                           size="sm"
                           variant="ghost"
                           data-testid="update-metric-value"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setUpdateValueDialog({ open: true, metric });
                             setNewValue(metric.currentValue || "");
                           }}
@@ -715,7 +823,7 @@ export default function ExecutiveMetricsPage() {
 
           {endorsements.length > 0 ? (
             <Card>
-              <Table>
+              <Table data-testid="endorsements-table">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Executive</TableHead>
@@ -728,7 +836,12 @@ export default function ExecutiveMetricsPage() {
                 </TableHeader>
                 <TableBody>
                   {endorsements.map((endorsement) => (
-                    <TableRow key={endorsement.id}>
+                    <TableRow
+                      key={endorsement.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      data-testid={`endorsement-row-${endorsement.id}`}
+                      onClick={() => setEndorsementDetailDialog({ open: true, endorsement })}
+                    >
                       <TableCell>
                         <div>
                           <p className="font-medium">{endorsement.executiveName}</p>
@@ -771,12 +884,13 @@ export default function ExecutiveMetricsPage() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() =>
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 updateEndorsementMutation.mutate({
                                   id: endorsement.id,
                                   data: { status: "received" },
-                                })
-                              }
+                                });
+                              }}
                             >
                               <CheckCircle2 className="h-4 w-4" />
                             </Button>
@@ -784,9 +898,10 @@ export default function ExecutiveMetricsPage() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() =>
-                              deleteEndorsementMutation.mutate(endorsement.id)
-                            }
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteEndorsementMutation.mutate(endorsement.id);
+                            }}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -818,7 +933,7 @@ export default function ExecutiveMetricsPage() {
 
           {sowCriteria.length > 0 ? (
             <Card>
-              <Table>
+              <Table data-testid="sow-criteria-table">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Role</TableHead>
@@ -831,7 +946,12 @@ export default function ExecutiveMetricsPage() {
                 </TableHeader>
                 <TableBody>
                   {sowCriteria.map((criterion) => (
-                    <TableRow key={criterion.id}>
+                    <TableRow
+                      key={criterion.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      data-testid={`sow-row-${criterion.id}`}
+                      onClick={() => setSowDetailDialog({ open: true, criterion })}
+                    >
                       <TableCell>
                         <Badge variant="outline">
                           {criterion.executiveRole.toUpperCase()}
@@ -861,7 +981,8 @@ export default function ExecutiveMetricsPage() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 const value = prompt("Enter achieved value:");
                                 if (value) {
                                   verifySowMutation.mutate({
@@ -877,7 +998,10 @@ export default function ExecutiveMetricsPage() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => deleteSowMutation.mutate(criterion.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteSowMutation.mutate(criterion.id);
+                            }}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -1169,6 +1293,317 @@ export default function ExecutiveMetricsPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Metric Detail Dialog */}
+      <Dialog
+        open={metricDetailDialog.open}
+        onOpenChange={(open) =>
+          setMetricDetailDialog({ open, metric: open ? metricDetailDialog.metric : null })
+        }
+      >
+        <DialogContent data-testid="dialog-metric-detail">
+          <DialogHeader>
+            <DialogTitle data-testid="metric-detail-name">
+              {metricDetailDialog.metric?.metricName}
+            </DialogTitle>
+            <DialogDescription>
+              Metric Details
+            </DialogDescription>
+          </DialogHeader>
+          {metricDetailDialog.metric && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground">Executive Role</Label>
+                  <p className="font-medium">{metricDetailDialog.metric.executiveRole.toUpperCase()}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Category</Label>
+                  <p>{getCategoryBadge(metricDetailDialog.metric.category)}</p>
+                </div>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Description</Label>
+                <p className="font-medium">{metricDetailDialog.metric.description || "No description"}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground">Target Value</Label>
+                  <p className="font-medium text-lg">
+                    {metricDetailDialog.metric.targetValue} {metricDetailDialog.metric.targetUnit}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Current Value</Label>
+                  <p className="font-medium text-lg">
+                    {metricDetailDialog.metric.currentValue || "-"} {metricDetailDialog.metric.currentValue && metricDetailDialog.metric.targetUnit}
+                  </p>
+                </div>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Status</Label>
+                <div className="mt-1">{getStatusBadge(metricDetailDialog.metric.status)}</div>
+              </div>
+              {metricDetailDialog.metric.targetDate && (
+                <div>
+                  <Label className="text-muted-foreground">Target Date</Label>
+                  <p className="font-medium">
+                    {new Date(metricDetailDialog.metric.targetDate).toLocaleDateString()}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setMetricDetailDialog({ open: false, metric: null })}
+            >
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                if (metricDetailDialog.metric) {
+                  setUpdateValueDialog({ open: true, metric: metricDetailDialog.metric });
+                  setNewValue(metricDetailDialog.metric.currentValue || "");
+                  setMetricDetailDialog({ open: false, metric: null });
+                }
+              }}
+            >
+              Update Value
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Endorsement Detail Dialog */}
+      <Dialog
+        open={endorsementDetailDialog.open}
+        onOpenChange={(open) =>
+          setEndorsementDetailDialog({ open, endorsement: open ? endorsementDetailDialog.endorsement : null })
+        }
+      >
+        <DialogContent data-testid="dialog-endorsement-detail">
+          <DialogHeader>
+            <DialogTitle data-testid="endorsement-detail-name">
+              {endorsementDetailDialog.endorsement?.executiveName}
+            </DialogTitle>
+            <DialogDescription>
+              Endorsement Details
+            </DialogDescription>
+          </DialogHeader>
+          {endorsementDetailDialog.endorsement && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground">Title</Label>
+                  <p className="font-medium">{endorsementDetailDialog.endorsement.executiveTitle || "-"}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Role</Label>
+                  <p className="font-medium">{endorsementDetailDialog.endorsement.executiveRole.toUpperCase()}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground">Type</Label>
+                  <p className="font-medium">{endorsementDetailDialog.endorsement.endorsementType || "-"}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Status</Label>
+                  <Badge
+                    className={
+                      endorsementDetailDialog.endorsement.status === "received"
+                        ? "bg-green-100 text-green-800"
+                        : endorsementDetailDialog.endorsement.status === "published"
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-yellow-100 text-yellow-800"
+                    }
+                  >
+                    {endorsementDetailDialog.endorsement.status}
+                  </Badge>
+                </div>
+              </div>
+              {endorsementDetailDialog.endorsement.endorsementText && (
+                <div>
+                  <Label className="text-muted-foreground">Endorsement Text</Label>
+                  <p className="font-medium bg-muted p-3 rounded-md mt-1">
+                    "{endorsementDetailDialog.endorsement.endorsementText}"
+                  </p>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground">Requested</Label>
+                  <p className="font-medium">
+                    {endorsementDetailDialog.endorsement.requestedAt
+                      ? new Date(endorsementDetailDialog.endorsement.requestedAt).toLocaleDateString()
+                      : "-"}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Received</Label>
+                  <p className="font-medium">
+                    {endorsementDetailDialog.endorsement.receivedAt
+                      ? new Date(endorsementDetailDialog.endorsement.receivedAt).toLocaleDateString()
+                      : "-"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEndorsementDetailDialog({ open: false, endorsement: null })}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* SOW Criterion Detail Dialog */}
+      <Dialog
+        open={sowDetailDialog.open}
+        onOpenChange={(open) =>
+          setSowDetailDialog({ open, criterion: open ? sowDetailDialog.criterion : null })
+        }
+      >
+        <DialogContent data-testid="dialog-sow-detail">
+          <DialogHeader>
+            <DialogTitle>SOW Criterion Details</DialogTitle>
+          </DialogHeader>
+          {sowDetailDialog.criterion && (
+            <div className="space-y-4">
+              <div>
+                <Label className="text-muted-foreground">Executive Role</Label>
+                <p className="font-medium">{sowDetailDialog.criterion.executiveRole.toUpperCase()}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Success Criteria</Label>
+                <p className="font-medium bg-muted p-3 rounded-md mt-1" data-testid="sow-detail-criteria">
+                  {sowDetailDialog.criterion.criteriaText}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground">Target Value</Label>
+                  <p className="font-medium text-lg">{sowDetailDialog.criterion.targetValue || "-"}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Achieved Value</Label>
+                  <p className="font-medium text-lg">{sowDetailDialog.criterion.achievedValue || "-"}</p>
+                </div>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Status</Label>
+                <div className="mt-1">
+                  <Badge
+                    className={
+                      sowDetailDialog.criterion.status === "achieved"
+                        ? "bg-green-100 text-green-800"
+                        : sowDetailDialog.criterion.status === "not_achieved"
+                        ? "bg-red-100 text-red-800"
+                        : "bg-yellow-100 text-yellow-800"
+                    }
+                  >
+                    {sowDetailDialog.criterion.status}
+                  </Badge>
+                </div>
+              </div>
+              {sowDetailDialog.criterion.evidence && (
+                <div>
+                  <Label className="text-muted-foreground">Evidence</Label>
+                  <p className="font-medium bg-muted p-3 rounded-md mt-1">
+                    {sowDetailDialog.criterion.evidence}
+                  </p>
+                </div>
+              )}
+              {sowDetailDialog.criterion.verifiedAt && (
+                <div>
+                  <Label className="text-muted-foreground">Verified</Label>
+                  <p className="font-medium">
+                    {new Date(sowDetailDialog.criterion.verifiedAt).toLocaleDateString()}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setSowDetailDialog({ open: false, criterion: null })}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Contributing Metrics Dialog */}
+      <Dialog
+        open={contributingMetricsDialog.open}
+        onOpenChange={(open) =>
+          setContributingMetricsDialog({ open, title: "", metrics: [] })
+        }
+      >
+        <DialogContent className="max-w-2xl" data-testid="dialog-contributing-metrics">
+          <DialogHeader>
+            <DialogTitle>{contributingMetricsDialog.title}</DialogTitle>
+            <DialogDescription>
+              {contributingMetricsDialog.metrics.length} metrics contributing to this rate
+            </DialogDescription>
+          </DialogHeader>
+          {contributingMetricsDialog.metrics.length > 0 ? (
+            <div className="max-h-[400px] overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Metric</TableHead>
+                    <TableHead>Target</TableHead>
+                    <TableHead>Current</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {contributingMetricsDialog.metrics.map((metric) => (
+                    <TableRow
+                      key={metric.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => {
+                        setContributingMetricsDialog({ open: false, title: "", metrics: [] });
+                        setMetricDetailDialog({ open: true, metric });
+                      }}
+                    >
+                      <TableCell>
+                        <Badge variant="outline">{metric.executiveRole.toUpperCase()}</Badge>
+                      </TableCell>
+                      <TableCell className="font-medium">{metric.metricName}</TableCell>
+                      <TableCell>{metric.targetValue} {metric.targetUnit}</TableCell>
+                      <TableCell>{metric.currentValue || "-"}</TableCell>
+                      <TableCell>{getStatusBadge(metric.status)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="py-8 text-center text-muted-foreground">
+              No metrics in this category
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setContributingMetricsDialog({ open: false, title: "", metrics: [] })}
+            >
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

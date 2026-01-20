@@ -5,12 +5,15 @@ interface StatusItem {
   label: string;
   value: number;
   color?: string;
+  onClick?: () => void;
 }
 
 interface StatusDistributionCardProps {
   title: string;
   items: StatusItem[];
   className?: string;
+  onClick?: () => void;
+  onItemClick?: (item: StatusItem) => void;
   "data-testid"?: string;
 }
 
@@ -35,12 +38,18 @@ export function StatusDistributionCard({
   title,
   items,
   className,
+  onClick,
+  onItemClick,
   "data-testid": testId,
 }: StatusDistributionCardProps) {
   const total = items.reduce((sum, item) => sum + item.value, 0);
 
   return (
-    <Card className={cn("", className)} data-testid={testId}>
+    <Card
+      className={cn(onClick && "cursor-pointer hover:border-primary/50 hover:shadow-md transition-all", className)}
+      data-testid={testId}
+      onClick={onClick}
+    >
       <CardHeader>
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
@@ -49,9 +58,20 @@ export function StatusDistributionCard({
           const percentage = total > 0 ? (item.value / total) * 100 : 0;
           const colorClass =
             item.color || STATUS_COLORS[item.label.toLowerCase()] || "bg-primary";
+          const isClickable = onItemClick || item.onClick;
 
           return (
-            <div key={item.label} className="space-y-1">
+            <div
+              key={item.label}
+              className={cn("space-y-1", isClickable && "cursor-pointer hover:bg-muted/50 p-1 -m-1 rounded transition-colors")}
+              onClick={(e) => {
+                if (onItemClick || item.onClick) {
+                  e.stopPropagation();
+                  item.onClick?.();
+                  onItemClick?.(item);
+                }
+              }}
+            >
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground capitalize">
                   {item.label.replace(/_/g, " ")}

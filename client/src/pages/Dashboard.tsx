@@ -86,6 +86,8 @@ export default function Dashboard() {
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [chartPeriod, setChartPeriod] = useState<"week" | "month" | "year">("month");
   const [isDragMode, setIsDragMode] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
   // WebSocket for live stats
   const { isConnected, liveStats } = useDashboardWebSocket();
@@ -146,30 +148,34 @@ export default function Dashboard() {
     return generateData(chartPeriod);
   }, [chartPeriod]);
 
-  // Performance gauges data
+  // Performance gauges data with drill-down handlers
   const performanceGauges = useMemo(() => [
     {
       value: stats?.ticketResolutionRate || 0,
       label: "Ticket Resolution",
       description: "Support tickets resolved",
+      onClick: () => navigate("/support-tickets?status=resolved"),
     },
     {
       value: stats?.projectCompletionRate || 0,
       label: "Project Completion",
       description: "Projects delivered",
+      onClick: () => navigate("/projects?status=completed"),
     },
     {
       value: stats?.consultantUtilization || 0,
       label: "Utilization",
       description: "Consultant capacity used",
+      onClick: () => navigate("/consultants?sort=utilization"),
     },
     {
       value: Math.min(100, (stats?.totalHoursLogged || 0) / 10),
       max: 100,
       label: "Hours Logged",
       description: `${stats?.totalHoursLogged || 0} total hours`,
+      onClick: () => navigate("/timesheets"),
     },
-  ], [stats]);
+  ], [stats, navigate]);
 
   const { data: tasks = [], isLoading: isLoadingTasks } = useQuery<Task[]>({
     queryKey: ["/api/dashboard/tasks"],
@@ -538,15 +544,19 @@ export default function Dashboard() {
                     {filteredTasks.map((task) => (
                       <div
                         key={task.id}
-                        className="flex items-center gap-3 p-2 rounded-lg border hover:bg-muted/50 transition-colors"
+                        className="flex items-center gap-3 p-2 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer"
                         data-testid={`task-item-${task.id}`}
+                        onClick={() => setSelectedTask(task)}
                       >
                         <Button
                           variant="ghost"
                           size="sm"
                           className="p-0 h-auto"
                           disabled={task.status === "completed" || completeTaskMutation.isPending}
-                          onClick={() => task.status !== "completed" && completeTaskMutation.mutate(task.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            task.status !== "completed" && completeTaskMutation.mutate(task.id);
+                          }}
                           data-testid={`button-complete-${task.id}`}
                         >
                           {completeTaskMutation.isPending && completeTaskMutation.variables === task.id ? (
@@ -731,8 +741,9 @@ export default function Dashboard() {
                     calendarEvents.map((event) => (
                       <div
                         key={event.id}
-                        className="flex items-center gap-2 p-2 bg-muted/50 rounded hover:bg-muted transition-colors"
+                        className="flex items-center gap-2 p-2 bg-muted/50 rounded hover:bg-muted transition-colors cursor-pointer"
                         data-testid={`event-${event.id}`}
+                        onClick={() => setSelectedEvent(event)}
                       >
                         <Badge variant={event.type === "milestone" ? "default" : "secondary"} data-testid={`badge-${event.type}`}>
                           {event.type === "milestone" ? "Milestone" : "Event"}
@@ -832,6 +843,138 @@ export default function Dashboard() {
           </Card>
         </div>
       )}
+
+      {/* Task Detail Modal */}
+      <Dialog open={!!selectedTask} onOpenChange={() => setSelectedTask(null)}>
+        <DialogContent data-testid="dialog-task-detail">
+          <DialogHeader>
+            <DialogTitle>Task Details</DialogTitle>
+            <DialogDescription>View task information and navigate to project</DialogDescription>
+          </DialogHeader>
+          {selectedTask && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Task</p>
+                <p className="font-medium" data-testid="task-detail-title">{selectedTask.title}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Priority</p>
+                  <Badge className={
+                    selectedTask.priority === "critical" ? "bg-purple-500" :
+                    selectedTask.priority === "high" ? "bg-red-500" :
+                    selectedTask.priority === "medium" ? "bg-yellow-500" : "bg-green-500"
+                  } data-testid="task-detail-priority">
+                    {selectedTask.priority.charAt(0).toUpperCase() + selectedTask.priority.slice(1)}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Status</p>
+                  <Badge variant={selectedTask.status === "completed" ? "default" : "secondary"} data-testid="task-detail-status">
+                    {selectedTask.status.replace("_", " ")}
+                  </Badge>
+                </div>
+              </div>
+              {selectedTask.dueDate && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Due Date</p>
+                  <p className="font-medium" data-testid="task-detail-due">{format(new Date(selectedTask.dueDate), "MMM d, yyyy")}</p>
+                </div>
+              )}
+              {selectedTask.projectName && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Project</p>
+                  <Link
+                    href={`/projects?id=${selectedTask.projectId}`}
+                    className="font-medium text-primary hover:underline"
+                    data-testid="task-detail-project-link"
+                  >
+                    {selectedTask.projectName} →
+                  </Link>
+                </div>
+              )}
+              <div className="flex gap-2 pt-4">
+                <Button
+                  onClick={() => {
+                    setSelectedTask(null);
+                    navigate(`/projects?id=${selectedTask.projectId}`);
+                  }}
+                  data-testid="button-view-project"
+                >
+                  View Project
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedTask(null)}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Event Detail Modal */}
+      <Dialog open={!!selectedEvent} onOpenChange={() => setSelectedEvent(null)}>
+        <DialogContent data-testid="dialog-event-detail">
+          <DialogHeader>
+            <DialogTitle>Event Details</DialogTitle>
+            <DialogDescription>View event information</DialogDescription>
+          </DialogHeader>
+          {selectedEvent && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Event</p>
+                <p className="font-medium" data-testid="event-detail-title">{selectedEvent.title}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Type</p>
+                  <Badge variant={selectedEvent.type === "milestone" ? "default" : "secondary"} data-testid="event-detail-type">
+                    {selectedEvent.type === "milestone" ? "Milestone" : "Event"}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Date</p>
+                  <p className="font-medium" data-testid="event-detail-date">{format(new Date(selectedEvent.date), "MMM d, yyyy")}</p>
+                </div>
+              </div>
+              {selectedEvent.projectName && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Project</p>
+                  <Link
+                    href={`/projects?id=${selectedEvent.projectId}`}
+                    className="font-medium text-primary hover:underline"
+                    data-testid="event-detail-project-link"
+                  >
+                    {selectedEvent.projectName} →
+                  </Link>
+                </div>
+              )}
+              <div className="flex gap-2 pt-4">
+                {selectedEvent.projectId && (
+                  <Button
+                    onClick={() => {
+                      setSelectedEvent(null);
+                      navigate(`/projects?id=${selectedEvent.projectId}`);
+                    }}
+                    data-testid="button-view-event-project"
+                  >
+                    View Project
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedEvent(null)}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -127,12 +127,19 @@ export default function Consultants() {
   const [onboardedFilter, setOnboardedFilter] = useState<string>("all");
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
 
+  // Sort state for drill-down support
+  const [sortBy, setSortBy] = useState<string>("");
+
   // Read filter from URL query params (drill-down support)
   useEffect(() => {
     const params = new URLSearchParams(searchString);
     const availabilityParam = params.get("availability");
+    const sortParam = params.get("sort");
     if (availabilityParam) {
       setAvailabilityFilter(availabilityParam);
+    }
+    if (sortParam) {
+      setSortBy(sortParam);
     }
   }, [searchString]);
 

@@ -13,6 +13,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0] - 2026-01-19
+
+### Added
+
+#### Drill-Down Functionality (55 Interactive Elements)
+- **Phase 1 - Dashboard Core (12 items)**
+  - Stat cards navigate to filtered pages (consultants, projects, tickets, invoices)
+  - Task items open task detail modals
+  - Calendar events open event detail dialogs
+
+- **Phase 2 - Analytics & Executive Dashboard (25 items)**
+  - Performance gauges clickable with navigation to filtered pages
+  - Analytics KPI cards with drill-down to detailed views
+  - Trend charts with data point drill-down
+  - Status distribution cards with filtered navigation
+  - Executive Dashboard KPIs navigate to relevant modules
+  - Executive Dashboard charts show contributing data
+
+- **Phase 3 - Executive Metrics & ROI Dashboard (18 items)**
+  - Executive Metrics summary cards filter metrics by status
+  - Progress bars show contributing metrics dialogs
+  - Metrics table rows open detail modals
+  - Endorsements and SOW criteria table rows open detail dialogs
+  - ROI Dashboard KPI cards show survey lists, savings breakdowns
+  - Question and survey list items open detail dialogs
+  - Project Overview card navigates to projects page
+
+#### E2E Test Coverage for Drill-Downs
+- `cypress/e2e/49-drill-down-phase1.cy.js` - 31 tests for Phase 1
+- `cypress/e2e/50-drill-down-phase2.cy.js` - 17 tests for Phase 2
+- `cypress/e2e/51-drill-down-phase3.cy.js` - 15 tests for Phase 3
+
+### Changed
+- Enhanced PerformanceGauge component with onClick callback support
+- Enhanced all Analytics chart components with drill-down props
+- Updated Dashboard, Analytics, ExecutiveDashboard, ExecutiveMetrics, RoiDashboard pages
+- Consultants and SupportTickets pages now support URL parameter filtering
+
+---
+
 ## [1.0.0] - 2026-01-19
 
 ### Added
@@ -314,6 +354,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 1.1.0 | 2026-01-19 | Drill-Down Functionality (55 interactive elements) |
 | 1.0.0 | 2026-01-19 | CRM Module, ESIGN Compliance, Documentation |
 | 0.9.0 | 2026-01-18 | Change Management, Seed Data |
 | 0.8.0 | 2026-01-17 | TDR-Tickets Integration |

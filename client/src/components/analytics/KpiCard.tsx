@@ -13,6 +13,7 @@ interface KpiCardProps {
     isPositive?: boolean;
   };
   className?: string;
+  onClick?: () => void;
   "data-testid"?: string;
 }
 
@@ -23,10 +24,15 @@ export function KpiCard({
   icon: Icon,
   trend,
   className,
+  onClick,
   "data-testid": testId,
 }: KpiCardProps) {
   return (
-    <Card className={cn("", className)} data-testid={testId}>
+    <Card
+      className={cn(onClick && "cursor-pointer hover:border-primary/50 hover:shadow-md transition-all", className)}
+      data-testid={testId}
+      onClick={onClick}
+    >
       <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {title}

@@ -9,6 +9,8 @@ interface PerformanceGaugeProps {
   colorScheme?: "default" | "success" | "warning" | "danger";
   showPercentage?: boolean;
   className?: string;
+  onClick?: () => void;
+  "data-testid"?: string;
 }
 
 export function PerformanceGauge({
@@ -20,6 +22,8 @@ export function PerformanceGauge({
   colorScheme = "default",
   showPercentage = true,
   className,
+  onClick,
+  "data-testid": testId,
 }: PerformanceGaugeProps) {
   const percentage = Math.min(Math.round((value / max) * 100), 100);
 
@@ -68,7 +72,11 @@ export function PerformanceGauge({
   };
 
   return (
-    <div className={cn("flex flex-col items-center", className)}>
+    <div
+      className={cn("flex flex-col items-center", onClick && "cursor-pointer hover:opacity-80 transition-opacity", className)}
+      onClick={onClick}
+      data-testid={testId}
+    >
       <div className="relative" style={{ width: dimension, height: dimension }}>
         {/* Background circle */}
         <svg className="transform -rotate-90" width={dimension} height={dimension}>
@@ -121,6 +129,7 @@ interface GaugeGridProps {
     label: string;
     description?: string;
     colorScheme?: "default" | "success" | "warning" | "danger";
+    onClick?: () => void;
   }>;
   size?: "sm" | "md" | "lg";
   className?: string;
@@ -138,6 +147,7 @@ export function GaugeGrid({ gauges, size = "sm", className }: GaugeGridProps) {
           description={gauge.description}
           size={size}
           colorScheme={gauge.colorScheme}
+          onClick={gauge.onClick}
           data-testid={`gauge-${gauge.label.toLowerCase().replace(/\s+/g, "-")}`}
         />
       ))}

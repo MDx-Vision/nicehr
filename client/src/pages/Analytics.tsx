@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -669,6 +670,8 @@ function ScheduleReportDialog({
 }
 
 function AdvancedVisualizations() {
+  const [, navigate] = useLocation();
+
   // Sample forecasting data
   const forecastData = [
     { month: "Jan", actual: 12, forecast: 12 },
@@ -721,7 +724,11 @@ function AdvancedVisualizations() {
       </div>
 
       {/* Timeline & Forecasting */}
-      <Card data-testid="card-timeline-forecasting">
+      <Card
+        className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all"
+        data-testid="card-timeline-forecasting"
+        onClick={() => navigate("/projects")}
+      >
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
@@ -784,7 +791,11 @@ function AdvancedVisualizations() {
       </Card>
 
       {/* Cost Variance Analytics */}
-      <Card data-testid="card-cost-variance">
+      <Card
+        className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all"
+        data-testid="card-cost-variance"
+        onClick={() => navigate("/invoices")}
+      >
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5" />
@@ -845,7 +856,11 @@ function AdvancedVisualizations() {
       </Card>
 
       {/* Go-Live Readiness Dashboard */}
-      <Card data-testid="card-golive-readiness">
+      <Card
+        className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all"
+        data-testid="card-golive-readiness"
+        onClick={() => navigate("/tdr")}
+      >
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Rocket className="h-5 w-5" />
@@ -981,6 +996,8 @@ function formatCurrency(value: string | number): string {
 }
 
 function PlatformDashboard({ data }: { data: PlatformAnalytics }) {
+  const [, navigate] = useLocation();
+
   return (
     <>
       <div>
@@ -996,6 +1013,7 @@ function PlatformDashboard({ data }: { data: PlatformAnalytics }) {
           value={data.overview.totalConsultants}
           subtitle={`${data.overview.activeConsultants} active`}
           icon={Users}
+          onClick={() => navigate("/consultants")}
           data-testid="kpi-total-consultants"
         />
         <KpiCard
@@ -1003,6 +1021,7 @@ function PlatformDashboard({ data }: { data: PlatformAnalytics }) {
           value={data.overview.totalHospitals}
           subtitle={`${data.overview.activeHospitals} active`}
           icon={Building2}
+          onClick={() => navigate("/hospitals")}
           data-testid="kpi-hospitals"
         />
         <KpiCard
@@ -1010,12 +1029,14 @@ function PlatformDashboard({ data }: { data: PlatformAnalytics }) {
           value={data.overview.activeProjects}
           subtitle={`${data.overview.totalProjects} total`}
           icon={FolderKanban}
+          onClick={() => navigate("/projects?status=active")}
           data-testid="kpi-active-projects"
         />
         <KpiCard
           title="Total Savings"
           value={formatCurrency(data.overview.totalSavings)}
           icon={DollarSign}
+          onClick={() => navigate("/projects")}
           data-testid="kpi-total-savings"
         />
       </div>
@@ -1025,6 +1046,7 @@ function PlatformDashboard({ data }: { data: PlatformAnalytics }) {
           title="Activity Trend (30 Days)"
           data={data.activityTrend}
           dataKey="count"
+          onClick={() => navigate("/dashboard")}
           data-testid="chart-activity-trend"
         />
         <StatusDistributionCard
@@ -1035,6 +1057,7 @@ function PlatformDashboard({ data }: { data: PlatformAnalytics }) {
             { label: "Completed", value: data.projectsByStatus.completed },
             { label: "Cancelled", value: data.projectsByStatus.cancelled },
           ]}
+          onItemClick={(item) => navigate(`/projects?status=${item.label.toLowerCase()}`)}
           data-testid="chart-project-status"
         />
       </div>
@@ -1048,6 +1071,13 @@ function PlatformDashboard({ data }: { data: PlatformAnalytics }) {
             { label: "Available", value: data.consultantsByStatus.available },
             { label: "Unavailable", value: data.consultantsByStatus.unavailable },
           ]}
+          onItemClick={(item) => {
+            if (item.label === "Available" || item.label === "Unavailable") {
+              navigate(`/consultants?availability=${item.label.toLowerCase()}`);
+            } else {
+              navigate("/consultants");
+            }
+          }}
           data-testid="chart-consultant-status"
         />
         <StatusDistributionCard
@@ -1058,6 +1088,7 @@ function PlatformDashboard({ data }: { data: PlatformAnalytics }) {
             { label: "Rejected", value: data.documentCompliance.rejected },
             { label: "Expired", value: data.documentCompliance.expired },
           ]}
+          onItemClick={(item) => navigate(`/documents?status=${item.label.toLowerCase()}`)}
           data-testid="chart-document-compliance"
         />
       </div>
@@ -1070,9 +1101,20 @@ function PlatformDashboard({ data }: { data: PlatformAnalytics }) {
             { name: "Hospital Staff", value: data.usersByRole.hospital_staff },
             { name: "Consultant", value: data.usersByRole.consultant },
           ]}
+          onSliceClick={(sliceData) => {
+            if (sliceData.name === "Consultant") {
+              navigate("/consultants");
+            } else if (sliceData.name === "Hospital Staff") {
+              navigate("/hospitals");
+            }
+          }}
           data-testid="chart-users-by-role"
         />
-        <Card data-testid="card-compliance-rate">
+        <Card
+          className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all"
+          data-testid="card-compliance-rate"
+          onClick={() => navigate("/documents")}
+        >
           <CardHeader>
             <CardTitle className="text-base">Overall Compliance</CardTitle>
           </CardHeader>

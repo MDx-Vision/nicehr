@@ -12,6 +12,8 @@ interface PieChartCardProps {
   data: Array<{ name: string; value: number }>;
   colors?: string[];
   className?: string;
+  onClick?: () => void;
+  onSliceClick?: (data: { name: string; value: number }) => void;
   "data-testid"?: string;
 }
 
@@ -29,6 +31,8 @@ export function PieChartCard({
   data,
   colors = DEFAULT_COLORS,
   className,
+  onClick,
+  onSliceClick,
   "data-testid": testId,
 }: PieChartCardProps) {
   const chartConfig = data.reduce((acc, item, index) => {
@@ -42,7 +46,11 @@ export function PieChartCard({
   const total = data.reduce((sum, item) => sum + item.value, 0);
 
   return (
-    <Card className={cn("", className)} data-testid={testId}>
+    <Card
+      className={cn(onClick && "cursor-pointer hover:border-primary/50 hover:shadow-md transition-all", className)}
+      data-testid={testId}
+      onClick={onClick}
+    >
       <CardHeader>
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
@@ -65,6 +73,12 @@ export function PieChartCard({
                   innerRadius={50}
                   outerRadius={80}
                   paddingAngle={2}
+                  onClick={(pieData) => {
+                    if (onSliceClick && pieData) {
+                      onSliceClick({ name: pieData.name, value: pieData.value });
+                    }
+                  }}
+                  style={onSliceClick ? { cursor: 'pointer' } : undefined}
                 >
                   {data.map((entry, index) => (
                     <Cell
@@ -77,7 +91,16 @@ export function PieChartCard({
             </ChartContainer>
             <div className="flex flex-col gap-2">
               {data.map((item, index) => (
-                <div key={item.name} className="flex items-center gap-2">
+                <div
+                  key={item.name}
+                  className={cn("flex items-center gap-2", onSliceClick && "cursor-pointer hover:bg-muted/50 p-1 -m-1 rounded transition-colors")}
+                  onClick={(e) => {
+                    if (onSliceClick) {
+                      e.stopPropagation();
+                      onSliceClick({ name: item.name, value: item.value });
+                    }
+                  }}
+                >
                   <div
                     className="w-3 h-3 rounded-full"
                     style={{ backgroundColor: colors[index % colors.length] }}

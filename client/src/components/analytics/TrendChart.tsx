@@ -16,6 +16,8 @@ interface TrendChartProps {
   dataKey?: string;
   color?: string;
   className?: string;
+  onClick?: () => void;
+  onPointClick?: (data: { date: string; count?: number; value?: number }) => void;
   "data-testid"?: string;
 }
 
@@ -25,6 +27,8 @@ export function TrendChart({
   dataKey = "count",
   color = "hsl(var(--primary))",
   className,
+  onClick,
+  onPointClick,
   "data-testid": testId,
 }: TrendChartProps) {
   const chartConfig = {
@@ -40,7 +44,11 @@ export function TrendChart({
   }));
 
   return (
-    <Card className={cn("", className)} data-testid={testId}>
+    <Card
+      className={cn(onClick && "cursor-pointer hover:border-primary/50 hover:shadow-md transition-all", className)}
+      data-testid={testId}
+      onClick={onClick}
+    >
       <CardHeader>
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
@@ -51,7 +59,17 @@ export function TrendChart({
           </div>
         ) : (
           <ChartContainer config={chartConfig} className="h-[200px] w-full">
-            <LineChart data={formattedData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+            <LineChart
+              data={formattedData}
+              margin={{ top: 5, right: 10, left: 10, bottom: 5 }}
+              onClick={(chartData) => {
+                if (onPointClick && chartData?.activePayload?.[0]) {
+                  const payload = chartData.activePayload[0].payload;
+                  onPointClick({ date: payload.date, count: payload.count, value: payload.value });
+                }
+              }}
+              style={onPointClick ? { cursor: 'pointer' } : undefined}
+            >
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis
                 dataKey="displayDate"
