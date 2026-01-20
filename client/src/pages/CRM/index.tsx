@@ -42,7 +42,31 @@ export default function CRM() {
     queryFn: async () => {
       const res = await fetch("/api/crm/dashboard");
       if (!res.ok) throw new Error("Failed to fetch CRM dashboard");
-      return res.json();
+      const data = await res.json();
+      // Transform API response to expected DashboardStats format
+      return {
+        contacts: {
+          total: data.stats?.totalContacts || 0,
+          leads: data.stats?.totalLeads || 0,
+          customers: data.stats?.totalCustomers || 0,
+        },
+        companies: {
+          total: data.stats?.totalCompanies || 0,
+          prospects: data.stats?.totalProspects || 0,
+          customers: data.stats?.totalCustomerCompanies || 0,
+        },
+        deals: {
+          total: data.stats?.openDeals || 0,
+          open: data.stats?.openDeals || 0,
+          totalValue: parseFloat(data.stats?.pipelineValue) || 0,
+          wonValue: parseFloat(data.stats?.wonValue) || 0,
+        },
+        activities: {
+          total: data.recentActivities?.length || 0,
+          today: 0,
+          upcoming: 0,
+        },
+      };
     },
   });
 
