@@ -540,6 +540,64 @@ C-suite dashboards for high-level organizational insights.
 
 ---
 
+## Legacy Systems Integration (Planned)
+
+**Route:** `/integrations`
+**Status:** 🔲 Planned
+**Documentation:** See `LEGACY_SYSTEMS_MAPPING.md`
+
+### Overview
+
+Unified dashboard consolidating data from multiple enterprise systems into one executive view.
+
+### Target Systems
+
+| Category | Systems | Priority |
+|----------|---------|----------|
+| **ITSM** | ServiceNow, BMC Helix, Jira SM, Freshservice | HIGH |
+| **Project Mgmt** | Asana, Jira Software, Monday.com, Smartsheet | HIGH |
+| **ERP** | SAP S/4HANA, Oracle, Workday | HIGH |
+| **PPM** | Clarity PPM, Planview, ServiceNow SPM | MEDIUM |
+
+### Planned Features
+
+| Feature | Description |
+|---------|-------------|
+| Integration Hub | Central dashboard for all connected systems |
+| Field Mapping UI | Admin configures source → target field mappings |
+| Manual Entry | Data entry forms when API not available |
+| CSV Import | Bulk import from exported files |
+| API Sync | Automated sync when API access granted |
+| Auto-Mapping | AI-powered field mapping suggestions |
+
+### Data Entry Methods
+
+| Method | When to Use |
+|--------|-------------|
+| Manual Entry | No API access, small data volumes |
+| CSV Import | Periodic bulk imports |
+| Scheduled Sync | Full API access granted |
+| Real-time API | Full API + security approval |
+
+### Planned Pages
+
+| Route | Purpose |
+|-------|---------|
+| `/integrations` | Integration hub and status |
+| `/integrations/servicenow` | ServiceNow data view |
+| `/integrations/asana` | Asana data view |
+| `/integrations/sap` | SAP data view |
+| `/integrations/jira` | Jira data view |
+| `/integrations/:id/mappings` | Field mapping configuration |
+
+### Drill-Downs (32 items planned)
+
+See `DRILL_DOWN_IMPLEMENTATION.md` Phase 4 for complete list.
+
+**Feature Flag:** `ENABLE_LEGACY_INTEGRATIONS` (planned)
+
+---
+
 ## Feature Flags
 
 Feature flags allow safe rollout of new features.

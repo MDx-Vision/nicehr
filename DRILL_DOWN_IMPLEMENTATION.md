@@ -513,11 +513,189 @@ Each drill-down needs:
 | Phase 1 (P0) | 12 | 12 | ✅ Complete |
 | Phase 2 (P1) | 25 | 25 | ✅ Complete |
 | Phase 3 (P2) | 18 | 18 | ✅ Complete |
+| **Phase 4 (P3)** | **32** | **0** | 🔲 Pending |
 | Deferred | 13 | 0 | ⏸️ Deferred |
 | Testing | 6 | 4 | In Progress |
-| **Total** | **55** | **55** | **100%** |
+| **Total** | **87** | **55** | **63%** |
 
 *Note: 13 items deferred to future phases (require additional features/infrastructure)*
+
+---
+
+## Phase 4: Legacy Systems Integration (P3) - 32 items
+
+**Purpose:** Enable drill-downs from consolidated executive views into source data from legacy systems (ServiceNow, Asana, SAP, Jira, etc.)
+
+**New Pages Required:**
+- `/integrations` - Integration hub and data mapping configuration
+- `/integrations/servicenow` - ServiceNow data view
+- `/integrations/asana` - Asana data view
+- `/integrations/sap` - SAP data view
+- `/integrations/jira` - Jira data view
+
+### 8. Legacy Systems Hub (`/integrations`)
+
+**File:** `client/src/pages/Integrations/index.tsx` (NEW)
+
+#### Integration Overview Cards (6 items)
+
+| # | Card | Current | Drill-Down Target | Priority |
+|---|------|---------|-------------------|----------|
+| 8.1 | ServiceNow Tickets | Count + status | `/integrations/servicenow` with filters | P3 |
+| 8.2 | Asana Tasks | Count + status | `/integrations/asana` with filters | P3 |
+| 8.3 | SAP Records | Count | `/integrations/sap` with type filter | P3 |
+| 8.4 | Jira Issues | Count + status | `/integrations/jira` with filters | P3 |
+| 8.5 | Data Freshness | Last sync time | Sync history modal | P3 |
+| 8.6 | Mapping Status | % mapped | Field mapping configuration | P3 |
+
+---
+
+### 9. ServiceNow Integration (`/integrations/servicenow`)
+
+**File:** `client/src/pages/Integrations/ServiceNow.tsx` (NEW)
+
+#### KPI Cards (4 items)
+
+| # | Card | Current | Drill-Down Target | Priority |
+|---|------|---------|-------------------|----------|
+| 9.1 | Open Incidents | Count | Incident list filtered open | P3 |
+| 9.2 | Change Requests | Count | Change request list | P3 |
+| 9.3 | Problem Tickets | Count | Problem ticket list | P3 |
+| 9.4 | SLA Compliance | % | SLA breach detail | P3 |
+
+#### Tables (2 items)
+
+| # | Table | Current | Drill-Down Target | Priority |
+|---|-------|---------|-------------------|----------|
+| 9.5 | Incidents Table | Rows | Click → incident detail modal | P3 |
+| 9.6 | Changes Table | Rows | Click → change detail modal | P3 |
+
+---
+
+### 10. Asana Integration (`/integrations/asana`)
+
+**File:** `client/src/pages/Integrations/Asana.tsx` (NEW)
+
+#### KPI Cards (4 items)
+
+| # | Card | Current | Drill-Down Target | Priority |
+|---|------|---------|-------------------|----------|
+| 10.1 | Open Tasks | Count | Task list filtered open | P3 |
+| 10.2 | Completed Tasks | Count | Completed task list | P3 |
+| 10.3 | Overdue Tasks | Count | Overdue task list (red) | P3 |
+| 10.4 | Projects | Count | Project list | P3 |
+
+#### Tables (2 items)
+
+| # | Table | Current | Drill-Down Target | Priority |
+|---|-------|---------|-------------------|----------|
+| 10.5 | Tasks Table | Rows | Click → task detail modal | P3 |
+| 10.6 | Projects Table | Rows | Click → project detail modal | P3 |
+
+---
+
+### 11. SAP Integration (`/integrations/sap`)
+
+**File:** `client/src/pages/Integrations/SAP.tsx` (NEW)
+
+#### KPI Cards (4 items)
+
+| # | Card | Current | Drill-Down Target | Priority |
+|---|------|---------|-------------------|----------|
+| 11.1 | Purchase Orders | Count + value | PO list | P3 |
+| 11.2 | Invoices | Count + value | Invoice list | P3 |
+| 11.3 | Cost Centers | Count | Cost center breakdown | P3 |
+| 11.4 | Budget Variance | % | Variance detail | P3 |
+
+#### Tables (2 items)
+
+| # | Table | Current | Drill-Down Target | Priority |
+|---|-------|---------|-------------------|----------|
+| 11.5 | Financials Table | Rows | Click → transaction detail | P3 |
+| 11.6 | Budget Table | Rows | Click → budget line detail | P3 |
+
+---
+
+### 12. Jira Integration (`/integrations/jira`)
+
+**File:** `client/src/pages/Integrations/Jira.tsx` (NEW)
+
+#### KPI Cards (4 items)
+
+| # | Card | Current | Drill-Down Target | Priority |
+|---|------|---------|-------------------|----------|
+| 12.1 | Open Issues | Count | Issue list filtered open | P3 |
+| 12.2 | In Progress | Count | Issues in progress | P3 |
+| 12.3 | Bugs | Count | Bug list | P3 |
+| 12.4 | Sprint Progress | % | Sprint burndown | P3 |
+
+#### Tables (2 items)
+
+| # | Table | Current | Drill-Down Target | Priority |
+|---|-------|---------|-------------------|----------|
+| 12.5 | Issues Table | Rows | Click → issue detail modal | P3 |
+| 12.6 | Sprints Table | Rows | Click → sprint detail | P3 |
+
+---
+
+### 13. EOD Reports Enhancement (`/eod-reports`)
+
+**File:** `client/src/pages/EODReports.tsx` (MODIFY)
+
+#### Change Management Metrics (2 items)
+
+| # | Card | Current | Drill-Down Target | Priority |
+|---|------|---------|-------------------|----------|
+| 13.1 | Changes Requested | Count | Change request list for day | P3 |
+| 13.2 | Changes Implemented | Count | Implemented changes list | P3 |
+
+---
+
+### Phase 4 Implementation Checklist
+
+#### Legacy Systems Hub
+- [ ] 8.1 ServiceNow Tickets → `/integrations/servicenow`
+- [ ] 8.2 Asana Tasks → `/integrations/asana`
+- [ ] 8.3 SAP Records → `/integrations/sap`
+- [ ] 8.4 Jira Issues → `/integrations/jira`
+- [ ] 8.5 Data Freshness → Sync history modal
+- [ ] 8.6 Mapping Status → Field mapping config
+
+#### ServiceNow Integration
+- [ ] 9.1 Open Incidents → Filtered list
+- [ ] 9.2 Change Requests → Change list
+- [ ] 9.3 Problem Tickets → Problem list
+- [ ] 9.4 SLA Compliance → SLA detail
+- [ ] 9.5 Incidents Table → Detail modal
+- [ ] 9.6 Changes Table → Detail modal
+
+#### Asana Integration
+- [ ] 10.1 Open Tasks → Filtered list
+- [ ] 10.2 Completed Tasks → Completed list
+- [ ] 10.3 Overdue Tasks → Overdue list
+- [ ] 10.4 Projects → Project list
+- [ ] 10.5 Tasks Table → Detail modal
+- [ ] 10.6 Projects Table → Detail modal
+
+#### SAP Integration
+- [ ] 11.1 Purchase Orders → PO list
+- [ ] 11.2 Invoices → Invoice list
+- [ ] 11.3 Cost Centers → Breakdown
+- [ ] 11.4 Budget Variance → Detail
+- [ ] 11.5 Financials Table → Transaction detail
+- [ ] 11.6 Budget Table → Budget line detail
+
+#### Jira Integration
+- [ ] 12.1 Open Issues → Filtered list
+- [ ] 12.2 In Progress → In progress list
+- [ ] 12.3 Bugs → Bug list
+- [ ] 12.4 Sprint Progress → Burndown
+- [ ] 12.5 Issues Table → Detail modal
+- [ ] 12.6 Sprints Table → Sprint detail
+
+#### EOD Reports Enhancement
+- [ ] 13.1 Changes Requested → Change list for day
+- [ ] 13.2 Changes Implemented → Implemented list
 
 ---
 

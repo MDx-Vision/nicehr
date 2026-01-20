@@ -12,6 +12,42 @@
 
 ## Recent Changes (Jan 19, 2026)
 
+### Session: "Legacy Systems Integration Planning"
+
+**Status:** 🔲 PLANNING COMPLETE - Ready to Build
+
+**Overview:**
+Planned comprehensive legacy systems integration feature to consolidate data from hospital enterprise systems (ServiceNow, Asana, SAP, Jira) into unified NiceHR executive dashboards.
+
+**Research Completed:**
+- Identified target systems: ITSM (ServiceNow, BMC Helix), Project Mgmt (Asana, Jira), ERP (SAP, Oracle), PPM (Clarity, Planview)
+- Researched auto-mapping solutions: AI schema matching, FHIR standards, template libraries
+- Documented field mappings for ServiceNow, Asana, SAP, Jira
+
+**Documents Created:**
+| Document | Purpose |
+|----------|---------|
+| `LEGACY_SYSTEMS_MAPPING.md` | Complete integration tracker with field mappings, DB schema, API specs |
+| `DRILL_DOWN_IMPLEMENTATION.md` (Phase 4) | 32 new drill-downs for legacy system pages |
+
+**Planned Components:**
+- Database tables: `integration_sources`, `field_mappings`, `integration_records`, `sync_history`
+- Pages: Integration Hub, ServiceNow, Asana, SAP, Jira views
+- Features: Manual entry, CSV import, API sync, auto-mapping
+
+**Phase 4 Drill-Downs (32 items):**
+- Integration Hub (6)
+- ServiceNow page (6)
+- Asana page (6)
+- SAP page (6)
+- Jira page (6)
+- EOD Reports enhancement (2)
+
+**Value Proposition:**
+"One View. Every System. Zero Logins." - Executives see consolidated data from all hospital systems in one dashboard without logging into ServiceNow, SAP, Asana separately.
+
+---
+
 ### Session: "Drill-Down Implementation (Phases 1-3)"
 
 **Status:** ✅ COMPLETE
