@@ -9,6 +9,7 @@ export const FEATURES = {
   EXECUTIVE_METRICS: process.env.ENABLE_EXECUTIVE_METRICS === 'true',
   CHANGE_MANAGEMENT: process.env.ENABLE_CHANGE_MANAGEMENT === 'true',
   CRM_MODULE: process.env.ENABLE_CRM === 'true',
+  LEGACY_INTEGRATION: process.env.ENABLE_LEGACY_INTEGRATION === 'true',
 };
 
 // Helper to check if a feature is enabled

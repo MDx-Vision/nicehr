@@ -1,14 +1,21 @@
-import { defineConfig } from 'cypress';
+import { defineConfig } from "cypress";
 
 export default defineConfig({
   e2e: {
-    baseUrl: 'http://localhost:4000',
-    supportFile: 'cypress/support/e2e.js',
-    specPattern: 'cypress/e2e/**/*.cy.{js,jsx,ts,tsx}',
+    baseUrl: "http://localhost:4000",
+    supportFile: "cypress/support/e2e.js",
+    specPattern: "cypress/e2e/**/*.cy.{js,jsx,ts,tsx}",
     setupNodeEvents(on, config) {
       // Set environment variable to disable access control during tests
-      process.env.CYPRESS_TEST = 'true';
+      process.env.CYPRESS_TEST = "true";
       return config;
+    },
+  },
+
+  component: {
+    devServer: {
+      framework: "react",
+      bundler: "vite",
     },
   },
 });

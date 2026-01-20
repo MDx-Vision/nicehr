@@ -128,6 +128,7 @@ import executiveMetricsRoutes from "./routes/executiveMetrics";
 import changeManagementRoutes from "./routes/changeManagement";
 import esignRoutes from "./routes/esign";
 import crmRoutes from "./routes/crm";
+import legacyIntegrationRoutes from "./routes/legacyIntegration";
 
 // =============================================================================
 // QUERY PARAMETER VALIDATION HELPERS
@@ -254,6 +255,12 @@ export async function registerRoutes(
   if (FEATURES.CRM_MODULE) {
     app.use('/api', crmRoutes);
     console.log('[CRM] CRM module enabled');
+  }
+
+  // Legacy Integration Module - Feature Flagged
+  if (FEATURES.LEGACY_INTEGRATION) {
+    app.use('/api', legacyIntegrationRoutes);
+    console.log('[Legacy Integration] Legacy Integration module enabled');
   }
 
   // Seed RBAC roles and permissions at startup

@@ -17,6 +17,8 @@
 - [x] Fixed test card name mismatches (epics, requests, teams, cost-centers → total-records)
 - [x] Fixed API mock response format (`{ records: [...], total: N }`)
 - [x] Simplified sync tests to verify button visibility
+- [x] **Fixed 4 failing CRM tests** (47-crm-pipeline, 48-crm-activities)
+- [x] Fixed CRM dashboard data transformation (contacts, companies, activities)
 - [x] Committed and pushed all changes
 
 **Legacy Systems Integration - FULLY COMPLETE:**
@@ -33,6 +35,7 @@
 | **TOTAL** | **✅ COMPLETE** | **98** |
 
 **Key Commits:**
+- `2874d18` - Fix CRM dashboard data transformation for test compatibility
 - `14d28e1` - Fix Legacy Integration E2E tests - all 98 tests now passing
 - `a2b0efb` - Add E2E tests for Legacy Integration feature
 - `2f4f012` - Add Mappings button drill-down to all integration pages
@@ -107,10 +110,11 @@ CYPRESS_TEST=true npx cypress run
 
 | Metric | Value |
 |--------|-------|
-| Total Tests | ~2,233 |
+| Total Tests | ~2,284 |
 | Legacy Integration Tests | 98 ✅ |
+| CRM Tests | 158 ✅ |
 | All Tests Passing | Yes |
-| Last Commit | `14d28e1` |
+| Last Commit | `2874d18` |
 | Branch | main (pushed) |
 
 ---
@@ -119,7 +123,7 @@ CYPRESS_TEST=true npx cypress run
 
 | Date | Focus | Outcome |
 |------|-------|---------|
-| Jan 20, 2026 | Legacy Integration Tests | All 98 tests fixed and passing |
+| Jan 20, 2026 | CRM + Integration Tests | Fixed 4 CRM tests + 98 integration tests |
 | Jan 19, 2026 | Legacy Integration Build | Complete feature implementation |
 | Jan 19, 2026 | Drill-Down Impl | Phases 1-3 complete (55 items) |
 | Jan 19, 2026 | Documentation | 15+ docs created |

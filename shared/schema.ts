@@ -29,6 +29,12 @@ export const profileVisibilityEnum = pgEnum("profile_visibility", ["public", "me
 export const invitationStatusEnum = pgEnum("invitation_status", ["pending", "accepted", "revoked", "expired"]);
 export const accessStatusEnum = pgEnum("access_status", ["pending_invitation", "active", "suspended", "revoked"]);
 
+// Legacy Integration Enums
+export const integrationSourceTypeEnum = pgEnum("integration_source_type", ["servicenow", "asana", "sap", "jira", "bmc_helix", "freshservice", "monday", "smartsheet", "other"]);
+export const legacyIntegrationStatusEnum = pgEnum("legacy_integration_status", ["draft", "configured", "testing", "active", "paused", "inactive"]);
+export const legacySyncStatusEnum = pgEnum("legacy_sync_status", ["pending", "running", "completed", "failed", "partial"]);
+export const fieldMappingStatusEnum = pgEnum("field_mapping_status", ["pending", "mapped", "validated", "archived"]);
+
 // Session storage table for Replit Auth
 export const sessions = pgTable(
   "sessions",
@@ -8378,3 +8384,218 @@ export const crmActivities = pgTable("crm_activities", {
 export const insertCrmActivitySchema = createInsertSchema(crmActivities);
 export type CrmActivity = typeof crmActivities.$inferSelect;
 export type InsertCrmActivity = typeof crmActivities.$inferInsert;
+
+// =============================================================================
+// LEGACY SYSTEMS INTEGRATION TABLES
+// =============================================================================
+
+// Integration Sources - External system configurations
+export const integrationSources = pgTable("integration_sources", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  systemType: integrationSourceTypeEnum("system_type").notNull(),
+  status: legacyIntegrationStatusEnum("status").default("draft").notNull(),
+  // Connection details (credentials encrypted at application level)
+  apiUrl: varchar("api_url"),
+  apiKey: varchar("api_key"),
+  apiSecret: varchar("api_secret"),
+  credentials: jsonb("credentials"), // Additional encrypted credentials
+  configurationJson: jsonb("configuration_json"), // System-specific config
+  // Sync settings
+  syncFrequency: varchar("sync_frequency"), // manual, hourly, daily, weekly
+  lastSyncAt: timestamp("last_sync_at"),
+  lastSyncStatus: legacySyncStatusEnum("last_sync_status"),
+  // Scope
+  projectId: varchar("project_id").references(() => projects.id),
+  hospitalId: varchar("hospital_id").references(() => hospitals.id),
+  // Audit
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  deletedAt: timestamp("deleted_at"),
+}, (table) => [
+  index("idx_integration_sources_system_type").on(table.systemType),
+  index("idx_integration_sources_status").on(table.status),
+  index("idx_integration_sources_project_id").on(table.projectId),
+  index("idx_integration_sources_hospital_id").on(table.hospitalId),
+]);
+
+export const insertIntegrationSourceSchema = createInsertSchema(integrationSources);
+export type IntegrationSource = typeof integrationSources.$inferSelect;
+export type InsertIntegrationSource = typeof integrationSources.$inferInsert;
+
+// Field Mappings - Source field to NiceHR field mappings
+export const fieldMappings = pgTable("field_mappings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  integrationSourceId: varchar("integration_source_id").references(() => integrationSources.id).notNull(),
+  // Source system field info
+  sourceEntity: varchar("source_entity").notNull(), // e.g., "incident", "task", "purchase_order"
+  sourceField: varchar("source_field").notNull(),
+  sourceFieldType: varchar("source_field_type"), // string, number, date, boolean, array, object
+  // Target NiceHR field info
+  targetEntity: varchar("target_entity").notNull(), // e.g., "support_tickets", "projects"
+  targetField: varchar("target_field").notNull(),
+  targetFieldType: varchar("target_field_type"),
+  // Transformation
+  transformationType: varchar("transformation_type").default("direct"), // direct, lookup, enum_map, formula, custom
+  transformationConfig: jsonb("transformation_config"), // Transform rules { enumMap: {}, formula: "", lookupTable: "" }
+  // Validation
+  validationRules: jsonb("validation_rules"), // { required: true, pattern: "", min: 0, max: 100 }
+  defaultValue: text("default_value"),
+  // Status
+  status: fieldMappingStatusEnum("status").default("pending").notNull(),
+  isAutoMapped: boolean("is_auto_mapped").default(false),
+  // Sample data for preview
+  sampleSourceValue: text("sample_source_value"),
+  sampleTargetValue: text("sample_target_value"),
+  // Audit
+  createdBy: varchar("created_by").references(() => users.id),
+  verifiedBy: varchar("verified_by").references(() => users.id),
+  verifiedAt: timestamp("verified_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_field_mappings_source_id").on(table.integrationSourceId),
+  index("idx_field_mappings_status").on(table.status),
+  index("idx_field_mappings_source_entity").on(table.sourceEntity),
+  index("idx_field_mappings_target_entity").on(table.targetEntity),
+]);
+
+export const insertFieldMappingSchema = createInsertSchema(fieldMappings);
+export type FieldMapping = typeof fieldMappings.$inferSelect;
+export type InsertFieldMapping = typeof fieldMappings.$inferInsert;
+
+// Sync History - Track all sync operations
+export const syncHistory = pgTable("sync_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  integrationSourceId: varchar("integration_source_id").references(() => integrationSources.id).notNull(),
+  // Sync details
+  syncType: varchar("sync_type").notNull(), // manual, scheduled, triggered, csv_import
+  status: legacySyncStatusEnum("status").default("pending").notNull(),
+  // Metrics
+  recordsRequested: integer("records_requested"),
+  recordsProcessed: integer("records_processed").default(0),
+  recordsSucceeded: integer("records_succeeded").default(0),
+  recordsFailed: integer("records_failed").default(0),
+  recordsSkipped: integer("records_skipped").default(0),
+  recordsCreated: integer("records_created").default(0),
+  recordsUpdated: integer("records_updated").default(0),
+  // Timing
+  syncStartedAt: timestamp("sync_started_at").defaultNow(),
+  syncCompletedAt: timestamp("sync_completed_at"),
+  durationMs: integer("duration_ms"),
+  // Error tracking
+  errorSummary: text("error_summary"),
+  errorLog: jsonb("error_log"), // Array of { recordId, error, timestamp }
+  // Source info
+  sourceQuery: text("source_query"), // Query/filter used to fetch data
+  syncCriteria: jsonb("sync_criteria"), // Filters applied during sync
+  // Audit
+  initiatedBy: varchar("initiated_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_sync_history_source_id").on(table.integrationSourceId),
+  index("idx_sync_history_status").on(table.status),
+  index("idx_sync_history_sync_started_at").on(table.syncStartedAt),
+]);
+
+export const insertSyncHistorySchema = createInsertSchema(syncHistory);
+export type SyncHistory = typeof syncHistory.$inferSelect;
+export type InsertSyncHistory = typeof syncHistory.$inferInsert;
+
+// Integration Records - Individual synced records from legacy systems
+export const integrationRecords = pgTable("integration_records", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  integrationSourceId: varchar("integration_source_id").references(() => integrationSources.id).notNull(),
+  syncHistoryId: varchar("sync_history_id").references(() => syncHistory.id),
+  // External system reference
+  externalId: varchar("external_id").notNull(),
+  externalEntity: varchar("external_entity").notNull(), // incident, task, purchase_order, issue
+  externalUrl: varchar("external_url"), // Link back to source system
+  // Data
+  externalData: jsonb("external_data").notNull(), // Raw data from legacy system
+  mappedData: jsonb("mapped_data"), // Data after mapping transformations
+  // Link to NiceHR entity (flexible - supports multiple resource types)
+  nicehrEntity: varchar("nicehr_entity"), // support_tickets, projects, etc.
+  nicehrEntityId: varchar("nicehr_entity_id"),
+  // Sync status
+  syncStatus: legacySyncStatusEnum("sync_status").default("pending").notNull(),
+  syncErrors: jsonb("sync_errors"), // Array of error messages if sync failed
+  // Timestamps
+  externalCreatedAt: timestamp("external_created_at"),
+  externalUpdatedAt: timestamp("external_updated_at"),
+  lastSyncedAt: timestamp("last_synced_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_integration_records_source_id").on(table.integrationSourceId),
+  index("idx_integration_records_sync_history_id").on(table.syncHistoryId),
+  index("idx_integration_records_external_id").on(table.externalId),
+  index("idx_integration_records_external_entity").on(table.externalEntity),
+  index("idx_integration_records_sync_status").on(table.syncStatus),
+  index("idx_integration_records_nicehr_entity").on(table.nicehrEntity),
+]);
+
+export const insertIntegrationRecordSchema = createInsertSchema(integrationRecords);
+export type IntegrationRecord = typeof integrationRecords.$inferSelect;
+export type InsertIntegrationRecord = typeof integrationRecords.$inferInsert;
+
+// Relations for Legacy Integration tables
+export const integrationSourcesRelations = relations(integrationSources, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [integrationSources.projectId],
+    references: [projects.id],
+  }),
+  hospital: one(hospitals, {
+    fields: [integrationSources.hospitalId],
+    references: [hospitals.id],
+  }),
+  createdByUser: one(users, {
+    fields: [integrationSources.createdBy],
+    references: [users.id],
+  }),
+  fieldMappings: many(fieldMappings),
+  syncHistory: many(syncHistory),
+  records: many(integrationRecords),
+}));
+
+export const fieldMappingsRelations = relations(fieldMappings, ({ one }) => ({
+  integrationSource: one(integrationSources, {
+    fields: [fieldMappings.integrationSourceId],
+    references: [integrationSources.id],
+  }),
+  createdByUser: one(users, {
+    fields: [fieldMappings.createdBy],
+    references: [users.id],
+    relationName: "fieldMappingsCreatedBy",
+  }),
+  verifiedByUser: one(users, {
+    fields: [fieldMappings.verifiedBy],
+    references: [users.id],
+    relationName: "fieldMappingsVerifiedBy",
+  }),
+}));
+
+export const syncHistoryRelations = relations(syncHistory, ({ one, many }) => ({
+  integrationSource: one(integrationSources, {
+    fields: [syncHistory.integrationSourceId],
+    references: [integrationSources.id],
+  }),
+  initiator: one(users, {
+    fields: [syncHistory.initiatedBy],
+    references: [users.id],
+  }),
+  records: many(integrationRecords),
+}));
+
+export const integrationRecordsRelations = relations(integrationRecords, ({ one }) => ({
+  integrationSource: one(integrationSources, {
+    fields: [integrationRecords.integrationSourceId],
+    references: [integrationSources.id],
+  }),
+  syncHistoryRecord: one(syncHistory, {
+    fields: [integrationRecords.syncHistoryId],
+    references: [syncHistory.id],
+  }),
+}));
