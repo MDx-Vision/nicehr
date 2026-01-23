@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>THE NICEHR GROUP - Healthcare IT Consulting</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --black: #0a0a0a;
+      --gray-900: #171717;
+      --gray-700: #404040;
+      --gray-500: #737373;
+      --gray-300: #d4d4d4;
+      --gray-100: #f5f5f5;
+      --white: #ffffff;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--white);
+      color: var(--gray-900);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 32px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px 0;
+    }
+
+    .logo img {
+      height: 32px;
+      width: auto;
+    }
+
+    .header-link {
+      font-size: 0.8rem;
+      color: var(--gray-500);
+      text-decoration: none;
+    }
+
+    .hero {
+      padding: 80px 0 60px;
+      text-align: center;
+    }
+
+    .hero-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--gray-500);
+      margin-bottom: 16px;
+    }
+
+    .hero h1 {
+      font-size: 3rem;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      color: var(--black);
+      margin-bottom: 20px;
+    }
+
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--gray-700);
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--gray-300);
+    }
+
+    .section {
+      padding: 60px 0;
+    }
+
+    .section-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gray-500);
+      margin-bottom: 32px;
+    }
+
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 40px 48px;
+    }
+
+    .service h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--black);
+      margin-bottom: 8px;
+    }
+
+    .service p {
+      font-size: 0.9rem;
+      color: var(--gray-700);
+      line-height: 1.6;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 32px;
+      padding: 48px 0;
+      border-top: 1px solid var(--gray-300);
+      border-bottom: 1px solid var(--gray-300);
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 600;
+      color: var(--black);
+      letter-spacing: -0.02em;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--gray-500);
+      margin-top: 4px;
+    }
+
+    .platforms {
+      padding: 48px 0;
+      text-align: center;
+    }
+
+    .platforms-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gray-500);
+      margin-bottom: 24px;
+    }
+
+    .platform-list {
+      font-size: 0.95rem;
+      color: var(--gray-700);
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 64px;
+      padding: 48px 0;
+    }
+
+    .col h3 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--black);
+      margin-bottom: 20px;
+    }
+
+    .col ul {
+      list-style: none;
+    }
+
+    .col li {
+      padding: 8px 0;
+      font-size: 0.875rem;
+      color: var(--gray-700);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .col li::before {
+      content: "";
+      width: 4px;
+      height: 4px;
+      background: var(--gray-500);
+      border-radius: 50%;
+    }
+
+    .compliance {
+      display: flex;
+      gap: 24px;
+      padding: 32px 0;
+      justify-content: center;
+      border-top: 1px solid var(--gray-300);
+    }
+
+    .badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--gray-700);
+    }
+
+    .badge svg {
+      width: 20px;
+      height: 20px;
+      stroke: var(--gray-700);
+    }
+
+    .cta {
+      padding: 60px 0;
+      text-align: center;
+    }
+
+    .cta h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--black);
+      margin-bottom: 8px;
+    }
+
+    .cta p {
+      font-size: 0.95rem;
+      color: var(--gray-500);
+      margin-bottom: 24px;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 12px 28px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      text-decoration: none;
+      border-radius: 6px;
+      background: var(--black);
+      color: var(--white);
+      transition: opacity 0.2s;
+    }
+
+    .btn:hover {
+      opacity: 0.85;
+    }
+
+    .footer {
+      padding: 24px 0;
+      border-top: 1px solid var(--gray-300);
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: var(--gray-500);
+    }
+
+    .footer a {
+      color: var(--gray-500);
+      text-decoration: none;
+    }
+
+    @media print {
+      .btn { display: none; }
+    }
+
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 2.25rem; }
+      .services-grid { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .two-col { grid-template-columns: 1fr; gap: 40px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <header class="header">
+      <div class="logo">
+        <img src="https://thenicehrgroup.com/wp-content/uploads/2023/10/Logo.webp" alt="THE NICEHR GROUP">
+      </div>
+      <a href="https://thenicehrgroup.com" class="header-link">thenicehrgroup.com</a>
+    </header>
+
+    <section class="hero">
+      <div class="hero-label">Consultant-Owned. Consultant-Operated.</div>
+      <h1>Healthcare IT Consulting</h1>
+      <p>EHR implementation. Revenue cycle operations. Specialized staffing. Simplifying healthcare technology since 2012.</p>
+    </section>
+
+    <div class="divider"></div>
+
+    <section class="section">
+      <div class="section-label">What We Do</div>
+      <div class="services-grid">
+        <div class="service">
+          <h3>EHR Implementation</h3>
+          <p>End-to-end support for Epic, Cerner, MEDITECH, and other major platforms. From planning through go-live and optimization.</p>
+        </div>
+        <div class="service">
+          <h3>Revenue Cycle Management</h3>
+          <p>Optimize billing workflows, reduce denials, and improve collections with experienced RCM consultants.</p>
+        </div>
+        <div class="service">
+          <h3>Remote Support</h3>
+          <p>On-demand video consultations with HIPAA-compliant screen sharing for rapid issue resolution.</p>
+        </div>
+        <div class="service">
+          <h3>Specialized Staffing</h3>
+          <p>Access our network of vetted, certified consultants matched to your organization's specific needs.</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="stats-row">
+      <div class="stat">
+        <div class="stat-value">1,000+</div>
+        <div class="stat-label">Consultants</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">60+</div>
+        <div class="stat-label">Health Systems</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">12+</div>
+        <div class="stat-label">Years Experience</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">24/7</div>
+        <div class="stat-label">Support</div>
+      </div>
+    </div>
+
+    <section class="platforms">
+      <div class="platforms-label">EHR Platforms We Support</div>
+      <div class="platform-list">Epic &nbsp;·&nbsp; Oracle Cerner &nbsp;·&nbsp; MEDITECH &nbsp;·&nbsp; Athenahealth &nbsp;·&nbsp; eClinicalWorks &nbsp;·&nbsp; Allscripts</div>
+    </section>
+
+    <div class="divider"></div>
+
+    <div class="two-col">
+      <div class="col">
+        <h3>For Hospitals & Health Systems</h3>
+        <ul>
+          <li>Dedicated implementation consultants</li>
+          <li>On-demand video support</li>
+          <li>Real-time project visibility</li>
+          <li>Staff training programs</li>
+          <li>Go-live support coverage</li>
+          <li>Post-implementation optimization</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h3>Why NICEHR GROUP</h3>
+        <ul>
+          <li>Invitation-only consultant network</li>
+          <li>Deep EHR platform expertise</li>
+          <li>Proven implementation methodology</li>
+          <li>Flexible engagement models</li>
+          <li>Transparent communication</li>
+          <li>Long-term partnership approach</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="compliance">
+      <div class="badge">
+        <svg fill="none" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
+        SOC 2 Certified
+      </div>
+      <div class="badge">
+        <svg fill="none" stroke-width="1.5" viewBox="0 0 24 24"><path d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
+        HIPAA Compliant
+      </div>
+    </div>
+
+    <section class="cta">
+      <h2>Let's discuss your project</h2>
+      <p>Schedule a consultation to learn how we can support your organization.</p>
+      <a href="https://thenicehrgroup.com/contact" class="btn">Get in Touch</a>
+    </section>
+
+    <footer class="footer">
+      <div>National Independent Consultants of Electronic Healthcare Records, LLC</div>
+      <a href="https://thenicehrgroup.com">thenicehrgroup.com</a>
+    </footer>
+
+  </div>
+</body>
+</html>

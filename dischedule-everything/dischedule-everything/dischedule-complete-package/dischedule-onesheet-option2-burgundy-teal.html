@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DiSChedule - Modern Contrast</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        @page { size: letter; margin: 0; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --primary: #8B3A4C;
+            --primary-dark: #6B2D3C;
+            --accent: #2A9D8F;
+            --accent-light: #E8F4F2;
+            --text-dark: #2d2d2d;
+        }
+        
+        body {
+            font-family: 'Open Sans', sans-serif;
+            background: white;
+            color: #333;
+            width: 8.5in;
+            min-height: 11in;
+            margin: 0 auto;
+        }
+        
+        .page {
+            width: 8.5in;
+            min-height: 11in;
+            padding: 0.5in;
+            background: white;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.3in;
+            padding-bottom: 0.15in;
+            border-bottom: 3px solid var(--primary);
+        }
+        
+        .brand { font-family: 'Montserrat', sans-serif; }
+        .brand-name { font-size: 11px; font-weight: 600; color: var(--primary); letter-spacing: 0.5px; }
+        .brand-title { font-size: 9px; color: #666; }
+        .created-by { font-size: 9px; color: #888; text-align: right; }
+        .created-by strong { color: var(--primary); }
+        
+        .hero {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 0.35in;
+            border-radius: 12px;
+            margin-bottom: 0.25in;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 60%;
+            height: 200%;
+            background: rgba(42, 157, 143, 0.15);
+            transform: rotate(15deg);
+        }
+        
+        .hero h1 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            position: relative;
+        }
+        
+        .hero-subtitle { font-size: 16px; font-weight: 500; opacity: 0.95; position: relative; }
+        
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.25in;
+            margin-bottom: 0.25in;
+        }
+        
+        .problem-box, .solution-box { padding: 0.2in; border-radius: 10px; }
+        .problem-box { background: #f8f8f8; border-left: 4px solid var(--text-dark); }
+        .solution-box { background: var(--accent-light); border-left: 4px solid var(--accent); }
+        
+        .section-label {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        
+        .problem-box .section-label { color: var(--text-dark); }
+        .solution-box .section-label { color: var(--accent); }
+        .section-content { font-size: 11px; line-height: 1.5; color: #444; }
+        .section-content strong { color: var(--text-dark); }
+        
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.15in;
+            margin-bottom: 0.25in;
+        }
+        
+        .stat-card {
+            background: var(--primary-dark);
+            color: white;
+            padding: 0.15in;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--accent);
+        }
+        
+        .stat-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9; margin-top: 4px; }
+        
+        .features-section { margin-bottom: 0.25in; }
+        
+        .features-header {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: 0.12in;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .features-header::after {
+            content: '';
+            flex: 1;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent), transparent);
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.12in;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 0.1in;
+            background: #fafafa;
+            border-radius: 6px;
+        }
+        
+        .feature-icon {
+            width: 24px;
+            height: 24px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+        
+        .feature-text { font-size: 10px; line-height: 1.4; }
+        .feature-text strong { display: block; color: var(--primary-dark); margin-bottom: 2px; }
+        
+        .industries-section {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, #4a1f2a 100%);
+            color: white;
+            padding: 0.2in;
+            border-radius: 10px;
+            margin-bottom: 0.25in;
+        }
+        
+        .industries-section h3 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--accent);
+        }
+        
+        .industry-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+        
+        .industry-pill {
+            background: rgba(42, 157, 143, 0.2);
+            border: 1px solid rgba(42, 157, 143, 0.4);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+        
+        .industry-more { background: var(--accent); color: white; border: none; }
+        
+        .disc-section {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 0.2in;
+            align-items: center;
+            margin-bottom: 0.2in;
+            padding: 0.15in;
+            background: var(--accent-light);
+            border-radius: 10px;
+        }
+        
+        .disc-wheel {
+            width: 100px;
+            height: 100px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            border-radius: 50%;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        }
+        
+        .disc-quadrant {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 18px;
+            font-weight: 800;
+        }
+        
+        .disc-d { background: #D64933; }
+        .disc-i { background: #F4B942; color: #333; }
+        .disc-s { background: #4A9B5D; }
+        .disc-c { background: #3B82C4; }
+        
+        .disc-description { font-size: 11px; line-height: 1.6; }
+        .disc-description strong { font-family: 'Montserrat', sans-serif; color: var(--primary-dark); }
+        
+        .cta-section {
+            background: linear-gradient(135deg, var(--accent) 0%, #238B7E 100%);
+            color: white;
+            padding: 0.2in;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .cta-text h3 { font-family: 'Montserrat', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+        .cta-text p { font-size: 11px; opacity: 0.9; }
+        .cta-contact { text-align: right; font-size: 11px; }
+        .cta-contact strong { font-family: 'Montserrat', sans-serif; font-size: 12px; display: block; margin-bottom: 4px; }
+        
+        .footer {
+            margin-top: 0.15in;
+            padding-top: 0.1in;
+            border-top: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 8px;
+            color: #888;
+        }
+        
+        @media print { body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="header">
+            <div class="brand">
+                <div class="brand-name">DISCHEDULE</div>
+                <div class="brand-title">Workforce Optimization Platform</div>
+            </div>
+            <div class="created-by">
+                Created by <strong>Wendy Perdomo</strong><br>
+                Certified DiSC Professional
+            </div>
+        </div>
+        
+        <div class="hero">
+            <h1>DiSChedule</h1>
+            <p class="hero-subtitle">Build Better Teams. Deliver Better Results.</p>
+        </div>
+        
+        <div class="two-column">
+            <div class="problem-box">
+                <div class="section-label">The Challenge</div>
+                <div class="section-content">
+                    <strong>70% of project failures stem from team dynamics, not skill gaps.</strong> 
+                    Organizations build teams based on resumes and availability—ignoring how people actually work together. The result: communication breakdowns, personality clashes, and underperformance.
+                </div>
+            </div>
+            <div class="solution-box">
+                <div class="section-label">The Solution</div>
+                <div class="section-content">
+                    <strong>DiSChedule combines DiSC behavioral science with intelligent matching</strong> 
+                    to build teams with the right skills AND the right chemistry. Know how your people will perform together before you make assignments—and optimize for every situation.
+                </div>
+            </div>
+        </div>
+        
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-number">60%</div>
+                <div class="stat-label">Faster Team Assembly</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">45%</div>
+                <div class="stat-label">Reduced Conflict</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">35%</div>
+                <div class="stat-label">Better Outcomes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">25%</div>
+                <div class="stat-label">Higher Retention</div>
+            </div>
+        </div>
+        
+        <div class="features-section">
+            <div class="features-header">Platform Capabilities</div>
+            <div class="features-grid">
+                <div class="feature-item">
+                    <div class="feature-icon">◉</div>
+                    <div class="feature-text">
+                        <strong>DiSC-Powered Matching</strong>
+                        Pair skills with behavioral compatibility
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">◉</div>
+                    <div class="feature-text">
+                        <strong>Team Analysis</strong>
+                        Instant chemistry scoring with insights
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">◉</div>
+                    <div class="feature-text">
+                        <strong>What-If Simulation</strong>
+                        Test team changes before committing
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">◉</div>
+                    <div class="feature-text">
+                        <strong>Conflict Alerts</strong>
+                        Proactive flags for friction points
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">◉</div>
+                    <div class="feature-text">
+                        <strong>Skills & Certifications</strong>
+                        Complete competency tracking
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">◉</div>
+                    <div class="feature-text">
+                        <strong>ROI Analytics</strong>
+                        Prove the value of optimized teams
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="industries-section">
+            <h3>Built for Organizations Across Industries</h3>
+            <div class="industry-pills">
+                <span class="industry-pill">Healthcare</span>
+                <span class="industry-pill">Professional Services</span>
+                <span class="industry-pill">Manufacturing</span>
+                <span class="industry-pill">Education</span>
+                <span class="industry-pill">Financial Services</span>
+                <span class="industry-pill">Technology</span>
+                <span class="industry-pill industry-more">+ Many More</span>
+            </div>
+        </div>
+        
+        <div class="disc-section">
+            <div class="disc-wheel">
+                <div class="disc-quadrant disc-d">D</div>
+                <div class="disc-quadrant disc-i">i</div>
+                <div class="disc-quadrant disc-c">C</div>
+                <div class="disc-quadrant disc-s">S</div>
+            </div>
+            <div class="disc-description">
+                <strong>The Science Behind Better Teams</strong><br>
+                DiSC is the world's most trusted behavioral assessment, used by over 1 million people annually. DiSChedule operationalizes these insights at scale—ensuring every team has the right balance of Dominance, Influence, Steadiness, and Conscientiousness for optimal performance.
+            </div>
+        </div>
+        
+        <div class="cta-section">
+            <div class="cta-text">
+                <h3>Ready to Transform Your Teams?</h3>
+                <p>See how DiSChedule can optimize your workforce.</p>
+            </div>
+            <div class="cta-contact">
+                <strong>www.coachingwomenofcolor.com</strong>
+                <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f483919a908db4979b95979c9d9a93839b99919a9b92979b989b86da979b99">[email&#160;protected]</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <div>DiSC® is a registered trademark of John Wiley & Sons, Inc. DiSChedule 
