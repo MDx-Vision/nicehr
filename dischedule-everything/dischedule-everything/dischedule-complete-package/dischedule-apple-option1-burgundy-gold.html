@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DiSChedule - Elevated Heritage</title>
+    <style>
+        @page { size: letter; margin: 0; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --primary: #722F37;
+            --primary-dark: #5D1A2D;
+            --accent: #D4A537;
+            --text: #1d1d1f;
+            --text-secondary: #86868b;
+            --bg-subtle: #f5f5f7;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+            background: white;
+            color: var(--text);
+            width: 8.5in;
+            min-height: 11in;
+            margin: 0 auto;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        .page {
+            width: 8.5in;
+            min-height: 11in;
+            padding: 0.6in 0.65in;
+            background: white;
+        }
+        
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5in;
+        }
+        
+        .logo {
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            color: var(--primary);
+        }
+        
+        .created-by {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+        
+        .created-by strong {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        /* Hero */
+        .hero {
+            text-align: center;
+            margin-bottom: 0.55in;
+        }
+        
+        .hero h1 {
+            font-size: 44px;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+            line-height: 1.1;
+            color: var(--text);
+            margin-bottom: 0.15in;
+        }
+        
+        .hero h1 span {
+            color: var(--primary);
+        }
+        
+        .hero-sub {
+            font-size: 19px;
+            font-weight: 400;
+            color: var(--text-secondary);
+            letter-spacing: -0.01em;
+        }
+        
+        /* Problem */
+        .problem {
+            text-align: center;
+            margin-bottom: 0.5in;
+            padding: 0 0.4in;
+        }
+        
+        .problem p {
+            font-size: 15px;
+            font-weight: 400;
+            line-height: 1.5;
+            color: var(--text);
+        }
+        
+        .problem strong {
+            font-weight: 600;
+        }
+        
+        /* Differentiator */
+        .differentiator {
+            background: linear-gradient(180deg, var(--bg-subtle) 0%, #ffffff 100%);
+            border-radius: 18px;
+            padding: 0.35in;
+            margin-bottom: 0.4in;
+            text-align: center;
+        }
+        
+        .disc-badge {
+            display: inline-flex;
+            gap: 3px;
+            margin-bottom: 0.18in;
+        }
+        
+        .disc-dot {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: white;
+        }
+        
+        .disc-d { background: #D64933; }
+        .disc-i { background: #F4B942; color: #1d1d1f; }
+        .disc-s { background: #4A9B5D; }
+        .disc-c { background: #3B82C4; }
+        
+        .differentiator h2 {
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            color: var(--text);
+            margin-bottom: 0.1in;
+        }
+        
+        .differentiator p {
+            font-size: 14px;
+            font-weight: 400;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            max-width: 5.5in;
+            margin: 0 auto;
+        }
+        
+        /* Stats */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.2in;
+            margin-bottom: 0.45in;
+            text-align: center;
+        }
+        
+        .stat h3 {
+            font-size: 36px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+        
+        .stat p {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+        
+        /* Features */
+        .features {
+            margin-bottom: 0.4in;
+        }
+        
+        .features-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            text-align: center;
+            margin-bottom: 0.18in;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.15in;
+        }
+        
+        .feature {
+            text-align: center;
+            padding: 0.18in 0.1in;
+            background: var(--bg-subtle);
+            border-radius: 12px;
+        }
+        
+        .feature h4 {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+        
+        .feature p {
+            font-size: 10px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+        
+        /* Industries */
+        .industries {
+            background: var(--primary-dark);
+            border-radius: 14px;
+            padding: 0.25in 0.3in;
+            margin-bottom: 0.4in;
+            text-align: center;
+        }
+        
+        .industries h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 0.15in;
+        }
+        
+        .industry-tags {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .industry-tag {
+            font-size: 11px;
+            font-weight: 500;
+            color: white;
+            background: rgba(255,255,255,0.15);
+            padding: 6px 14px;
+            border-radius: 20px;
+        }
+        
+        .industry-tag.highlight {
+            background: var(--accent);
+            color: var(--primary-dark);
+            font-weight: 600;
+        }
+        
+        /* CTA */
+        .cta {
+            text-align: center;
+            margin-bottom: 0.3in;
+        }
+        
+        .cta h3 {
+            font-size: 22px;
+            font-weight: 600;
+            letter-spacing: -0.015em;
+            color: var(--text);
+            margin-bottom: 0.12in;
+        }
+        
+        .cta-links {
+            display: flex;
+            justify-content: center;
+            gap: 0.35in;
+        }
+        
+        .cta-link {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--primary);
+        }
+        
+        /* Footer */
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 0.15in;
+            border-top: 1px solid #e8e8ed;
+        }
+        
+        .footer-left, .footer-right {
+            font-size: 9px;
+            color: var(--text-secondary);
+        }
+        
+        @media print {
+            body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">DiSChedule</div>
+            <div class="created-by">Created by <strong>Wendy Perdomo</strong> | Certified DiSC Professional</div>
+        </div>
+        
+        <!-- Hero -->
+        <div class="hero">
+            <h1>Teams that <span>actually work.</span></h1>
+            <p class="hero-sub">Skills matter. Chemistry matters more.</p>
+        </div>
+        
+        <!-- Problem -->
+        <div class="problem">
+            <p>Organizations build teams by resumes and availability. <strong>But 70% of project failures come from team dynamics—not skill gaps.</strong> We fix that.</p>
+        </div>
+        
+        <!-- Differentiator -->
+        <div class="differentiator">
+            <div class="disc-badge">
+                <div class="disc-dot disc-d">D</div>
+                <div class="disc-dot disc-i">i</div>
+                <div class="disc-dot disc-s">S</div>
+                <div class="disc-dot disc-c">C</div>
+            </div>
+            <h2>Behavioral science meets scheduling.</h2>
+            <p>DiSChedule pairs skills with personality compatibility. Know how your people will perform together before you make assignments. Build teams that click from day one.</p>
+        </div>
+        
+        <!-- Stats -->
+        <div class="stats">
+            <div class="stat">
+                <h3>60%</h3>
+                <p>Faster Assembly</p>
+            </div>
+            <div class="stat">
+                <h3>45%</h3>
+                <p>Less Conflict</p>
+            </div>
+            <div class="stat">
+                <h3>35%</h3>
+                <p>Better Outcomes</p>
+            </div>
+            <div class="stat">
+                <h3>25%</h3>
+                <p>Higher Retention</p>
+            </div>
+        </div>
+        
+        <!-- Features -->
+        <div class="features">
+            <div class="features-label">Platform</div>
+            <div class="features-grid">
+                <div class="feature">
+                    <h4>Smart Matching</h4>
+                    <p>Skills + behavioral compatibility</p>
+                </div>
+                <div class="feature">
+                    <h4>Team Analysis</h4>
+                    <p>Instant chemistry scoring</p>
+                </div>
+                <div class="feature">
+                    <h4>What-If Simulation</h4>
+                    <p>Test before you commit</p>
+                </div>
+                <div class="feature">
+                    <h4>Conflict Alerts</h4>
+                    <p>Friction flags, proactively</p>
+                </div>
+                <div class="feature">
+                    <h4>Skill Tracking</h4>
+                    <p>Certifications + competencies</p>
+                </div>
+                <div class="feature">
+                    <h4>ROI Analytics</h4>
+                    <p>Prove the value</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Industries -->
+        <div class="industries">
+            <h3>Built for every industry.</h3>
+            <div class="industry-tags">
+                <span class="industry-tag">Healthcare</span>
+                <span class="industry-tag">Professional Services</span>
+                <span class="industry-tag">Manufacturing</span>
+                <span class="industry-tag">Education</span>
+                <span class="industry-tag">Financial Services</span>
+                <span class="industry-tag">Technology</span>
+                <span class="industry-tag highlight">+ More</span>
+            </div>
+        </div>
+        
+        <!-- CTA -->
+        <div class="cta">
+            <h3>Ready to build better teams?</h3>
+            <div class="cta-links">
+                <span class="cta-link">www.coachingwomenofcolor.com</span>
+                <span class="cta-link"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="a9deccc7cdd0e9cac6c8cac1c0c7cedec6c4ccc7c6cfcac6c5c6db87cac6c4">[email&#160;protected]</a></span>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <div class="footer-left">DiSC® is a registered trademark of Jo
