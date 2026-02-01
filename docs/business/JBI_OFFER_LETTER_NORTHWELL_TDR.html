@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JBI Software Employment Offer Letter - Northwell TDR</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&family=Inter:wght@400;500;600&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Crimson Text', Georgia, serif;
+            font-size: 12pt;
+            line-height: 1.6;
+            color: #1a1a1a;
+            background: #fff;
+            max-width: 8.5in;
+            margin: 0 auto;
+            padding: 0.75in 1in;
+        }
+
+        /* Letterhead */
+        .letterhead {
+            text-align: center;
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .letterhead img {
+            max-height: 120px;
+            margin-bottom: 10px;
+        }
+
+        .company-legal {
+            font-family: 'Inter', sans-serif;
+            font-size: 9pt;
+            color: #666;
+            letter-spacing: 1px;
+        }
+
+        /* Date and Address */
+        .date-block {
+            text-align: right;
+            margin-bottom: 30px;
+            font-size: 11pt;
+        }
+
+        .recipient {
+            margin-bottom: 25px;
+        }
+
+        /* Greeting */
+        .greeting {
+            margin-bottom: 20px;
+        }
+
+        /* Section Headers */
+        h2 {
+            font-family: 'Inter', sans-serif;
+            font-size: 11pt;
+            font-weight: 600;
+            color: #2c3e50;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 30px 0 15px 0;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        /* Paragraphs */
+        p {
+            margin-bottom: 12px;
+            text-align: justify;
+        }
+
+        /* Field placeholders - for items that change per consultant */
+        .field {
+            font-family: 'Inter', sans-serif;
+            font-weight: 500;
+            color: #2c3e50;
+            background: #f5f8fb;
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-size: 10pt;
+        }
+
+        /* Fixed values - pre-filled from contract */
+        .fixed {
+            font-weight: 500;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 11pt;
+        }
+
+        table td {
+            padding: 8px 12px;
+            vertical-align: top;
+        }
+
+        table td:first-child {
+            width: 40%;
+            color: #555;
+        }
+
+        table td:last-child {
+            font-weight: 500;
+        }
+
+        .bordered-table {
+            border: 1px solid #ddd;
+        }
+
+        .bordered-table td {
+            border-bottom: 1px solid #eee;
+        }
+
+        .bordered-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Lists */
+        ul, ol {
+            margin: 10px 0 15px 25px;
+        }
+
+        li {
+            margin-bottom: 6px;
+        }
+
+        /* Signature Block */
+        .signature-section {
+            margin-top: 50px;
+            page-break-inside: avoid;
+        }
+
+        .signature-block {
+            margin-top: 40px;
+        }
+
+        .signature-line {
+            border-bottom: 1px solid #333;
+            width: 250px;
+            margin-bottom: 5px;
+            height: 30px;
+        }
+
+        .signature-label {
+            font-size: 10pt;
+            color: #555;
+        }
+
+        .signature-row {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 60px;
+        }
+
+        .signature-col {
+            width: 45%;
+        }
+
+        /* Acceptance Section */
+        .acceptance {
+            margin-top: 60px;
+            padding-top: 30px;
+            border-top: 2px solid #2c3e50;
+            page-break-inside: avoid;
+        }
+
+        .acceptance h2 {
+            text-align: center;
+            border-bottom: none;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: flex-start;
+            margin: 10px 0;
+            font-size: 11pt;
+        }
+
+        .checkbox {
+            width: 14px;
+            height: 14px;
+            border: 1px solid #333;
+            margin-right: 10px;
+            margin-top: 3px;
+            flex-shrink: 0;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            font-size: 9pt;
+            color: #888;
+            text-align: center;
+        }
+
+        /* Print Styles */
+        @media print {
+            body {
+                padding: 0;
+            }
+
+            .page-break {
+                page-break-before: always;
+            }
+
+            h2 {
+                page-break-after: avoid;
+            }
+
+            .signature-section, .acceptance {
+                page-break-inside: avoid;
+            }
+        }
+
+        /* Emphasis */
+        strong {
+            font-weight: 600;
+        }
+
+        .highlight {
+            background: #fff3cd;
+            padding: 10px 15px;
+            border-left: 3px solid #ffc107;
+            margin: 15px 0;
+            font-size: 11pt;
+        }
+
+        /* Role Description Box */
+        .role-description {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            padding: 15px;
+            margin: 15px 0;
+            font-size: 11pt;
+        }
+
+        .role-description h3 {
+            font-family: 'Inter', sans-serif;
+            font-size: 10pt;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Letterhead with Logo -->
+    <div class="letterhead">
+        <img src="jbi-logo.png" alt="JBI Software, Inc.">
+    </div>
+
+    <!-- Date -->
+    <div class="date-block">
+        <span class="field">DATE</span>
+    </div>
+
+    <!-- Recipient -->
+    <div class="recipient">
+        <span class="field">CONSULTANT NAME</span><br>
+        <span class="field">ADDRESS LINE 1</span><br>
+        <span class="field">CITY, STATE ZIP</span>
+    </div>
+
+    <!-- Greeting -->
+    <div class="greeting">
+        Dear <span class="field">CONSULTANT NAME</span>,
+    </div>
+
+    <!-- Opening -->
+    <p>
+        I am pleased to offer you a position with JBI Software, Inc. ("Company") as
+        <span class="fixed">Epic TDR Analyst</span> supporting our <span class="fixed">Northwell Health</span>
+        engagement. This position will report to <span class="fixed">TJ Giordano</span>.
+    </p>
+
+    <!-- Engagement Details -->
+    <h2>Engagement Details</h2>
+    <table>
+        <tr>
+            <td>Client</td>
+            <td><span class="fixed">Northwell Health</span></td>
+        </tr>
+        <tr>
+            <td>Project</td>
+            <td><span class="fixed">Epic TDR (Technical Data Review)</span></td>
+        </tr>
+        <tr>
+            <td>Location</td>
+            <td><span class="fixed">New York, NY</span></td>
+        </tr>
+        <tr>
+            <td>Start Date</td>
+            <td><span class="fixed">February 9, 2026</span></td>
+        </tr>
+        <tr>
+            <td>Anticipated End Date</td>
+            <td><span class="fixed">July 31, 2026</span></td>
+        </tr>
+        <tr>
+            <td>Module/Role</td>
+            <td><span class="fixed">Epic TDR Analyst</span></td>
+        </tr>
+    </table>
+
+    <!-- Role Description -->
+    <div class="role-description">
+        <h3>Role Description</h3>
+        <p style="margin-bottom: 0;">
+            As an Epic TDR (Technical Data Review) Analyst, you will support Northwell by performing
+            detailed validation, testing, and troubleshooting of data conversions, interfaces, and
+            workflow configurations across Epic modules. Responsibilities include reviewing extracted
+            data for accuracy, reconciling source system information, validating migrated records in
+            Epic, documenting defects, partnering with build teams to resolve issues, supporting
+            cutover readiness, and ensuring data integrity throughout the implementation lifecycle.
+        </p>
+    </div>
+
+    <!-- Compensation -->
+    <h2>Compensation</h2>
+    <p>You will be classified as an hourly, non-exempt W-2 employee.</p>
+
+    <table class="bordered-table">
+        <tr>
+            <td>Hourly Rate</td>
+            <td><span class="fixed">$45.00</span> per hour</td>
+        </tr>
+        <tr>
+            <td>Overtime Rate</td>
+            <td><span class="fixed">$67.50</span> per hour (1.5× base rate)</td>
+        </tr>
+        <tr>
+            <td>Per Diem</td>
+            <td><span class="fixed">$50.00</span> per day worked</td>
+        </tr>
+    </table>
+
+    <p>
+        <strong>Overtime:</strong> For all hours worked in excess of forty (40) hours per week,
+        you will be compensated at one and one-half times (1.5×) your base hourly rate.
+        All overtime must be pre-approved by your supervisor.
+    </p>
+
+    <p>
+        <strong>Per Diem:</strong> You will receive a daily per diem of $50.00 for each day worked
+        while onsite to help cover meals, local transportation, and incidental expenses. This project
+        does not include expense reimbursement for other charges.
+    </p>
+
+    <p>
+        <strong>Payroll:</strong> You will be paid bi-weekly in accordance with Company payroll
+        procedures, less applicable withholdings and deductions.
+    </p>
+
+    <!-- Contingencies -->
+    <h2>Contingencies</h2>
+    <p>This offer is contingent upon successful completion of:</p>
+    <ol>
+        <li>Background check and reference verification</li>
+        <li>Drug screening (if required by Client)</li>
+        <li>Occupational health requirements (immunizations, TB test, etc.)</li>
+        <li>Client credentialing approval</li>
+        <li>Execution of this offer letter</li>
+    </ol>
+
+    <!-- At-Will Employment -->
+    <h2>At-Will Employment</h2>
+    <p>
+        Your employment with the Company is for no specified period and constitutes at-will
+        employment. As a result, you are free to resign at any time, for any reason or for no
+        reason. Similarly, the Company is free to conclude its employment relationship with you
+        at any time, with or without cause, and with or without notice.
+    </p>
+
+    <!-- Early Termination -->
+    <h2>Early Termination</h2>
+    <p>If your employment ends prior to the anticipated end date:</p>
+
+    <p>
+        <strong>Voluntary Resignation:</strong> If you resign without providing fourteen (14) days
+        written notice, you forfeit your final per diem payment and your hourly rate for the
+        final pay period will be adjusted to training rate.
+    </p>
+
+    <p>
+        <strong>Performance-Related Termination:</strong> If you are terminated for performance
+        issues or misrepresentation of competencies, your hourly rate for completed work will
+        be adjusted to training rate.
+    </p>
+
+    <p>
+        <strong>Client Cancellation:</strong> If the engagement ends due to client cancellation
+        or project reduction, you will be paid for all hours worked through your termination
+        date at your full hourly rate.
+    </p>
+
+    <!-- Non-Solicitation -->
+    <h2>Non-Solicitation</h2>
+    <p>
+        During your employment and for twelve (12) months following termination, you agree
+        that you shall not:
+    </p>
+    <ol type="a">
+        <li>Directly recruit or solicit any current employee of the Company;</li>
+        <li>Solicit or encourage any Client of the Company to terminate or diminish its
+            relationship with the Company;</li>
+        <li>Solicit business from any Client with which you had direct contact during your
+            employment for the benefit of a competing business.</li>
+    </ol>
+    <p>
+        <em>This is a non-solicitation agreement, not a non-compete. You remain free to work
+        in the healthcare IT industry and accept positions with other companies.</em>
+    </p>
+
+    <!-- Confidentiality -->
+    <h2>Confidentiality</h2>
+    <p>
+        During your employment, you will have access to Confidential Information of the Company,
+        its Clients, and Affiliates. You agree not to use or disclose any Confidential Information
+        except as required for proper performance of your duties. This includes, but is not
+        limited to: client information and systems, patient health information (PHI), business
+        strategies, pricing and financial information, and proprietary methodologies. This
+        obligation continues after termination.
+    </p>
+
+    <!-- Work Product -->
+    <h2>Work Product</h2>
+    <p>
+        All work product, documentation, training materials, and deliverables created during
+        your engagement are the sole property of the Client and Company. You retain no rights
+        to work created during the engagement and agree not to retain copies after the
+        engagement ends.
+    </p>
+
+    <!-- Compliance -->
+    <h2>Compliance Requirements</h2>
+    <p>
+        You agree to comply with all Client requirements, policies, and procedures, including:
+    </p>
+    <ul>
+        <li>HIPAA compliance and training</li>
+        <li>Client credentialing and badge protocols</li>
+        <li>IT security and acceptable use policies</li>
+        <li>Professional conduct and dress code standards</li>
+    </ul>
+    <p>
+        Failure to comply with these requirements is grounds for immediate termination.
+    </p>
+
+    <!-- Immigration -->
+    <h2>Employment Eligibility</h2>
+    <p>
+        For purposes of federal immigration law, you must provide documentary evidence of your
+        identity and eligibility for employment in the United States within three (3) business
+        days of your start date.
+    </p>
+
+    <!-- Governing Law -->
+    <h2>Governing Law</h2>
+    <p>
+        This agreement is governed by the laws of the State of <span class="fixed">New York</span>.
+        Any dispute arising from this agreement shall be resolved through binding arbitration
+        in <span class="fixed">New York, NY</span>.
+    </p>
+
+    <!-- Acceptance Deadline -->
+    <div class="highlight">
+        <strong>This offer expires at midnight Eastern Time on <span class="field">DEADLINE DATE</span>.</strong>
+        To accept, please sign and return this letter by the deadline.
+    </div>
+
+    <p>
+        We are excited to welcome you to the team and look forward to a successful engagement.
+    </p>
+
+    <p>Sincerely,</p>
+
+    <!-- Company Signature -->
+    <div class="signature-block">
+        <div class="signature-line"></div>
+        <div class="signature-label"><span class="field">AUTHORIZED SIGNATORY</span></div>
+        <div class="signature-label"><span class="field">TITLE</span></div>
+        <div class="signature-label">JBI Software, Inc.</div>
+        <div style="margin-top: 10px;">
+            <span class="signature-label">Date: </span>
+            <span style="border-bottom: 1px solid #333; display: inline-block; width: 150px;">&nbsp;</span>
+        </div>
+    </div>
+
+    <!-- Acceptance Section -->
+    <div class="acceptance">
+        <h2>Acceptance of Offer</h2>
+
+        <p>
+            I have read and understand all terms and conditions of this offer letter. I accept
+            this offer of employment in accordance with the terms specified above.
+        </p>
+
+        <p style="margin-top: 20px;"><strong>I confirm that:</strong></p>
+
+        <div class="checkbox-item">
+            <div class="checkbox"></div>
+            <span>I understand my compensation structure including overtime provisions</span>
+        </div>
+        <div class="checkbox-item">
+            <div class="checkbox"></div>
+            <span>I understand the early termination provisions</span>
+        </div>
+        <div class="checkbox-item">
+            <div class="checkbox"></div>
+            <span>I agree to the non-solicitation provisions</span>
+        </div>
+        <div class="checkbox-item">
+            <div class="checkbox"></div>
+            <span>I agree to the confidentiality obligations</span>
+        </div>
+        <div class="checkbox-item">
+            <div class="checkbox"></div>
+            <span>I have not entered into any agreement that conflicts with this letter</span>
+        </div>
+
+        <div class="signature-row">
+            <div class="signature-col">
+                <div class="signature-line"></div>
+                <div class="signature-label">Employee Signature</div>
+            </div>
+            <div class="signature-col">
+                <div class="signature-line"></div>
+                <div class="signature-label">Date</div>
+            </div>
+        </div>
+
+        <div style="margin-top: 30px;">
+            <div class="signature-line"></div>
+            <div class="signature-label">Printed Name</div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        JBI Software, Inc. &bull; Northwell Health Epic TDR &bull; Confidential
+    </div>
+
+</body>
+</html>
