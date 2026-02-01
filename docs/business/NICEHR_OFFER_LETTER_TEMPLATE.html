@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NICEHR Offer Letter Template</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+            background: white;
+            padding: 60px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .letterhead {
+            text-align: center;
+            border-bottom: 3px solid #1a365d;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .letterhead h1 {
+            color: #1a365d;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        .letterhead p {
+            color: #666;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .date-section {
+            text-align: right;
+            margin-bottom: 30px;
+            color: #666;
+        }
+
+        .greeting {
+            margin-bottom: 20px;
+        }
+
+        .intro {
+            margin-bottom: 30px;
+            text-align: justify;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-header {
+            background: #1a365d;
+            color: white;
+            padding: 10px 15px;
+            font-weight: 600;
+            font-size: 14px;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+        }
+
+        .section-content {
+            padding: 0 15px;
+        }
+
+        .field {
+            background: #fff3cd;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-family: monospace;
+            color: #856404;
+            border: 1px dashed #856404;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        th, td {
+            padding: 10px 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #1a365d;
+        }
+
+        .highlight-box {
+            background: #e8f4fd;
+            border-left: 4px solid #1a365d;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: flex-start;
+            margin: 10px 0;
+            gap: 10px;
+        }
+
+        .checkbox {
+            width: 18px;
+            height: 18px;
+            border: 2px solid #1a365d;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .tier-option {
+            border: 2px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+
+        .tier-option.selected {
+            border-color: #1a365d;
+            background: #f8f9fa;
+        }
+
+        .tier-header {
+            font-weight: 700;
+            color: #1a365d;
+            margin-bottom: 8px;
+        }
+
+        .tier-rate {
+            font-size: 24px;
+            color: #28a745;
+            font-weight: 700;
+        }
+
+        .signature-section {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #1a365d;
+        }
+
+        .signature-line {
+            border-bottom: 1px solid #333;
+            width: 300px;
+            margin: 30px 0 5px 0;
+            height: 30px;
+        }
+
+        .signature-label {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        ul {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+
+        li {
+            margin: 8px 0;
+        }
+
+        .company-use {
+            background: #f8f9fa;
+            padding: 20px;
+            margin-top: 40px;
+            border: 1px solid #ddd;
+        }
+
+        .company-use h3 {
+            color: #666;
+            font-size: 12px;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .comparison-table th {
+            background: #1a365d;
+            color: white;
+        }
+
+        .check {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .cross {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .container {
+                box-shadow: none;
+                padding: 40px;
+            }
+            .section-header {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+
+        .version-info {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            color: #999;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- LETTERHEAD -->
+        <div class="letterhead">
+            <h1>THE NICEHR GROUP, LLC</h1>
+            <p>Healthcare IT Consulting &amp; Implementation Services</p>
+        </div>
+
+        <!-- DATE -->
+        <div class="date-section">
+            <span class="field">[DATE]</span>
+        </div>
+
+        <!-- GREETING -->
+        <div class="greeting">
+            <p>Dear <span class="field">[CONSULTANT NAME]</span>,</p>
+        </div>
+
+        <!-- INTRO -->
+        <div class="intro">
+            <p>I am pleased to offer you a position with <strong>THE NICEHR GROUP, LLC</strong> ("Company") as
+            <span class="field">[POSITION TITLE]</span> for our <span class="field">[CLIENT NAME]</span>
+            <span class="field">[PROJECT NAME]</span> Project. This position will report to
+            <span class="field">[MANAGER NAME]</span>.</p>
+        </div>
+
+        <!-- ENGAGEMENT DETAILS -->
+        <div class="section">
+            <div class="section-header">ENGAGEMENT DETAILS</div>
+            <div class="section-content">
+                <table>
+                    <tr>
+                        <th width="35%">Project</th>
+                        <td><span class="field">[CLIENT NAME]</span> - <span class="field">[PROJECT NAME]</span></td>
+                    </tr>
+                    <tr>
+                        <th>Location</th>
+                        <td><span class="field">[CITY, STATE]</span></td>
+                    </tr>
+                    <tr>
+                        <th>Travel Date</th>
+                        <td><span class="field">[TRAVEL DATE]</span></td>
+                    </tr>
+                    <tr>
+                        <th>Orientation Date</th>
+                        <td><span class="field">[ORIENTATION DATE]</span></td>
+                    </tr>
+                    <tr>
+                        <th>Start Date</th>
+                        <td><span class="field">[START DATE]</span></td>
+                    </tr>
+                    <tr>
+                        <th>Anticipated End Date</th>
+                        <td><span class="field">[END DATE]</span></td>
+                    </tr>
+                    <tr>
+                        <th>Module/Role</th>
+                        <td><span class="field">[EPIC MODULE / ROLE]</span></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- COMPENSATION -->
+        <div class="section">
+            <div class="section-header">COMPENSATION</div>
+            <div class="section-content">
+                <p>You will be classified as an <strong>hourly, non-exempt W-2 employee</strong>.</p>
+
+                <table>
+                    <tr>
+                        <th>Rate Type</th>
+                        <th>Hourly Rate</th>
+                        <th>Description</th>
+                    </tr>
+                    <tr>
+                        <td>Orientation/Training</td>
+                        <td><strong>$<span class="field">[XX.00]</span>/hour</strong></td>
+                        <td>Mandatory training and orientation sessions</td>
+                    </tr>
+                    <tr>
+                        <td>Support/Billable</td>
+                        <td><strong>$<span class="field">[XX.00]</span>/hour</strong></td>
+                        <td>All client support hours</td>
+                    </tr>
+                    <tr style="background: #d4edda;">
+                        <td><strong>Overtime (>40 hrs/week)</strong></td>
+                        <td><strong>$<span class="field">[XX.00]</span>/hour</strong></td>
+                        <td><strong>1.5x Support Rate - TIME AND A HALF</strong></td>
+                    </tr>
+                </table>
+
+                <div class="highlight-box">
+                    <strong>OVERTIME POLICY:</strong> For any support billable hours worked over 40 hours per week,
+                    your overtime rate will be <strong>1.5x your support rate</strong>. All overtime hours must be
+                    pre-approved by <span class="field">[MANAGER NAME]</span>. Unapproved overtime may not be compensated.
+                </div>
+
+                <p><strong>PAYROLL:</strong> You will be paid <span class="field">[bi-weekly/weekly]</span> in accordance
+                with Company payroll procedures, less applicable deductions.</p>
+            </div>
+        </div>
+
+        <!-- PER DIEM -->
+        <div class="section">
+            <div class="section-header">PER DIEM &amp; EXPENSES</div>
+            <div class="section-content">
+                <p>Your per diem tier is determined by your distance from the project location:</p>
+
+                <div class="tier-option">
+                    <div class="checkbox-item">
+                        <div class="checkbox"></div>
+                        <div>
+                            <div class="tier-header">TIER 1 - Remote (&gt;50 miles from project site)</div>
+                            <div class="tier-rate">$240.00/day</div>
+                            <ul>
+                                <li>Eligible on all days engaged including travel in/out and orientation</li>
+                                <li><strong>Consultant books and pays for own accommodations</strong></li>
+                                <li>No expense receipts required for per diem</li>
+                                <li>Travel day per diem requires arrival before 5:00 PM local time</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tier-option">
+                    <div class="checkbox-item">
+                        <div class="checkbox"></div>
+                        <div>
+                            <div class="tier-header">TIER 2 - Regional (11-50 miles from project site)</div>
+                            <div class="tier-rate">$175.00/day</div>
+                            <ul>
+                                <li><strong>Per diem eligible only on days with 3+ hours worked</strong></li>
+                                <li>Per diem eligible on travel-out day (within 1 day of offboarding)</li>
+                                <li>No expense receipts required for per diem</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tier-option">
+                    <div class="checkbox-item">
+                        <div class="checkbox"></div>
+                        <div>
+                            <div class="tier-header">TIER 3 - Local (&lt;11 miles from project site)</div>
+                            <div class="tier-rate">$75.00/day</div>
+                            <ul>
+                                <li>Local commute compensation</li>
+                                <li>No accommodation reimbursement</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="warning-box">
+                    <strong>IMPORTANT:</strong> The tier designated in this offer letter will be used for the duration
+                    of the project. If you have questions about your tier assignment, contact
+                    <span class="field">[EMAIL ADDRESS]</span>.
+                </div>
+            </div>
+        </div>
+
+        <!-- MANDATORY ONBOARDING -->
+        <div class="section">
+            <div class="section-header">MANDATORY ONBOARDING</div>
+            <div class="section-content">
+                <p>There will be a <strong>MANDATORY</strong> onboarding session on <span class="field">[DATE]</span>
+                from <span class="field">[START TIME]</span> to <span class="field">[END TIME]</span>.</p>
+
+                <div class="warning-box">
+                    <strong>REQUIREMENTS:</strong>
+                    <ul>
+                        <li>You must provide valid government-issued photo identification at check-in</li>
+                        <li>Your travel MUST be scheduled to arrive before <span class="field">[TIME]</span> local time</li>
+                        <li>Failure to attend onboarding may result in release from the project</li>
+                        <li>Late arrival will disqualify you from travel day per diem</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTINGENCIES -->
+        <div class="section">
+            <div class="section-header">CONTINGENCIES</div>
+            <div class="section-content">
+                <p>This offer is contingent upon successful completion of:</p>
+                <ol>
+                    <li>Background/Reference Check</li>
+                    <li>Drug Screening (if required by Client)</li>
+                    <li>Occupational Health Requirements (immunizations, TB test, etc.)</li>
+                    <li>Client Approval</li>
+                    <li>Agreement to terms and conditions in this letter</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- AT-WILL EMPLOYMENT -->
+        <div class="section">
+            <div class="section-header">AT-WILL EMPLOYMENT</div>
+            <div class="section-content">
+                <p>Your employment with the Company is for no specified period and constitutes <strong>at-will employment</strong>.
+                As a result, you are free to resign at any time, for any reason or for no reason. Similarly, the Company is free
+                to terminate its employment relationship with you at any time, with or without cause, and with or without notice.</p>
+            </div>
+        </div>
+
+        <!-- EARLY TERMINATION -->
+        <div class="section">
+            <div class="section-header">EARLY TERMINATION</div>
+            <div class="section-content">
+                <p>If early employment termination from the project occurs:</p>
+
+                <table>
+                    <tr>
+                        <th>Termination Type</th>
+                        <th>Consequences</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Your Voluntary Termination</strong><br>(without 14 days written notice)</td>
+                        <td>
+                            <ul>
+                                <li>Forfeit final per diem payment</li>
+                                <li>Responsible for all travel costs to return home</li>
+                                <li>Hourly rate reduced to orientation rate for completed work</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Poor Performance or Misrepresentation</strong></td>
+                        <td>
+                            <ul>
+                                <li>Responsible for all travel costs to return home</li>
+                                <li>Hourly rate reduced to orientation rate</li>
+                                <li>May be ineligible for future Company engagements</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Client Cancellation</strong></td>
+                        <td>
+                            <ul>
+                                <li>Paid for all hours worked through termination date</li>
+                                <li>Per diem paid through last day worked plus travel-out day</li>
+                            </ul>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- NON-SOLICITATION -->
+        <div class="section">
+            <div class="section-header">NON-SOLICITATION</div>
+            <div class="section-content">
+                <p>As a condition of employment, you agree that during your employment and for <strong>twelve (12) months</strong>
+                following termination, you shall not:</p>
+
+                <ol type="a">
+                    <li>Directly recruit or solicit for employment any current employee of the Company or seek to persuade
+                    any employee to discontinue employment with the Company;</li>
+                    <li>Solicit or encourage any Client of the Company to terminate or diminish its relationship with the Company;</li>
+                    <li>Solicit business from any Client with which you had direct contact during your employment with the Company
+                    for the benefit of a directly competitive business.</li>
+                </ol>
+
+                <div class="highlight-box">
+                    <strong>NOTE:</strong> This is a <strong>non-solicitation agreement, NOT a non-compete</strong>. You remain
+                    free to work in the healthcare IT industry and accept positions with other companies, provided you do not
+                    directly solicit Company employees or clients.
+                </div>
+            </div>
+        </div>
+
+        <!-- CONFIDENTIALITY -->
+        <div class="section">
+            <div class="section-header">CONFIDENTIALITY</div>
+            <div class="section-content">
+                <p>During your employment, you will have access to Confidential Information of the Company, its Clients, and Affiliates.
+                You agree that you will not use or disclose to any person any Confidential Information obtained during your employment,
+                except as required for proper performance of your duties.</p>
+
+                <p><strong>Confidential Information includes, but is not limited to:</strong></p>
+                <ul>
+                    <li>Client information, systems, and data</li>
+                    <li>Patient health information (PHI)</li>
+                    <li>Company business strategies and client relationships</li>
+                    <li>Pricing, rates, and financial information</li>
+                    <li>Proprietary processes and methodologies</li>
+                </ul>
+
+                <p><em>This confidentiality obligation continues after termination of employment.</em></p>
+            </div>
+        </div>
+
+        <!-- WORK PRODUCT -->
+        <div class="section">
+            <div class="section-header">WORK PRODUCT &amp; INTELLECTUAL PROPERTY</div>
+            <div class="section-content">
+                <p>All work product, documentation, training materials, workflows, and deliverables created during your engagement
+                are the sole property of the Client and Company. You retain no rights to work created during the engagement.</p>
+
+                <p><strong>You represent that you will not:</strong></p>
+                <ul>
+                    <li>Use proprietary information from previous employers</li>
+                    <li>Incorporate third-party intellectual property without written permission</li>
+                    <li>Retain copies of Client or Company materials after engagement ends</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- FLOW-DOWN -->
+        <div class="section">
+            <div class="section-header">FLOW-DOWN REQUIREMENTS</div>
+            <div class="section-content">
+                <p>You agree to comply with all Client requirements, policies, and procedures that the Company is obligated to
+                flow down, including but not limited to:</p>
+
+                <ul>
+                    <li>HIPAA compliance and training requirements</li>
+                    <li>Client background check and credentialing requirements</li>
+                    <li>Drug screening requirements (if applicable)</li>
+                    <li>Confidentiality and security obligations</li>
+                    <li>Badge and access control protocols</li>
+                    <li>Dress code and professional conduct standards</li>
+                    <li>IT security and acceptable use policies</li>
+                </ul>
+
+                <div class="warning-box">
+                    <strong>Failure to comply with flow-down requirements is grounds for immediate termination from the engagement.</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- INDEMNIFICATION -->
+        <div class="section">
+            <div class="section-header">INDEMNIFICATION</div>
+            <div class="section-content">
+                <p>You agree to indemnify and hold harmless the Company from any claims, damages, losses, or liabilities arising from:</p>
+                <ul>
+                    <li>Your negligence, misconduct, or violation of law</li>
+                    <li>Your misrepresentation of qualifications or competency</li>
+                    <li>Your breach of confidentiality obligations</li>
+                    <li>Your violation of Client policies or procedures</li>
+                    <li>Your unauthorized disclosure of PHI or Confidential Information</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- IMMIGRATION -->
+        <div class="section">
+            <div class="section-header">IMMIGRATION COMPLIANCE</div>
+            <div class="section-content">
+                <p>For purposes of federal immigration law, you are required to provide documentary evidence of your identity and
+                eligibility for employment in the United States. Such documentation must be provided within <strong>three (3) business
+                days</strong> of your date of hire, or your employment may be terminated.</p>
+            </div>
+        </div>
+
+        <!-- GOVERNING LAW -->
+        <div class="section">
+            <div class="section-header">GOVERNING LAW &amp; DISPUTE RESOLUTION</div>
+            <div class="section-content">
+                <p>This agreement is governed by the laws of the State of <span class="field">[STATE]</span>.</p>
+
+                <p>Any dispute arising from this agreement shall be resolved as follows:</p>
+                <ol>
+                    <li>Good faith negotiation between the parties (30 days)</li>
+                    <li>If unresolved, binding arbitration in <span class="field">[CITY, STATE]</span></li>
+                </ol>
+
+                <p>The prevailing party in any dispute shall be entitled to reasonable attorney's fees and costs.</p>
+            </div>
+        </div>
+
+        <!-- ACCEPTANCE DEADLINE -->
+        <div class="section">
+            <div class="section-header">ACCEPTANCE</div>
+            <div class="section-content">
+                <div class="warning-box">
+                    <strong>This offer of employment will terminate if not accepted, signed, and returned by midnight Eastern Time
+                    on <span class="field">[DEADLINE DATE]</span>.</strong>
+                </div>
+
+                <p>To accept this offer, please sign and date below.</p>
+
+                <p>We are excited to have you join our team and look forward to a successful engagement!</p>
+
+                <p>Sincerely,</p>
+
+                <div class="signature-line"></div>
+                <div class="signature-label"><span class="field">[AUTHORIZED SIGNATORY NAME]</span></div>
+                <div class="signature-label"><span class="field">[TITLE]</span></div>
+                <div class="signature-label"><strong>THE NICEHR GROUP, LLC</strong></div>
+                <p style="margin-top: 10px;">Date: _________________</p>
+            </div>
+        </div>
+
+        <!-- EMPLOYEE ACCEPTANCE -->
+        <div class="signature-section">
+            <div class="section-header">EMPLOYEE ACCEPTANCE</div>
+            <div class="section-content">
+                <p>I have carefully read and understand all terms and conditions of this offer letter. I accept this offer of
+                employment in accordance with the terms specified above.</p>
+
+                <p><strong>I confirm that:</strong></p>
+
+                <div class="checkbox-item">
+                    <div class="checkbox"></div>
+                    <span>I understand my per diem tier assignment and compensation structure</span>
+                </div>
+                <div class="checkbox-item">
+                    <div class="checkbox"></div>
+                    <span>I understand the overtime policy and pre-approval requirements</span>
+                </div>
+                <div class="checkbox-item">
+                    <div class="checkbox"></div>
+                    <span>I understand the early termination provisions</span>
+                </div>
+                <div class="checkbox-item">
+                    <div class="checkbox"></div>
+                    <span>I understand and agree to the non-solicitation provisions</span>
+                </div>
+                <div class="checkbox-item">
+                    <div class="checkbox"></div>
+                    <span>I understand and agree to the confidentiality obligations</span>
+                </div>
+                <div class="checkbox-item">
+                    <div class="checkbox"></div>
+                    <span>I understand and agree to comply with all flow-down requirements</span>
+                </div>
+                <div class="checkbox-item">
+                    <div class="checkbox"></div>
+                    <span>I have not entered into any agreement that conflicts with this letter</span>
+                </div>
+
+                <div class="two-column" style="margin-top: 40px;">
+                    <div>
+                        <div class="signature-line"></div>
+                        <div class="signature-label">Employee Signature</div>
+
+                        <div class="signature-line"></div>
+                        <div class="signature-label">Printed Name</div>
+                    </div>
+                    <div>
+                        <div class="signature-line"></div>
+                        <div class="signature-label">Date</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COMPANY USE -->
+        <div class="company-use">
+            <h3>FOR COMPANY USE ONLY</h3>
+            <table>
+                <tr>
+                    <td width="40%">Background Check:</td>
+                    <td>
+                        <span class="checkbox" style="display: inline-block; width: 14px; height: 14px; vertical-align: middle;"></span> Cleared
+                        <span class="checkbox" style="display: inline-block; width: 14px; height: 14px; vertical-align: middle; margin-left: 15px;"></span> Pending
+                        &nbsp;&nbsp; Date: _________
+                    </td>
+                </tr>
+                <tr>
+                    <td>Drug Screen:</td>
+                    <td>
+                        <span class="checkbox" style="display: inline-block; width: 14px; height: 14px; vertical-align: middle;"></span> Cleared
+                        <span class="checkbox" style="display: inline-block; width: 14px; height: 14px; vertical-align: middle; margin-left: 15px;"></span> Pending
+                        <span class="checkbox" style="display: inline-block; width: 14px; height: 14px; vertical-align: middle; margin-left: 15px;"></span> N/A
+                        &nbsp;&nbsp; Date: _________
+                    </td>
+                </tr>
+                <tr>
+                    <td>Client Approval:</td>
+                    <td>
+                        <span class="checkbox" style="display: inline-block; width: 14px; height: 14px; vertical-align: middle;"></span> Approved
+                        <span class="checkbox" style="display: inline-block; width: 14px; height: 14px; vertical-align: middle; margin-left: 15px;"></span> Pending
+                        &nbsp;&nbsp; Date: _________
+                    </td>
+                </tr>
+                <tr>
+                    <td>Onboarding Complete:</td>
+                    <td>
+                        <span class="checkbox" style="display: inline-block; width: 14px; height: 14px; vertical-align: middle;"></span> Yes
+                        <span class="checkbox" style="display: inline-block; width: 14px; height: 14px; vertical-align: middle; margin-left: 15px;"></span> No
+                        &nbsp;&nbsp; Date: _________
+                    </td>
+                </tr>
+            </table>
+            <p style="margin-top: 15px;">Entered by: _________________________ Date: _________</p>
+        </div>
+
+        <!-- COMPARISON TABLE -->
+        <div class="section" style="margin-top: 40px;">
+            <div class="section-header">NICEHR vs INDUSTRY COMPARISON</div>
+            <div class="section-content">
+                <table class="comparison-table">
+                    <tr>
+                        <th>Feature</th>
+                        <th>NICEHR</th>
+                        <th>JBI</th>
+                        <th>CSI</th>
+                        <th>Ellit</th>
+                        <th>Divurgent</th>
+                    </tr>
+                    <tr>
+                        <td>Time &amp; Half (OT)</td>
+                        <td class="check">&#10004;</td>
+                        <td class="cross">&#10008;</td>
+                        <td class="check">&#10004;</td>
+                        <td class="cross">&#10008;</td>
+                        <td class="check">&#10004;</td>
+                    </tr>
+                    <tr>
+                        <td>Per Diem Tiers</td>
+                        <td class="check">&#10004; 3 Tiers</td>
+                        <td class="cross">Flat</td>
+                        <td class="cross">Flat</td>
+                        <td class="cross">Flat</td>
+                        <td class="check">&#10004; 3 Tiers</td>
+                    </tr>
+                    <tr>
+                        <td>Orientation Rate</td>
+                        <td class="check">&#10004; Clear</td>
+                        <td class="cross">Same</td>
+                        <td class="cross">Same</td>
+                        <td class="check">&#10004;</td>
+                        <td class="check">&#10004;</td>
+                    </tr>
+                    <tr>
+                        <td>Early Term Protection</td>
+                        <td class="check">&#10004;</td>
+                        <td class="cross">&#10008;</td>
+                        <td class="cross">&#10008;</td>
+                        <td class="cross">&#10008;</td>
+                        <td class="check">&#10004;</td>
+                    </tr>
+                    <tr>
+                        <td>Non-Solicitation</td>
+                        <td class="check">&#10004; Reasonable</td>
+                        <td>Broad</td>
+                        <td class="check">Limited</td>
+                        <td class="cross">None</td>
+                        <td>Broad</td>
+                    </tr>
+                    <tr>
+                        <td>Flow-Down Clause</td>
+                        <td class="check">&#10004;</td>
+                        <td class="cross">&#10008;</td>
+                        <td class="cross">&#10008;</td>
+                        <td class="cross">&#10008;</td>
+                        <td class="cross">&#10008;</td>
+                    </tr>
+                    <tr>
+                        <td>IP/Work Product</td>
+                        <td class="check">&#10004;</td>
+                        <td class="cross">&#10008;</td>
+                        <td class="cross">&#10008;</td>
+                        <td class="cross">&#10008;</td>
+                        <td class="check">&#10004;</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- VERSION -->
+        <div class="version-info">
+            <p>NICEHR Offer Letter Template v1.0 | Created February 1, 2026</p>
+            <p>This document requires legal review before use.</p>
+        </div>
+    </div>
+</body>
+</html>
