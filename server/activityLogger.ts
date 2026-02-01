@@ -1,18 +1,19 @@
 import { Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
+import { logger, getCorrelationId, getRequestId } from "./structuredLogger";
 
-type ActivityType = 
-  | "login" 
-  | "logout" 
-  | "page_view" 
-  | "create" 
-  | "update" 
-  | "delete" 
-  | "upload" 
-  | "download" 
-  | "approve" 
-  | "reject" 
-  | "assign" 
+type ActivityType =
+  | "login"
+  | "logout"
+  | "page_view"
+  | "create"
+  | "update"
+  | "delete"
+  | "upload"
+  | "download"
+  | "approve"
+  | "reject"
+  | "assign"
   | "submit";
 
 interface ActivityLogParams {
@@ -24,18 +25,48 @@ interface ActivityLogParams {
   metadata?: Record<string, unknown>;
 }
 
+/**
+ * Log a user activity to both structured logs and database
+ * This provides:
+ * 1. Immediate structured log output with correlation IDs
+ * 2. Persistent database storage for audit trails
+ */
 export async function logActivity(
   userId: string,
   params: ActivityLogParams,
   req?: Request
 ): Promise<void> {
+  // Get correlation context for structured logging
+  const correlationId = getCorrelationId();
+  const requestId = getRequestId();
+
   try {
     const user = await storage.getUser(userId);
     if (!user) {
-      console.warn(`Activity logging skipped: User ${userId} not found in database`);
+      logger.warn(`Activity logging skipped: User not found`, {
+        metadata: {
+          user_id: userId,
+          activity_type: params.activityType,
+        },
+      });
       return;
     }
-    
+
+    // Log to structured logger (immediate output with correlation)
+    logger.activity(params.activityType, {
+      resourceType: params.resourceType,
+      resourceId: params.resourceId,
+      resourceName: params.resourceName,
+      description: params.description,
+      metadata: {
+        ...params.metadata,
+        user_id: userId,
+        correlation_id: correlationId,
+        request_id: requestId,
+      },
+    });
+
+    // Log to database for persistent audit trail
     await storage.logUserActivity({
       userId,
       activityType: params.activityType,
@@ -43,12 +74,21 @@ export async function logActivity(
       resourceId: params.resourceId || null,
       resourceName: params.resourceName || null,
       description: params.description || null,
-      metadata: params.metadata || null,
+      metadata: {
+        ...params.metadata,
+        correlation_id: correlationId,
+        request_id: requestId,
+      },
       ipAddress: req?.ip || req?.headers['x-forwarded-for']?.toString() || null,
       userAgent: req?.headers['user-agent'] || null,
     });
   } catch (error) {
-    console.error("Failed to log activity:", error);
+    logger.error("Failed to log activity", error, {
+      metadata: {
+        user_id: userId,
+        activity_type: params.activityType,
+      },
+    });
   }
 }
 
@@ -77,7 +117,9 @@ export function activityLoggerMiddleware(
         logActivity(userId, {
           activityType,
           ...resourceInfo,
-        }, req).catch(console.error);
+        }, req).catch((error) => {
+          logger.error("Activity logging failed in middleware", error);
+        });
       }
       
       return result;

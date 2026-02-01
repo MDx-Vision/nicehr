@@ -1,169 +1,71 @@
 /**
  * Integration Test Setup
- * Provides database connection and utilities for each test
+ *
+ * This file runs before integration tests.
+ * Sets up the Express app and database connection for testing.
  */
 
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
-import { sql } from 'drizzle-orm';
-import * as schema from '../../shared/schema';
+import express, { Express } from 'express';
+import { createServer, Server } from 'http';
 
-// Test database connection
-const testDbUrl = process.env.TEST_DATABASE_URL ||
-  'postgresql://testuser:testpass@localhost:5433/nicehr_test';
+// Test database URL (use a separate test database)
+process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL;
 
-let pool: Pool;
-let db: ReturnType<typeof drizzle>;
+let app: Express;
+let server: Server;
 
 /**
- * Get database connection for tests
+ * Create a test Express app instance
+ * This mirrors the main app setup but without starting the server
  */
-export function getDb() {
-  if (!db) {
-    pool = new Pool({ connectionString: testDbUrl });
-    db = drizzle(pool, { schema });
+export async function createTestApp(): Promise<Express> {
+  const testApp = express();
+
+  // Add JSON parsing
+  testApp.use(express.json());
+
+  // Import and register routes
+  // Note: We dynamically import to avoid side effects during module load
+  const { registerRoutes } = await import('../../server/routes');
+  const httpServer = createServer(testApp);
+  await registerRoutes(httpServer, testApp);
+
+  return testApp;
+}
+
+/**
+ * Get the test app instance
+ */
+export function getTestApp(): Express {
+  if (!app) {
+    throw new Error('Test app not initialized. Call setupTestApp() first.');
   }
-  return db;
+  return app;
 }
 
 /**
- * Clean all tables before/after tests
+ * Setup test app before all tests
  */
-export async function cleanDatabase() {
-  const database = getDb();
-
-  // Disable foreign key checks temporarily
-  await database.execute(sql`SET session_replication_role = 'replica'`);
-
-  // Truncate all tables in reverse dependency order
-  const tables = [
-    'eod_reports',
-    'timesheets',
-    'project_tasks',
-    'project_schedules',
-    'support_tickets',
-    'invoices',
-    'contracts',
-    'consultant_documents',
-    'user_activities',
-    'consultants',
-    'hospital_staff',
-    'projects',
-    'hospitals',
-    'invitations',
-    'users',
-    'sessions',
-  ];
-
-  for (const table of tables) {
-    try {
-      await database.execute(sql.raw(`TRUNCATE TABLE "${table}" CASCADE`));
-    } catch (error) {
-      const message = (error as Error).message;
-      // Only silently skip if table doesn't exist (expected during initial setup)
-      if (!message.includes('does not exist')) {
-        console.warn(`Warning: Failed to truncate table "${table}": ${message}`);
-      }
-    }
-  }
-
-  // Re-enable foreign key checks
-  await database.execute(sql`SET session_replication_role = 'origin'`);
+export async function setupTestApp(): Promise<Express> {
+  app = await createTestApp();
+  return app;
 }
 
 /**
- * Seed test data
+ * Cleanup after all tests
  */
-export async function seedTestData() {
-  const database = getDb();
-
-  // Create test admin user
-  const [adminUser] = await database.insert(schema.users).values({
-    email: 'admin@test.com',
-    firstName: 'Test',
-    lastName: 'Admin',
-    role: 'admin',
-    isActive: true,
-    accessStatus: 'active',
-  }).returning();
-
-  // Create test hospital
-  const [hospital] = await database.insert(schema.hospitals).values({
-    name: 'Test Hospital',
-    address: '123 Test St',
-    city: 'Test City',
-    state: 'TS',
-    zipCode: '12345',
-    contactEmail: 'contact@testhospital.com',
-    contactPhone: '555-0100',
-    ehrSystem: 'Epic',
-    isActive: true,
-  }).returning();
-
-  // Create test consultant user
-  const [consultantUser] = await database.insert(schema.users).values({
-    email: 'consultant@test.com',
-    firstName: 'Test',
-    lastName: 'Consultant',
-    role: 'consultant',
-    isActive: true,
-    accessStatus: 'active',
-  }).returning();
-
-  // Create consultant profile
-  const [consultant] = await database.insert(schema.consultants).values({
-    userId: consultantUser.id,
-    specialty: 'Epic',
-    certifications: ['Epic Certified'],
-    yearsExperience: 5,
-    hourlyRate: '150.00',
-    isAvailable: true,
-    maxWeeklyHours: 40,
-    shiftPreference: 'day',
-    willingToTravel: true,
-    remoteCapable: true,
-    startDate: new Date().toISOString().split('T')[0],
-  }).returning();
-
-  // Create test project
-  const [project] = await database.insert(schema.projects).values({
-    name: 'Test Implementation',
-    hospitalId: hospital.id,
-    description: 'Test project description',
-    status: 'active',
-    startDate: new Date().toISOString().split('T')[0],
-    ehrSystem: 'Epic',
-    projectType: 'Implementation',
-    budget: '100000.00',
-  }).returning();
-
-  return {
-    adminUser,
-    consultantUser,
-    consultant,
-    hospital,
-    project,
-  };
-}
-
-/**
- * Close database connection
- */
-export async function closeConnection() {
-  if (pool) {
-    await pool.end();
+export async function teardownTestApp(): Promise<void> {
+  if (server) {
+    server.close();
   }
 }
 
-// Jest hooks
+// Global setup for integration tests
 beforeAll(async () => {
-  // Initialize connection
-  getDb();
+  // You can setup the app here if needed globally
+  // await setupTestApp();
 });
 
 afterAll(async () => {
-  await closeConnection();
+  await teardownTestApp();
 });
-
-// Export schema for tests
-export { schema };
