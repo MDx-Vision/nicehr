@@ -12,6 +12,59 @@ NiceHR is a comprehensive platform designed for healthcare IT consulting firms m
 
 ---
 
+## Current Status (January 2026)
+
+### Working Components
+
+| Component | Status | Tests | Notes |
+|-----------|--------|-------|-------|
+| Dashboard | ✅ Live | 125 | Stats, tasks, calendar, activity feed |
+| Analytics | ✅ Live | 100 | Reports, visualizations, forecasting |
+| CRM | ✅ Live | 158 | Contacts, companies, deals, pipelines |
+| TDR | ✅ Live | 154 | Go-live readiness assessment |
+| Executive Metrics | ✅ Live | 56 | C-suite dashboards |
+| Change Management | ✅ Live | 71 | ITIL-aligned workflows |
+| Support Tickets | ✅ Live | 32 | Full ticketing system |
+| Consultants | ✅ Live | 89 | Profile & document management |
+| Hospitals | ✅ Live | 45 | Facility records |
+| Projects | ✅ Live | 67 | Implementation tracking |
+| Contracts | ✅ Live | 52 | ESIGN compliant signatures |
+| Invoices | ✅ Live | 38 | Billing & payments |
+| Schedules | ✅ Live | 42 | Calendar & EOD reports |
+| Remote Support | ✅ Live | 725 | HIPAA video consultations |
+| Timesheets | ✅ Live | 35 | Time tracking |
+| Training | ✅ Live | 28 | Learning management |
+
+### Recently Launched
+
+- **Structured Logging** - JSON logging with correlation IDs for distributed tracing
+- **Jest Testing** - Unit & integration tests (61 tests) alongside Cypress E2E
+- **Drill-Down Functionality** - 55 interactive elements across dashboards
+- **CRM Module** - Complete sales pipeline management
+- **ESIGN Compliance** - 4-step wizard with SHA-256 hashing
+
+### Integration Status
+
+| System | Status | Notes |
+|--------|--------|-------|
+| ServiceNow | 📋 Planned | Manual import first |
+| Asana | 📋 Planned | CSV export/import |
+| SAP | 📋 Planned | Field mapping done |
+| Jira | 📋 Planned | API integration |
+| Epic | 🔴 Not Started | Need sandbox access |
+| Cerner | 🔴 Not Started | Need sandbox access |
+
+### Test Results
+
+```
+Cypress E2E: 2,135 tests (100% passing)
+Jest Unit/Integration: 61 tests (100% passing)
+Total: 2,196 tests
+Last Run: 2026-01-31
+```
+
+---
+
 ## Table of Contents
 
 - [Features](#features)
@@ -62,7 +115,7 @@ NiceHR is a comprehensive platform designed for healthcare IT consulting firms m
 | **Timesheets** | Time tracking and approval |
 | **Analytics** | Custom reports, visualizations, forecasting |
 
-See [FEATURES.md](FEATURES.md) for complete feature documentation.
+See [FEATURES.md](docs/development/FEATURES.md) for complete feature documentation.
 
 ---
 
@@ -212,7 +265,7 @@ CYPRESS_TEST=true npx cypress run --spec "cypress/e2e/01-dashboard.cy.js"
 | Pass Rate | 100% |
 | Run Time | ~17 minutes |
 
-See [TEST_PLAN.md](TEST_PLAN.md) for detailed test coverage.
+See [TEST_PLAN.md](docs/development/TEST_PLAN.md) for detailed test coverage.
 
 ---
 
@@ -250,7 +303,7 @@ nicehr/
 └── docs/                   # Additional documentation
 ```
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed architecture documentation.
+See [ARCHITECTURE.md](docs/development/ARCHITECTURE.md) for detailed architecture documentation.
 
 ---
 
@@ -284,7 +337,7 @@ ENABLE_CHANGE_MANAGEMENT=true
 ENABLE_EXECUTIVE_METRICS=true
 ```
 
-See [DEPLOYMENT_REQUIREMENTS.md](DEPLOYMENT_REQUIREMENTS.md) for production configuration.
+See [DEPLOYMENT_REQUIREMENTS.md](docs/development/DEPLOYMENT_REQUIREMENTS.md) for production configuration.
 
 ---
 
@@ -313,7 +366,7 @@ All API endpoints require authentication via session cookie.
 | TDR | `/api/tdr/events`, `/issues`, `/checklists`, `/readiness` |
 | Support | `GET/POST /api/support-tickets`, `PATCH/DELETE /:id` |
 
-See [API.md](API.md) for complete API reference.
+See [API.md](docs/development/API.md) for complete API reference.
 
 ---
 
@@ -348,7 +401,7 @@ docker-compose logs -f
 5. Set secure session secrets
 6. Enable audit logging
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions.
+See [DEPLOYMENT.md](docs/development/DEPLOYMENT.md) for detailed instructions.
 
 ---
 
@@ -357,12 +410,12 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions.
 | Document | Description |
 |----------|-------------|
 | [README.md](README.md) | This file - project overview |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | System architecture and diagrams |
-| [FEATURES.md](FEATURES.md) | Complete feature documentation |
-| [API.md](API.md) | API reference |
-| [DEPLOYMENT.md](DEPLOYMENT.md) | Deployment guide |
-| [DEPLOYMENT_REQUIREMENTS.md](DEPLOYMENT_REQUIREMENTS.md) | Infrastructure requirements |
-| [TEST_PLAN.md](TEST_PLAN.md) | Test coverage plan |
+| [docs/](docs/README.md) | Full documentation index |
+| [ARCHITECTURE.md](docs/development/ARCHITECTURE.md) | System architecture and diagrams |
+| [FEATURES.md](docs/development/FEATURES.md) | Complete feature documentation |
+| [API.md](docs/development/API.md) | API reference |
+| [DEPLOYMENT.md](docs/development/DEPLOYMENT.md) | Deployment guide |
+| [TEST_PLAN.md](docs/development/TEST_PLAN.md) | Test coverage plan |
 | [SECURITY.md](SECURITY.md) | Security policy |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution guidelines |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |

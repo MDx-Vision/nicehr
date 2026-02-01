@@ -8,6 +8,8 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { auditLogMiddleware } from "./auditLog";
+import { logger } from "./structuredLogger";
+import { correlationIdMiddleware, requestLoggerMiddleware } from "./middleware";
 
 const app = express();
 const httpServer = createServer(app);
@@ -17,6 +19,13 @@ declare module "http" {
     rawBody: unknown;
   }
 }
+
+// =============================================================================
+// CORRELATION ID & STRUCTURED LOGGING - First in middleware chain
+// =============================================================================
+// Must be first to ensure all subsequent middleware/routes have correlation context
+app.use(correlationIdMiddleware);
+app.use(requestLoggerMiddleware);
 
 // =============================================================================
 // SECURITY MIDDLEWARE - HIPAA Compliance
@@ -162,42 +171,19 @@ app.use(
 
 app.use(express.urlencoded({ extended: false }));
 
+/**
+ * Legacy log function - now uses structured logger
+ * @deprecated Use `logger` from './structuredLogger' directly
+ */
 export function log(message: string, source = "express") {
-  const formattedTime = new Date().toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
+  logger.info(message, {
+    metadata: { source },
   });
-
-  console.log(`${formattedTime} [${source}] ${message}`);
 }
 
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      log(logLine);
-    }
-  });
-
-  next();
-});
+// Note: Request logging is now handled by requestLoggerMiddleware
+// The structured logger provides JSON output with correlation IDs
+// Response bodies are NOT logged to maintain HIPAA compliance
 
 (async () => {
   await registerRoutes(httpServer, app);
@@ -227,6 +213,13 @@ app.use((req, res, next) => {
   const port = parseInt(process.env.PORT || "5000", 10);
   const host = process.env.HOST || "0.0.0.0";
   httpServer.listen(port, host, () => {
-    log(`serving on port ${port}`);
+    logger.info(`Server started`, {
+      metadata: {
+        port,
+        host,
+        node_env: process.env.NODE_ENV || 'development',
+        log_level: process.env.LOG_LEVEL || 'INFO',
+      },
+    });
   });
 })();
