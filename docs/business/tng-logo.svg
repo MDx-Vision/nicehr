@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200" width="400" height="200">
+  <!-- THE -->
+  <text x="200" y="45" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="36" font-weight="900" fill="#000000">THE</text>
+
+  <!-- NI CEHR stylized -->
+  <g transform="translate(30, 55)">
+    <!-- NI -->
+    <text x="0" y="70" font-family="Arial Black, Arial, sans-serif" font-size="72" font-weight="900" fill="#6B9BD2">NI</text>
+
+    <!-- Stylized C with curve -->
+    <path d="M135 10
+             C135 10, 190 10, 190 45
+             L190 45
+             C190 45, 190 20, 160 20
+             L145 20
+             L145 55
+             L175 55
+             C175 55, 190 55, 190 70
+             L190 85
+             C190 85, 135 85, 135 45
+             Z"
+          fill="#6B9BD2"/>
+
+    <!-- EHR -->
+    <text x="195" y="70" font-family="Arial Black, Arial, sans-serif" font-size="72" font-weight="900" fill="#6B9BD2">EHR</text>
+  </g>
+
+  <!-- GROUP -->
+  <text x="200" y="175" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="42" font-weight="900" fill="#000000">GROUP</text>
+</svg>

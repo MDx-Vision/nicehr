@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Handbook - The NICEHR Group, LLC</title>
+    <style>
+        @page {
+            size: letter;
+            margin: 0.75in;
+        }
+
+        body {
+            font-family: Georgia, 'Times New Roman', Times, serif;
+            font-size: 10.5pt;
+            line-height: 1.4;
+            color: #000;
+            max-width: 8.5in;
+            margin: 0 auto;
+            padding: 0.75in;
+            background: #fff;
+        }
+
+        .cover {
+            text-align: center;
+            padding: 2in 0 1.5in 0;
+            page-break-after: always;
+        }
+
+        .cover .logo img {
+            height: 50pt;
+            margin-bottom: 36pt;
+        }
+
+        .cover-title {
+            font-family: Arial, sans-serif;
+            font-size: 28pt;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 12pt;
+        }
+
+        .cover-subtitle {
+            font-size: 14pt;
+            color: #666;
+            margin-bottom: 48pt;
+        }
+
+        .cover-date {
+            font-size: 11pt;
+            color: #666;
+        }
+
+        .header-logo {
+            text-align: center;
+            margin-bottom: 18pt;
+        }
+
+        .header-logo img {
+            height: 36pt;
+        }
+
+        h1 {
+            font-family: Arial, sans-serif;
+            font-size: 14pt;
+            font-weight: bold;
+            margin: 30pt 0 12pt 0;
+            padding-bottom: 6pt;
+            border-bottom: 2pt solid #6B9BD2;
+            color: #333;
+        }
+
+        h2 {
+            font-family: Arial, sans-serif;
+            font-size: 11pt;
+            font-weight: bold;
+            margin: 18pt 0 8pt 0;
+            color: #333;
+        }
+
+        h3 {
+            font-family: Arial, sans-serif;
+            font-size: 10pt;
+            font-weight: bold;
+            margin: 12pt 0 6pt 0;
+        }
+
+        p {
+            margin-bottom: 8pt;
+            text-align: justify;
+        }
+
+        ul, ol {
+            margin: 6pt 0 10pt 24pt;
+        }
+
+        li {
+            margin-bottom: 3pt;
+        }
+
+        .section {
+            margin-bottom: 18pt;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10pt 0;
+            font-size: 9.5pt;
+        }
+
+        table th, table td {
+            border: 1pt solid #333;
+            padding: 5pt 8pt;
+            text-align: left;
+        }
+
+        table th {
+            font-weight: bold;
+            background: #f0f0f0;
+        }
+
+        .toc {
+            page-break-after: always;
+        }
+
+        .toc h1 {
+            text-align: center;
+            border-bottom: none;
+        }
+
+        .toc-list {
+            list-style: none;
+            margin: 18pt 0;
+            padding: 0;
+        }
+
+        .toc-list li {
+            padding: 5pt 0;
+            border-bottom: 1pt dotted #ccc;
+            font-size: 10pt;
+        }
+
+        .important {
+            border: 1pt solid #000;
+            padding: 8pt;
+            margin: 12pt 0;
+            background: #f9f9f9;
+        }
+
+        .signature-block {
+            margin-top: 30pt;
+            page-break-inside: avoid;
+        }
+
+        .signature-row {
+            display: flex;
+            gap: 30pt;
+            margin-top: 20pt;
+        }
+
+        .signature-col {
+            flex: 1;
+        }
+
+        .signature-line {
+            border-bottom: 1pt solid #000;
+            height: 20pt;
+            margin-bottom: 3pt;
+        }
+
+        .signature-label {
+            font-size: 9pt;
+            color: #333;
+        }
+
+        .page-footer {
+            text-align: center;
+            font-size: 8pt;
+            color: #666;
+            margin-top: 24pt;
+            padding-top: 8pt;
+            border-top: 1pt solid #ccc;
+        }
+
+        .page-break {
+            page-break-before: always;
+        }
+
+        @media print {
+            body { padding: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="cover">
+    <div class="logo">
+        <img src="tng-logo.png" alt="The NICEHR Group">
+    </div>
+    <div class="cover-title">EMPLOYEE HANDBOOK</div>
+    <div class="cover-subtitle">Healthcare IT Consulting Services</div>
+    <div class="cover-date">
+        Effective February 2026<br>
+        Version 1.0<br><br>
+        <em>Confidential - For Employee Use Only</em>
+    </div>
+</div>
+
+<div class="toc">
+    <div class="header-logo"><img src="tng-logo.png" alt="The NICEHR Group"></div>
+    <h1>TABLE OF CONTENTS</h1>
+    <ol class="toc-list">
+        <li>1. Welcome and Introduction</li>
+        <li>2. Employment Relationship</li>
+        <li>3. Equal Employment Opportunity</li>
+        <li>4. Compensation and Payroll</li>
+        <li>5. Work Hours and Attendance</li>
+        <li>6. Time Reporting and Timesheets</li>
+        <li>7. Travel and Expense Reimbursement</li>
+        <li>8. Confidentiality and Data Protection</li>
+        <li>9. HIPAA Compliance</li>
+        <li>10. Professional Conduct</li>
+        <li>11. Client Site Policies</li>
+        <li>12. Technology and Information Security</li>
+        <li>13. Health, Safety, and Credentialing</li>
+        <li>14. Performance and Termination</li>
+        <li>15. Dispute Resolution</li>
+        <li>16. Employee Acknowledgment</li>
+    </ol>
+</div>
+
+<div class="header-logo"><img src="tng-logo.png" alt="The NICEHR Group"></div>
+
+<div class="section">
+    <h1>1. WELCOME AND INTRODUCTION</h1>
+    <p>Welcome to The NICEHR Group, LLC ("Company"). We are a healthcare IT consulting firm specializing in Electronic Health Record (EHR) implementations, Technical Dress Rehearsals (TDR), go-live support, and technical services for healthcare organizations nationwide.</p>
+    <p>This Employee Handbook ("Handbook") establishes the policies, procedures, and expectations that govern your employment. <strong>This Handbook is not a contract of employment and does not create any contractual rights.</strong> The Company reserves the right to modify, revoke, suspend, or add to any policy at any time, with or without notice.</p>
+    <p>You are responsible for reading, understanding, and complying with all policies contained herein. If you have questions about any policy, please contact your supervisor or Human Resources.</p>
+</div>
+
+<div class="section">
+    <h1>2. EMPLOYMENT RELATIONSHIP</h1>
+
+    <h2>2.1 At-Will Employment</h2>
+    <p>Your employment with the Company is "at-will." This means that either you or the Company may terminate the employment relationship at any time, with or without cause, and with or without notice. No supervisor, manager, or representative of the Company has the authority to enter into any agreement for employment for any specified period of time or to make any agreement contrary to the at-will nature of your employment, unless such agreement is in writing and signed by an authorized officer of the Company.</p>
+
+    <h2>2.2 Employment Classifications</h2>
+    <table>
+        <tr>
+            <th>Classification</th>
+            <th>Description</th>
+            <th>Overtime</th>
+        </tr>
+        <tr>
+            <td>W-2 Non-Exempt (Hourly)</td>
+            <td>Employees paid hourly based on time worked</td>
+            <td>Eligible (1.5× for hours over 40/week)</td>
+        </tr>
+        <tr>
+            <td>W-2 Exempt (Salaried)</td>
+            <td>Employees meeting FLSA exemption criteria</td>
+            <td>Not eligible</td>
+        </tr>
+        <tr>
+            <td>1099 Independent Contractor</td>
+            <td>Governed by separate contractor agreement</td>
+            <td>N/A</td>
+        </tr>
+    </table>
+
+    <h2>2.3 Project-Based Employment</h2>
+    <p>Employment is typically tied to specific client engagements. When an engagement ends, employment may be terminated unless reassignment to another project is available and mutually agreed upon. There is no guarantee of continued employment between projects.</p>
+</div>
+
+<div class="section">
+    <h1>3. EQUAL EMPLOYMENT OPPORTUNITY</h1>
+    <p>The NICEHR Group is an equal opportunity employer. We prohibit discrimination and harassment based on race, color, religion, sex, sexual orientation, gender identity or expression, national origin, age, disability, genetic information, veteran status, marital status, pregnancy, or any other characteristic protected by applicable federal, state, or local law.</p>
+    <p>This policy applies to all terms and conditions of employment, including but not limited to recruitment, hiring, placement, promotion, termination, layoff, recall, transfer, leaves of absence, compensation, benefits, and training.</p>
+    <p>Employees who believe they have been subjected to discrimination or harassment should immediately report the conduct to their supervisor, Human Resources, or any member of management. All complaints will be investigated promptly, thoroughly, and confidentially to the extent possible. Retaliation against employees who report concerns in good faith is strictly prohibited.</p>
+</div>
+
+<div class="page-break"></div>
+<div class="header-logo"><img src="tng-logo.png" alt="The NICEHR Group"></div>
+
+<div class="section">
+    <h1>4. COMPENSATION AND PAYROLL</h1>
+
+    <h2>4.1 Pay Schedule</h2>
+    <p>Employees are paid bi-weekly on Fridays for the two-week period ending the previous Saturday. If a payday falls on a holiday, payment will be made on the preceding business day.</p>
+
+    <h2>4.2 Overtime</h2>
+    <p>Non-exempt employees will be paid one and one-half times (1.5×) their regular hourly rate for all hours worked in excess of forty (40) hours in a workweek. <strong>All overtime must be pre-approved by your supervisor or project manager.</strong> Working unauthorized overtime may result in disciplinary action up to and including termination.</p>
+
+    <h2>4.3 Per Diem Rates</h2>
+    <p>Per diem is provided to offset costs associated with working away from home. Rates are based on distance from employee's home to the work site:</p>
+    <table>
+        <tr>
+            <th>Tier</th>
+            <th>Distance from Home</th>
+            <th>Daily Rate</th>
+            <th>Conditions</th>
+        </tr>
+        <tr>
+            <td>Tier 1 (Remote/Travel)</td>
+            <td>More than 50 miles</td>
+            <td>$240.00</td>
+            <td>Employee books own accommodations</td>
+        </tr>
+        <tr>
+            <td>Tier 2 (Regional)</td>
+            <td>11-50 miles</td>
+            <td>$175.00</td>
+            <td>Minimum 3 hours worked</td>
+        </tr>
+        <tr>
+            <td>Tier 3 (Local)</td>
+            <td>Less than 11 miles</td>
+            <td>$75.00</td>
+            <td>Standard work day</td>
+        </tr>
+        <tr>
+            <td>Tier 4 (Training/Orientation)</td>
+            <td>Any distance</td>
+            <td>$50.00</td>
+            <td>Training periods only</td>
+        </tr>
+    </table>
+    <p>Per diem is paid for actual days worked and is subject to verification. Misrepresentation of per diem eligibility is grounds for termination.</p>
+
+    <h2>4.4 Direct Deposit</h2>
+    <p>All employees must enroll in direct deposit. A completed Direct Deposit Authorization Form with a voided check or bank verification letter is required prior to processing the first payroll. Changes to direct deposit information require 5 business days notice.</p>
+
+    <h2>4.5 Tax Withholding</h2>
+    <p>Employees must complete Form W-4 (Employee's Withholding Certificate) and applicable state tax forms upon hire. You are responsible for ensuring your withholding information is accurate and up to date. Changes to W-4 should be submitted to HR and take effect on the next available payroll.</p>
+</div>
+
+<div class="section">
+    <h1>5. WORK HOURS AND ATTENDANCE</h1>
+
+    <h2>5.1 Standard Work Week</h2>
+    <p>The standard work week is forty (40) hours, typically Monday through Friday. However, actual schedules are determined by client requirements and may include early mornings, evenings, weekends, or holidays, particularly during go-live support periods.</p>
+
+    <h2>5.2 Attendance and Punctuality</h2>
+    <p>Regular attendance and punctuality are essential to successful project delivery. You must report to work as scheduled and remain at work for your entire shift. If you cannot report to work or will be late, you must notify your supervisor as soon as possible, and no later than one (1) hour before your scheduled start time.</p>
+
+    <h2>5.3 No-Call, No-Show</h2>
+    <p>Failure to report to work without proper notification for two (2) consecutive scheduled workdays will be considered job abandonment and voluntary resignation. The Company will process your separation accordingly.</p>
+</div>
+
+<div class="section">
+    <h1>6. TIME REPORTING AND TIMESHEETS</h1>
+
+    <h2>6.1 Timesheet Requirements</h2>
+    <p>All employees must accurately record their time worked daily using the Company's designated timekeeping system. Timesheets must include:</p>
+    <ul>
+        <li>Date of work</li>
+        <li>Start and end times</li>
+        <li>Total hours worked (regular and overtime separately)</li>
+        <li>Project/client assignment codes</li>
+        <li>Detailed task descriptions sufficient to verify work performed</li>
+        <li>Break time deductions where applicable</li>
+    </ul>
+
+    <h2>6.2 Submission Deadline</h2>
+    <div class="important">
+        <strong>DEADLINE:</strong> Timesheets must be submitted by Monday at 12:00 PM Eastern Time for the preceding work week. Late timesheets may delay payment.
+    </div>
+    <p>Repeated late submissions will result in disciplinary action.</p>
+
+    <h2>6.3 Time Falsification</h2>
+    <p>Falsifying time records is a serious offense and grounds for immediate termination. This includes:</p>
+    <ul>
+        <li>Recording time not actually worked</li>
+        <li>Altering, tampering with, or falsifying time records</li>
+        <li>Having another person record time on your behalf</li>
+        <li>Failing to record all time worked</li>
+    </ul>
+</div>
+
+<div class="page-break"></div>
+<div class="header-logo"><img src="tng-logo.png" alt="The NICEHR Group"></div>
+
+<div class="section">
+    <h1>7. TRAVEL AND EXPENSE REIMBURSEMENT</h1>
+
+    <h2>7.1 Travel Authorization</h2>
+    <p>All travel must be pre-approved by your supervisor or project manager. Book travel as far in advance as possible to obtain the best rates. The Company will reimburse reasonable and necessary business expenses incurred during authorized travel.</p>
+
+    <h2>7.2 Reimbursable Expenses</h2>
+    <table>
+        <tr>
+            <th>Expense Type</th>
+            <th>Maximum Limit</th>
+            <th>Requirements</th>
+        </tr>
+        <tr>
+            <td>Airfare (roundtrip)</td>
+            <td>$600.00</td>
+            <td>Economy class only; lowest reasonable fare</td>
+        </tr>
+        <tr>
+            <td>Checked Baggage</td>
+            <td>$30.00 each way</td>
+            <td>Maximum 2 bags</td>
+        </tr>
+        <tr>
+            <td>Ground Transportation</td>
+            <td>$30.00 each way</td>
+            <td>Receipt required for amounts over $25</td>
+        </tr>
+        <tr>
+            <td>Mileage (personal vehicle)</td>
+            <td>$600.00 per project</td>
+            <td>Current IRS/GSA rate; mileage log required</td>
+        </tr>
+        <tr>
+            <td>Meals (Travel Day)</td>
+            <td>$20.00/day</td>
+            <td>Travel days to/from project site</td>
+        </tr>
+        <tr>
+            <td>Meals (Onsite)</td>
+            <td>$40.00/day</td>
+            <td>Working days at project site</td>
+        </tr>
+    </table>
+
+    <h2>7.3 Non-Reimbursable Expenses</h2>
+    <ul>
+        <li>First class or business class airfare upgrades</li>
+        <li>GPS rentals, toll pass waivers, satellite radio in rental cars</li>
+        <li>Airport parking (use shuttle or rideshare)</li>
+        <li>Room service, minibar, valet parking, in-room movies</li>
+        <li>Laundry or dry cleaning</li>
+        <li>Personal side trips, entertainment, or sightseeing</li>
+        <li>Flights purchased using personal reward miles</li>
+        <li>Alcoholic beverages</li>
+        <li>Traffic violations, parking tickets, or towing fees</li>
+        <li>Personal phone calls or data overages</li>
+    </ul>
+
+    <h2>7.4 Expense Submission</h2>
+    <div class="important">
+        <strong>DEADLINE:</strong> All expenses must be submitted within two (2) weeks of being incurred. <strong>Late submissions will NOT be reimbursed.</strong>
+    </div>
+    <p>Itemized receipts are required for all expenses over $25. Expenses must be submitted through the Company's expense management system with proper documentation and supervisory approval.</p>
+</div>
+
+<div class="section">
+    <h1>8. CONFIDENTIALITY AND DATA PROTECTION</h1>
+
+    <h2>8.1 Confidential Information</h2>
+    <p>During your employment, you will have access to confidential and proprietary information belonging to the Company, its clients, and affiliates. Confidential Information includes, but is not limited to:</p>
+    <ul>
+        <li>Client systems, configurations, workflows, and data</li>
+        <li>Protected Health Information (PHI) and patient data</li>
+        <li>Business strategies, methodologies, and proprietary processes</li>
+        <li>Pricing, contracts, proposals, and financial information</li>
+        <li>Employee and consultant information</li>
+        <li>Trade secrets and intellectual property</li>
+    </ul>
+
+    <h2>8.2 Confidentiality Obligations</h2>
+    <p>You agree to:</p>
+    <ul>
+        <li>Not disclose Confidential Information to any unauthorized person or entity</li>
+        <li>Not use Confidential Information for personal gain or benefit of others</li>
+        <li>Take reasonable precautions to protect Confidential Information</li>
+        <li>Return all Confidential Information upon termination</li>
+        <li>Not retain any copies after employment ends</li>
+    </ul>
+    <p><strong>These obligations survive termination of employment indefinitely.</strong></p>
+
+    <h2>8.3 Non-Disclosure Agreement</h2>
+    <p>All employees must sign a separate Non-Disclosure Agreement (NDA) as a condition of employment. Violation of confidentiality obligations may result in immediate termination, civil liability, and criminal prosecution.</p>
+</div>
+
+<div class="page-break"></div>
+<div class="header-logo"><img src="tng-logo.png" alt="The NICEHR Group"></div>
+
+<div class="section">
+    <h1>9. HIPAA COMPLIANCE</h1>
+
+    <h2>9.1 Protected Health Information (PHI)</h2>
+    <p>As a healthcare IT consulting firm, we frequently access Protected Health Information (PHI) subject to the Health Insurance Portability and Accountability Act (HIPAA). All employees must complete HIPAA training prior to accessing any client systems containing PHI.</p>
+
+    <h2>9.2 HIPAA Requirements</h2>
+    <p>You must:</p>
+    <ul>
+        <li>Access only the minimum necessary PHI required for your job duties</li>
+        <li>Never access PHI for personal reasons, curiosity, or unauthorized purposes</li>
+        <li>Never share PHI with unauthorized individuals, including family and friends</li>
+        <li>Use only secure, approved methods for transmitting PHI</li>
+        <li>Never take screenshots, photographs, or recordings of PHI</li>
+        <li>Log off systems when not in active use</li>
+        <li>Report any suspected breaches immediately</li>
+    </ul>
+
+    <h2>9.3 Breach Reporting</h2>
+    <div class="important">
+        <strong>IMMEDIATE REPORTING REQUIRED:</strong> Any suspected or actual breach of PHI must be reported immediately (within 24 hours) to your supervisor and the Company's Privacy Officer. Failure to report a breach is itself a violation of this policy.
+    </div>
+
+    <h2>9.4 HIPAA Penalties</h2>
+    <p>HIPAA violations can result in severe penalties:</p>
+    <ul>
+        <li>Civil penalties up to $1,500,000 per violation category per year</li>
+        <li>Criminal penalties including fines up to $250,000 and imprisonment up to 10 years</li>
+        <li>Personal liability - you may be held individually responsible</li>
+        <li>Immediate termination of employment</li>
+        <li>Exclusion from federal healthcare programs</li>
+    </ul>
+</div>
+
+<div class="section">
+    <h1>10. PROFESSIONAL CONDUCT</h1>
+
+    <h2>10.1 Code of Conduct</h2>
+    <p>All employees are expected to:</p>
+    <ul>
+        <li>Act with honesty, integrity, and professionalism at all times</li>
+        <li>Treat colleagues, clients, patients, and visitors with respect and dignity</li>
+        <li>Maintain professional appearance appropriate to the client site</li>
+        <li>Communicate professionally in all interactions, written and verbal</li>
+        <li>Avoid conflicts of interest and report any potential conflicts</li>
+        <li>Comply with all applicable laws, regulations, and policies</li>
+        <li>Represent the Company positively in all professional interactions</li>
+    </ul>
+
+    <h2>10.2 Prohibited Conduct</h2>
+    <p>The following conduct is strictly prohibited and may result in immediate termination:</p>
+    <ul>
+        <li>Harassment, discrimination, bullying, or retaliation</li>
+        <li>Violence, threats, intimidation, or aggressive behavior</li>
+        <li>Theft, fraud, embezzlement, or dishonesty</li>
+        <li>Possession of weapons on client sites or Company premises</li>
+        <li>Being under the influence of drugs or alcohol at work</li>
+        <li>Insubordination or refusal to follow reasonable instructions</li>
+        <li>Falsification of records, credentials, or applications</li>
+        <li>Unauthorized access to systems, data, or restricted areas</li>
+        <li>Breach of confidentiality or HIPAA violations</li>
+    </ul>
+
+    <h2>10.3 Social Media Policy</h2>
+    <ul>
+        <li>Never post Confidential Information, client names, or patient information on social media</li>
+        <li>Do not represent yourself as speaking on behalf of the Company unless authorized</li>
+        <li>Use good judgment; posts may reflect on your professional reputation and the Company</li>
+        <li>Do not disparage the Company, clients, colleagues, or competitors</li>
+    </ul>
+</div>
+
+<div class="section">
+    <h1>11. CLIENT SITE POLICIES</h1>
+
+    <p>When working at client sites, you must comply with all client policies and procedures in addition to Company policies. These may include:</p>
+    <ul>
+        <li>Badge and identification requirements</li>
+        <li>Visitor sign-in/sign-out procedures</li>
+        <li>Parking restrictions and designations</li>
+        <li>Dress code requirements (which may be more formal than Company policy)</li>
+        <li>Restricted areas and access controls</li>
+        <li>IT and security policies</li>
+        <li>Patient interaction protocols</li>
+    </ul>
+    <p>Failure to comply with client policies may result in removal from the engagement and potential termination.</p>
+</div>
+
+<div class="page-break"></div>
+<div class="header-logo"><img src="tng-logo.png" alt="The NICEHR Group"></div>
+
+<div class="section">
+    <h1>12. TECHNOLOGY AND INFORMATION SECURITY</h1>
+
+    <p>All employees must sign and comply with the IT Systems and Acceptable Use Agreement. Key requirements include:</p>
+    <ul>
+        <li>Use strong, unique passwords and never share credentials</li>
+        <li>Lock your workstation when stepping away</li>
+        <li>Do not install unauthorized software on Company or client systems</li>
+        <li>Report suspicious emails, security incidents, and lost devices immediately</li>
+        <li>Use only approved methods for file sharing and data transmission</li>
+        <li>Do not connect personal devices to client networks without authorization</li>
+        <li>Do not store Confidential Information or PHI on personal devices</li>
+    </ul>
+    <p><strong>You have no expectation of privacy when using Company or client technology resources.</strong> All activity may be monitored, logged, and reviewed.</p>
+</div>
+
+<div class="section">
+    <h1>13. HEALTH, SAFETY, AND CREDENTIALING</h1>
+
+    <h2>13.1 Drug-Free Workplace</h2>
+    <p>The Company maintains a drug-free workplace. The use, possession, distribution, or sale of illegal drugs or controlled substances on company time, client premises, or Company property is strictly prohibited and grounds for immediate termination. Random drug testing may be conducted as permitted by law.</p>
+
+    <h2>13.2 Credentialing Requirements</h2>
+    <p>All employees must pass background checks and pre-employment drug screening. Healthcare client sites typically require additional credentialing including:</p>
+    <table>
+        <tr>
+            <th>Requirement</th>
+            <th>Details</th>
+        </tr>
+        <tr>
+            <td>Background Check</td>
+            <td>Criminal history, employment verification, education verification</td>
+        </tr>
+        <tr>
+            <td>Drug Screening</td>
+            <td>10-panel drug test; may be required periodically</td>
+        </tr>
+        <tr>
+            <td>TB Testing</td>
+            <td>2-step PPD or QuantiFERON within 12 months</td>
+        </tr>
+        <tr>
+            <td>Hepatitis B</td>
+            <td>3-dose series or documented titer</td>
+        </tr>
+        <tr>
+            <td>MMR (Measles, Mumps, Rubella)</td>
+            <td>2-dose series or documented titer</td>
+        </tr>
+        <tr>
+            <td>Varicella (Chickenpox)</td>
+            <td>2-dose series or documented titer</td>
+        </tr>
+        <tr>
+            <td>Tdap (Tetanus, Diphtheria, Pertussis)</td>
+            <td>Within 10 years</td>
+        </tr>
+        <tr>
+            <td>Influenza</td>
+            <td>Annual vaccination or approved declination</td>
+        </tr>
+        <tr>
+            <td>COVID-19</td>
+            <td>Per client requirements</td>
+        </tr>
+        <tr>
+            <td>HIPAA Training</td>
+            <td>Annual certification required</td>
+        </tr>
+    </table>
+    <p>Failure to meet credentialing requirements may result in inability to work at certain client sites and potential termination.</p>
+</div>
+
+<div class="section">
+    <h1>14. PERFORMANCE AND TERMINATION</h1>
+
+    <h2>14.1 Performance Expectations</h2>
+    <p>You are expected to perform your duties competently and professionally. Performance issues may be addressed through coaching, feedback, verbal or written warnings, or termination as appropriate.</p>
+
+    <h2>14.2 Resignation</h2>
+    <p>If you choose to resign, we request a minimum of fourteen (14) calendar days written notice. Failure to provide adequate notice may result in:</p>
+    <ul>
+        <li>Forfeiture of final per diem payment</li>
+        <li>Reduction of final pay rate to training rate</li>
+        <li>Notation in personnel file affecting rehire eligibility</li>
+    </ul>
+
+    <h2>14.3 Termination for Cause</h2>
+    <p>The Company may terminate employment immediately for cause, including but not limited to:</p>
+    <ul>
+        <li>Violation of Company or client policies</li>
+        <li>Misconduct, insubordination, or unprofessional behavior</li>
+        <li>Poor performance or failure to meet job requirements</li>
+        <li>Misrepresentation of qualifications or falsification of records</li>
+        <li>HIPAA or confidentiality violations</li>
+        <li>Failure to meet or maintain credentialing requirements</li>
+        <li>Abandonment (no-call, no-show for 2+ days)</li>
+    </ul>
+
+    <h2>14.4 Return of Property</h2>
+    <p>Upon termination, you must immediately return all Company and client property, including badges, equipment, documents, access credentials, and any materials containing Confidential Information. Failure to return property may result in deductions from final pay as permitted by law and potential legal action.</p>
+</div>
+
+<div class="page-break"></div>
+<div class="header-logo"><img src="tng-logo.png" alt="The NICEHR Group"></div>
+
+<div class="section">
+    <h1>15. DISPUTE RESOLUTION</h1>
+
+    <h2>15.1 Arbitration Agreement</h2>
+    <p>Any dispute arising out of or related to your employment, including but not limited to claims of discrimination, harassment, wrongful termination, breach of contract, wage and hour disputes, or any other employment-related claim, shall be resolved through final and binding arbitration in accordance with the rules of the American Arbitration Association.</p>
+    <p>This agreement to arbitrate does not prevent you from filing a charge with the Equal Employment Opportunity Commission (EEOC) or similar state or local agency, but any subsequent claim for damages must be arbitrated.</p>
+
+    <h2>15.2 Waiver of Class Action</h2>
+    <p>You agree to resolve all disputes on an individual basis only. You expressly waive any right to participate in any class action, collective action, or representative proceeding, whether in arbitration, court, or any other forum.</p>
+
+    <h2>15.3 Governing Law</h2>
+    <p>This Handbook and your employment relationship shall be governed by the laws of the State of New York, without regard to conflict of law principles.</p>
+</div>
+
+<div class="section">
+    <h1>16. EMPLOYEE ACKNOWLEDGMENT</h1>
+
+    <p>By signing below, I acknowledge and agree that:</p>
+    <ul>
+        <li>I have received and read The NICEHR Group Employee Handbook.</li>
+        <li>I understand that it is my responsibility to read, understand, and comply with the policies contained herein and any revisions made to it.</li>
+        <li>I understand that this Handbook is NOT a contract of employment and does NOT create any contractual rights.</li>
+        <li>I understand that my employment is at-will and may be terminated at any time by either party, with or without cause, and with or without notice.</li>
+        <li>I understand that the Company reserves the right to modify, revoke, suspend, or add to any policy at any time, with or without notice.</li>
+        <li>I agree to comply with all Company policies and any changes thereto.</li>
+        <li>I agree to binding arbitration for any employment-related disputes and waive participation in class actions.</li>
+        <li>I have been given the opportunity to ask questions about the policies in this Handbook.</li>
+    </ul>
+
+    <div class="signature-block">
+        <div class="signature-row">
+            <div class="signature-col">
+                <div class="signature-line"></div>
+                <div class="signature-label">Employee Signature</div>
+            </div>
+            <div class="signature-col" style="flex: 0.4;">
+                <div class="signature-line"></div>
+                <div class="signature-label">Date</div>
+            </div>
+        </div>
+
+        <div style="margin-top: 20pt;">
+            <div class="signature-line" style="width: 280pt;"></div>
+            <div class="signature-label">Print Name</div>
+        </div>
+    </div>
+</div>
+
+<div class="page-footer">
+    The NICEHR Group, LLC | Employee Handbook | Version 1.0 | February 2026 | Confidential
+</div>
+
+</body>
+</html>
