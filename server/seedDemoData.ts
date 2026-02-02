@@ -1777,18 +1777,69 @@ const demoProjectTeamAssignments = [
 ];
 
 const demoDocumentTypes = [
+  // Professional Documents
   { id: "doctype-1", name: "Resume/CV", description: "Professional resume or curriculum vitae", isRequired: true, hasExpiration: false, category: "Professional" },
   { id: "doctype-2", name: "RN License", description: "Registered Nurse license", isRequired: false, hasExpiration: true, expirationMonths: 24, category: "License" },
   { id: "doctype-3", name: "Epic Certification", description: "Epic Systems certification badge", isRequired: false, hasExpiration: true, expirationMonths: 36, category: "Certification" },
   { id: "doctype-4", name: "Cerner Certification", description: "Cerner certification credential", isRequired: false, hasExpiration: true, expirationMonths: 36, category: "Certification" },
+
+  // Compliance Documents
   { id: "doctype-5", name: "Background Check", description: "Criminal background check clearance", isRequired: true, hasExpiration: true, expirationMonths: 12, category: "Compliance" },
   { id: "doctype-6", name: "Drug Screen", description: "Drug screening results", isRequired: true, hasExpiration: true, expirationMonths: 12, category: "Compliance" },
   { id: "doctype-7", name: "HIPAA Training", description: "HIPAA compliance training certificate", isRequired: true, hasExpiration: true, expirationMonths: 12, category: "Training" },
-  { id: "doctype-8", name: "W-9 Form", description: "Tax identification form", isRequired: true, hasExpiration: false, category: "Tax" },
   { id: "doctype-9", name: "Proof of Insurance", description: "Professional liability insurance", isRequired: true, hasExpiration: true, expirationMonths: 12, category: "Insurance" },
-  { id: "doctype-10", name: "COVID Vaccination", description: "COVID-19 vaccination record", isRequired: false, hasExpiration: false, category: "Health" },
-  { id: "doctype-11", name: "NDA Agreement", description: "Non-disclosure agreement", isRequired: true, hasExpiration: false, category: "Legal" },
-  { id: "doctype-12", name: "Employment Contract", description: "Consultant employment or contractor agreement", isRequired: true, hasExpiration: false, category: "Legal" },
+
+  // Tax Documents
+  { id: "doctype-8", name: "W-9 Form", description: "Tax identification form", isRequired: true, hasExpiration: false, category: "Tax" },
+
+  // Legal Documents
+  { id: "doctype-10", name: "NDA Agreement", description: "Non-disclosure agreement", isRequired: true, hasExpiration: false, category: "Legal" },
+  { id: "doctype-11", name: "Employment Agreement", description: "Consultant employment agreement", isRequired: true, hasExpiration: false, category: "Legal" },
+  { id: "doctype-12", name: "Employment Contract", description: "Consultant contractor agreement", isRequired: false, hasExpiration: false, category: "Legal" },
+
+  // TNG Onboarding Forms
+  { id: "doctype-13", name: "Employment Application", description: "TNG employment application form", isRequired: true, hasExpiration: false, category: "Onboarding" },
+  { id: "doctype-14", name: "Direct Deposit Authorization", description: "Bank account information for payroll", isRequired: true, hasExpiration: false, category: "Onboarding" },
+  { id: "doctype-15", name: "Emergency Contact Form", description: "Emergency contact information", isRequired: true, hasExpiration: false, category: "Onboarding" },
+  { id: "doctype-16", name: "Photo/Media Release", description: "Authorization for photo and media use", isRequired: false, hasExpiration: false, category: "Onboarding" },
+  { id: "doctype-17", name: "Professional References", description: "Three professional references", isRequired: true, hasExpiration: false, category: "Onboarding" },
+  { id: "doctype-18", name: "Professional Headshot", description: "Current professional photo for badges", isRequired: true, hasExpiration: true, expirationMonths: 12, category: "Onboarding" },
+
+  // Policy Acknowledgments
+  { id: "doctype-19", name: "Employee Handbook Acknowledgment", description: "Signed acknowledgment of employee handbook", isRequired: true, hasExpiration: false, category: "Policy" },
+  { id: "doctype-20", name: "Code of Conduct Acknowledgment", description: "Signed acknowledgment of code of conduct", isRequired: true, hasExpiration: false, category: "Policy" },
+  { id: "doctype-21", name: "IT Systems Agreement", description: "Acceptable use policy for IT systems", isRequired: true, hasExpiration: false, category: "Policy" },
+
+  // I-9 Identity Documents
+  { id: "doctype-22", name: "I-9 List A Document", description: "Identity and work authorization (passport, green card)", isRequired: false, hasExpiration: true, expirationMonths: 120, category: "Identity" },
+  { id: "doctype-23", name: "I-9 List B Document", description: "Identity document (driver's license, state ID)", isRequired: false, hasExpiration: true, expirationMonths: 48, category: "Identity" },
+  { id: "doctype-24", name: "I-9 List C Document", description: "Work authorization (social security card, birth certificate)", isRequired: false, hasExpiration: false, category: "Identity" },
+
+  // Immunization Documents - Vaccines
+  { id: "doctype-25", name: "Hepatitis B Vaccine", description: "Hepatitis B vaccination series (3 doses) or titer", isRequired: true, hasExpiration: false, category: "Immunization" },
+  { id: "doctype-26", name: "MMR Vaccine", description: "Measles, Mumps, Rubella vaccination (2 doses) or titer", isRequired: true, hasExpiration: false, category: "Immunization" },
+  { id: "doctype-27", name: "Varicella Vaccine", description: "Chickenpox vaccination (2 doses) or titer", isRequired: true, hasExpiration: false, category: "Immunization" },
+  { id: "doctype-28", name: "Tdap Vaccine", description: "Tetanus, Diphtheria, Pertussis booster", isRequired: true, hasExpiration: true, expirationMonths: 120, category: "Immunization" },
+  { id: "doctype-29", name: "Influenza Vaccine", description: "Annual flu vaccination", isRequired: true, hasExpiration: true, expirationMonths: 12, category: "Immunization" },
+  { id: "doctype-30", name: "COVID-19 Vaccine", description: "COVID-19 vaccination record with boosters", isRequired: false, hasExpiration: false, category: "Immunization" },
+
+  // TB Screening
+  { id: "doctype-31", name: "TB Test - PPD/TST", description: "Tuberculosis skin test (2-step)", isRequired: false, hasExpiration: true, expirationMonths: 12, category: "Immunization" },
+  { id: "doctype-32", name: "TB Test - QuantiFERON", description: "TB blood test (IGRA)", isRequired: false, hasExpiration: true, expirationMonths: 12, category: "Immunization" },
+  { id: "doctype-33", name: "TB Chest X-Ray", description: "Chest X-ray for positive TB history", isRequired: false, hasExpiration: true, expirationMonths: 12, category: "Immunization" },
+
+  // Immunization Tracking Forms
+  { id: "doctype-34", name: "Immunization Record", description: "Complete immunization history form", isRequired: true, hasExpiration: false, category: "Immunization" },
+  { id: "doctype-35", name: "Titer Results", description: "Blood test immunity verification", isRequired: false, hasExpiration: false, category: "Immunization" },
+
+  // Declination Forms
+  { id: "doctype-36", name: "Flu Vaccine Declination", description: "Influenza vaccine declination form", isRequired: false, hasExpiration: true, expirationMonths: 12, category: "Declination" },
+  { id: "doctype-37", name: "Hepatitis B Declination", description: "Hepatitis B vaccine declination form", isRequired: false, hasExpiration: false, category: "Declination" },
+  { id: "doctype-38", name: "COVID-19 Declination", description: "COVID-19 vaccine declination form", isRequired: false, hasExpiration: false, category: "Declination" },
+
+  // Background/Screening Authorizations
+  { id: "doctype-39", name: "Background Check Authorization", description: "Authorization for criminal background check", isRequired: true, hasExpiration: false, category: "Authorization" },
+  { id: "doctype-40", name: "Drug Screening Consent", description: "Consent for drug and alcohol testing", isRequired: true, hasExpiration: false, category: "Authorization" },
 ];
 
 // Consultant documents - onboarded consultants should have their required docs
