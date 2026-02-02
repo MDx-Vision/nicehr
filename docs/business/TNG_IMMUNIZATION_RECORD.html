@@ -189,6 +189,71 @@
         @media print {
             body { padding: 0; }
         }
+
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            body {
+                padding: 12pt;
+                font-size: 8pt;
+            }
+
+            .form-row {
+                flex-direction: column;
+                gap: 8pt;
+            }
+
+            .form-group, .form-group.small {
+                flex: 1;
+                width: 100%;
+            }
+
+            .signature-row {
+                flex-direction: column;
+                gap: 10pt;
+            }
+
+            .signature-col {
+                width: 100%;
+            }
+
+            table {
+                display: block;
+                overflow-x: auto;
+                font-size: 7pt;
+            }
+
+            .status-row {
+                flex-direction: column;
+                gap: 6pt;
+            }
+
+            h2 { font-size: 9pt; }
+            h3 { font-size: 8pt; }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10pt;
+                font-size: 7pt;
+            }
+
+            .letterhead img {
+                height: 24pt !important;
+            }
+
+            .document-title {
+                font-size: 11pt;
+            }
+
+            .notice {
+                font-size: 7pt;
+                padding: 6pt;
+            }
+
+            .page-footer {
+                font-size: 6pt;
+            }
+        }
     </style>
 </head>
 <body>

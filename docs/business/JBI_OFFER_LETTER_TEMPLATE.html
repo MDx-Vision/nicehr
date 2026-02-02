@@ -223,6 +223,61 @@
             }
         }
 
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            body {
+                padding: 16pt;
+                font-size: 11pt;
+            }
+
+            .letterhead img {
+                max-height: 80px;
+            }
+
+            .signature-row {
+                flex-direction: column;
+                gap: 20pt;
+            }
+
+            .signature-col {
+                width: 100%;
+            }
+
+            .signature-line {
+                width: 100%;
+            }
+
+            table {
+                font-size: 10pt;
+            }
+
+            h2 { font-size: 10pt; }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 12pt;
+                font-size: 10pt;
+            }
+
+            .letterhead img {
+                max-height: 60px;
+            }
+
+            .checkbox-item {
+                font-size: 10pt;
+            }
+
+            .highlight {
+                font-size: 10pt;
+                padding: 8pt 12pt;
+            }
+
+            .footer {
+                font-size: 8pt;
+            }
+        }
+
         /* Emphasis */
         strong {
             font-weight: 600;

@@ -139,6 +139,54 @@
         @media print {
             body { padding: 0; }
         }
+
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            body {
+                padding: 16pt;
+                font-size: 9pt;
+            }
+
+            .signature-table {
+                display: block;
+            }
+
+            .signature-table tr {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .signature-column {
+                width: 100%;
+                padding-right: 0;
+                margin-bottom: 20pt;
+            }
+
+            h2 { font-size: 10pt; }
+
+            .parties {
+                padding: 10pt;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 12pt;
+                font-size: 8pt;
+            }
+
+            .logo img {
+                height: 30pt !important;
+            }
+
+            .document-title {
+                font-size: 12pt;
+            }
+
+            .page-footer {
+                font-size: 7pt;
+            }
+        }
     </style>
 </head>
 <body>

@@ -211,6 +211,92 @@
         @media print {
             body { padding: 0; }
         }
+
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            body {
+                padding: 16pt;
+                font-size: 10pt;
+            }
+
+            .form-row {
+                flex-direction: column;
+                gap: 10pt;
+            }
+
+            .form-group, .form-group.half, .form-group.third {
+                flex: 1;
+                width: 100%;
+            }
+
+            .checkbox-row {
+                flex-direction: column;
+                gap: 8pt;
+            }
+
+            .signature-row {
+                flex-direction: column;
+                gap: 12pt;
+            }
+
+            .signature-col {
+                width: 100%;
+            }
+
+            .bank-section {
+                padding: 10pt;
+            }
+
+            .check-diagram {
+                font-size: 7pt;
+                padding: 8pt;
+                overflow-x: auto;
+            }
+
+            .hr-row {
+                flex-direction: column;
+                gap: 8pt;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 12pt;
+                font-size: 9pt;
+            }
+
+            .letterhead img {
+                height: 28pt !important;
+            }
+
+            .document-title {
+                font-size: 10pt;
+            }
+
+            h2 {
+                font-size: 9pt;
+            }
+
+            .instructions {
+                font-size: 9pt;
+            }
+
+            .bank-title {
+                font-size: 9pt;
+            }
+
+            .check-diagram {
+                font-size: 6pt;
+            }
+
+            .page-footer {
+                font-size: 8pt;
+            }
+
+            .checkbox-item input[type="text"] {
+                width: 50pt;
+            }
+        }
     </style>
 </head>
 <body>

@@ -149,6 +149,62 @@
         @media print {
             body { padding: 0; }
         }
+
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            body {
+                padding: 16pt;
+                font-size: 10pt;
+            }
+
+            .meta-row {
+                display: flex;
+                flex-direction: column;
+                gap: 4pt;
+            }
+
+            .meta-item {
+                display: block;
+                margin-right: 0;
+            }
+
+            .job-title {
+                font-size: 14pt;
+            }
+
+            table {
+                display: block;
+                overflow-x: auto;
+                font-size: 9pt;
+            }
+
+            h2 { font-size: 10pt; }
+            h3 { font-size: 9pt; }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 12pt;
+                font-size: 9pt;
+            }
+
+            .letterhead img {
+                height: 28pt !important;
+            }
+
+            .job-title {
+                font-size: 12pt;
+            }
+
+            .document-label {
+                float: none;
+                margin-top: 0;
+            }
+
+            .page-number {
+                font-size: 7pt;
+            }
+        }
     </style>
 </head>
 <body>

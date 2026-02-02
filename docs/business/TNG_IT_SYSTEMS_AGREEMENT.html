@@ -143,6 +143,52 @@
         @media print {
             body { padding: 0; }
         }
+
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            body {
+                padding: 16pt;
+                font-size: 9pt;
+            }
+
+            .signature-row {
+                flex-direction: column;
+                gap: 12pt;
+            }
+
+            .signature-col {
+                width: 100%;
+            }
+
+            h2 { font-size: 10pt; }
+
+            .important-notice {
+                padding: 8pt;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 12pt;
+                font-size: 8pt;
+            }
+
+            .logo img {
+                height: 28pt !important;
+            }
+
+            .document-title {
+                font-size: 12pt;
+            }
+
+            .checkbox-item {
+                font-size: 9pt;
+            }
+
+            .page-footer {
+                font-size: 7pt;
+            }
+        }
     </style>
 </head>
 <body>

@@ -154,6 +154,59 @@
         @media print {
             body { padding: 0; }
         }
+
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            body {
+                padding: 16pt;
+                font-size: 9pt;
+            }
+
+            .form-row {
+                flex-direction: column;
+                gap: 8pt;
+            }
+
+            .form-group, .form-group.small {
+                flex: 1;
+                width: 100%;
+            }
+
+            .signature-row {
+                flex-direction: column;
+                gap: 10pt;
+            }
+
+            .signature-col {
+                width: 100%;
+            }
+
+            h2 { font-size: 10pt; }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 12pt;
+                font-size: 8pt;
+            }
+
+            .letterhead img {
+                height: 24pt !important;
+            }
+
+            .document-title {
+                font-size: 11pt;
+            }
+
+            .warning {
+                font-size: 8pt;
+                padding: 6pt;
+            }
+
+            .page-footer {
+                font-size: 7pt;
+            }
+        }
     </style>
 </head>
 <body>

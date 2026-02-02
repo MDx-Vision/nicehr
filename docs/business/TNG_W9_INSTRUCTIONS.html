@@ -116,6 +116,47 @@
         @media print {
             body { padding: 0; }
         }
+
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            body {
+                padding: 16pt;
+                font-size: 10pt;
+            }
+
+            table {
+                display: block;
+                overflow-x: auto;
+                font-size: 9pt;
+            }
+
+            h2 { font-size: 10pt; }
+            h3 { font-size: 9pt; }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 12pt;
+                font-size: 9pt;
+            }
+
+            .letterhead img {
+                height: 28pt !important;
+            }
+
+            .document-title {
+                font-size: 12pt;
+            }
+
+            .notice {
+                font-size: 9pt;
+                padding: 8pt;
+            }
+
+            .page-footer {
+                font-size: 8pt;
+            }
+        }
     </style>
 </head>
 <body>

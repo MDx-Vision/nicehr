@@ -232,6 +232,101 @@
         @media print {
             body { padding: 0; }
         }
+
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            body {
+                padding: 16pt;
+                font-size: 11pt;
+            }
+
+            .header {
+                flex-direction: column;
+            }
+
+            .header-left, .header-right {
+                width: 100%;
+                border-right: none;
+                border-left: none;
+                border-bottom: 1pt solid #000;
+            }
+
+            .header-right {
+                border-bottom: none;
+            }
+
+            .form-title {
+                font-size: 14pt;
+            }
+
+            .form-row {
+                flex-direction: column;
+                gap: 8pt;
+            }
+
+            .form-group, .form-group.small, .form-group.medium {
+                flex: 1;
+                width: 100%;
+            }
+
+            .checkbox-row {
+                flex-direction: column;
+                gap: 8pt;
+            }
+
+            .signature-row {
+                flex-direction: column;
+                gap: 12pt;
+            }
+
+            .signature-col {
+                width: 100%;
+            }
+
+            .amount-box {
+                min-width: 100%;
+                box-sizing: border-box;
+            }
+
+            .section-header {
+                font-size: 10pt;
+            }
+
+            .step-number {
+                width: 18pt;
+                height: 18pt;
+                line-height: 18pt;
+                font-size: 10pt;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 12pt;
+                font-size: 10pt;
+            }
+
+            .company-header img {
+                height: 24pt !important;
+            }
+
+            .form-title {
+                font-size: 12pt;
+            }
+
+            .form-year {
+                font-size: 18pt;
+            }
+
+            .instructions {
+                font-size: 8pt;
+                padding: 6pt;
+            }
+
+            .privacy-notice {
+                font-size: 7pt;
+            }
+        }
     </style>
 </head>
 <body>
