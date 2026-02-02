@@ -45,12 +45,12 @@ app.use(
         fontSrc: ["'self'"],
         objectSrc: ["'none'"],
         mediaSrc: ["'self'"],
-        frameSrc: ["'none'"],
-        childSrc: ["'none'"],
+        frameSrc: ["'self'"], // Allow same-origin iframes for embedded forms
+        childSrc: ["'self'"],
         connectSrc: ["'self'", "wss:", "ws:"], // WebSocket support
         workerSrc: ["'self'", "blob:"],
         formAction: ["'self'"],
-        frameAncestors: ["'none'"], // Prevent clickjacking
+        frameAncestors: ["'self'"], // Allow same-origin iframes for embedded forms
         baseUri: ["'self'"],
         upgradeInsecureRequests: [], // Upgrade HTTP to HTTPS
       },
@@ -63,8 +63,8 @@ app.use(
     },
     // Prevent MIME type sniffing
     noSniff: true,
-    // Prevent clickjacking
-    frameguard: { action: "deny" },
+    // Prevent clickjacking (allow same-origin for embedded forms)
+    frameguard: { action: "sameorigin" },
     // Hide X-Powered-By header
     hidePoweredBy: true,
     // Strict referrer policy - don't leak URLs

@@ -72,14 +72,30 @@
         }
 
         .form-field {
+            border: none;
             border-bottom: 1pt solid #000;
             height: 16pt;
             width: 100%;
+            font-family: inherit;
+            font-size: 10pt;
+            padding: 2pt 4pt;
+            box-sizing: border-box;
+            background: transparent;
+        }
+
+        .form-field:focus {
+            outline: none;
+            border-bottom: 2pt solid #6B9BD2;
         }
 
         .form-field.tall {
             height: 48pt;
             border: 1pt solid #000;
+            resize: none;
+        }
+
+        .form-field.tall:focus {
+            border: 2pt solid #6B9BD2;
         }
 
         .checkbox-row {
@@ -95,10 +111,10 @@
             font-size: 9pt;
         }
 
-        .checkbox {
-            width: 10pt;
-            height: 10pt;
-            border: 1pt solid #000;
+        .checkbox-item input[type="checkbox"] {
+            width: 12pt;
+            height: 12pt;
+            cursor: pointer;
         }
 
         .notice {
@@ -168,6 +184,26 @@
             font-size: 8pt;
         }
 
+        table input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            font-size: 9pt;
+            padding: 2pt;
+        }
+
+        table input:focus {
+            outline: none;
+            background: #f0f7ff;
+        }
+
+        .employer-section {
+            border: 1pt solid #ccc;
+            padding: 10pt;
+            margin-bottom: 12pt;
+        }
+
         @media print {
             body { padding: 0; }
         }
@@ -189,67 +225,67 @@
 <div class="form-row">
     <div class="form-group">
         <div class="form-label">Legal Last Name</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="lastName" />
     </div>
     <div class="form-group">
         <div class="form-label">Legal First Name</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="firstName" />
     </div>
     <div class="form-group small">
         <div class="form-label">MI</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="middleInitial" maxlength="1" />
     </div>
 </div>
 
 <div class="form-row">
     <div class="form-group">
         <div class="form-label">Street Address</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="streetAddress" />
     </div>
     <div class="form-group small">
         <div class="form-label">Apt/Unit</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="aptUnit" />
     </div>
 </div>
 
 <div class="form-row">
     <div class="form-group">
         <div class="form-label">City</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="city" />
     </div>
     <div class="form-group small">
         <div class="form-label">State</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="state" maxlength="2" />
     </div>
     <div class="form-group small">
         <div class="form-label">ZIP Code</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="zipCode" maxlength="10" />
     </div>
 </div>
 
 <div class="form-row">
     <div class="form-group">
         <div class="form-label">Primary Phone</div>
-        <div class="form-field"></div>
+        <input type="tel" class="form-field" name="primaryPhone" />
     </div>
     <div class="form-group">
         <div class="form-label">Alternate Phone</div>
-        <div class="form-field"></div>
+        <input type="tel" class="form-field" name="alternatePhone" />
     </div>
     <div class="form-group">
         <div class="form-label">Email Address</div>
-        <div class="form-field"></div>
+        <input type="email" class="form-field" name="email" />
     </div>
 </div>
 
 <div class="form-row">
     <div class="form-group medium">
         <div class="form-label">Social Security Number</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="ssn" placeholder="XXX-XX-XXXX" />
     </div>
     <div class="form-group medium">
         <div class="form-label">Date of Birth</div>
-        <div class="form-field"></div>
+        <input type="date" class="form-field" name="dateOfBirth" />
     </div>
 </div>
 
@@ -257,15 +293,15 @@
     <div class="form-group">
         <div class="form-label">Are you legally authorized to work in the United States?</div>
         <div class="checkbox-row">
-            <div class="checkbox-item"><div class="checkbox"></div> Yes</div>
-            <div class="checkbox-item"><div class="checkbox"></div> No</div>
+            <label class="checkbox-item"><input type="checkbox" name="workAuthYes" /> Yes</label>
+            <label class="checkbox-item"><input type="checkbox" name="workAuthNo" /> No</label>
         </div>
     </div>
     <div class="form-group">
         <div class="form-label">Will you now or in the future require sponsorship?</div>
         <div class="checkbox-row">
-            <div class="checkbox-item"><div class="checkbox"></div> Yes</div>
-            <div class="checkbox-item"><div class="checkbox"></div> No</div>
+            <label class="checkbox-item"><input type="checkbox" name="sponsorshipYes" /> Yes</label>
+            <label class="checkbox-item"><input type="checkbox" name="sponsorshipNo" /> No</label>
         </div>
     </div>
 </div>
@@ -275,22 +311,22 @@
 <div class="form-row">
     <div class="form-group">
         <div class="form-label">Position Applied For</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="positionApplied" />
     </div>
     <div class="form-group medium">
         <div class="form-label">Desired Hourly Rate</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="desiredRate" placeholder="$" />
     </div>
     <div class="form-group medium">
         <div class="form-label">Available Start Date</div>
-        <div class="form-field"></div>
+        <input type="date" class="form-field" name="startDate" />
     </div>
 </div>
 
 <div class="form-row">
     <div class="form-group">
         <div class="form-label">How did you hear about this position?</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="referralSource" />
     </div>
 </div>
 
@@ -298,15 +334,15 @@
     <div class="form-group">
         <div class="form-label">Are you willing to travel up to 100%?</div>
         <div class="checkbox-row">
-            <div class="checkbox-item"><div class="checkbox"></div> Yes</div>
-            <div class="checkbox-item"><div class="checkbox"></div> No</div>
+            <label class="checkbox-item"><input type="checkbox" name="travelYes" /> Yes</label>
+            <label class="checkbox-item"><input type="checkbox" name="travelNo" /> No</label>
         </div>
     </div>
     <div class="form-group">
         <div class="form-label">Are you willing to work evenings/weekends during go-live?</div>
         <div class="checkbox-row">
-            <div class="checkbox-item"><div class="checkbox"></div> Yes</div>
-            <div class="checkbox-item"><div class="checkbox"></div> No</div>
+            <label class="checkbox-item"><input type="checkbox" name="eveningsYes" /> Yes</label>
+            <label class="checkbox-item"><input type="checkbox" name="eveningsNo" /> No</label>
         </div>
     </div>
 </div>
@@ -321,22 +357,22 @@
         <th style="width: 20%;">Year Completed</th>
     </tr>
     <tr>
-        <td style="height: 20pt;"></td>
-        <td></td>
-        <td></td>
-        <td></td>
+        <td><input type="text" name="edu1School" /></td>
+        <td><input type="text" name="edu1Location" /></td>
+        <td><input type="text" name="edu1Degree" /></td>
+        <td><input type="text" name="edu1Year" /></td>
     </tr>
     <tr>
-        <td style="height: 20pt;"></td>
-        <td></td>
-        <td></td>
-        <td></td>
+        <td><input type="text" name="edu2School" /></td>
+        <td><input type="text" name="edu2Location" /></td>
+        <td><input type="text" name="edu2Degree" /></td>
+        <td><input type="text" name="edu2Year" /></td>
     </tr>
     <tr>
-        <td style="height: 20pt;"></td>
-        <td></td>
-        <td></td>
-        <td></td>
+        <td><input type="text" name="edu3School" /></td>
+        <td><input type="text" name="edu3Location" /></td>
+        <td><input type="text" name="edu3Degree" /></td>
+        <td><input type="text" name="edu3Year" /></td>
     </tr>
 </table>
 
@@ -350,22 +386,22 @@
         <th style="width: 20%;">Expiration Date</th>
     </tr>
     <tr>
-        <td style="height: 20pt;"></td>
-        <td></td>
-        <td></td>
-        <td></td>
+        <td><input type="text" name="cert1Name" /></td>
+        <td><input type="text" name="cert1Org" /></td>
+        <td><input type="text" name="cert1Date" /></td>
+        <td><input type="text" name="cert1Exp" /></td>
     </tr>
     <tr>
-        <td style="height: 20pt;"></td>
-        <td></td>
-        <td></td>
-        <td></td>
+        <td><input type="text" name="cert2Name" /></td>
+        <td><input type="text" name="cert2Org" /></td>
+        <td><input type="text" name="cert2Date" /></td>
+        <td><input type="text" name="cert2Exp" /></td>
     </tr>
     <tr>
-        <td style="height: 20pt;"></td>
-        <td></td>
-        <td></td>
-        <td></td>
+        <td><input type="text" name="cert3Name" /></td>
+        <td><input type="text" name="cert3Org" /></td>
+        <td><input type="text" name="cert3Date" /></td>
+        <td><input type="text" name="cert3Exp" /></td>
     </tr>
 </table>
 
@@ -374,152 +410,152 @@
 <h2>Section 5: Employment History</h2>
 <p style="font-size: 9pt; margin-bottom: 8pt;">List your last three employers, starting with the most recent.</p>
 
-<div style="border: 1pt solid #ccc; padding: 10pt; margin-bottom: 12pt;">
+<div class="employer-section">
     <div class="form-row">
         <div class="form-group">
             <div class="form-label">Employer Name</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="emp1Name" />
         </div>
         <div class="form-group">
             <div class="form-label">Job Title</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="emp1Title" />
         </div>
     </div>
     <div class="form-row">
         <div class="form-group">
             <div class="form-label">Address</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="emp1Address" />
         </div>
         <div class="form-group medium">
             <div class="form-label">Phone</div>
-            <div class="form-field"></div>
+            <input type="tel" class="form-field" name="emp1Phone" />
         </div>
     </div>
     <div class="form-row">
         <div class="form-group small">
             <div class="form-label">Start Date</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="emp1Start" placeholder="MM/YYYY" />
         </div>
         <div class="form-group small">
             <div class="form-label">End Date</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="emp1End" placeholder="MM/YYYY" />
         </div>
         <div class="form-group medium">
             <div class="form-label">Supervisor Name</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="emp1Supervisor" />
         </div>
         <div class="form-group small">
             <div class="form-label">May we contact?</div>
             <div class="checkbox-row">
-                <div class="checkbox-item"><div class="checkbox"></div> Yes</div>
-                <div class="checkbox-item"><div class="checkbox"></div> No</div>
+                <label class="checkbox-item"><input type="checkbox" name="emp1ContactYes" /> Yes</label>
+                <label class="checkbox-item"><input type="checkbox" name="emp1ContactNo" /> No</label>
             </div>
         </div>
     </div>
     <div class="form-row">
         <div class="form-group">
             <div class="form-label">Reason for Leaving</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="emp1Reason" />
         </div>
     </div>
 </div>
 
-<div style="border: 1pt solid #ccc; padding: 10pt; margin-bottom: 12pt;">
+<div class="employer-section">
     <div class="form-row">
         <div class="form-group">
             <div class="form-label">Employer Name</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="emp2Name" />
         </div>
         <div class="form-group">
             <div class="form-label">Job Title</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="emp2Title" />
         </div>
     </div>
     <div class="form-row">
         <div class="form-group">
             <div class="form-label">Address</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="emp2Address" />
         </div>
         <div class="form-group medium">
             <div class="form-label">Phone</div>
-            <div class="form-field"></div>
+            <input type="tel" class="form-field" name="emp2Phone" />
         </div>
     </div>
     <div class="form-row">
         <div class="form-group small">
             <div class="form-label">Start Date</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="emp2Start" placeholder="MM/YYYY" />
         </div>
         <div class="form-group small">
             <div class="form-label">End Date</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="emp2End" placeholder="MM/YYYY" />
         </div>
         <div class="form-group medium">
             <div class="form-label">Supervisor Name</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="emp2Supervisor" />
         </div>
         <div class="form-group small">
             <div class="form-label">May we contact?</div>
             <div class="checkbox-row">
-                <div class="checkbox-item"><div class="checkbox"></div> Yes</div>
-                <div class="checkbox-item"><div class="checkbox"></div> No</div>
+                <label class="checkbox-item"><input type="checkbox" name="emp2ContactYes" /> Yes</label>
+                <label class="checkbox-item"><input type="checkbox" name="emp2ContactNo" /> No</label>
             </div>
         </div>
     </div>
     <div class="form-row">
         <div class="form-group">
             <div class="form-label">Reason for Leaving</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="emp2Reason" />
         </div>
     </div>
 </div>
 
-<div style="border: 1pt solid #ccc; padding: 10pt; margin-bottom: 12pt;">
+<div class="employer-section">
     <div class="form-row">
         <div class="form-group">
             <div class="form-label">Employer Name</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="emp3Name" />
         </div>
         <div class="form-group">
             <div class="form-label">Job Title</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="emp3Title" />
         </div>
     </div>
     <div class="form-row">
         <div class="form-group">
             <div class="form-label">Address</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="emp3Address" />
         </div>
         <div class="form-group medium">
             <div class="form-label">Phone</div>
-            <div class="form-field"></div>
+            <input type="tel" class="form-field" name="emp3Phone" />
         </div>
     </div>
     <div class="form-row">
         <div class="form-group small">
             <div class="form-label">Start Date</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="emp3Start" placeholder="MM/YYYY" />
         </div>
         <div class="form-group small">
             <div class="form-label">End Date</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="emp3End" placeholder="MM/YYYY" />
         </div>
         <div class="form-group medium">
             <div class="form-label">Supervisor Name</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="emp3Supervisor" />
         </div>
         <div class="form-group small">
             <div class="form-label">May we contact?</div>
             <div class="checkbox-row">
-                <div class="checkbox-item"><div class="checkbox"></div> Yes</div>
-                <div class="checkbox-item"><div class="checkbox"></div> No</div>
+                <label class="checkbox-item"><input type="checkbox" name="emp3ContactYes" /> Yes</label>
+                <label class="checkbox-item"><input type="checkbox" name="emp3ContactNo" /> No</label>
             </div>
         </div>
     </div>
     <div class="form-row">
         <div class="form-group">
             <div class="form-label">Reason for Leaving</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="emp3Reason" />
         </div>
     </div>
 </div>
@@ -545,16 +581,16 @@ I understand that any offer of employment is contingent upon successful completi
 <div class="signature-block">
     <div class="signature-row">
         <div class="signature-col">
-            <div class="signature-line"></div>
+            <input type="text" class="form-field" name="signature" placeholder="Type your full legal name as signature" />
             <div class="signature-label">Applicant Signature</div>
         </div>
         <div class="signature-col" style="flex: 0.4;">
-            <div class="signature-line"></div>
+            <input type="date" class="form-field" name="signatureDate" />
             <div class="signature-label">Date</div>
         </div>
     </div>
     <div style="margin-top: 12pt;">
-        <div class="signature-line" style="width: 240pt;"></div>
+        <input type="text" class="form-field" name="printName" style="width: 240pt;" />
         <div class="signature-label">Print Name</div>
     </div>
 </div>

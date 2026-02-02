@@ -277,6 +277,7 @@ const NAV_GROUPS: NavGroup[] = [
       { id: "personal-info", title: "Personal Info", url: "/personal-information", icon: "FileText", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
       { id: "skills", title: "Skills", url: "/skills-questionnaire", icon: "Award", roles: ["consultant"] },
       { id: "my-documents", title: "My Documents", url: "/my-documents", icon: "FileText", roles: ["consultant"] },
+      { id: "my-onboarding", title: "My Onboarding", url: "/my-onboarding", icon: "ClipboardCheck", roles: ["consultant"] },
       { id: "documents", title: "Documents", url: "/documents", icon: "FileText", roles: ["admin", "hospital_leadership", "hospital_staff"] },
       { id: "account", title: "Account Settings", url: "/account", icon: "Settings", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
     ],

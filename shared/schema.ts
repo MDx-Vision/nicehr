@@ -1941,11 +1941,17 @@ export const onboardingTasks = pgTable("onboarding_tasks", {
   documentTypeId: varchar("document_type_id").references(() => documentTypes.id),
   isRequired: boolean("is_required").default(true).notNull(),
   status: onboardingTaskStatusEnum("status").default("pending").notNull(),
+  phase: integer("phase").default(1).notNull(),
+  phaseName: varchar("phase_name"),
   dueDate: date("due_date"),
+  dueDays: integer("due_days"), // days from start date
   submittedAt: timestamp("submitted_at"),
+  submittedDocumentId: varchar("submitted_document_id").references(() => consultantDocuments.id),
   reviewedBy: varchar("reviewed_by").references(() => users.id),
   reviewedAt: timestamp("reviewed_at"),
   rejectionReason: text("rejection_reason"),
+  instructions: text("instructions"),
+  formUrl: varchar("form_url"), // URL for form_fill and e_sign task types
   orderIndex: integer("order_index").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -1960,9 +1966,39 @@ export const onboardingTasksRelations = relations(onboardingTasks, ({ one }) => 
     fields: [onboardingTasks.documentTypeId],
     references: [documentTypes.id],
   }),
+  submittedDocument: one(consultantDocuments, {
+    fields: [onboardingTasks.submittedDocumentId],
+    references: [consultantDocuments.id],
+  }),
   reviewer: one(users, {
     fields: [onboardingTasks.reviewedBy],
     references: [users.id],
+  }),
+}));
+
+// Onboarding Templates - Standard tasks auto-generated for new consultants
+export const onboardingTemplates = pgTable("onboarding_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  documentTypeId: varchar("document_type_id").references(() => documentTypes.id).notNull(),
+  taskType: varchar("task_type").notNull(), // document_upload, e_sign, form_fill, verification
+  title: varchar("title").notNull(),
+  description: text("description"),
+  phase: integer("phase").notNull(),
+  phaseName: varchar("phase_name").notNull(),
+  orderIndex: integer("order_index").default(0),
+  isRequired: boolean("is_required").default(true).notNull(),
+  dueDays: integer("due_days"), // days from start date
+  instructions: text("instructions"),
+  formUrl: varchar("form_url"), // URL for form_fill and e_sign task types
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const onboardingTemplatesRelations = relations(onboardingTemplates, ({ one }) => ({
+  documentType: one(documentTypes, {
+    fields: [onboardingTemplates.documentTypeId],
+    references: [documentTypes.id],
   }),
 }));
 
@@ -2023,6 +2059,12 @@ export const insertOnboardingTaskSchema = createInsertSchema(onboardingTasks).om
   updatedAt: true,
 });
 
+export const insertOnboardingTemplateSchema = createInsertSchema(onboardingTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // ============================================
 // PHASE 8 TYPES
 // ============================================
@@ -2053,6 +2095,9 @@ export type InsertProjectTeamAssignment = z.infer<typeof insertProjectTeamAssign
 
 export type OnboardingTask = typeof onboardingTasks.$inferSelect;
 export type InsertOnboardingTask = z.infer<typeof insertOnboardingTaskSchema>;
+
+export type OnboardingTemplate = typeof onboardingTemplates.$inferSelect;
+export type InsertOnboardingTemplate = z.infer<typeof insertOnboardingTemplateSchema>;
 
 // Extended types for API responses
 export interface ProjectPhaseWithDetails extends ProjectPhase {

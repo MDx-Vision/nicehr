@@ -1,5 +1,6 @@
-import type { Express } from "express";
+import express, { type Express } from "express";
 import { createServer, type Server } from "http";
+import path from "path";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, requireRole, requirePermission, requireAnyPermission, optionalAuth, sessionTouchMiddleware } from "./replitAuth";
 import {
@@ -113,7 +114,12 @@ import {
   insertKpiDefinitionSchema,
   insertKpiSnapshotSchema,
   insertRaciAssignmentSchema,
+  onboardingTemplates,
+  onboardingTasks,
+  consultants,
 } from "@shared/schema";
+import { db } from "./db";
+import { asc, eq, count } from "drizzle-orm";
 import {
   sendWelcomeEmail,
   sendDocumentApprovedEmail,
@@ -129,6 +135,7 @@ import changeManagementRoutes from "./routes/changeManagement";
 import esignRoutes from "./routes/esign";
 import crmRoutes from "./routes/crm";
 import legacyIntegrationRoutes from "./routes/legacyIntegration";
+import onboardingRoutes from "./routes/onboarding";
 
 // =============================================================================
 // QUERY PARAMETER VALIDATION HELPERS
@@ -199,6 +206,12 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   // =============================================================================
+  // STATIC FILE SERVING FOR DOCS
+  // =============================================================================
+  // Serve onboarding forms and business documents
+  app.use("/docs", express.static(path.join(process.cwd(), "docs")));
+
+  // =============================================================================
   // HEALTH CHECK ENDPOINT
   // =============================================================================
   // Used by load balancers, Kubernetes, and monitoring systems
@@ -262,6 +275,10 @@ export async function registerRoutes(
     app.use('/api', legacyIntegrationRoutes);
     console.log('[Legacy Integration] Legacy Integration module enabled');
   }
+
+  // Onboarding Portal Routes
+  app.use('/api', onboardingRoutes);
+  console.log('[Onboarding] Onboarding Portal routes enabled');
 
   // Seed RBAC roles and permissions at startup
   try {
@@ -855,7 +872,7 @@ export async function registerRoutes(
         userId: req.body.userId || userId,
       });
       const consultant = await storage.createConsultant(validated);
-      
+
       if (userId) {
         await logActivity(userId, {
           activityType: "create",
@@ -865,7 +882,49 @@ export async function registerRoutes(
           description: "Created new consultant profile",
         }, req);
       }
-      
+
+      // Auto-generate onboarding tasks from templates
+      try {
+        const templates = await db
+          .select()
+          .from(onboardingTemplates)
+          .where(eq(onboardingTemplates.isActive, true))
+          .orderBy(asc(onboardingTemplates.phase), asc(onboardingTemplates.orderIndex));
+
+        if (templates.length > 0) {
+          const startDate = new Date();
+
+          const tasksToInsert = templates.map((template: typeof onboardingTemplates.$inferSelect) => {
+            const dueDate = new Date(startDate);
+            if (template.dueDays) {
+              dueDate.setDate(dueDate.getDate() + template.dueDays);
+            }
+
+            return {
+              consultantId: consultant.id,
+              taskType: template.taskType,
+              title: template.title,
+              description: template.description,
+              documentTypeId: template.documentTypeId,
+              isRequired: template.isRequired,
+              status: "pending" as const,
+              phase: template.phase,
+              phaseName: template.phaseName,
+              dueDate: dueDate.toISOString().split("T")[0],
+              dueDays: template.dueDays,
+              instructions: template.instructions,
+              orderIndex: template.orderIndex,
+            };
+          });
+
+          await db.insert(onboardingTasks).values(tasksToInsert);
+          console.log(`[Onboarding] Generated ${tasksToInsert.length} onboarding tasks for consultant ${consultant.id}`);
+        }
+      } catch (onboardingError) {
+        console.error("[Onboarding] Error generating tasks:", onboardingError);
+        // Don't fail the consultant creation if onboarding task generation fails
+      }
+
       res.status(201).json(consultant);
     } catch (error) {
       console.error("Error creating consultant:", error);

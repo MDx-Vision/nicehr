@@ -60,6 +60,7 @@ import {
   changeRequestImpacts,
   changeRequestApprovals,
   changeRequestComments,
+  onboardingTemplates,
 } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 
@@ -1840,6 +1841,53 @@ const demoDocumentTypes = [
   // Background/Screening Authorizations
   { id: "doctype-39", name: "Background Check Authorization", description: "Authorization for criminal background check", isRequired: true, hasExpiration: false, category: "Authorization" },
   { id: "doctype-40", name: "Drug Screening Consent", description: "Consent for drug and alcohol testing", isRequired: true, hasExpiration: false, category: "Authorization" },
+];
+
+// Onboarding Templates - Standard tasks for new consultant onboarding organized by phase
+// Task types: form_fill (fill out on-site form), e_sign (review & sign), document_upload (upload external file)
+const demoOnboardingTemplates = [
+  // Phase 1: Personal Information (Due Day 1)
+  { id: "template-1", documentTypeId: "doctype-13", taskType: "form_fill", title: "Employment Application", description: "Complete and submit TNG employment application", phase: 1, phaseName: "Personal Information", orderIndex: 1, isRequired: true, dueDays: 1, instructions: "Fill out all sections completely. Use your legal name as it appears on your ID.", formUrl: "/docs/business/TNG_EMPLOYMENT_APPLICATION.html" },
+  { id: "template-2", documentTypeId: "doctype-15", taskType: "form_fill", title: "Emergency Contact Form", description: "Provide emergency contact information", phase: 1, phaseName: "Personal Information", orderIndex: 2, isRequired: true, dueDays: 1, instructions: "List at least two emergency contacts with current phone numbers.", formUrl: "/docs/business/TNG_EMERGENCY_CONTACT_FORM.html" },
+  { id: "template-3", documentTypeId: "doctype-14", taskType: "form_fill", title: "Direct Deposit Authorization", description: "Set up direct deposit for payroll", phase: 1, phaseName: "Personal Information", orderIndex: 3, isRequired: true, dueDays: 1, instructions: "Enter your bank account and routing numbers for payroll deposits.", formUrl: "/docs/business/TNG_DIRECT_DEPOSIT_FORM.html" },
+  { id: "template-4", documentTypeId: "doctype-8", taskType: "form_fill", title: "W-9 Tax Form", description: "Complete W-9 for tax purposes", phase: 1, phaseName: "Personal Information", orderIndex: 4, isRequired: true, dueDays: 1, instructions: "Complete all fields including your SSN or EIN. Sign and date the form.", formUrl: "/docs/business/TNG_W9_INSTRUCTIONS.html" },
+  { id: "template-5", documentTypeId: "doctype-18", taskType: "document_upload", title: "Professional Headshot", description: "Upload current professional photo", phase: 1, phaseName: "Personal Information", orderIndex: 5, isRequired: true, dueDays: 1, instructions: "Submit a high-resolution professional photo for your ID badge. Business attire preferred." },
+  { id: "template-6", documentTypeId: "doctype-22", taskType: "document_upload", title: "I-9 Identity Document (List A)", description: "Passport, Green Card, or equivalent document", phase: 1, phaseName: "Personal Information", orderIndex: 6, isRequired: false, dueDays: 1, instructions: "Upload a clear copy of your passport or other List A document. Must be unexpired." },
+  { id: "template-7", documentTypeId: "doctype-23", taskType: "document_upload", title: "I-9 Identity Document (List B)", description: "Driver's license or state ID", phase: 1, phaseName: "Personal Information", orderIndex: 7, isRequired: false, dueDays: 1, instructions: "If not using List A, upload a clear copy of your driver's license or state ID." },
+  { id: "template-8", documentTypeId: "doctype-24", taskType: "document_upload", title: "I-9 Work Authorization (List C)", description: "Social Security card or birth certificate", phase: 1, phaseName: "Personal Information", orderIndex: 8, isRequired: false, dueDays: 1, instructions: "If using List B, also upload your Social Security card or birth certificate." },
+
+  // Phase 2: Legal Agreements (Due Day 3) - e_sign docs with formUrl to view the document
+  { id: "template-9", documentTypeId: "doctype-11", taskType: "e_sign", title: "Employment Agreement", description: "Review and sign employment agreement", phase: 2, phaseName: "Legal Agreements", orderIndex: 1, isRequired: true, dueDays: 3, instructions: "Read the agreement carefully before signing. Contact HR with any questions.", formUrl: "/docs/business/TNG_EMPLOYMENT_AGREEMENT.html" },
+  { id: "template-10", documentTypeId: "doctype-10", taskType: "e_sign", title: "Non-Disclosure Agreement", description: "Sign confidentiality agreement", phase: 2, phaseName: "Legal Agreements", orderIndex: 2, isRequired: true, dueDays: 3, instructions: "This NDA protects client and company confidential information.", formUrl: "/docs/business/TNG_NDA_AGREEMENT.html" },
+  { id: "template-11", documentTypeId: "doctype-19", taskType: "e_sign", title: "Employee Handbook Acknowledgment", description: "Review and acknowledge employee handbook", phase: 2, phaseName: "Legal Agreements", orderIndex: 3, isRequired: true, dueDays: 3, instructions: "Read the complete handbook before signing. Keep a copy for your records.", formUrl: "/docs/business/TNG_EMPLOYEE_HANDBOOK.html" },
+  { id: "template-12", documentTypeId: "doctype-20", taskType: "e_sign", title: "Code of Conduct", description: "Review and sign code of conduct", phase: 2, phaseName: "Legal Agreements", orderIndex: 4, isRequired: true, dueDays: 3, instructions: "Our code of conduct outlines expected professional behavior.", formUrl: "/docs/business/TNG_CODE_OF_CONDUCT.html" },
+  { id: "template-13", documentTypeId: "doctype-21", taskType: "e_sign", title: "IT Systems Agreement", description: "Sign IT acceptable use policy", phase: 2, phaseName: "Legal Agreements", orderIndex: 5, isRequired: true, dueDays: 3, instructions: "Covers proper use of company IT systems and devices.", formUrl: "/docs/business/TNG_IT_SYSTEMS_AGREEMENT.html" },
+  { id: "template-14", documentTypeId: "doctype-16", taskType: "e_sign", title: "Photo/Media Release", description: "Authorize use of photo and media", phase: 2, phaseName: "Legal Agreements", orderIndex: 6, isRequired: false, dueDays: 3, instructions: "Optional: allows use of your image for company materials.", formUrl: "/docs/business/TNG_PHOTO_MEDIA_RELEASE.html" },
+
+  // Phase 3: Background & Compliance (Due Day 7)
+  { id: "template-15", documentTypeId: "doctype-39", taskType: "e_sign", title: "Background Check Authorization", description: "Authorize criminal background check", phase: 3, phaseName: "Background & Compliance", orderIndex: 1, isRequired: true, dueDays: 7, instructions: "Authorization for third-party background verification. Required for hospital access.", formUrl: "/docs/business/TNG_BACKGROUND_CHECK_AUTHORIZATION.html" },
+  { id: "template-16", documentTypeId: "doctype-40", taskType: "e_sign", title: "Drug Screening Consent", description: "Consent to pre-employment drug test", phase: 3, phaseName: "Background & Compliance", orderIndex: 2, isRequired: true, dueDays: 7, instructions: "Drug screening is required per hospital facility requirements.", formUrl: "/docs/business/TNG_DRUG_SCREENING_CONSENT.html" },
+  { id: "template-17", documentTypeId: "doctype-7", taskType: "document_upload", title: "HIPAA Training Certificate", description: "Complete HIPAA training and upload certificate", phase: 3, phaseName: "Background & Compliance", orderIndex: 3, isRequired: true, dueDays: 7, instructions: "Complete HIPAA training if you don't have a valid certificate from the past 12 months." },
+  { id: "template-18", documentTypeId: "doctype-17", taskType: "form_fill", title: "Professional References", description: "Provide three professional references", phase: 3, phaseName: "Background & Compliance", orderIndex: 4, isRequired: true, dueDays: 7, instructions: "List 3 professional references with name, title, organization, phone, and email.", formUrl: "/docs/business/TNG_REFERENCE_FORM.html" },
+
+  // Phase 4: Credentials (Due Day 14) - all external uploads
+  { id: "template-19", documentTypeId: "doctype-1", taskType: "document_upload", title: "Resume/CV", description: "Upload current resume or CV", phase: 4, phaseName: "Credentials", orderIndex: 1, isRequired: true, dueDays: 14, instructions: "Submit your most recent resume with all relevant experience and certifications." },
+  { id: "template-20", documentTypeId: "doctype-2", taskType: "document_upload", title: "RN License (if applicable)", description: "Upload nursing license", phase: 4, phaseName: "Credentials", orderIndex: 2, isRequired: false, dueDays: 14, instructions: "Required for clinical consultant roles. Upload front and back of license." },
+  { id: "template-21", documentTypeId: "doctype-3", taskType: "document_upload", title: "Epic Certification", description: "Upload Epic certification badge", phase: 4, phaseName: "Credentials", orderIndex: 3, isRequired: false, dueDays: 14, instructions: "If Epic certified, upload your current certification badge/proof." },
+  { id: "template-22", documentTypeId: "doctype-4", taskType: "document_upload", title: "Cerner Certification", description: "Upload Cerner certification credential", phase: 4, phaseName: "Credentials", orderIndex: 4, isRequired: false, dueDays: 14, instructions: "If Cerner certified, upload your current certification credential." },
+  { id: "template-23", documentTypeId: "doctype-9", taskType: "document_upload", title: "Proof of Insurance", description: "Upload professional liability insurance", phase: 4, phaseName: "Credentials", orderIndex: 5, isRequired: true, dueDays: 14, instructions: "Provide certificate of professional liability insurance with current coverage dates." },
+
+  // Phase 5: Immunizations (Due Day 30) - form_fill for record, uploads for vaccine proof
+  { id: "template-24", documentTypeId: "doctype-34", taskType: "form_fill", title: "Immunization Record", description: "Complete immunization history form", phase: 5, phaseName: "Immunizations", orderIndex: 1, isRequired: true, dueDays: 30, instructions: "Complete the TNG Immunization Record form with your vaccination history.", formUrl: "/docs/business/TNG_IMMUNIZATION_RECORD.html" },
+  { id: "template-25", documentTypeId: "doctype-25", taskType: "document_upload", title: "Hepatitis B Vaccine", description: "Hepatitis B vaccination series or titer", phase: 5, phaseName: "Immunizations", orderIndex: 2, isRequired: true, dueDays: 30, instructions: "Upload proof of Hep B series (3 doses) or positive titer. Submit declination if refusing." },
+  { id: "template-26", documentTypeId: "doctype-26", taskType: "document_upload", title: "MMR Vaccine", description: "Measles, Mumps, Rubella vaccination", phase: 5, phaseName: "Immunizations", orderIndex: 3, isRequired: true, dueDays: 30, instructions: "Upload proof of 2-dose MMR series or positive titers for all 3 components." },
+  { id: "template-27", documentTypeId: "doctype-27", taskType: "document_upload", title: "Varicella Vaccine", description: "Chickenpox vaccination or titer", phase: 5, phaseName: "Immunizations", orderIndex: 4, isRequired: true, dueDays: 30, instructions: "Upload proof of 2-dose Varicella series or positive titer." },
+  { id: "template-28", documentTypeId: "doctype-28", taskType: "document_upload", title: "Tdap Vaccine", description: "Tetanus, Diphtheria, Pertussis booster", phase: 5, phaseName: "Immunizations", orderIndex: 5, isRequired: true, dueDays: 30, instructions: "Tdap booster required within the last 10 years." },
+  { id: "template-29", documentTypeId: "doctype-29", taskType: "document_upload", title: "Influenza Vaccine", description: "Annual flu vaccination", phase: 5, phaseName: "Immunizations", orderIndex: 6, isRequired: true, dueDays: 30, instructions: "Current season flu vaccine required. Submit declination if refusing." },
+  { id: "template-30", documentTypeId: "doctype-30", taskType: "document_upload", title: "COVID-19 Vaccine", description: "COVID-19 vaccination record", phase: 5, phaseName: "Immunizations", orderIndex: 7, isRequired: false, dueDays: 30, instructions: "Upload COVID-19 vaccination card if available. Hospital requirements may vary." },
+  { id: "template-31", documentTypeId: "doctype-31", taskType: "document_upload", title: "TB Test - PPD/TST", description: "Tuberculosis skin test (2-step)", phase: 5, phaseName: "Immunizations", orderIndex: 8, isRequired: false, dueDays: 30, instructions: "2-step PPD or single blood test required. Upload within 12 months." },
+  { id: "template-32", documentTypeId: "doctype-32", taskType: "document_upload", title: "TB Test - QuantiFERON", description: "TB blood test (IGRA)", phase: 5, phaseName: "Immunizations", orderIndex: 9, isRequired: false, dueDays: 30, instructions: "Alternative to PPD skin test. Upload lab results." },
+  { id: "template-33", documentTypeId: "doctype-35", taskType: "document_upload", title: "Titer Results", description: "Blood test immunity verification", phase: 5, phaseName: "Immunizations", orderIndex: 10, isRequired: false, dueDays: 30, instructions: "If lacking vaccination records, submit lab titer results to prove immunity." },
 ];
 
 // Consultant documents - onboarded consultants should have their required docs
@@ -4067,6 +4115,27 @@ export async function seedDemoData() {
       await db.insert(documentTypes).values(docType).onConflictDoNothing();
     }
 
+    console.log("Seeding onboarding templates...");
+    for (const template of demoOnboardingTemplates) {
+      await db.insert(onboardingTemplates).values(template).onConflictDoUpdate({
+        target: onboardingTemplates.id,
+        set: {
+          documentTypeId: template.documentTypeId,
+          taskType: template.taskType,
+          title: template.title,
+          description: template.description,
+          phase: template.phase,
+          phaseName: template.phaseName,
+          orderIndex: template.orderIndex,
+          isRequired: template.isRequired,
+          dueDays: template.dueDays,
+          instructions: template.instructions,
+          formUrl: template.formUrl,
+          isActive: true,
+        },
+      });
+    }
+
     console.log("Seeding consultant documents...");
     for (const doc of demoConsultantDocuments) {
       await db.insert(consultantDocuments).values(doc).onConflictDoNothing();
@@ -4707,12 +4776,12 @@ export async function seedDemoData() {
         priority: "high" as const,
         status: "approved" as const,
         impactLevel: "significant" as const,
-        requestedById: "user-1",
-        requestedByName: "Dr. James Wilson",
+        requestedById: "demo-admin",
+        requestedByName: "Dev Admin",
         justification: "Pharmacy is critical for medication reconciliation during go-live. Without this interface, nurses will need to manually enter medications.",
         proposedSolution: "Add HL7 ADT and RDE message types to the existing interface engine configuration.",
         estimatedEffort: "80 hours",
-        estimatedCost: "$12,000",
+        estimatedCost: 12000,
         targetImplementationDate: new Date("2025-05-01"),
         submittedAt: new Date("2025-01-10"),
         decidedAt: new Date("2025-01-12"),
@@ -4729,12 +4798,12 @@ export async function seedDemoData() {
         priority: "medium" as const,
         status: "submitted" as const,
         impactLevel: "moderate" as const,
-        requestedById: "user-2",
-        requestedByName: "Sarah Mitchell",
+        requestedById: "user-c2",
+        requestedByName: "Michael Rodriguez",
         justification: "Nursing leadership has indicated that 3 weeks is insufficient to train all shifts without impacting patient care. An additional week allows for overlap training.",
         proposedSolution: "Extend training from Feb 15-Mar 8 to Feb 15-Mar 15. This still allows 2 weeks before go-live for remediation.",
         estimatedEffort: "40 hours additional",
-        estimatedCost: "$8,000",
+        estimatedCost: 8000,
         targetImplementationDate: new Date("2025-02-01"),
         submittedAt: new Date("2025-01-15"),
         createdAt: new Date("2025-01-14"),
@@ -4750,12 +4819,12 @@ export async function seedDemoData() {
         priority: "critical" as const,
         status: "implemented" as const,
         impactLevel: "major" as const,
-        requestedById: "user-3",
-        requestedByName: "Michael Rodriguez",
+        requestedById: "user-c3",
+        requestedByName: "Jennifer Williams",
         justification: "Current workstation density is 1:4 (provider:workstation). Epic workflow requires 1:2 ratio for efficient patient throughput.",
         proposedSolution: "Procure 5 additional Ergotron mobile workstations with barcode scanners.",
         estimatedEffort: "16 hours",
-        estimatedCost: "$35,000",
+        estimatedCost: 35000,
         targetImplementationDate: new Date("2025-04-15"),
         actualImplementationDate: new Date("2025-01-10"),
         submittedAt: new Date("2024-12-20"),
@@ -4774,12 +4843,12 @@ export async function seedDemoData() {
         priority: "medium" as const,
         status: "rejected" as const,
         impactLevel: "moderate" as const,
-        requestedById: "user-4",
-        requestedByName: "Jennifer Park",
+        requestedById: "user-c4",
+        requestedByName: "David Kim",
         justification: "HL7 v2.5.1 provides better support for microbiology results and allows for more granular result codes.",
         proposedSolution: "Rebuild the outbound lab results interface using v2.5.1 message specification.",
         estimatedEffort: "120 hours",
-        estimatedCost: "$18,000",
+        estimatedCost: 18000,
         targetImplementationDate: new Date("2025-04-01"),
         submittedAt: new Date("2025-01-05"),
         decidedAt: new Date("2025-01-08"),
@@ -4796,12 +4865,12 @@ export async function seedDemoData() {
         priority: "high" as const,
         status: "draft" as const,
         impactLevel: "moderate" as const,
-        requestedById: "user-1",
-        requestedByName: "Dr. James Wilson",
+        requestedById: "demo-admin",
+        requestedByName: "Dev Admin",
         justification: "Current staffing model provides coverage from 6am-10pm only. Hospital operates 24/7 and needs support during overnight hours.",
         proposedSolution: "Engage additional consultant with inpatient experience for overnight shift (10pm-6am) during go-live week.",
         estimatedEffort: "56 hours",
-        estimatedCost: "$14,000",
+        estimatedCost: 14000,
         targetImplementationDate: new Date("2025-06-01"),
         createdAt: new Date("2025-01-16"),
         updatedAt: new Date("2025-01-16"),
@@ -4816,12 +4885,12 @@ export async function seedDemoData() {
         priority: "medium" as const,
         status: "under_review" as const,
         impactLevel: "significant" as const,
-        requestedById: "user-5",
-        requestedByName: "Lisa Thompson",
+        requestedById: "user-c5",
+        requestedByName: "Amanda Foster",
         justification: "Patient portal was originally planned for Phase 2, but hospital marketing has committed to patients that it will be available at go-live.",
         proposedSolution: "Add MyChart configuration tasks to the project plan and include in Phase 1 training curriculum.",
         estimatedEffort: "200 hours",
-        estimatedCost: "$45,000",
+        estimatedCost: 45000,
         targetImplementationDate: new Date("2025-09-01"),
         submittedAt: new Date("2025-01-14"),
         reviewStartedAt: new Date("2025-01-16"),
@@ -4894,7 +4963,7 @@ export async function seedDemoData() {
       {
         id: "approval-1",
         changeRequestId: "cr-1",
-        approverId: "user-admin",
+        approverId: "demo-admin",
         approverName: "Patricia Chen",
         approverRole: "Project Director",
         decision: "approved" as const,
@@ -4905,7 +4974,7 @@ export async function seedDemoData() {
       {
         id: "approval-2",
         changeRequestId: "cr-3",
-        approverId: "user-admin",
+        approverId: "demo-admin",
         approverName: "Patricia Chen",
         approverRole: "Project Director",
         decision: "approved" as const,
@@ -4916,7 +4985,7 @@ export async function seedDemoData() {
       {
         id: "approval-3",
         changeRequestId: "cr-4",
-        approverId: "user-admin",
+        approverId: "demo-admin",
         approverName: "Patricia Chen",
         approverRole: "Project Director",
         decision: "rejected" as const,
@@ -4934,39 +5003,39 @@ export async function seedDemoData() {
       {
         id: "comment-1",
         changeRequestId: "cr-2",
-        userId: "user-1",
-        userName: "Dr. James Wilson",
+        userId: "demo-admin",
+        userName: "Dev Admin",
         content: "I support this request. The nursing staff has been vocal about the compressed training timeline.",
         createdAt: new Date("2025-01-15T09:30:00"),
       },
       {
         id: "comment-2",
         changeRequestId: "cr-2",
-        userId: "user-3",
-        userName: "Michael Rodriguez",
+        userId: "user-c3",
+        userName: "Jennifer Williams",
         content: "Training team has confirmed they can accommodate the extended timeline with current staffing.",
         createdAt: new Date("2025-01-15T14:15:00"),
       },
       {
         id: "comment-3",
         changeRequestId: "cr-4",
-        userId: "user-4",
-        userName: "Jennifer Park",
+        userId: "user-c4",
+        userName: "David Kim",
         content: "Understood. We will proceed with v2.3 as planned and document the v2.5.1 upgrade for Phase 2.",
         createdAt: new Date("2025-01-08T16:45:00"),
       },
       {
         id: "comment-4",
         changeRequestId: "cr-6",
-        userId: "user-5",
-        userName: "Lisa Thompson",
+        userId: "user-c5",
+        userName: "Amanda Foster",
         content: "Marketing has agreed to adjust messaging if needed. However, they strongly prefer portal at go-live.",
         createdAt: new Date("2025-01-16T10:00:00"),
       },
       {
         id: "comment-5",
         changeRequestId: "cr-6",
-        userId: "user-admin",
+        userId: "demo-admin",
         userName: "Patricia Chen",
         content: "Scheduling meeting with steering committee on Thursday to discuss scope implications.",
         createdAt: new Date("2025-01-16T11:30:00"),

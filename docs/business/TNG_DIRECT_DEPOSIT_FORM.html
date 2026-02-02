@@ -86,9 +86,20 @@
         }
 
         .form-field {
+            border: none;
             border-bottom: 1pt solid #000;
             height: 20pt;
             width: 100%;
+            font-family: inherit;
+            font-size: 11pt;
+            padding: 2pt 4pt;
+            box-sizing: border-box;
+            background: transparent;
+        }
+
+        .form-field:focus {
+            outline: none;
+            border-bottom: 2pt solid #6B9BD2;
         }
 
         .checkbox-row {
@@ -104,10 +115,20 @@
             font-size: 10pt;
         }
 
-        .checkbox {
-            width: 12pt;
-            height: 12pt;
-            border: 1pt solid #000;
+        .checkbox-item input[type="checkbox"] {
+            width: 14pt;
+            height: 14pt;
+            cursor: pointer;
+        }
+
+        .checkbox-item input[type="text"] {
+            width: 60pt;
+            border: none;
+            border-bottom: 1pt solid #000;
+            font-family: inherit;
+            font-size: 10pt;
+            padding: 2pt;
+            background: transparent;
         }
 
         .bank-section {
@@ -151,12 +172,6 @@
 
         .signature-col {
             flex: 1;
-        }
-
-        .signature-line {
-            border-bottom: 1pt solid #000;
-            height: 20pt;
-            margin-bottom: 4pt;
         }
 
         .signature-label {
@@ -214,55 +229,55 @@
 <div class="form-row">
     <div class="form-group">
         <div class="form-label">Legal Last Name</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="lastName" />
     </div>
     <div class="form-group">
         <div class="form-label">Legal First Name</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="firstName" />
     </div>
     <div class="form-group third">
         <div class="form-label">MI</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="middleInitial" maxlength="1" />
     </div>
 </div>
 
 <div class="form-row">
     <div class="form-group">
         <div class="form-label">Street Address</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="streetAddress" />
     </div>
 </div>
 
 <div class="form-row">
     <div class="form-group">
         <div class="form-label">City</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="city" />
     </div>
     <div class="form-group third">
         <div class="form-label">State</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="state" maxlength="2" />
     </div>
     <div class="form-group third">
         <div class="form-label">ZIP Code</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="zipCode" maxlength="10" />
     </div>
 </div>
 
 <div class="form-row">
     <div class="form-group">
         <div class="form-label">Phone Number</div>
-        <div class="form-field"></div>
+        <input type="tel" class="form-field" name="phone" />
     </div>
     <div class="form-group">
         <div class="form-label">Email Address</div>
-        <div class="form-field"></div>
+        <input type="email" class="form-field" name="email" />
     </div>
 </div>
 
 <div class="form-row">
     <div class="form-group half">
         <div class="form-label">Last 4 Digits of SSN</div>
-        <div class="form-field" style="width: 80pt;"></div>
+        <input type="text" class="form-field" name="ssnLast4" style="width: 80pt;" maxlength="4" placeholder="XXXX" />
     </div>
 </div>
 
@@ -274,18 +289,18 @@
     <div class="form-row">
         <div class="form-group">
             <div class="form-label">Bank / Financial Institution Name</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="primaryBankName" />
         </div>
     </div>
 
     <div class="form-row">
         <div class="form-group">
             <div class="form-label">Routing Number (9 digits)</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="primaryRoutingNumber" maxlength="9" placeholder="123456789" />
         </div>
         <div class="form-group">
             <div class="form-label">Account Number</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="primaryAccountNumber" />
         </div>
     </div>
 
@@ -293,15 +308,15 @@
         <div class="form-group">
             <div class="form-label">Account Type</div>
             <div class="checkbox-row">
-                <div class="checkbox-item"><div class="checkbox"></div> Checking</div>
-                <div class="checkbox-item"><div class="checkbox"></div> Savings</div>
+                <label class="checkbox-item"><input type="checkbox" name="primaryChecking" /> Checking</label>
+                <label class="checkbox-item"><input type="checkbox" name="primarySavings" /> Savings</label>
             </div>
         </div>
         <div class="form-group">
             <div class="form-label">Deposit Amount</div>
             <div class="checkbox-row">
-                <div class="checkbox-item"><div class="checkbox"></div> 100% of Net Pay</div>
-                <div class="checkbox-item"><div class="checkbox"></div> Fixed Amount: $________</div>
+                <label class="checkbox-item"><input type="checkbox" name="primary100Percent" /> 100% of Net Pay</label>
+                <label class="checkbox-item"><input type="checkbox" name="primaryFixedAmount" /> Fixed Amount: $<input type="text" name="primaryFixedValue" /></label>
             </div>
         </div>
     </div>
@@ -313,18 +328,18 @@
     <div class="form-row">
         <div class="form-group">
             <div class="form-label">Bank / Financial Institution Name</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="secondaryBankName" />
         </div>
     </div>
 
     <div class="form-row">
         <div class="form-group">
             <div class="form-label">Routing Number (9 digits)</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="secondaryRoutingNumber" maxlength="9" placeholder="123456789" />
         </div>
         <div class="form-group">
             <div class="form-label">Account Number</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="secondaryAccountNumber" />
         </div>
     </div>
 
@@ -332,15 +347,15 @@
         <div class="form-group">
             <div class="form-label">Account Type</div>
             <div class="checkbox-row">
-                <div class="checkbox-item"><div class="checkbox"></div> Checking</div>
-                <div class="checkbox-item"><div class="checkbox"></div> Savings</div>
+                <label class="checkbox-item"><input type="checkbox" name="secondaryChecking" /> Checking</label>
+                <label class="checkbox-item"><input type="checkbox" name="secondarySavings" /> Savings</label>
             </div>
         </div>
         <div class="form-group">
             <div class="form-label">Deposit Amount</div>
             <div class="checkbox-row">
-                <div class="checkbox-item"><div class="checkbox"></div> Remainder</div>
-                <div class="checkbox-item"><div class="checkbox"></div> Fixed Amount: $________</div>
+                <label class="checkbox-item"><input type="checkbox" name="secondaryRemainder" /> Remainder</label>
+                <label class="checkbox-item"><input type="checkbox" name="secondaryFixedAmount" /> Fixed Amount: $<input type="text" name="secondaryFixedValue" /></label>
             </div>
         </div>
     </div>
@@ -373,25 +388,25 @@
 <div class="signature-block">
     <div class="signature-row">
         <div class="signature-col">
-            <div class="signature-line"></div>
+            <input type="text" class="form-field" name="signature" placeholder="Type your full legal name as signature" />
             <div class="signature-label">Employee Signature</div>
         </div>
         <div class="signature-col" style="flex: 0.4;">
-            <div class="signature-line"></div>
+            <input type="date" class="form-field" name="signatureDate" />
             <div class="signature-label">Date</div>
         </div>
     </div>
     <div style="margin-top: 16pt;">
-        <div class="signature-line" style="width: 240pt;"></div>
+        <input type="text" class="form-field" name="printName" style="width: 240pt;" />
         <div class="signature-label">Print Name</div>
     </div>
 </div>
 
 <h2>Required Attachment</h2>
 <div class="checkbox-row" style="margin-left: 0;">
-    <div class="checkbox-item"><div class="checkbox"></div> Voided Check (preferred)</div>
-    <div class="checkbox-item"><div class="checkbox"></div> Bank Letter</div>
-    <div class="checkbox-item"><div class="checkbox"></div> Bank Statement (first page)</div>
+    <label class="checkbox-item"><input type="checkbox" name="attachVoidedCheck" /> Voided Check (preferred)</label>
+    <label class="checkbox-item"><input type="checkbox" name="attachBankLetter" /> Bank Letter</label>
+    <label class="checkbox-item"><input type="checkbox" name="attachBankStatement" /> Bank Statement (first page)</label>
 </div>
 
 <div class="hr-section">
@@ -399,15 +414,15 @@
     <div class="hr-row">
         <div class="form-group">
             <div class="form-label">Received By</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="hrReceivedBy" />
         </div>
         <div class="form-group">
             <div class="form-label">Date Received</div>
-            <div class="form-field"></div>
+            <input type="date" class="form-field" name="hrDateReceived" />
         </div>
         <div class="form-group">
             <div class="form-label">Date Entered</div>
-            <div class="form-field"></div>
+            <input type="date" class="form-field" name="hrDateEntered" />
         </div>
     </div>
 </div>

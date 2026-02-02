@@ -73,9 +73,20 @@
         }
 
         .form-field {
+            border: none;
             border-bottom: 1pt solid #000;
             height: 20pt;
             width: 100%;
+            font-family: inherit;
+            font-size: 11pt;
+            padding: 2pt 4pt;
+            box-sizing: border-box;
+            background: transparent;
+        }
+
+        .form-field:focus {
+            outline: none;
+            border-bottom: 2pt solid #6B9BD2;
         }
 
         .contact-section {
@@ -104,12 +115,6 @@
 
         .signature-col {
             flex: 1;
-        }
-
-        .signature-line {
-            border-bottom: 1pt solid #000;
-            height: 20pt;
-            margin-bottom: 4pt;
         }
 
         .signature-label {
@@ -155,44 +160,44 @@
 <div class="form-row">
     <div class="form-group">
         <div class="form-label">Employee Name</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="employeeName" />
     </div>
     <div class="form-group small">
         <div class="form-label">Employee ID</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="employeeId" />
     </div>
 </div>
 
 <div class="form-row">
     <div class="form-group">
         <div class="form-label">Employee Phone</div>
-        <div class="form-field"></div>
+        <input type="tel" class="form-field" name="employeePhone" />
     </div>
     <div class="form-group">
         <div class="form-label">Employee Email</div>
-        <div class="form-field"></div>
+        <input type="email" class="form-field" name="employeeEmail" />
     </div>
 </div>
 
 <div class="form-row">
     <div class="form-group">
         <div class="form-label">Current Address</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="currentAddress" />
     </div>
 </div>
 
 <div class="form-row">
     <div class="form-group">
         <div class="form-label">City</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="city" />
     </div>
     <div class="form-group small">
         <div class="form-label">State</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="state" maxlength="2" />
     </div>
     <div class="form-group small">
         <div class="form-label">ZIP</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="zip" maxlength="10" />
     </div>
 </div>
 
@@ -204,36 +209,36 @@
     <div class="form-row">
         <div class="form-group">
             <div class="form-label">Full Name</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="primaryName" />
         </div>
         <div class="form-group small">
             <div class="form-label">Relationship</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="primaryRelationship" />
         </div>
     </div>
 
     <div class="form-row">
         <div class="form-group">
             <div class="form-label">Primary Phone</div>
-            <div class="form-field"></div>
+            <input type="tel" class="form-field" name="primaryPhone" />
         </div>
         <div class="form-group">
             <div class="form-label">Alternate Phone</div>
-            <div class="form-field"></div>
+            <input type="tel" class="form-field" name="primaryAltPhone" />
         </div>
     </div>
 
     <div class="form-row">
         <div class="form-group">
             <div class="form-label">Email Address</div>
-            <div class="form-field"></div>
+            <input type="email" class="form-field" name="primaryEmail" />
         </div>
     </div>
 
     <div class="form-row">
         <div class="form-group">
             <div class="form-label">Address</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="primaryAddress" />
         </div>
     </div>
 </div>
@@ -244,36 +249,36 @@
     <div class="form-row">
         <div class="form-group">
             <div class="form-label">Full Name</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="secondaryName" />
         </div>
         <div class="form-group small">
             <div class="form-label">Relationship</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="secondaryRelationship" />
         </div>
     </div>
 
     <div class="form-row">
         <div class="form-group">
             <div class="form-label">Primary Phone</div>
-            <div class="form-field"></div>
+            <input type="tel" class="form-field" name="secondaryPhone" />
         </div>
         <div class="form-group">
             <div class="form-label">Alternate Phone</div>
-            <div class="form-field"></div>
+            <input type="tel" class="form-field" name="secondaryAltPhone" />
         </div>
     </div>
 
     <div class="form-row">
         <div class="form-group">
             <div class="form-label">Email Address</div>
-            <div class="form-field"></div>
+            <input type="email" class="form-field" name="secondaryEmail" />
         </div>
     </div>
 
     <div class="form-row">
         <div class="form-group">
             <div class="form-label">Address</div>
-            <div class="form-field"></div>
+            <input type="text" class="form-field" name="secondaryAddress" />
         </div>
     </div>
 </div>
@@ -283,32 +288,32 @@
 <div class="form-row">
     <div class="form-group">
         <div class="form-label">Known Allergies</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="allergies" />
     </div>
 </div>
 
 <div class="form-row">
     <div class="form-group">
         <div class="form-label">Current Medications</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="medications" />
     </div>
 </div>
 
 <div class="form-row">
     <div class="form-group">
         <div class="form-label">Medical Conditions (e.g., diabetes, heart condition)</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="medicalConditions" />
     </div>
 </div>
 
 <div class="form-row">
     <div class="form-group">
         <div class="form-label">Primary Physician Name</div>
-        <div class="form-field"></div>
+        <input type="text" class="form-field" name="physicianName" />
     </div>
     <div class="form-group">
         <div class="form-label">Physician Phone</div>
-        <div class="form-field"></div>
+        <input type="tel" class="form-field" name="physicianPhone" />
     </div>
 </div>
 
@@ -317,11 +322,11 @@
 
     <div class="signature-row">
         <div class="signature-col">
-            <div class="signature-line"></div>
+            <input type="text" class="form-field" name="signature" placeholder="Type your full legal name as signature" />
             <div class="signature-label">Employee Signature</div>
         </div>
         <div class="signature-col" style="flex: 0.4;">
-            <div class="signature-line"></div>
+            <input type="date" class="form-field" name="signatureDate" />
             <div class="signature-label">Date</div>
         </div>
     </div>
