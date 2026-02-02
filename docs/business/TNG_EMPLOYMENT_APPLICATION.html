@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employment Application - The NICEHR Group, LLC</title>
+    <style>
+        @page {
+            size: letter;
+            margin: 0.75in;
+        }
+
+        body {
+            font-family: Georgia, 'Times New Roman', Times, serif;
+            font-size: 10pt;
+            line-height: 1.4;
+            color: #000;
+            max-width: 8.5in;
+            margin: 0 auto;
+            padding: 0.75in;
+            background: #fff;
+        }
+
+        .letterhead {
+            text-align: center;
+            margin-bottom: 24pt;
+        }
+
+        .document-title {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-size: 14pt;
+            font-weight: 600;
+            letter-spacing: 1pt;
+            color: #000;
+            margin-top: 12pt;
+            padding-top: 8pt;
+            border-top: 2pt solid #6B9BD2;
+        }
+
+        h2 {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-size: 10pt;
+            font-weight: 600;
+            margin: 18pt 0 8pt 0;
+            padding-bottom: 4pt;
+            border-bottom: 1pt solid #ccc;
+            text-transform: uppercase;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 12pt;
+            margin-bottom: 10pt;
+        }
+
+        .form-group {
+            flex: 1;
+        }
+
+        .form-group.small {
+            flex: 0.3;
+        }
+
+        .form-group.medium {
+            flex: 0.5;
+        }
+
+        .form-label {
+            font-size: 8pt;
+            color: #333;
+            margin-bottom: 2pt;
+        }
+
+        .form-field {
+            border-bottom: 1pt solid #000;
+            height: 16pt;
+            width: 100%;
+        }
+
+        .form-field.tall {
+            height: 48pt;
+            border: 1pt solid #000;
+        }
+
+        .checkbox-row {
+            display: flex;
+            gap: 16pt;
+            margin: 6pt 0;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 4pt;
+            font-size: 9pt;
+        }
+
+        .checkbox {
+            width: 10pt;
+            height: 10pt;
+            border: 1pt solid #000;
+        }
+
+        .notice {
+            font-size: 8pt;
+            color: #333;
+            margin: 12pt 0;
+            padding: 8pt;
+            border: 1pt solid #ccc;
+            background: #fafafa;
+        }
+
+        .signature-block {
+            margin-top: 18pt;
+            page-break-inside: avoid;
+        }
+
+        .signature-row {
+            display: flex;
+            gap: 24pt;
+            margin-top: 16pt;
+        }
+
+        .signature-col {
+            flex: 1;
+        }
+
+        .signature-line {
+            border-bottom: 1pt solid #000;
+            height: 18pt;
+            margin-bottom: 2pt;
+        }
+
+        .signature-label {
+            font-size: 8pt;
+            color: #333;
+        }
+
+        .page-footer {
+            text-align: center;
+            font-size: 8pt;
+            color: #666;
+            margin-top: 18pt;
+            padding-top: 8pt;
+            border-top: 1pt solid #ccc;
+        }
+
+        .page-break {
+            page-break-before: always;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8pt 0;
+            font-size: 9pt;
+        }
+
+        table th, table td {
+            border: 1pt solid #333;
+            padding: 4pt 6pt;
+            text-align: left;
+        }
+
+        table th {
+            background: #f5f5f5;
+            font-weight: bold;
+            font-size: 8pt;
+        }
+
+        @media print {
+            body { padding: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="letterhead">
+    <img src="tng-logo.png" alt="The NICEHR Group" style="height: 36pt; margin-bottom: 8pt;">
+    <div class="document-title">EMPLOYMENT APPLICATION</div>
+</div>
+
+<div class="notice">
+    <strong>EQUAL OPPORTUNITY EMPLOYER:</strong> The NICEHR Group, LLC is an equal opportunity employer. We do not discriminate based on race, color, religion, sex, national origin, age, disability, veteran status, sexual orientation, gender identity, or any other protected characteristic.
+</div>
+
+<h2>Section 1: Personal Information</h2>
+
+<div class="form-row">
+    <div class="form-group">
+        <div class="form-label">Legal Last Name</div>
+        <div class="form-field"></div>
+    </div>
+    <div class="form-group">
+        <div class="form-label">Legal First Name</div>
+        <div class="form-field"></div>
+    </div>
+    <div class="form-group small">
+        <div class="form-label">MI</div>
+        <div class="form-field"></div>
+    </div>
+</div>
+
+<div class="form-row">
+    <div class="form-group">
+        <div class="form-label">Street Address</div>
+        <div class="form-field"></div>
+    </div>
+    <div class="form-group small">
+        <div class="form-label">Apt/Unit</div>
+        <div class="form-field"></div>
+    </div>
+</div>
+
+<div class="form-row">
+    <div class="form-group">
+        <div class="form-label">City</div>
+        <div class="form-field"></div>
+    </div>
+    <div class="form-group small">
+        <div class="form-label">State</div>
+        <div class="form-field"></div>
+    </div>
+    <div class="form-group small">
+        <div class="form-label">ZIP Code</div>
+        <div class="form-field"></div>
+    </div>
+</div>
+
+<div class="form-row">
+    <div class="form-group">
+        <div class="form-label">Primary Phone</div>
+        <div class="form-field"></div>
+    </div>
+    <div class="form-group">
+        <div class="form-label">Alternate Phone</div>
+        <div class="form-field"></div>
+    </div>
+    <div class="form-group">
+        <div class="form-label">Email Address</div>
+        <div class="form-field"></div>
+    </div>
+</div>
+
+<div class="form-row">
+    <div class="form-group medium">
+        <div class="form-label">Social Security Number</div>
+        <div class="form-field"></div>
+    </div>
+    <div class="form-group medium">
+        <div class="form-label">Date of Birth</div>
+        <div class="form-field"></div>
+    </div>
+</div>
+
+<div class="form-row">
+    <div class="form-group">
+        <div class="form-label">Are you legally authorized to work in the United States?</div>
+        <div class="checkbox-row">
+            <div class="checkbox-item"><div class="checkbox"></div> Yes</div>
+            <div class="checkbox-item"><div class="checkbox"></div> No</div>
+        </div>
+    </div>
+    <div class="form-group">
+        <div class="form-label">Will you now or in the future require sponsorship?</div>
+        <div class="checkbox-row">
+            <div class="checkbox-item"><div class="checkbox"></div> Yes</div>
+            <div class="checkbox-item"><div class="checkbox"></div> No</div>
+        </div>
+    </div>
+</div>
+
+<h2>Section 2: Position Information</h2>
+
+<div class="form-row">
+    <div class="form-group">
+        <div class="form-label">Position Applied For</div>
+        <div class="form-field"></div>
+    </div>
+    <div class="form-group medium">
+        <div class="form-label">Desired Hourly Rate</div>
+        <div class="form-field"></div>
+    </div>
+    <div class="form-group medium">
+        <div class="form-label">Available Start Date</div>
+        <div class="form-field"></div>
+    </div>
+</div>
+
+<div class="form-row">
+    <div class="form-group">
+        <div class="form-label">How did you hear about this position?</div>
+        <div class="form-field"></div>
+    </div>
+</div>
+
+<div class="form-row">
+    <div class="form-group">
+        <div class="form-label">Are you willing to travel up to 100%?</div>
+        <div class="checkbox-row">
+            <div class="checkbox-item"><div class="checkbox"></div> Yes</div>
+            <div class="checkbox-item"><div class="checkbox"></div> No</div>
+        </div>
+    </div>
+    <div class="form-group">
+        <div class="form-label">Are you willing to work evenings/weekends during go-live?</div>
+        <div class="checkbox-row">
+            <div class="checkbox-item"><div class="checkbox"></div> Yes</div>
+            <div class="checkbox-item"><div class="checkbox"></div> No</div>
+        </div>
+    </div>
+</div>
+
+<h2>Section 3: Education</h2>
+
+<table>
+    <tr>
+        <th style="width: 30%;">School Name</th>
+        <th style="width: 25%;">Location</th>
+        <th style="width: 25%;">Degree/Diploma</th>
+        <th style="width: 20%;">Year Completed</th>
+    </tr>
+    <tr>
+        <td style="height: 20pt;"></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td style="height: 20pt;"></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td style="height: 20pt;"></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+</table>
+
+<h2>Section 4: Certifications</h2>
+
+<table>
+    <tr>
+        <th style="width: 35%;">Certification Name</th>
+        <th style="width: 25%;">Issuing Organization</th>
+        <th style="width: 20%;">Date Obtained</th>
+        <th style="width: 20%;">Expiration Date</th>
+    </tr>
+    <tr>
+        <td style="height: 20pt;"></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td style="height: 20pt;"></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td style="height: 20pt;"></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+</table>
+
+<div class="page-break"></div>
+
+<h2>Section 5: Employment History</h2>
+<p style="font-size: 9pt; margin-bottom: 8pt;">List your last three employers, starting with the most recent.</p>
+
+<div style="border: 1pt solid #ccc; padding: 10pt; margin-bottom: 12pt;">
+    <div class="form-row">
+        <div class="form-group">
+            <div class="form-label">Employer Name</div>
+            <div class="form-field"></div>
+        </div>
+        <div class="form-group">
+            <div class="form-label">Job Title</div>
+            <div class="form-field"></div>
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="form-group">
+            <div class="form-label">Address</div>
+            <div class="form-field"></div>
+        </div>
+        <div class="form-group medium">
+            <div class="form-label">Phone</div>
+            <div class="form-field"></div>
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="form-group small">
+            <div class="form-label">Start Date</div>
+            <div class="form-field"></div>
+        </div>
+        <div class="form-group small">
+            <div class="form-label">End Date</div>
+            <div class="form-field"></div>
+        </div>
+        <div class="form-group medium">
+            <div class="form-label">Supervisor Name</div>
+            <div class="form-field"></div>
+        </div>
+        <div class="form-group small">
+            <div class="form-label">May we contact?</div>
+            <div class="checkbox-row">
+                <div class="checkbox-item"><div class="checkbox"></div> Yes</div>
+                <div class="checkbox-item"><div class="checkbox"></div> No</div>
+            </div>
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="form-group">
+            <div class="form-label">Reason for Leaving</div>
+            <div class="form-field"></div>
+        </div>
+    </div>
+</div>
+
+<div style="border: 1pt solid #ccc; padding: 10pt; margin-bottom: 12pt;">
+    <div class="form-row">
+        <div class="form-group">
+            <div class="form-label">Employer Name</div>
+            <div class="form-field"></div>
+        </div>
+        <div class="form-group">
+            <div class="form-label">Job Title</div>
+            <div class="form-field"></div>
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="form-group">
+            <div class="form-label">Address</div>
+            <div class="form-field"></div>
+        </div>
+        <div class="form-group medium">
+            <div class="form-label">Phone</div>
+            <div class="form-field"></div>
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="form-group small">
+            <div class="form-label">Start Date</div>
+            <div class="form-field"></div>
+        </div>
+        <div class="form-group small">
+            <div class="form-label">End Date</div>
+            <div class="form-field"></div>
+        </div>
+        <div class="form-group medium">
+            <div class="form-label">Supervisor Name</div>
+            <div class="form-field"></div>
+        </div>
+        <div class="form-group small">
+            <div class="form-label">May we contact?</div>
+            <div class="checkbox-row">
+                <div class="checkbox-item"><div class="checkbox"></div> Yes</div>
+                <div class="checkbox-item"><div class="checkbox"></div> No</div>
+            </div>
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="form-group">
+            <div class="form-label">Reason for Leaving</div>
+            <div class="form-field"></div>
+        </div>
+    </div>
+</div>
+
+<div style="border: 1pt solid #ccc; padding: 10pt; margin-bottom: 12pt;">
+    <div class="form-row">
+        <div class="form-group">
+            <div class="form-label">Employer Name</div>
+            <div class="form-field"></div>
+        </div>
+        <div class="form-group">
+            <div class="form-label">Job Title</div>
+            <div class="form-field"></div>
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="form-group">
+            <div class="form-label">Address</div>
+            <div class="form-field"></div>
+        </div>
+        <div class="form-group medium">
+            <div class="form-label">Phone</div>
+            <div class="form-field"></div>
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="form-group small">
+            <div class="form-label">Start Date</div>
+            <div class="form-field"></div>
+        </div>
+        <div class="form-group small">
+            <div class="form-label">End Date</div>
+            <div class="form-field"></div>
+        </div>
+        <div class="form-group medium">
+            <div class="form-label">Supervisor Name</div>
+            <div class="form-field"></div>
+        </div>
+        <div class="form-group small">
+            <div class="form-label">May we contact?</div>
+            <div class="checkbox-row">
+                <div class="checkbox-item"><div class="checkbox"></div> Yes</div>
+                <div class="checkbox-item"><div class="checkbox"></div> No</div>
+            </div>
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="form-group">
+            <div class="form-label">Reason for Leaving</div>
+            <div class="form-field"></div>
+        </div>
+    </div>
+</div>
+
+<h2>Section 6: Applicant Certification</h2>
+
+<p style="font-size: 9pt; text-align: justify;">
+I certify that the information provided in this application is true, complete, and accurate to the best of my knowledge. I understand that any misrepresentation or omission may be grounds for rejection of my application or termination of employment.
+</p>
+
+<p style="font-size: 9pt; text-align: justify;">
+I authorize The NICEHR Group, LLC to verify all information provided and to contact former employers, educational institutions, and references. I release all parties from any liability arising from such inquiries.
+</p>
+
+<p style="font-size: 9pt; text-align: justify;">
+I understand that employment with The NICEHR Group, LLC is at-will, meaning either party may terminate the employment relationship at any time, with or without cause or notice. I understand that this application is not a contract of employment.
+</p>
+
+<p style="font-size: 9pt; text-align: justify;">
+I understand that any offer of employment is contingent upon successful completion of background check, drug screening, and verification of credentials as required by the position and client requirements.
+</p>
+
+<div class="signature-block">
+    <div class="signature-row">
+        <div class="signature-col">
+            <div class="signature-line"></div>
+            <div class="signature-label">Applicant Signature</div>
+        </div>
+        <div class="signature-col" style="flex: 0.4;">
+            <div class="signature-line"></div>
+            <div class="signature-label">Date</div>
+        </div>
+    </div>
+    <div style="margin-top: 12pt;">
+        <div class="signature-line" style="width: 240pt;"></div>
+        <div class="signature-label">Print Name</div>
+    </div>
+</div>
+
+<div class="page-footer">
+    The NICEHR Group, LLC | Employment Application | Confidential
+</div>
+
+</body>
+</html>
