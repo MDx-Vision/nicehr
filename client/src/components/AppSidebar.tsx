@@ -250,6 +250,7 @@ const NAV_GROUPS: NavGroup[] = [
       { id: "assessments", title: "Assessments", url: "/assessments", icon: "ClipboardCheck", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
       { id: "labs", title: "Login Labs", url: "/login-labs", icon: "Monitor", roles: ["admin", "hospital_leadership", "hospital_staff", "consultant"] },
       { id: "onboarding", title: "Onboarding", url: "/onboarding", icon: "UserCheck", roles: ["admin", "consultant"] },
+      { id: "onboarding-admin", title: "Review Submissions", url: "/onboarding-admin", icon: "ClipboardList", roles: ["admin"] },
     ],
   },
   {

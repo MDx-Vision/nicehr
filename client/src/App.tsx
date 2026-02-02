@@ -79,6 +79,7 @@ import TDRManagement from "@/pages/TDR";
 import ExecutiveMetrics from "@/pages/ExecutiveMetrics";
 import ChangeManagement from "@/pages/ChangeManagement";
 import OnboardingPortal from "@/pages/OnboardingPortal";
+import OnboardingAdmin from "@/pages/OnboardingAdmin";
 import CRM from "@/pages/CRM";
 import CRMContacts from "@/pages/CRM/Contacts";
 import CRMCompanies from "@/pages/CRM/Companies";
@@ -226,6 +227,7 @@ function Router() {
       <Route path="/project-phases" component={() => <ProtectedRoute component={ProjectPhases} />} />
       <Route path="/onboarding" component={() => <ProtectedRoute component={ConsultantOnboarding} />} />
       <Route path="/my-onboarding" component={() => <ProtectedRoute component={OnboardingPortal} />} />
+      <Route path="/onboarding-admin" component={() => <ProtectedRoute component={OnboardingAdmin} />} />
       <Route path="/command-center" component={() => <ProtectedRoute component={CommandCenter} />} />
       <Route path="/remote-support" component={() => <ProtectedRoute component={RemoteSupport} />} />
       <Route path="/tdr" component={() => <ProtectedRoute component={TDRManagement} />} />

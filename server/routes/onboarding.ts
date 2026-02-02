@@ -488,15 +488,22 @@ router.post("/onboarding/tasks/:id/submit", async (req: Request, res: Response) 
       return res.status(404).json({ error: "Task not found" });
     }
 
-    // Update task with submitted document
+    // Build update data - only include documentId if it's a real document reference
+    const updateData: any = {
+      status: "submitted",
+      submittedAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    // Only set submittedDocumentId if it references an actual document (not form submissions)
+    if (documentId && !documentId.startsWith("form-") && !documentId.startsWith("signed-")) {
+      updateData.submittedDocumentId = documentId;
+    }
+
+    // Update task
     const [updated] = await db
       .update(onboardingTasks)
-      .set({
-        status: "submitted",
-        submittedDocumentId: documentId,
-        submittedAt: new Date(),
-        updatedAt: new Date(),
-      })
+      .set(updateData)
       .where(eq(onboardingTasks.id, id))
       .returning();
 
