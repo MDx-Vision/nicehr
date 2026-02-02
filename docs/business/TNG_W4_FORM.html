@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form W-4 Employee's Withholding Certificate - The NICEHR Group, LLC</title>
+    <style>
+        @page {
+            size: letter;
+            margin: 0.5in;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10pt;
+            line-height: 1.3;
+            color: #000;
+            max-width: 8.5in;
+            margin: 0 auto;
+            padding: 0.5in;
+            background: #fff;
+        }
+
+        .header {
+            display: flex;
+            border: 2pt solid #000;
+            margin-bottom: 0;
+        }
+
+        .header-left {
+            width: 15%;
+            padding: 8pt;
+            border-right: 1pt solid #000;
+            text-align: center;
+        }
+
+        .header-center {
+            flex: 1;
+            padding: 8pt;
+            text-align: center;
+        }
+
+        .header-right {
+            width: 20%;
+            padding: 8pt;
+            border-left: 1pt solid #000;
+            text-align: center;
+            font-size: 9pt;
+        }
+
+        .form-title {
+            font-size: 18pt;
+            font-weight: bold;
+        }
+
+        .form-subtitle {
+            font-size: 10pt;
+            margin-top: 4pt;
+        }
+
+        .form-year {
+            font-size: 24pt;
+            font-weight: bold;
+        }
+
+        .section {
+            border: 1pt solid #000;
+            border-top: none;
+            padding: 0;
+        }
+
+        .section-header {
+            background: #000;
+            color: #fff;
+            padding: 4pt 8pt;
+            font-weight: bold;
+            font-size: 11pt;
+        }
+
+        .section-content {
+            padding: 8pt;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 12pt;
+            margin-bottom: 8pt;
+        }
+
+        .form-group {
+            flex: 1;
+        }
+
+        .form-group.small {
+            flex: 0.3;
+        }
+
+        .form-group.medium {
+            flex: 0.5;
+        }
+
+        .form-label {
+            font-size: 8pt;
+            color: #333;
+            margin-bottom: 2pt;
+        }
+
+        .form-field {
+            border: none;
+            border-bottom: 1pt solid #000;
+            height: 18pt;
+            width: 100%;
+            font-family: inherit;
+            font-size: 10pt;
+            padding: 2pt 4pt;
+            box-sizing: border-box;
+            background: transparent;
+        }
+
+        .form-field:focus {
+            outline: none;
+            border-bottom: 2pt solid #0066cc;
+        }
+
+        .checkbox-row {
+            display: flex;
+            gap: 16pt;
+            margin: 6pt 0;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 4pt;
+            font-size: 9pt;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 12pt;
+            height: 12pt;
+            cursor: pointer;
+        }
+
+        .step-number {
+            display: inline-block;
+            width: 20pt;
+            height: 20pt;
+            background: #000;
+            color: #fff;
+            text-align: center;
+            line-height: 20pt;
+            font-weight: bold;
+            margin-right: 8pt;
+        }
+
+        .step-title {
+            font-weight: bold;
+            font-size: 11pt;
+        }
+
+        .instructions {
+            font-size: 9pt;
+            margin: 8pt 0;
+            padding: 8pt;
+            background: #f5f5f5;
+            border: 1pt solid #ccc;
+        }
+
+        .amount-box {
+            display: inline-block;
+            border: 1pt solid #000;
+            padding: 4pt 8pt;
+            min-width: 80pt;
+            text-align: right;
+        }
+
+        .amount-box input {
+            border: none;
+            width: 100%;
+            text-align: right;
+            font-family: inherit;
+            font-size: 10pt;
+            background: transparent;
+        }
+
+        .amount-box input:focus {
+            outline: none;
+        }
+
+        .signature-section {
+            border: 1pt solid #000;
+            border-top: none;
+            padding: 8pt;
+        }
+
+        .signature-row {
+            display: flex;
+            gap: 16pt;
+            margin-top: 12pt;
+        }
+
+        .signature-col {
+            flex: 1;
+        }
+
+        .signature-label {
+            font-size: 8pt;
+            color: #333;
+        }
+
+        .employer-section {
+            border: 1pt solid #000;
+            border-top: none;
+            padding: 8pt;
+            background: #f9f9f9;
+        }
+
+        .privacy-notice {
+            font-size: 8pt;
+            margin-top: 12pt;
+            padding: 8pt;
+            border: 1pt solid #ccc;
+        }
+
+        .company-header {
+            text-align: center;
+            margin-bottom: 12pt;
+            padding-bottom: 8pt;
+            border-bottom: 2pt solid #6B9BD2;
+        }
+
+        @media print {
+            body { padding: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="company-header">
+    <img src="tng-logo.png" alt="The NICEHR Group" style="height: 30pt; margin-bottom: 6pt;">
+    <div style="font-size: 10pt; color: #666;">Internal Use - Submit to HR</div>
+</div>
+
+<div class="header">
+    <div class="header-left">
+        <div style="font-size: 9pt;">Form</div>
+        <div style="font-size: 24pt; font-weight: bold;">W-4</div>
+        <div style="font-size: 7pt;">Department of the Treasury<br>Internal Revenue Service</div>
+    </div>
+    <div class="header-center">
+        <div class="form-title">Employee's Withholding Certificate</div>
+        <div class="form-subtitle">Complete Form W-4 so that your employer can withhold the correct federal income tax from your pay.</div>
+        <div style="font-size: 8pt; margin-top: 4pt;">Give Form W-4 to your employer. Your withholding is subject to review by the IRS.</div>
+    </div>
+    <div class="header-right">
+        <div style="font-size: 9pt;">OMB No. 1545-0074</div>
+        <div class="form-year">2024</div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-header">
+        <span class="step-number">1</span>
+        <span class="step-title">Personal Information</span>
+    </div>
+    <div class="section-content">
+        <div class="form-row">
+            <div class="form-group" style="flex: 2;">
+                <div class="form-label">(a) First name and middle initial</div>
+                <input type="text" class="form-field" name="firstName" />
+            </div>
+            <div class="form-group" style="flex: 2;">
+                <div class="form-label">Last name</div>
+                <input type="text" class="form-field" name="lastName" />
+            </div>
+            <div class="form-group">
+                <div class="form-label">(b) Social security number</div>
+                <input type="text" class="form-field" name="ssn" placeholder="XXX-XX-XXXX" />
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <div class="form-label">(c) Address</div>
+                <input type="text" class="form-field" name="address" />
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <div class="form-label">City or town, state, and ZIP code</div>
+                <input type="text" class="form-field" name="cityStateZip" />
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-header">
+        <span class="step-number">2</span>
+        <span class="step-title">Multiple Jobs or Spouse Works</span>
+        <span style="font-weight: normal; font-size: 9pt;"> (Complete if applicable)</span>
+    </div>
+    <div class="section-content">
+        <div class="instructions">
+            Complete this step if you (1) hold more than one job at a time, or (2) are married filing jointly and your spouse also works.
+            The correct amount of withholding depends on income earned from all of these jobs.
+        </div>
+        <div class="checkbox-row">
+            <label class="checkbox-item">
+                <input type="checkbox" name="multipleJobsCheckbox" />
+                <span>Check here if there are only two jobs total. Do this only if the jobs have similar pay; otherwise, more tax than necessary may be withheld.</span>
+            </label>
+        </div>
+        <p style="font-size: 9pt; margin-top: 8pt;">
+            <strong>TIP:</strong> If you have self-employment income, see page 2 of IRS Form W-4 instructions.
+        </p>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-header">
+        <span class="step-number">3</span>
+        <span class="step-title">Claim Dependents</span>
+    </div>
+    <div class="section-content">
+        <div class="instructions">
+            If your total income will be $200,000 or less ($400,000 or less if married filing jointly), complete this section.
+        </div>
+        <div class="form-row" style="align-items: center;">
+            <div class="form-group" style="flex: 3;">
+                <span style="font-size: 9pt;">Multiply number of qualifying children under age 17 by $2,000</span>
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <div class="amount-box">$ <input type="text" name="childrenAmount" /></div>
+            </div>
+        </div>
+        <div class="form-row" style="align-items: center;">
+            <div class="form-group" style="flex: 3;">
+                <span style="font-size: 9pt;">Multiply number of other dependents by $500</span>
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <div class="amount-box">$ <input type="text" name="otherDependentsAmount" /></div>
+            </div>
+        </div>
+        <div class="form-row" style="align-items: center;">
+            <div class="form-group" style="flex: 3;">
+                <span style="font-size: 9pt;"><strong>Add the amounts above for qualifying children and other dependents. Enter total here.</strong></span>
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <div class="amount-box" style="border: 2pt solid #000;">$ <input type="text" name="totalDependents" /></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-header">
+        <span class="step-number">4</span>
+        <span class="step-title">Other Adjustments</span>
+        <span style="font-weight: normal; font-size: 9pt;"> (Optional)</span>
+    </div>
+    <div class="section-content">
+        <div class="form-row" style="align-items: center;">
+            <div class="form-group" style="flex: 3;">
+                <span style="font-size: 9pt;">(a) Other income (not from jobs). Include interest, dividends, retirement income.</span>
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <div class="amount-box">$ <input type="text" name="otherIncome" /></div>
+            </div>
+        </div>
+        <div class="form-row" style="align-items: center;">
+            <div class="form-group" style="flex: 3;">
+                <span style="font-size: 9pt;">(b) Deductions. If you expect to claim deductions other than the standard deduction.</span>
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <div class="amount-box">$ <input type="text" name="deductions" /></div>
+            </div>
+        </div>
+        <div class="form-row" style="align-items: center;">
+            <div class="form-group" style="flex: 3;">
+                <span style="font-size: 9pt;">(c) Extra withholding. Enter any additional tax you want withheld each pay period.</span>
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <div class="amount-box">$ <input type="text" name="extraWithholding" /></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-header">
+        <span class="step-number">5</span>
+        <span class="step-title">Filing Status</span>
+        <span style="font-weight: normal; font-size: 9pt;"> (Check only one box)</span>
+    </div>
+    <div class="section-content">
+        <div class="checkbox-row" style="flex-wrap: wrap; gap: 24pt;">
+            <label class="checkbox-item">
+                <input type="checkbox" name="statusSingle" />
+                <span>Single or Married filing separately</span>
+            </label>
+            <label class="checkbox-item">
+                <input type="checkbox" name="statusMarried" />
+                <span>Married filing jointly or Qualifying surviving spouse</span>
+            </label>
+            <label class="checkbox-item">
+                <input type="checkbox" name="statusHOH" />
+                <span>Head of household (Check only if unmarried and pay more than half the costs of keeping up a home for yourself and a qualifying individual)</span>
+            </label>
+        </div>
+    </div>
+</div>
+
+<div class="signature-section">
+    <p style="font-size: 9pt; margin-bottom: 8pt;">
+        Under penalties of perjury, I declare that this certificate, to the best of my knowledge and belief, is true, correct, and complete.
+    </p>
+    <div class="signature-row">
+        <div class="signature-col" style="flex: 2;">
+            <input type="text" class="form-field" name="signature" placeholder="Type your full legal name as signature" />
+            <div class="signature-label">Employee's signature (This form is not valid unless you sign it.)</div>
+        </div>
+        <div class="signature-col" style="flex: 1;">
+            <input type="date" class="form-field" name="signatureDate" />
+            <div class="signature-label">Date</div>
+        </div>
+    </div>
+</div>
+
+<div class="employer-section">
+    <div style="font-weight: bold; margin-bottom: 8pt;">Employers Only - For TNG HR Use</div>
+    <div class="form-row">
+        <div class="form-group">
+            <div class="form-label">Employer's name and address</div>
+            <div style="font-size: 9pt;">The NICEHR Group, LLC</div>
+        </div>
+        <div class="form-group small">
+            <div class="form-label">First date of employment</div>
+            <input type="date" class="form-field" name="firstDateEmployment" />
+        </div>
+        <div class="form-group">
+            <div class="form-label">Employer identification number (EIN)</div>
+            <input type="text" class="form-field" name="ein" readonly value="XX-XXXXXXX" style="background: #eee;" />
+        </div>
+    </div>
+</div>
+
+<div class="privacy-notice">
+    <strong>Privacy Act and Paperwork Reduction Act Notice.</strong> We ask for the information on this form to carry out the Internal Revenue laws of the United States.
+    Internal Revenue Code sections 3402(f)(2) and 6109 and their regulations require you to provide this information; your employer uses it to determine your federal income tax withholding.
+    Failure to provide a properly completed form will result in your being treated as a single person with no other entries on the form; providing fraudulent information may subject you to penalties.
+</div>
+
+<div style="text-align: center; margin-top: 12pt; font-size: 8pt; color: #666;">
+    The NICEHR Group, LLC | Form W-4 Employee's Withholding Certificate | Submit to HR
+</div>
+
+</body>
+</html>
