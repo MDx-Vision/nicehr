@@ -1,4 +1,5 @@
 import { db } from "./db";
+import bcrypt from "bcryptjs";
 import {
   hospitals,
   hospitalUnits,
@@ -3967,6 +3968,38 @@ export async function seedDemoData() {
   console.log("Starting demo data seeding...");
 
   try {
+    // Seed login users with passwords
+    console.log("Seeding login users with passwords...");
+    const hashedPassword = await bcrypt.hash("password123", 10);
+
+    // Consultant user for testing - update existing or insert new
+    await db.execute(sql`
+      INSERT INTO users (id, email, password, first_name, last_name, role, is_active, access_status)
+      VALUES ('consultant-login-user', 'consultant@nicehr.local', ${hashedPassword}, 'Sarah', 'Johnson', 'consultant', true, 'active')
+      ON CONFLICT (email) DO UPDATE SET
+        password = ${hashedPassword},
+        first_name = 'Sarah',
+        last_name = 'Johnson',
+        role = 'consultant',
+        is_active = true,
+        access_status = 'active'
+    `);
+    console.log("  - Consultant user: consultant@nicehr.local / password123");
+
+    // Admin user for testing - update existing or insert new
+    await db.execute(sql`
+      INSERT INTO users (id, email, password, first_name, last_name, role, is_active, access_status)
+      VALUES ('admin-login-user', 'admin@nicehr.local', ${hashedPassword}, 'Admin', 'User', 'admin', true, 'active')
+      ON CONFLICT (email) DO UPDATE SET
+        password = ${hashedPassword},
+        first_name = 'Admin',
+        last_name = 'User',
+        role = 'admin',
+        is_active = true,
+        access_status = 'active'
+    `);
+    console.log("  - Admin user: admin@nicehr.local / password123");
+
     console.log("Seeding hospitals...");
     for (const hospital of demoHospitals) {
       await db.insert(hospitals).values(hospital).onConflictDoUpdate({

@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Bug, User, Shield, Building2, X, Users, Wrench, GraduationCap, Headphones, CheckCircle, Sparkles, ArrowRightLeft } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
 
 const DEV_ROLE_KEY = "nicehr_dev_role_override";
 
@@ -50,6 +51,7 @@ export function getDevRoleOverride(): string | null {
 }
 
 export function DevRoleSwitcher() {
+  const { user } = useAuth();
   const [overrideRole, setOverrideRole] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -58,6 +60,11 @@ export function DevRoleSwitcher() {
     staleTime: 300000,
     enabled: isOpen,
   });
+
+  // Only show role switcher for admin users
+  if (user?.role !== 'admin') {
+    return null;
+  }
 
   useEffect(() => {
     setOverrideRole(getDevRoleOverride());

@@ -263,18 +263,35 @@ export async function setupAuth(app: Express) {
     app.use(passport.initialize());
     app.use(passport.session());
 
-    // Create mock dev user
-    const devUser = {
-      claims: {
-        sub: 'dev-user-local',
-        email: 'dev@nicehr.local',
-        first_name: 'Dev',
-        last_name: 'User'
-      },
-      expires_at: Math.floor(Date.now() / 1000) + 86400 // 24 hours
-    };
+    // Middleware to check for local auth session or use dev user
+    app.use(async (req, res, next) => {
+      const session = req.session as any;
 
-    app.use((req, res, next) => {
+      // Check if user has local auth session
+      if (session?.userId && session?.isLocalAuth) {
+        (req as any).user = {
+          claims: {
+            sub: session.userId,
+            email: session.userEmail,
+            first_name: session.firstName || '',
+            last_name: session.lastName || '',
+          },
+          expires_at: Math.floor(Date.now() / 1000) + 86400,
+        };
+        req.isAuthenticated = function(this: Express.Request): this is Express.AuthenticatedRequest { return true; };
+        return next();
+      }
+
+      // Default to dev admin user if no local auth
+      const devUser = {
+        claims: {
+          sub: 'dev-user-local',
+          email: 'dev@nicehr.local',
+          first_name: 'Dev',
+          last_name: 'Admin'
+        },
+        expires_at: Math.floor(Date.now() / 1000) + 86400
+      };
       (req as any).user = devUser;
       req.isAuthenticated = function(this: Express.Request): this is Express.AuthenticatedRequest { return true; };
       next();

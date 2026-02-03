@@ -136,6 +136,7 @@ import esignRoutes from "./routes/esign";
 import crmRoutes from "./routes/crm";
 import legacyIntegrationRoutes from "./routes/legacyIntegration";
 import onboardingRoutes from "./routes/onboarding";
+import localAuthRoutes from "./routes/localAuth";
 
 // =============================================================================
 // QUERY PARAMETER VALIDATION HELPERS
@@ -279,6 +280,10 @@ export async function registerRoutes(
   // Onboarding Portal Routes
   app.use('/api', onboardingRoutes);
   console.log('[Onboarding] Onboarding Portal routes enabled');
+
+  // Local Auth Routes (for password-based login)
+  app.use(localAuthRoutes);
+  console.log('[Local Auth] Local authentication routes enabled');
 
   // Seed RBAC roles and permissions at startup
   try {
