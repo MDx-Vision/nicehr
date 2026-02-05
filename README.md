@@ -34,9 +34,11 @@ NiceHR is a comprehensive platform designed for healthcare IT consulting firms m
 | Remote Support | ✅ Live | 725 | HIPAA video consultations |
 | Timesheets | ✅ Live | 35 | Time tracking |
 | Training | ✅ Live | 28 | Learning management |
+| Integrations | ✅ Live | 50+ | ServiceNow, Asana, SAP, Jira |
 
 ### Recently Launched
 
+- **Legacy Integrations** - ServiceNow, Asana, SAP, Jira unified dashboard ("One View. Every System. Zero Logins.")
 - **Structured Logging** - JSON logging with correlation IDs for distributed tracing
 - **Jest Testing** - Unit & integration tests (61 tests) alongside Cypress E2E
 - **Drill-Down Functionality** - 55 interactive elements across dashboards
@@ -47,10 +49,10 @@ NiceHR is a comprehensive platform designed for healthcare IT consulting firms m
 
 | System | Status | Notes |
 |--------|--------|-------|
-| ServiceNow | 📋 Planned | Manual import first |
-| Asana | 📋 Planned | CSV export/import |
-| SAP | 📋 Planned | Field mapping done |
-| Jira | 📋 Planned | API integration |
+| ServiceNow | ✅ Live | ITSM incidents, changes, requests |
+| Asana | ✅ Live | Projects, tasks, CSV import |
+| SAP | ✅ Live | ERP modules, field mapping |
+| Jira | ✅ Live | Issues, sprints, API sync |
 | Epic | 🔴 Not Started | Need sandbox access |
 | Cerner | 🔴 Not Started | Need sandbox access |
 
