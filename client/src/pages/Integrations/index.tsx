@@ -51,6 +51,7 @@ import {
   TrendingUp,
   Cloud,
   Upload,
+  Users,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 
@@ -104,6 +105,7 @@ const SYSTEM_TYPES = [
   { value: "asana", label: "Asana", icon: Activity, color: "bg-pink-500" },
   { value: "sap", label: "SAP", icon: Database, color: "bg-yellow-500" },
   { value: "jira", label: "Jira", icon: Zap, color: "bg-blue-500" },
+  { value: "fieldglass", label: "SAP Fieldglass", icon: Users, color: "bg-orange-500" },
   { value: "bmc_helix", label: "BMC Helix", icon: Cloud, color: "bg-purple-500" },
   { value: "freshservice", label: "Freshservice", icon: Settings, color: "bg-teal-500" },
   { value: "monday", label: "Monday.com", icon: Activity, color: "bg-red-500" },
@@ -378,6 +380,27 @@ export default function IntegrationHub() {
               <div className="flex items-center justify-between">
                 <p className="text-xs text-muted-foreground">
                   {getActiveCount("jira")} active connections
+                </p>
+                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/integrations/fieldglass" className="block">
+          <Card
+            data-testid="card-fieldglass"
+            className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all h-full"
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">SAP Fieldglass</CardTitle>
+              <Users className="h-4 w-4 text-orange-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{getSystemCount("fieldglass")}</div>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">
+                  {getActiveCount("fieldglass")} active connections
                 </p>
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
               </div>

@@ -30,7 +30,7 @@ export const invitationStatusEnum = pgEnum("invitation_status", ["pending", "acc
 export const accessStatusEnum = pgEnum("access_status", ["pending_invitation", "active", "suspended", "revoked"]);
 
 // Legacy Integration Enums
-export const integrationSourceTypeEnum = pgEnum("integration_source_type", ["servicenow", "asana", "sap", "jira", "bmc_helix", "freshservice", "monday", "smartsheet", "other"]);
+export const integrationSourceTypeEnum = pgEnum("integration_source_type", ["servicenow", "asana", "sap", "jira", "bmc_helix", "freshservice", "monday", "smartsheet", "fieldglass", "other"]);
 export const legacyIntegrationStatusEnum = pgEnum("legacy_integration_status", ["draft", "configured", "testing", "active", "paused", "inactive"]);
 export const legacySyncStatusEnum = pgEnum("legacy_sync_status", ["pending", "running", "completed", "failed", "partial"]);
 export const fieldMappingStatusEnum = pgEnum("field_mapping_status", ["pending", "mapped", "validated", "archived"]);
