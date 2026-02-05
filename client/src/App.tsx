@@ -90,6 +90,7 @@ import IntegrationsAsana from "@/pages/Integrations/Asana";
 import IntegrationsSAP from "@/pages/Integrations/SAP";
 import IntegrationsJira from "@/pages/Integrations/Jira";
 import IntegrationsFieldglass from "@/pages/Integrations/Fieldglass";
+import IntegrationsEnterpriseOverview from "@/pages/Integrations/EnterpriseOverview";
 import IntegrationsFieldMappings from "@/pages/Integrations/FieldMappings";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/not-found";
@@ -243,8 +244,9 @@ function Router() {
       <Route path="/integrations/asana" component={() => <ProtectedRoute component={IntegrationsAsana} requiredRoles={["admin", "hospital_leadership"]} />} />
       <Route path="/integrations/sap" component={() => <ProtectedRoute component={IntegrationsSAP} requiredRoles={["admin", "hospital_leadership"]} />} />
       <Route path="/integrations/jira" component={() => <ProtectedRoute component={IntegrationsJira} requiredRoles={["admin", "hospital_leadership"]} />} />
-      <Route path="/integrations/fieldglass" component={() => <ProtectedRoute component={IntegrationsFieldglass} requiredRoles={["admin", "hospital_leadership"]} />} />
-      <Route path="/integrations/:id/mappings" component={() => <ProtectedRoute component={IntegrationsFieldMappings} requiredRoles={["admin", "hospital_leadership"]} />} />
+      <Route path="/integrations/fieldglass" component={() => <ProtectedRoute component={IntegrationsFieldglass} requiredRoles={["admin"]} />} />
+      <Route path="/integrations/enterprise" component={() => <ProtectedRoute component={IntegrationsEnterpriseOverview} requiredRoles={["admin", "hospital_leadership"]} />} />
+      <Route path="/integrations/:id/mappings" component={() => <ProtectedRoute component={IntegrationsFieldMappings} requiredRoles={["admin"]} />} />
       <Route path="/timesheets" component={() => <ProtectedRoute component={Timesheets} />} />
       <Route path="/availability" component={() => <ProtectedRoute component={Availability} />} />
       <Route path="/shift-swaps" component={() => <ProtectedRoute component={ShiftSwaps} />} />

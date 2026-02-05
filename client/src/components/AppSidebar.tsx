@@ -76,6 +76,10 @@ import {
   Video,
   Contact2,
   Handshake,
+  Globe,
+  Server,
+  Database,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -92,6 +96,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Receipt, Banknote, TrendingUp, Plane, Luggage, Bus, Target, Award, ShieldCheck,
   FileSignature, MessageCircle, UserCheck, FileBarChart, Gauge, KeyRound, Link2,
   Star, Briefcase, HeadphonesIcon, PieChart, Sparkles, Video, Contact2, Handshake,
+  Globe, Server, Database, Zap,
 };
 
 // Simplified navigation structure
@@ -150,11 +155,13 @@ const NAV_GROUPS: NavGroup[] = [
     roles: ["admin", "hospital_leadership"],
     defaultOpen: false,
     items: [
-      { id: "integration-hub", title: "Integration Hub", url: "/integrations", icon: "LayoutDashboard", roles: ["admin", "hospital_leadership"] },
-      { id: "integration-servicenow", title: "ServiceNow", url: "/integrations/servicenow", icon: "Server", roles: ["admin", "hospital_leadership"] },
-      { id: "integration-asana", title: "Asana", url: "/integrations/asana", icon: "Activity", roles: ["admin", "hospital_leadership"] },
-      { id: "integration-sap", title: "SAP", url: "/integrations/sap", icon: "Database", roles: ["admin", "hospital_leadership"] },
-      { id: "integration-jira", title: "Jira", url: "/integrations/jira", icon: "Zap", roles: ["admin", "hospital_leadership"] },
+      { id: "enterprise-overview", title: "Enterprise Overview", url: "/integrations/enterprise", icon: "Globe", roles: ["admin", "hospital_leadership"] },
+      { id: "integration-hub", title: "Integration Hub", url: "/integrations", icon: "LayoutDashboard", roles: ["admin"] },
+      { id: "integration-servicenow", title: "ServiceNow", url: "/integrations/servicenow", icon: "Server", roles: ["admin"] },
+      { id: "integration-asana", title: "Asana", url: "/integrations/asana", icon: "Activity", roles: ["admin"] },
+      { id: "integration-sap", title: "SAP", url: "/integrations/sap", icon: "Database", roles: ["admin"] },
+      { id: "integration-jira", title: "Jira", url: "/integrations/jira", icon: "Zap", roles: ["admin"] },
+      { id: "integration-fieldglass", title: "Fieldglass", url: "/integrations/fieldglass", icon: "Users", roles: ["admin"] },
     ],
   },
   {
