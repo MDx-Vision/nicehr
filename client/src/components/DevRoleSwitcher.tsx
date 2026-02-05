@@ -61,14 +61,14 @@ export function DevRoleSwitcher() {
     enabled: isOpen,
   });
 
-  // Only show role switcher for admin users
-  if (user?.role !== 'admin') {
-    return null;
-  }
-
   useEffect(() => {
     setOverrideRole(getDevRoleOverride());
   }, []);
+
+  // Only show role switcher for admin users (must be after all hooks)
+  if (user?.role !== 'admin') {
+    return null;
+  }
 
   const handleSelectRole = (role: string) => {
     localStorage.setItem(DEV_ROLE_KEY, role);
