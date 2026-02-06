@@ -713,6 +713,151 @@ Full documentation in `docs/TNG_CRM_MASTER_CHECKLIST.md` (3,827 lines, 2,000+ it
 
 ---
 
-*Last Updated: January 18, 2026*
-*TDR, Executive Metrics, Change Management, ESIGN Compliance Complete - Total test coverage: 1,977 tests (100% passing)*
-*Next: TNG CRM Implementation (2,000+ items)*
+---
+
+## 17. Enterprise Integrations Roadmap (P0-P1)
+
+> Source: `TNG_Future_Integrations_Roadmap_v2.docx` - February 2026
+
+### Strategic Vision
+**"One View. Every System. Zero Logins."** - Integrate with hospital systems, don't replace them.
+
+---
+
+### 🤖 TNG AI Assistant (P0 - Critical)
+
+**Conversational Intelligence** - Natural language queries grounded in real-time data.
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| RAG Architecture (Zero Hallucination) | ⬜ Pending | Retrieval-Augmented Generation from live data |
+| Function Calling to APIs | ⬜ Pending | Translate NL → API calls to ServiceNow, Jira, VMS, etc. |
+| Source Citations | ⬜ Pending | Every answer links to data source |
+| Hospital-Specific Context | ⬜ Pending | Org structure, project names, terminology |
+| "I Don't Know" Responses | ⬜ Pending | Clear when data unavailable |
+| Role-Based Access | ⬜ Pending | AI only sees what user can see |
+| Audit Trail | ⬜ Pending | Every query logged for HIPAA |
+
+**Example Queries:**
+- "What's the status of our Epic Beaker go-live?"
+- "How many TNG consultants are currently assigned?"
+- "Are we on budget for Q1?"
+- "Show me all P1 tickets opened this week"
+
+---
+
+### Phase 1: Foundation (0-6 Months) - P0
+
+| Integration | Status | API | Priority |
+|-------------|--------|-----|----------|
+| ServiceNow | ✅ Complete | REST API | HIGH |
+| Jira | ✅ Complete | REST API | HIGH |
+| Asana | ✅ Complete | REST API | MEDIUM |
+| SAP Fieldglass | ✅ Complete | REST/OAuth | HIGH |
+| Power BI | ⬜ Pending | REST API, JS SDK | HIGH |
+| Salesforce | ⬜ Pending | REST, SOAP, Bulk APIs | HIGH |
+| TNG AI Assistant (MVP) | ⬜ Pending | Internal | HIGH |
+
+---
+
+### Phase 2: VMS Integration (6-12 Months) - P0
+
+| Integration | Status | Description | Priority |
+|-------------|--------|-------------|----------|
+| Fieldglass SOW Auto-Response | 🔄 In Progress | Auto-detect SOW, match consultants | HIGH |
+| Beeline | ⬜ Pending | End-to-end contingent workforce | HIGH |
+| UKG (Kronos) | ⬜ Pending | Time & attendance, scheduling | HIGH |
+| ShiftWise | ⬜ Pending | Healthcare-specific VMS | HIGH |
+| Workday VNDLY | ⬜ Pending | Cloud VMS + Workday HCM | MEDIUM |
+| Magnit | ⬜ Pending | MSP + VMS unified platform | MEDIUM |
+| AI Assistant Expansion | ⬜ Pending | VMS queries, cross-system correlation | HIGH |
+
+---
+
+### Phase 3: Enterprise HCM (12-18 Months) - P1
+
+| Integration | Status | Description | Difficulty |
+|-------------|--------|-------------|------------|
+| Workday | ⬜ Pending | HCM, payroll, org management | HARD |
+| SAP SuccessFactors | ⬜ Pending | Enterprise HCM, talent | HARD |
+| Oracle PeopleSoft | ⬜ Pending | Legacy HCM in academic med centers | HARD |
+| ADP | ⬜ Pending | Payroll processing | MEDIUM |
+| Tableau | ⬜ Pending | Alternative to Power BI | MEDIUM |
+| AI Predictive Analytics | ⬜ Pending | Proactive alerts, forecasting | HIGH |
+
+---
+
+### Business Intelligence Integrations (P1)
+
+| Platform | Hospital Use | TNG Value | Status |
+|----------|--------------|-----------|--------|
+| Microsoft Power BI | Executive dashboards | Feed TNG metrics into hospital dashboards | ⬜ Pending |
+| Tableau | Data visualization | Alternative BI for non-Microsoft shops | ⬜ Pending |
+
+---
+
+### CRM Integration (P1)
+
+| Platform | Use Case | Status |
+|----------|----------|--------|
+| Salesforce | CRM, sales pipeline, vendor management | ⬜ Pending |
+
+---
+
+### Payroll & Time Systems (P1)
+
+| Platform | Hospital Use | Status | Priority |
+|----------|--------------|--------|----------|
+| UKG (Kronos) | Time & attendance, scheduling | ⬜ Pending | HIGH |
+| ADP | Payroll processing | ⬜ Pending | MEDIUM |
+| Connecteam | Mobile workforce management | ⬜ Pending | LOW |
+
+---
+
+### Competitive Gaps TNG Solves
+
+| Gap | Enterprise Systems Miss | TNG Solution |
+|-----|------------------------|--------------|
+| Natural Language Access | Each system has its own UI/query language | TNG AI Assistant |
+| EHR Expertise Matching | VMS tracks contractors generically | DiSChedule + EHR Skills Matrix |
+| Behavioral Team Matching | No system considers team dynamics | DiSC profiles for compatibility |
+| Multi-System Aggregation | Siloed - CIO checks each system separately | Unified Dashboard |
+| Consultant-Owned Model | Traditional staffing 30-50% markup | No middleman markup |
+| Implementation Methodology | VMS is vendor-agnostic | 11-Phase Methodology + TDR |
+| Instant Remote Support | No VMS offers real-time video | Daily.co Remote Support ✅ |
+| Cross-Hospital Insights | Each hospital's data is isolated | Aggregated anonymized patterns |
+
+---
+
+### API Requirements Summary
+
+| System | Auth Method | Endpoints | Notes |
+|--------|-------------|-----------|-------|
+| SAP Fieldglass | OAuth 2.0 + API Key | SOW, Workers, Timesheets, Submit | ✅ Credentials doc ready |
+| ServiceNow | Basic/OAuth | Table API, Incidents, Changes | ✅ Built |
+| Jira | API Token | Issues, Projects, Sprints | ✅ Built |
+| Asana | PAT/OAuth | Workspaces, Projects, Tasks | ✅ Built |
+| Power BI | Azure AD OAuth | Reports, Datasets, Embed | ⬜ Pending |
+| Salesforce | OAuth 2.0 | REST/SOAP/Bulk APIs | ⬜ Pending |
+| Workday | OAuth 2.0 | REST + SOAP | HARD |
+| UKG | OAuth 2.0 | REST + SOAP | ⬜ Pending |
+
+---
+
+### Credentials Required (See `docs/INTEGRATION_REQUIREMENTS.md`)
+
+| Integration | Credentials Needed | Status |
+|-------------|-------------------|--------|
+| SAP Fieldglass | OAuth Client ID/Secret, API Key | ⬜ Pending from user |
+| ServiceNow | Instance URL, API user | ⬜ Pending from user |
+| Asana | Personal Access Token | ⬜ Pending from user |
+| Jira | API Token, Instance URL | ⬜ Pending from user |
+| Power BI | Azure AD App Registration | ⬜ Pending from user |
+| Salesforce | Connected App credentials | ⬜ Pending from user |
+
+---
+
+*Last Updated: February 6, 2026*
+*TDR, Executive Metrics, Change Management, ESIGN Compliance Complete - Total test coverage: 2,135 tests (100% passing)*
+*Legacy Integrations (ServiceNow, Jira, Asana, Fieldglass) Complete*
+*Next: TNG AI Assistant MVP, Power BI, Salesforce integrations*

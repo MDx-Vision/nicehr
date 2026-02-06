@@ -1,7 +1,7 @@
 # NiceHR Development Tracker
 
 **Purpose:** Track what's done, what's in progress, and what's next. Prevent duplicate work.
-**Last Updated:** January 20, 2026
+**Last Updated:** February 6, 2026
 
 ---
 
@@ -18,8 +18,60 @@
 | Executive Metrics | ✅ Complete | 56 |
 | Drill-Down (Phases 1-3) | ✅ Complete | 63 |
 | **Legacy Systems Integration** | ✅ **COMPLETE** | **98** |
+| SAP Fieldglass (VMS) | ✅ **COMPLETE** | - |
+| Enterprise Overview | ✅ **COMPLETE** | - |
 | Documentation | ✅ Complete | N/A |
 | **TOTAL** | **Production Ready** | **~2,288** |
+
+---
+
+## 🚀 Enterprise Integrations Roadmap
+
+> Source: `TNG_Future_Integrations_Roadmap_v2.docx`
+
+### Phase 1: Foundation (0-6 Months) - NOW
+
+| Integration | Status | Priority | Notes |
+|-------------|--------|----------|-------|
+| ServiceNow | ✅ Complete | HIGH | ITSM integration |
+| Jira | ✅ Complete | HIGH | Issue tracking |
+| Asana | ✅ Complete | MEDIUM | Project management |
+| SAP Fieldglass | ✅ Complete | HIGH | VMS, SOW management |
+| Enterprise Overview | ✅ Complete | HIGH | Unified dashboard |
+| **TNG AI Assistant** | ⬜ Pending | **HIGH** | RAG-based NL queries |
+| **Power BI** | ⬜ Pending | **HIGH** | BI dashboard feeds |
+| **Salesforce** | ⬜ Pending | **HIGH** | CRM sync |
+
+### Phase 2: VMS Expansion (6-12 Months)
+
+| Integration | Status | Priority | Notes |
+|-------------|--------|----------|-------|
+| Fieldglass SOW Auto-Response | 🔄 Awaiting Credentials | HIGH | Auto-match consultants |
+| Beeline | ⬜ Pending | HIGH | Contingent workforce |
+| UKG (Kronos) | ⬜ Pending | HIGH | Time & attendance |
+| ShiftWise | ⬜ Pending | HIGH | Healthcare VMS |
+| Workday VNDLY | ⬜ Pending | MEDIUM | Cloud VMS |
+
+### Phase 3: Enterprise HCM (12-18 Months)
+
+| Integration | Status | Priority | Notes |
+|-------------|--------|----------|-------|
+| Workday | ⬜ Pending | HARD | HCM, payroll, org |
+| SAP SuccessFactors | ⬜ Pending | HARD | Enterprise HCM |
+| Oracle PeopleSoft | ⬜ Pending | HARD | Academic med centers |
+| ADP | ⬜ Pending | MEDIUM | Payroll |
+| AI Predictive Analytics | ⬜ Pending | HIGH | Forecasting, alerts |
+
+### Credentials Status
+
+| System | Needed | Status |
+|--------|--------|--------|
+| SAP Fieldglass | OAuth + API Key | ⬜ Awaiting |
+| Power BI | Azure AD App | ⬜ Awaiting |
+| Salesforce | Connected App | ⬜ Awaiting |
+| UKG | OAuth 2.0 | ⬜ Awaiting |
+
+See `docs/INTEGRATION_REQUIREMENTS.md` for full credential requirements.
 
 ---
 
@@ -94,7 +146,18 @@
 
 ## What's Next (Backlog)
 
-### High Priority
+### 🔴 HIGH Priority (Phase 1)
+- [ ] **TNG AI Assistant (MVP)** - Natural language queries
+  - RAG architecture (zero hallucination)
+  - Function calling to ServiceNow, Jira, Fieldglass
+  - Source citations
+  - Role-based access
+- [ ] **Power BI Integration** - Feed metrics to hospital dashboards
+- [ ] **Salesforce Integration** - CRM/sales pipeline sync
+- [ ] **Fieldglass SOW Auto-Response** (awaiting credentials)
+  - Auto-detect SOW postings
+  - Match consultants
+  - Auto-submit proposals
 - [ ] **Communication Center** (plan at `COMMUNICATION_CENTER_PLAN.md`)
   - Email/SMS to consultants
   - Bulk messaging
@@ -102,7 +165,11 @@
 - [ ] Production deployment
 - [ ] HIPAA audit preparation
 
-### Medium Priority
+### 🟡 MEDIUM Priority (Phase 2)
+- [ ] **Beeline VMS** - Contingent workforce automation
+- [ ] **UKG (Kronos)** - Time tracking integration
+- [ ] **ShiftWise** - Healthcare-specific VMS
+- [ ] AI Assistant expansion - VMS queries, cross-system
 - [ ] Performance optimization
 - [ ] Mobile responsiveness review
 - [ ] Bulk import/export features
@@ -110,7 +177,10 @@
 - [ ] Email notifications
 - [ ] Calendar integrations
 
-### Low Priority
+### 🟢 LOW Priority (Phase 3)
+- [ ] Workday HCM integration
+- [ ] SAP SuccessFactors integration
+- [ ] AI Predictive Analytics
 - [ ] Dark mode
 - [ ] Localization (i18n)
 - [ ] Mobile app
