@@ -1,0 +1,154 @@
+# =============================================================================
+# NiceHR AI Assistant Load Test Configuration
+# =============================================================================
+# Load testing specifically for AI Assistant endpoints
+# Run with: npx artillery run artillery/load-test-ai.yml
+# =============================================================================
+
+config:
+  target: "http://localhost:4000"
+  phases:
+    # Phase 1: Light load (2 minutes)
+    - duration: 120
+      arrivalRate: 2
+      name: "Light load"
+
+    # Phase 2: Normal load (3 minutes)
+    - duration: 180
+      arrivalRate: 5
+      name: "Normal load"
+
+    # Phase 3: Peak load (2 minutes)
+    - duration: 120
+      arrivalRate: 10
+      name: "Peak load"
+
+  defaults:
+    headers:
+      Content-Type: "application/json"
+      Accept: "application/json"
+
+  plugins:
+    expect: {}
+
+  # AI endpoints have longer acceptable response times
+  ensure:
+    - maxErrorRate: 5      # Max 5% error rate (AI can be flaky)
+    - max: 30000           # Max response time 30 seconds
+    - p95: 5000            # 95th percentile under 5 seconds
+    - p99: 10000           # 99th percentile under 10 seconds
+
+# =============================================================================
+# TEST SCENARIOS
+# =============================================================================
+scenarios:
+  # ============================================
+  # AI Health Check
+  # ============================================
+  - name: "AI Health Check"
+    weight: 20
+    flow:
+      - get:
+          url: "/api/ai/health"
+          expect:
+            - statusCode: 200
+
+  # ============================================
+  # ServiceNow Queries
+  # ============================================
+  - name: "ServiceNow Query"
+    weight: 20
+    flow:
+      - post:
+          url: "/api/ai/query"
+          json:
+            query: "How many open incidents are there?"
+            conversationHistory: []
+          expect:
+            - statusCode:
+                - 200
+                - 503  # Not configured is acceptable
+          capture:
+            - json: "$.response"
+              as: "aiResponse"
+
+  # ============================================
+  # Jira Queries
+  # ============================================
+  - name: "Jira Query"
+    weight: 15
+    flow:
+      - post:
+          url: "/api/ai/query"
+          json:
+            query: "What's the status of our Jira sprints?"
+            conversationHistory: []
+          expect:
+            - statusCode:
+                - 200
+                - 503
+
+  # ============================================
+  # Asana Queries
+  # ============================================
+  - name: "Asana Query"
+    weight: 15
+    flow:
+      - post:
+          url: "/api/ai/query"
+          json:
+            query: "Show me Asana tasks for this month"
+            conversationHistory: []
+          expect:
+            - statusCode:
+                - 200
+                - 503
+
+  # ============================================
+  # Fieldglass Queries
+  # ============================================
+  - name: "Fieldglass Query"
+    weight: 15
+    flow:
+      - post:
+          url: "/api/ai/query"
+          json:
+            query: "What are our open SOWs in Fieldglass?"
+            conversationHistory: []
+          expect:
+            - statusCode:
+                - 200
+                - 503
+
+  # ============================================
+  # Conversation Flow
+  # ============================================
+  - name: "Conversation Flow"
+    weight: 15
+    flow:
+      - post:
+          url: "/api/ai/query"
+          json:
+            query: "How many support tickets are open?"
+            conversationHistory: []
+          capture:
+            - json: "$.response"
+              as: "response1"
+          expect:
+            - statusCode:
+                - 200
+                - 503
+      - think: 2
+      - post:
+          url: "/api/ai/query"
+          json:
+            query: "Which ones are high priority?"
+            conversationHistory:
+              - role: "user"
+                content: "How many support tickets are open?"
+              - role: "assistant"
+                content: "{{ response1 }}"
+          expect:
+            - statusCode:
+                - 200
+                - 503

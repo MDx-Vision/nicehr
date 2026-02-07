@@ -1,0 +1,179 @@
+# =============================================================================
+# NiceHR Load Test Configuration
+# =============================================================================
+# Artillery load testing for critical API endpoints
+# Run with: npx artillery run artillery/load-test.yml
+# =============================================================================
+
+config:
+  target: "http://localhost:4000"
+  phases:
+    # Phase 1: Warm up (1 minute)
+    - duration: 60
+      arrivalRate: 5
+      name: "Warm up"
+
+    # Phase 2: Ramp up (2 minutes)
+    - duration: 120
+      arrivalRate: 10
+      rampTo: 50
+      name: "Ramp up"
+
+    # Phase 3: Sustained load (5 minutes)
+    - duration: 300
+      arrivalRate: 50
+      name: "Sustained load"
+
+    # Phase 4: Peak load (2 minutes)
+    - duration: 120
+      arrivalRate: 100
+      name: "Peak load"
+
+    # Phase 5: Cool down (1 minute)
+    - duration: 60
+      arrivalRate: 10
+      rampTo: 1
+      name: "Cool down"
+
+  defaults:
+    headers:
+      Content-Type: "application/json"
+      Accept: "application/json"
+
+  plugins:
+    expect: {}
+
+  # Thresholds for test success
+  ensure:
+    - maxErrorRate: 1      # Max 1% error rate
+    - max: 2000            # Max response time 2000ms
+    - p95: 500             # 95th percentile under 500ms
+    - p99: 1000            # 99th percentile under 1000ms
+
+# =============================================================================
+# TEST SCENARIOS
+# =============================================================================
+scenarios:
+  # ============================================
+  # Dashboard Load (40% of traffic)
+  # ============================================
+  - name: "Dashboard Load"
+    weight: 40
+    flow:
+      - get:
+          url: "/api/dashboard/stats"
+          expect:
+            - statusCode: 200
+      - get:
+          url: "/api/dashboard/tasks"
+          expect:
+            - statusCode: 200
+      - get:
+          url: "/api/activities/recent?limit=10"
+          expect:
+            - statusCode: 200
+      - get:
+          url: "/api/notifications"
+          expect:
+            - statusCode: 200
+
+  # ============================================
+  # Consultant Browse (20% of traffic)
+  # ============================================
+  - name: "Consultant Browse"
+    weight: 20
+    flow:
+      - get:
+          url: "/api/consultants?limit=25"
+          expect:
+            - statusCode: 200
+      - think: 2
+      - get:
+          url: "/api/consultants/1"
+          expect:
+            - statusCode:
+                - 200
+                - 404
+      - get:
+          url: "/api/consultants/1/documents"
+          expect:
+            - statusCode:
+                - 200
+                - 404
+      - get:
+          url: "/api/consultants/1/availability"
+          expect:
+            - statusCode:
+                - 200
+                - 404
+
+  # ============================================
+  # Project Management (20% of traffic)
+  # ============================================
+  - name: "Project Management"
+    weight: 20
+    flow:
+      - get:
+          url: "/api/projects"
+          expect:
+            - statusCode: 200
+      - think: 1
+      - get:
+          url: "/api/projects/1"
+          expect:
+            - statusCode:
+                - 200
+                - 404
+      - get:
+          url: "/api/projects/1/requirements"
+          expect:
+            - statusCode:
+                - 200
+                - 404
+      - get:
+          url: "/api/projects/1/budget"
+          expect:
+            - statusCode:
+                - 200
+                - 404
+
+  # ============================================
+  # Support Tickets (10% of traffic)
+  # ============================================
+  - name: "Support Tickets"
+    weight: 10
+    flow:
+      - get:
+          url: "/api/support-tickets?limit=25"
+          expect:
+            - statusCode: 200
+      - think: 2
+      - get:
+          url: "/api/support-tickets/1"
+          expect:
+            - statusCode:
+                - 200
+                - 404
+
+  # ============================================
+  # Hospital Data (10% of traffic)
+  # ============================================
+  - name: "Hospital Data"
+    weight: 10
+    flow:
+      - get:
+          url: "/api/hospitals"
+          expect:
+            - statusCode: 200
+      - get:
+          url: "/api/hospitals/1"
+          expect:
+            - statusCode:
+                - 200
+                - 404
+      - get:
+          url: "/api/hospitals/1/units"
+          expect:
+            - statusCode:
+                - 200
+                - 404

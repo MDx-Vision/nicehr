@@ -1,0 +1,132 @@
+# =============================================================================
+# NiceHR Integrations Load Test Configuration
+# =============================================================================
+# Load testing for legacy integration endpoints
+# Run with: npx artillery run artillery/load-test-integrations.yml
+# =============================================================================
+
+config:
+  target: "http://localhost:4000"
+  phases:
+    # Phase 1: Warm up (1 minute)
+    - duration: 60
+      arrivalRate: 3
+      name: "Warm up"
+
+    # Phase 2: Normal load (3 minutes)
+    - duration: 180
+      arrivalRate: 10
+      name: "Normal load"
+
+    # Phase 3: Peak load (2 minutes)
+    - duration: 120
+      arrivalRate: 30
+      name: "Peak load"
+
+    # Phase 4: Cool down (1 minute)
+    - duration: 60
+      arrivalRate: 5
+      name: "Cool down"
+
+  defaults:
+    headers:
+      Content-Type: "application/json"
+      Accept: "application/json"
+
+  plugins:
+    expect: {}
+
+  ensure:
+    - maxErrorRate: 2      # Max 2% error rate
+    - max: 5000            # Max response time 5 seconds
+    - p95: 1000            # 95th percentile under 1 second
+    - p99: 3000            # 99th percentile under 3 seconds
+
+# =============================================================================
+# TEST SCENARIOS
+# =============================================================================
+scenarios:
+  # ============================================
+  # Integration Sources
+  # ============================================
+  - name: "Integration Sources"
+    weight: 25
+    flow:
+      - get:
+          url: "/api/integrations/sources"
+          expect:
+            - statusCode: 200
+      - get:
+          url: "/api/integrations/sources/1"
+          expect:
+            - statusCode:
+                - 200
+                - 404
+
+  # ============================================
+  # Field Mappings
+  # ============================================
+  - name: "Field Mappings"
+    weight: 20
+    flow:
+      - get:
+          url: "/api/integrations/field-mappings"
+          expect:
+            - statusCode: 200
+      - get:
+          url: "/api/integrations/field-mappings?sourceId=1"
+          expect:
+            - statusCode: 200
+
+  # ============================================
+  # Sync History
+  # ============================================
+  - name: "Sync History"
+    weight: 20
+    flow:
+      - get:
+          url: "/api/integrations/sync-history?limit=25"
+          expect:
+            - statusCode: 200
+      - get:
+          url: "/api/integrations/sync-history?sourceId=1"
+          expect:
+            - statusCode: 200
+
+  # ============================================
+  # Integration Records
+  # ============================================
+  - name: "Integration Records"
+    weight: 25
+    flow:
+      - get:
+          url: "/api/integrations/records?limit=50"
+          expect:
+            - statusCode: 200
+      - get:
+          url: "/api/integrations/records?sourceType=servicenow"
+          expect:
+            - statusCode: 200
+      - get:
+          url: "/api/integrations/records?sourceType=jira"
+          expect:
+            - statusCode: 200
+
+  # ============================================
+  # CRM Data
+  # ============================================
+  - name: "CRM Data"
+    weight: 10
+    flow:
+      - get:
+          url: "/api/crm/dashboard"
+          expect:
+            - statusCode: 200
+      - get:
+          url: "/api/crm/contacts?limit=25"
+          expect:
+            - statusCode: 200
+      - get:
+          url: "/api/crm/deals"
+          expect:
+            - statusCode: 200

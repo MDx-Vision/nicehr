@@ -1,0 +1,156 @@
+# =============================================================================
+# NiceHR Executive Dashboard Load Test Configuration
+# =============================================================================
+# Load testing for executive metrics and TDR endpoints
+# Run with: npx artillery run artillery/load-test-executive.yml
+# =============================================================================
+
+config:
+  target: "http://localhost:4000"
+  phases:
+    # Phase 1: Light load (1 minute)
+    - duration: 60
+      arrivalRate: 5
+      name: "Light load"
+
+    # Phase 2: Normal executive load (3 minutes)
+    - duration: 180
+      arrivalRate: 15
+      name: "Normal load"
+
+    # Phase 3: Board meeting spike (2 minutes)
+    - duration: 120
+      arrivalRate: 40
+      name: "Board meeting spike"
+
+    # Phase 4: Cool down (1 minute)
+    - duration: 60
+      arrivalRate: 5
+      name: "Cool down"
+
+  defaults:
+    headers:
+      Content-Type: "application/json"
+      Accept: "application/json"
+
+  plugins:
+    expect: {}
+
+  ensure:
+    - maxErrorRate: 1      # Max 1% error rate
+    - max: 3000            # Max response time 3 seconds
+    - p95: 800             # 95th percentile under 800ms
+    - p99: 2000            # 99th percentile under 2 seconds
+
+# =============================================================================
+# TEST SCENARIOS
+# =============================================================================
+scenarios:
+  # ============================================
+  # Executive Dashboard
+  # ============================================
+  - name: "Executive Dashboard"
+    weight: 30
+    flow:
+      - get:
+          url: "/api/executive-metrics/dashboard"
+          expect:
+            - statusCode: 200
+      - get:
+          url: "/api/executive-metrics/summary"
+          expect:
+            - statusCode: 200
+      - get:
+          url: "/api/executive-metrics/summary/financial"
+          expect:
+            - statusCode: 200
+      - get:
+          url: "/api/executive-metrics/summary/projects"
+          expect:
+            - statusCode: 200
+
+  # ============================================
+  # KPI Metrics
+  # ============================================
+  - name: "KPI Metrics"
+    weight: 25
+    flow:
+      - get:
+          url: "/api/executive-metrics/kpis"
+          expect:
+            - statusCode: 200
+      - get:
+          url: "/api/executive-metrics/kpis/1"
+          expect:
+            - statusCode:
+                - 200
+                - 404
+      - get:
+          url: "/api/executive-metrics/kpis/1/snapshots?days=30"
+          expect:
+            - statusCode:
+                - 200
+                - 404
+
+  # ============================================
+  # TDR Module
+  # ============================================
+  - name: "TDR Module"
+    weight: 20
+    flow:
+      - get:
+          url: "/api/projects/1/tdr/events"
+          expect:
+            - statusCode:
+                - 200
+                - 404
+      - get:
+          url: "/api/projects/1/tdr/readiness"
+          expect:
+            - statusCode:
+                - 200
+                - 404
+      - get:
+          url: "/api/tdr/events/1/checklist"
+          expect:
+            - statusCode:
+                - 200
+                - 404
+
+  # ============================================
+  # Change Management
+  # ============================================
+  - name: "Change Management"
+    weight: 15
+    flow:
+      - get:
+          url: "/api/change-management/requests?limit=25"
+          expect:
+            - statusCode: 200
+      - get:
+          url: "/api/change-management/calendar"
+          expect:
+            - statusCode: 200
+      - get:
+          url: "/api/change-management/metrics"
+          expect:
+            - statusCode: 200
+
+  # ============================================
+  # Analytics
+  # ============================================
+  - name: "Analytics"
+    weight: 10
+    flow:
+      - get:
+          url: "/api/analytics/consultant-utilization"
+          expect:
+            - statusCode: 200
+      - get:
+          url: "/api/analytics/project-status"
+          expect:
+            - statusCode: 200
+      - get:
+          url: "/api/analytics/financial-summary"
+          expect:
+            - statusCode: 200
