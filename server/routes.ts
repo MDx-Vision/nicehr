@@ -137,6 +137,7 @@ import crmRoutes from "./routes/crm";
 import legacyIntegrationRoutes from "./routes/legacyIntegration";
 import onboardingRoutes from "./routes/onboarding";
 import localAuthRoutes from "./routes/localAuth";
+import aiAssistantRoutes from "./routes/aiAssistant";
 
 // =============================================================================
 // QUERY PARAMETER VALIDATION HELPERS
@@ -284,6 +285,10 @@ export async function registerRoutes(
   // Local Auth Routes (for password-based login)
   app.use(localAuthRoutes);
   console.log('[Local Auth] Local authentication routes enabled');
+
+  // AI Assistant Routes
+  app.use('/api', aiAssistantRoutes);
+  console.log('[AI Assistant] TNG AI Assistant routes enabled');
 
   // Seed RBAC roles and permissions at startup
   try {

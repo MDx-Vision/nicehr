@@ -15,6 +15,7 @@ import { PermissionsProvider } from "@/hooks/use-permissions";
 import { ProjectContextProvider } from "@/hooks/use-project-context";
 
 import { CommandMenu, SearchTrigger } from "@/components/CommandMenu";
+import { AIAssistant } from "@/components/AIAssistant";
 import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
 import Hospitals from "@/pages/Hospitals";
@@ -121,6 +122,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
             {children}
           </main>
         </div>
+        <AIAssistant />
       </div>
     </SidebarProvider>
   );
